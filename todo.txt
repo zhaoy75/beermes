@@ -22,3 +22,15 @@ taxrate
 created_at
 effect_date
 expire_date
+
+
+create an vue page mainteenance for brew catagory tables
+
+-catagory table following columns 
+ id as integer
+ name as varchar
+-all data should be list in a table 
+-no search section is needed 
+-crud is needed 
+-validate check is needed for data type 
+-backend is supabase

@@ -291,7 +291,7 @@ const menuGroups = [
         icon: CalenderIcon,
         name: "マスタメンテナンス",
         subItems: [
-          { name: "酒類登録", path: "/catalogMaster", pro: false },
+          { name: "カテゴリ登録", path: "/categoryMaster", pro: false },
           { name: "酒税登録", path: "/taxMaster", pro: false },
           { name: "詰口登録", path: "/PackingMaster", pro: false },
           { name: "ビール銘柄登録", path: "/BeerMaster", pro: false },

@@ -1,0 +1,49 @@
+{
+  "common": {
+    "new": "新規",
+    "refresh": "更新",
+    "edit": "編集",
+    "delete": "削除",
+    "save": "保存",
+    "saving": "保存中…",
+    "cancel": "キャンセル",
+    "close": "閉じる",
+    "actions": "操作",
+    "noData": "データなし"
+  },
+  "labels": {
+    "id": "ID",
+    "name": "名称",
+    "category": "カテゴリ",
+    "note": "備考",
+    "taxrate": "税率",
+    "created_date": "作成日",
+    "effect_date": "適用開始日",
+    "expire_date": "適用終了日"
+  },
+  "category": {
+    "title": "カテゴリ管理",
+    "subtitle": "Supabase 連携のカテゴリ CRUD",
+    "editTitle": "カテゴリ編集",
+    "newTitle": "カテゴリ新規",
+    "idHelp": "空欄で自動採番",
+    "deleteTitle": "カテゴリ削除",
+    "deleteConfirm": "本当に {id} を削除しますか？ この操作は元に戻せません。",
+    "selectPlaceholder": "-- カテゴリを選択 --"
+  },
+  "tax": {
+    "title": "酒税管理",
+    "subtitle": "Supabase 連携の酒税テーブル",
+    "editTitle": "酒税編集",
+    "newTitle": "酒税新規作成",
+    "categorySelect": "-- カテゴリを選択 --"
+  },
+  "errors": {
+    "required": "{field} は必須です",
+    "mustBeInteger": "{field} は整数である必要があります",
+    "mustBeNumber": "{field} は数値である必要があります",
+    "rateMin": "{field} は 0 以上である必要があります",
+    "expireAfter": "適用終了日は適用開始日より後である必要があります"
+  }
+}
+

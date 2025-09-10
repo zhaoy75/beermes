@@ -61,6 +61,15 @@ const router = createRouter({
         requiresAuth: true ,
       },
     },
+    {
+      path: '/categoryMaster',
+      name: 'カテゴリ',
+      component: () => import('../views/pages/CategoryMaster.vue'),
+      meta: {
+        title: 'カテゴリ',
+        requiresAuth: true ,
+      },
+    },
 
     {
       path: '/profile',
@@ -238,4 +247,3 @@ router.beforeEach(async (to) => {
     return { path: (to.query.redirect as string) ?? '/' }
   }
 })
-

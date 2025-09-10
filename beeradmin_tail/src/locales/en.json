@@ -1,0 +1,49 @@
+{
+  "common": {
+    "new": "New",
+    "refresh": "Refresh",
+    "edit": "Edit",
+    "delete": "Delete",
+    "save": "Save",
+    "saving": "Saving…",
+    "cancel": "Cancel",
+    "close": "Close",
+    "actions": "Actions",
+    "noData": "No data"
+  },
+  "labels": {
+    "id": "id",
+    "name": "name",
+    "category": "category",
+    "note": "note",
+    "taxrate": "taxrate",
+    "created_date": "created_date",
+    "effect_date": "effect_date",
+    "expire_date": "expire_date"
+  },
+  "category": {
+    "title": "Brew Category Maintenance",
+    "subtitle": "Supabase-backed CRUD for brew categories",
+    "editTitle": "Edit Category",
+    "newTitle": "New Category",
+    "idHelp": "Leave blank for auto-generated id",
+    "deleteTitle": "Delete Category",
+    "deleteConfirm": "Are you sure you want to delete {id}? This cannot be undone.",
+    "selectPlaceholder": "-- Select category --"
+  },
+  "tax": {
+    "title": "Beer Tax Maintenance",
+    "subtitle": "Supabase-backed CRUD for beer tax table",
+    "editTitle": "Edit Beer Tax",
+    "newTitle": "Create Beer Tax",
+    "categorySelect": "-- Select category --"
+  },
+  "errors": {
+    "required": "{field} is required",
+    "mustBeInteger": "{field} must be an integer",
+    "mustBeNumber": "{field} must be a number",
+    "rateMin": "{field} must be >= 0",
+    "expireAfter": "expire_date must be after effect_date"
+  }
+}
+

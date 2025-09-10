@@ -76,6 +76,15 @@
       >
         <div class="flex items-center gap-2 2xsm:gap-3">
           <!-- <ThemeToggler /> -->
+          <select
+            class="h-9 border rounded px-2 text-sm bg-white dark:bg-gray-900 dark:border-gray-700"
+            v-model="lang"
+            @change="onChangeLang"
+            aria-label="Language selector"
+          >
+            <option value="en">EN</option>
+            <option value="ja">日本語</option>
+          </select>
           <NotificationMenu />
         </div>
         <UserMenu />
@@ -85,7 +94,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useSidebar } from '@/composables/useSidebar'
 import ThemeToggler from '../common/ThemeToggler.vue'
 import SearchBar from './header/SearchBar.vue'
@@ -116,4 +126,10 @@ const isApplicationMenuOpen = ref(false)
 const toggleApplicationMenu = () => {
   isApplicationMenuOpen.value = !isApplicationMenuOpen.value
 }
+
+// i18n language toggle
+const { locale } = useI18n()
+const lang = ref(locale.value || 'en')
+const onChangeLang = () => { locale.value = lang.value }
+watch(locale, (v) => { if (v !== lang.value) lang.value = v as string })
 </script>

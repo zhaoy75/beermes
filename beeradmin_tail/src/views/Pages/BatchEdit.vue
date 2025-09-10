@@ -19,54 +19,53 @@
 
     <!-- Lot Summary -->
     <section class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 mb-4">
-      <h2 class="text-lg font-semibold mb-3">Lot Summary</h2>
+      <h2 class="text-lg font-semibold mb-3">{{ $t('batch.edit.lotSummary') }}</h2>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-          <label for="lotId" class="block text-sm text-gray-600 mb-1">Lot ID</label>
+          <label for="lotId" class="block text-sm text-gray-600 mb-1">{{ $t('batch.edit.lotId') }}</label>
           <input id="lotId" v-model.trim="lot.lotId" class="w-full h-[42px] border rounded px-3"
-            placeholder="2025-IPA-001" />
+            :placeholder="$t('batch.edit.lotIdPh')" />
         </div>
         <div>
-          <label for="beerName" class="block text-sm text-gray-600 mb-1">Beer Name</label>
+          <label for="beerName" class="block text-sm text-gray-600 mb-1">{{ $t('batch.edit.beerName') }}</label>
           <input id="beerName" v-model.trim="lot.beerName" class="w-full h-[42px] border rounded px-3"
-            placeholder="Galaxy IPA" />
+            :placeholder="$t('batch.edit.beerNamePh')" />
         </div>
         <div>
-          <label for="style" class="block text-sm text-gray-600 mb-1">Style</label>
+          <label for="style" class="block text-sm text-gray-600 mb-1">{{ $t('batch.edit.style') }}</label>
           <input id="style" v-model.trim="lot.style" class="w-full h-[42px] border rounded px-3"
-            placeholder="IPA / Stout / Lager" />
+            :placeholder="$t('batch.edit.stylePh')" />
         </div>
         <div>
-          <label for="batchSize" class="block text-sm text-gray-600 mb-1">Batch Size (L)</label>
+          <label for="batchSize" class="block text-sm text-gray-600 mb-1">{{ $t('batch.edit.batchSize') }}</label>
           <input id="batchSize" type="number" min="0" step="0.1" v-model.number="lot.batchSize"
-            class="w-full h-[42px] border rounded px-3" placeholder="20" />
+            class="w-full h-[42px] border rounded px-3" :placeholder="$t('batch.edit.batchSizePh')" />
         </div>
         <div>
-          <label for="og" class="block text-sm text-gray-600 mb-1">Target OG</label>
+          <label for="og" class="block text-sm text-gray-600 mb-1">{{ $t('batch.edit.targetOG') }}</label>
           <input id="og" type="number" step="0.001" v-model.number="lot.targetOG"
-            class="w-full h-[42px] border rounded px-3" placeholder="1.060" />
+            class="w-full h-[42px] border rounded px-3" :placeholder="$t('batch.edit.targetOGPh')" />
         </div>
         <div>
-          <label for="fg" class="block text-sm text-gray-600 mb-1">Target FG</label>
+          <label for="fg" class="block text-sm text-gray-600 mb-1">{{ $t('batch.edit.targetFG') }}</label>
           <input id="fg" type="number" step="0.001" v-model.number="lot.targetFG"
-            class="w-full h-[42px] border rounded px-3" placeholder="1.012" />
+            class="w-full h-[42px] border rounded px-3" :placeholder="$t('batch.edit.targetFGPh')" />
         </div>
         <div>
-          <label for="brewDate" class="block text-sm text-gray-600 mb-1">Brew Date</label>
+          <label for="brewDate" class="block text-sm text-gray-600 mb-1">{{ $t('batch.edit.brewDate') }}</label>
           <input id="brewDate" type="date" v-model="lot.brewDate" class="w-full h-[42px] border rounded px-3" />
         </div>
         <div class="sm:col-span-2">
-          <label for="notes" class="block text-sm text-gray-600 mb-1">Lot Notes</label>
+          <label for="notes" class="block text-sm text-gray-600 mb-1">{{ $t('batch.edit.lotNotes') }}</label>
           <input id="notes" v-model.trim="lot.notes" class="w-full h-[42px] border rounded px-3"
-            placeholder="hops, yeast, targets..." />
+            :placeholder="$t('batch.edit.lotNotesPh')" />
         </div>
       </div>
       <div class="flex items-center gap-2 mt-3 text-sm">
         <span
-          class="inline-flex items-center gap-1 rounded-full border px-2 py-1 text-emerald-700 border-emerald-200 bg-emerald-50">Est.
-          ABV: {{ estABV.toFixed(1) }}%</span>
+          class="inline-flex items-center gap-1 rounded-full border px-2 py-1 text-emerald-700 border-emerald-200 bg-emerald-50">{{ $t('batch.edit.estAbv') }} {{ estABV.toFixed(1) }}%</span>
         <span class="inline-flex items-center gap-1 rounded-full border px-2 py-1"
-          :class="attenuationBadge.class">Attenuation: {{ attenuation.toFixed(0) }}%</span>
+          :class="attenuationBadge.class">{{ $t('batch.edit.attenuation') }} {{ attenuation.toFixed(0) }}%</span>
       </div>
     </section>
 
@@ -82,18 +81,18 @@
             </svg>
             <span class="font-semibold">{{ proc.title }}</span>
           </div>
-          <span class="text-xs rounded-full border px-2 py-1" :class="sectionBadge(proc)">{{ sectionStatus(proc)
+          <span class="text-xs rounded-full border px-2 py-1" :class="sectionBadge(proc)">{{ tStatus(sectionStatus(proc))
             }}</span>
         </summary>
         <div class="px-4 pb-4 pt-0">
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label :for="proc.key + '-start'" class="block text-sm text-gray-600 mb-1">Start</label>
+              <label :for="proc.key + '-start'" class="block text-sm text-gray-600 mb-1">{{ $t('batch.edit.sections.start') }}</label>
               <input :id="proc.key + '-start'" type="datetime-local" v-model="proc.data.start"
                 class="w-full h-[42px] border rounded px-3" />
             </div>
             <div>
-              <label :for="proc.key + '-end'" class="block text-sm text-gray-600 mb-1">End</label>
+              <label :for="proc.key + '-end'" class="block text-sm text-gray-600 mb-1">{{ $t('batch.edit.sections.end') }}</label>
               <input :id="proc.key + '-end'" type="datetime-local" v-model="proc.data.end"
                 class="w-full h-[42px] border rounded px-3" />
             </div>
@@ -106,32 +105,32 @@
                 :placeholder="field.placeholder || ''" class="w-full h-[42px] border rounded px-3" />
             </div>
             <div class="sm:col-span-2">
-              <label :for="proc.key + '-notes'" class="block text-sm text-gray-600 mb-1">Notes</label>
+              <label :for="proc.key + '-notes'" class="block text-sm text-gray-600 mb-1">{{ $t('batch.edit.sections.notes') }}</label>
               <textarea :id="proc.key + '-notes'" v-model="proc.data.notes" class="w-full min-h-[88px] border rounded p-3"
                 placeholder="Observations, deviations, next actions..."></textarea>
             </div>
           </div>
           <div class="flex flex-wrap gap-2 mt-3">
-            <button class="px-3 py-2 text-sm border rounded hover:bg-gray-50" @click="clearSection(proc)">Clear</button>
+            <button class="px-3 py-2 text-sm border rounded hover:bg-gray-50" @click="clearSection(proc)">{{ $t('common.cancel') }}</button>
             <button class="px-3 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700"
-              @click="markDone(proc)">Mark Done</button>
+              @click="markDone(proc)">{{ $t('batch.statusMap.Done') }}</button>
           </div>
-          <p v-if="proc.doneAt" class="text-xs text-gray-500 mt-2">Done at: {{ fmt(proc.doneAt) }}</p>
+          <p v-if="proc.doneAt" class="text-xs text-gray-500 mt-2">{{ $t('batch.statusMap.Done') }}: {{ fmt(proc.doneAt) }}</p>
         </div>
       </details>
     </section>
 
     <!-- Audit / Footer Actions -->
     <section class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 mt-4">
-      <h3 class="text-base font-semibold mb-1">Audit</h3>
+      <h3 class="text-base font-semibold mb-1">{{ $t('common.actions') }}</h3>
       <p class="text-sm text-gray-600">Autosave: {{ lastSaved ? ('saved ' + timeAgo(lastSaved)) : 'pending…' }}</p>
       <div class="flex gap-2 mt-3 flex-wrap">
-        <button class="px-3 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700" @click="save()">Save</button>
-        <button class="px-3 py-2 text-sm border rounded hover:bg-gray-50" @click="exportJSON()">Export JSON</button>
+        <button class="px-3 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700" @click="save()">{{ $t('batch.edit.actions.save') }}</button>
+        <button class="px-3 py-2 text-sm border rounded hover:bg-gray-50" @click="exportJSON()">{{ $t('batch.edit.actions.export') }}</button>
         <input id="importFile" ref="importEl" type="file" accept="application/json" class="hidden"
           @change="importJSON($event)" />
-        <button class="px-3 py-2 text-sm border rounded hover:bg-gray-50" @click="importEl?.click()">Import</button>
-        <button class="px-3 py-2 text-sm border rounded hover:bg-gray-50" @click="resetAll()">Reset</button>
+        <button class="px-3 py-2 text-sm border rounded hover:bg-gray-50" @click="importEl?.click()">{{ $t('batch.edit.actions.import') }}</button>
+        <button class="px-3 py-2 text-sm border rounded hover:bg-gray-50" @click="resetAll()">{{ $t('batch.edit.actions.reset') }}</button>
       </div>
     </section>
   </AdminLayout>
@@ -139,10 +138,12 @@
 
 <script setup>
 import {  computed, reactive, watch, ref  } from "vue";
+import { useI18n } from 'vue-i18n'
 import AdminLayout from "@/components/layout/AdminLayout.vue";
 import PageBreadcrumb from "@/components/common/PageBreadcrumb.vue";
 
-const currentPageTitle = ref("バッチ情報編集");
+const { t } = useI18n()
+const currentPageTitle = computed(() => t('batch.edit.title'))
 const DEFAULT_PROCESSES = [
   {
     key: 'milling', title: 'Milling', fields: [
@@ -249,9 +250,9 @@ const attenuationBadge = computed(() => {
 const overallStatus = computed(() => {
   const total = processes.length
   const done = processes.filter(p => p.doneAt).length
-  if (done === 0) return { text: 'Not started', class: 'border border-red-200 bg-red-50 text-red-700', dot: 'bg-red-600' }
-  if (done < total) return { text: `In progress (${done}/${total})`, class: 'border border-amber-200 bg-amber-50 text-amber-700', dot: 'bg-amber-500' }
-  return { text: 'Complete', class: 'border border-emerald-200 bg-emerald-50 text-emerald-700', dot: 'bg-emerald-600' }
+  if (done === 0) return { text: t('batch.statusMap.Not started'), class: 'border border-red-200 bg-red-50 text-red-700', dot: 'bg-red-600' }
+  if (done < total) return { text: `${t('batch.statusMap.In progress')} (${done}/${total})`, class: 'border border-amber-200 bg-amber-50 text-amber-700', dot: 'bg-amber-500' }
+  return { text: t('batch.statusMap.Complete'), class: 'border border-emerald-200 bg-emerald-50 text-emerald-700', dot: 'bg-emerald-600' }
 })
 
 function sectionStatus(proc) {
@@ -266,6 +267,8 @@ function sectionBadge(proc) {
   if (s === 'In progress') return 'text-amber-700 border border-amber-200 bg-amber-50'
   return 'text-gray-600 border border-gray-200 bg-gray-50'
 }
+
+const tStatus = (s) => t('batch.statusMap.' + s)
 
 // --- Actions
 function toggle(proc) { proc.open = !proc.open }
@@ -321,13 +324,13 @@ function importJSON(evt) {
         }))
       }
       save()
-    } catch { alert('Invalid JSON file') }
+    } catch { alert(t('batch.edit.actions.invalidJson')) }
     evt.target.value = ''
   }
   reader.readAsText(file)
 }
 function resetAll() {
-  if (!confirm('Reset all data?')) return
+  if (!confirm(t('batch.edit.actions.confirmReset'))) return
   localStorage.removeItem(STORAGE_KEY)
   Object.assign(lot, { lotId: '', beerName: '', style: '', batchSize: '', targetOG: '', targetFG: '', brewDate: '', notes: '' })
   processes.splice(0, processes.length, ...DEFAULT_PROCESSES.map(p => blankSection(p)))
@@ -335,7 +338,6 @@ function resetAll() {
 }
 
 // Auto-save
-let t
 function debounce(fn, ms = 600) { return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms) } }
 const debouncedSave = debounce(save)
 watch(lot, debouncedSave, { deep: true })

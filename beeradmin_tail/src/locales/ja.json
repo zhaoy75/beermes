@@ -11,6 +11,70 @@
     "actions": "操作",
     "noData": "データなし"
   },
+  "batch": {
+    "statusMap": {
+      "Not started": "未開始",
+      "In progress": "進行中",
+      "Complete": "完了",
+      "Done": "完了",
+      "Empty": "未入力"
+    },
+    "list": {
+      "title": "バッチ一覧",
+      "searchTitle": "ロット検索",
+      "reset": "リセット",
+      "status": "ステータス",
+      "all": "すべて",
+      "startDate": "開始日",
+      "endDate": "終了日",
+      "keyword": "キーワード（Lot ID / ビール名）",
+      "keywordPh": "例: 2025-IPA / Galaxy",
+      "showing": "{total}件中{count}件を表示",
+      "lotId": "ロットID",
+      "beerName": "ビール名",
+      "brewDate": "仕込み日",
+      "finish": "終了",
+      "style": "スタイル",
+      "batchL": "仕込み量 (L)",
+      "view": "表示",
+      "edit": "編集",
+      "noMatch": "検索条件に一致するロットはありません。"
+    },
+    "edit": {
+      "title": "バッチ情報編集",
+      "lotSummary": "ロット概要",
+      "lotId": "ロットID",
+      "lotIdPh": "2025-IPA-001",
+      "beerName": "ビール名",
+      "beerNamePh": "Galaxy IPA",
+      "style": "スタイル",
+      "stylePh": "IPA / Stout / Lager",
+      "batchSize": "仕込み量 (L)",
+      "batchSizePh": "20",
+      "targetOG": "目標 OG",
+      "targetOGPh": "1.060",
+      "targetFG": "目標 FG",
+      "targetFGPh": "1.012",
+      "brewDate": "仕込み日",
+      "lotNotes": "メモ",
+      "lotNotesPh": "ホップ、酵母、目標など",
+      "estAbv": "推定 ABV:",
+      "attenuation": "減衰率:",
+      "sections": {
+        "start": "開始",
+        "end": "終了",
+        "notes": "メモ"
+      },
+      "actions": {
+        "save": "保存",
+        "export": "JSON エクスポート",
+        "import": "インポート",
+        "reset": "リセット",
+        "invalidJson": "JSON ファイルが不正です",
+        "confirmReset": "すべてのデータをリセットしますか？"
+      }
+    }
+  },
   "labels": {
     "id": "ID",
     "name": "名称",
@@ -46,4 +110,3 @@
     "expireAfter": "適用終了日は適用開始日より後である必要があります"
   }
 }
-

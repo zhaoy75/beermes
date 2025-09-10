@@ -3,33 +3,33 @@
     <PageBreadcrumb :pageTitle="currentPageTitle" />
     <section class="mb-6 bg-white shadow rounded-lg p-4 border border-gray-200" aria-labelledby="searchHeading">
       <div class="flex items-center justify-between mb-4">
-        <h2 id="searchHeading" class="text-lg font-semibold">Search Lots</h2>
+        <h2 id="searchHeading" class="text-lg font-semibold">{{ $t('batch.list.searchTitle') }}</h2>
         <button class="text-sm px-3 py-1 rounded border border-gray-300 hover:bg-gray-100"
-          @click="resetSearch">Reset</button>
+          @click="resetSearch">{{ $t('batch.list.reset') }}</button>
       </div>
       <form class="grid grid-cols-1 md:grid-cols-4 gap-4" @submit.prevent>
         <div>
-          <label for="status" class="block text-sm text-gray-600 mb-1">Status</label>
+          <label for="status" class="block text-sm text-gray-600 mb-1">{{ $t('batch.list.status') }}</label>
           <select id="status" v-model="search.status" class="w-full h-[30px] border rounded px-3 py-2">
-            <option value="">All</option>
-            <option v-for="s in STATUSES" :key="s" :value="s">{{ s }}</option>
+            <option value="">{{ $t('batch.list.all') }}</option>
+            <option v-for="s in STATUSES" :key="s" :value="s">{{ $t('batch.statusMap.' + s) }}</option>
           </select>
         </div>
         <div>
-          <label for="start" class="block text-sm text-gray-600 mb-1">Start date</label>
+          <label for="start" class="block text-sm text-gray-600 mb-1">{{ $t('batch.list.startDate') }}</label>
           <input id="start" type="date" v-model="search.startDate" class="w-full h-[30px] border rounded px-3 py-2" />
         </div>
         <div>
-          <label for="end" class="block text-sm text-gray-600 mb-1">End date</label>
+          <label for="end" class="block text-sm text-gray-600 mb-1">{{ $t('batch.list.endDate') }}</label>
           <input id="end" type="date" v-model="search.endDate" class="w-full h-[30px] border rounded px-3 py-2" />
         </div>
         <div>
-          <label for="q" class="block text-sm text-gray-600 mb-1">Keyword (Lot ID / Beer name)</label>
-          <input id="q" type="search" v-model.trim="search.q" placeholder="e.g., 2025-IPA / Galaxy"
+          <label for="q" class="block text-sm text-gray-600 mb-1">{{ $t('batch.list.keyword') }}</label>
+          <input id="q" type="search" v-model.trim="search.q" :placeholder="$t('batch.list.keywordPh')"
             class="w-full h-[30px] border rounded px-3 py-2" />
         </div>
       </form>
-      <div class="mt-2 text-sm text-gray-500">Showing {{ filteredLots.length }} / {{ lots.length }} lots</div>
+      <div class="mt-2 text-sm text-gray-500">{{ $t('batch.list.showing', { count: filteredLots.length, total: lots.length }) }}</div>
     </section>
 
 
@@ -42,18 +42,18 @@
         <div v-for="lot in filteredLots" :key="lot.lotId" role="listitem" class="border rounded-lg p-4 shadow">
           <div class="flex items-center justify-between mb-2">
             <div class="font-semibold">{{ lot.lotId }} <span class="text-gray-500">• {{ lot.beerName }}</span></div>
-            <span :class="['px-2 py-1 text-xs rounded-full', statusClass(lot.status)]">{{ lot.status }}</span>
+            <span :class="['px-2 py-1 text-xs rounded-full', statusClass(lot.status)]">{{ $t('batch.statusMap.' + lot.status) }}</span>
           </div>
           <div class="text-sm space-y-1">
-            <div><strong>Brew date:</strong> {{ fmtDate(lot.brewDate) }}</div>
-            <div><strong>Finish:</strong> {{ lot.finishDate ? fmtDate(lot.finishDate) : '—' }}</div>
-            <div><strong>Style:</strong> {{ lot.style }}</div>
-            <div><strong>Batch (L):</strong> {{ lot.batchSize }}</div>
+            <div><strong>{{ $t('batch.list.brewDate') }}:</strong> {{ fmtDate(lot.brewDate) }}</div>
+            <div><strong>{{ $t('batch.list.finish') }}:</strong> {{ lot.finishDate ? fmtDate(lot.finishDate) : '—' }}</div>
+            <div><strong>{{ $t('batch.list.style') }}:</strong> {{ lot.style }}</div>
+            <div><strong>{{ $t('batch.list.batchL') }}:</strong> {{ lot.batchSize }}</div>
           </div>
           <div class="flex justify-end gap-2 mt-3">
-            <button class="px-3 py-1 text-sm border rounded hover:bg-gray-100" @click="$emit('view', lot)">View</button>
+            <button class="px-3 py-1 text-sm border rounded hover:bg-gray-100" @click="$emit('view', lot)">{{ $t('batch.list.view') }}</button>
             <button class="px-3 py-1 text-sm rounded bg-blue-600 text-white hover:bg-blue-700"
-              @click="$emit('edit', lot)">Edit</button>
+              @click="goEdit(lot)">{{ $t('batch.list.edit') }}</button>
           </div>
         </div>
       </div>
@@ -63,35 +63,34 @@
         <table class="min-w-full border border-gray-200 divide-y divide-gray-200">
           <thead class="bg-gray-50">
             <tr>
-              <th class="px-3 py-2 text-left text-sm font-medium text-gray-600">Lot ID</th>
-              <th class="px-3 py-2 text-left text-sm font-medium text-gray-600">Beer name</th>
-              <th class="px-3 py-2 text-left text-sm font-medium text-gray-600">Status</th>
-              <th class="px-3 py-2 text-left text-sm font-medium text-gray-600">Brew date</th>
-              <th class="px-3 py-2 text-left text-sm font-medium text-gray-600">Finish</th>
-              <th class="px-3 py-2 text-left text-sm font-medium text-gray-600">Style</th>
-              <th class="px-3 py-2 text-right text-sm font-medium text-gray-600">Batch (L)</th>
-              <th class="px-3 py-2 text-sm font-medium text-gray-600">Actions</th>
+              <th class="px-3 py-2 text-left text-sm font-medium text-gray-600">{{ $t('batch.list.lotId') }}</th>
+              <th class="px-3 py-2 text-left text-sm font-medium text-gray-600">{{ $t('batch.list.beerName') }}</th>
+              <th class="px-3 py-2 text-left text-sm font-medium text-gray-600">{{ $t('batch.list.status') }}</th>
+              <th class="px-3 py-2 text-left text-sm font-medium text-gray-600">{{ $t('batch.list.brewDate') }}</th>
+              <th class="px-3 py-2 text-left text-sm font-medium text-gray-600">{{ $t('batch.list.finish') }}</th>
+              <th class="px-3 py-2 text-left text-sm font-medium text-gray-600">{{ $t('batch.list.style') }}</th>
+              <th class="px-3 py-2 text-right text-sm font-medium text-gray-600">{{ $t('batch.list.batchL') }}</th>
+              <th class="px-3 py-2 text-sm font-medium text-gray-600">{{ $t('common.actions') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100">
             <tr v-for="lot in filteredLots" :key="lot.lotId" class="hover:bg-gray-50">
               <td class="px-3 py-2 font-semibold">{{ lot.lotId }}</td>
               <td class="px-3 py-2">{{ lot.beerName }}</td>
-              <td class="px-3 py-2"><span :class="['px-2 py-1 text-xs rounded-full', statusClass(lot.status)]">{{
-                  lot.status }}</span></td>
+              <td class="px-3 py-2"><span :class="['px-2 py-1 text-xs rounded-full', statusClass(lot.status)]">{{ $t('batch.statusMap.' + lot.status) }}</span></td>
               <td class="px-3 py-2">{{ fmtDate(lot.brewDate) }}</td>
               <td class="px-3 py-2">{{ lot.finishDate ? fmtDate(lot.finishDate) : '—' }}</td>
               <td class="px-3 py-2">{{ lot.style }}</td>
               <td class="px-3 py-2 text-right">{{ lot.batchSize }}</td>
               <td class="px-3 py-2 space-x-2">
                 <button class="px-3 py-1 text-sm border rounded hover:bg-gray-100"
-                  @click="$emit('view', lot)">View</button>
+                  @click="$emit('view', lot)">{{ $t('batch.list.view') }}</button>
                 <button class="px-3 py-1 text-sm rounded bg-blue-600 text-white hover:bg-blue-700"
-                  @click="$emit('edit', lot)">Edit</button>
+                  @click="goEdit(lot)">{{ $t('batch.list.edit') }}</button>
               </td>
             </tr>
             <tr v-if="filteredLots.length === 0">
-              <td colspan="8" class="px-3 py-6 text-center text-gray-500">No lots match the search condition.</td>
+              <td colspan="8" class="px-3 py-6 text-center text-gray-500">{{ $t('batch.list.noMatch') }}</td>
             </tr>
           </tbody>
         </table>
@@ -103,12 +102,23 @@
 <script setup>
 import { computed, reactive, watch } from 'vue'
 import { ref } from "vue";
+import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import AdminLayout from "@/components/layout/AdminLayout.vue";
 import PageBreadcrumb from "@/components/common/PageBreadcrumb.vue";
 
-const currentPageTitle = ref("バッチ管理");
+const { t } = useI18n()
+const currentPageTitle = computed(() => t('batch.list.title'));
 
 const STATUSES = ['Not started', 'In progress', 'Complete']
+
+const router = useRouter()
+function goEdit(lot) {
+  try {
+    const id = lot?.lotId ?? ''
+    router.push({ path: '/batchedit', query: id ? { id } : undefined })
+  } catch {}
+}
 
 const props = defineProps({
   lots: {

@@ -11,6 +11,70 @@
     "actions": "Actions",
     "noData": "No data"
   },
+  "batch": {
+    "statusMap": {
+      "Not started": "Not started",
+      "In progress": "In progress",
+      "Complete": "Complete",
+      "Done": "Done",
+      "Empty": "Empty"
+    },
+    "list": {
+      "title": "Batch List",
+      "searchTitle": "Search Lots",
+      "reset": "Reset",
+      "status": "Status",
+      "all": "All",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "keyword": "Keyword (Lot ID / Beer name)",
+      "keywordPh": "e.g., 2025-IPA / Galaxy",
+      "showing": "Showing {count} / {total} lots",
+      "lotId": "Lot ID",
+      "beerName": "Beer name",
+      "brewDate": "Brew date",
+      "finish": "Finish",
+      "style": "Style",
+      "batchL": "Batch (L)",
+      "view": "View",
+      "edit": "Edit",
+      "noMatch": "No lots match the search condition."
+    },
+    "edit": {
+      "title": "Batch Editor",
+      "lotSummary": "Lot Summary",
+      "lotId": "Lot ID",
+      "lotIdPh": "2025-IPA-001",
+      "beerName": "Beer Name",
+      "beerNamePh": "Galaxy IPA",
+      "style": "Style",
+      "stylePh": "IPA / Stout / Lager",
+      "batchSize": "Batch Size (L)",
+      "batchSizePh": "20",
+      "targetOG": "Target OG",
+      "targetOGPh": "1.060",
+      "targetFG": "Target FG",
+      "targetFGPh": "1.012",
+      "brewDate": "Brew Date",
+      "lotNotes": "Lot Notes",
+      "lotNotesPh": "hops, yeast, targets...",
+      "estAbv": "Est. ABV:",
+      "attenuation": "Attenuation:",
+      "sections": {
+        "start": "Start",
+        "end": "End",
+        "notes": "Notes"
+      },
+      "actions": {
+        "save": "Save",
+        "export": "Export JSON",
+        "import": "Import",
+        "reset": "Reset",
+        "invalidJson": "Invalid JSON file",
+        "confirmReset": "Reset all data?"
+      }
+    }
+  },
   "labels": {
     "id": "id",
     "name": "name",
@@ -46,4 +110,3 @@
     "expireAfter": "expire_date must be after effect_date"
   }
 }
-

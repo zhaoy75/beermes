@@ -38,7 +38,8 @@
       "batchL": "Batch (L)",
       "view": "View",
       "edit": "Edit",
-      "noMatch": "No lots match the search condition."
+      "noMatch": "No lots match the search condition.",
+      "deleteConfirm": "Delete lot {id}? This cannot be undone."
     },
     "edit": {
       "title": "Batch Editor",
@@ -108,5 +109,161 @@
     "mustBeNumber": "{field} must be a number",
     "rateMin": "{field} must be >= 0",
     "expireAfter": "expire_date must be after effect_date"
+  }
+  ,
+  "dashboard": {
+    "title": "Dashboard",
+    "kpis": {
+      "inProgress": "In‑progress lots",
+      "completed30d": "Lots completed (30d)",
+      "volume30d": "Volume brewed (30d)",
+      "revenue30d": "Revenue (30d)"
+    },
+    "lists": {
+      "inProgressTitle": "In‑progress Lots",
+      "brewedMeta": "Brewed {date} · {style} · {liters} L",
+      "inProgressBadge": "In progress",
+      "none": "No in‑progress lots."
+    },
+    "todos": {
+      "title": "To‑do",
+      "add": "Add",
+      "due": "Due: {date}",
+      "remove": "Remove",
+      "empty": "No tasks. Enjoy a beer 🍺",
+      "newPlaceholder": "New task…",
+      "quickNew": "New task"
+    },
+    "charts": {
+      "volumeTitle": "Total Volume Manufactured",
+      "monthly": "Monthly (last 12 months)",
+      "revenueTitle": "Total Revenue",
+      "volumeDataset": "Volume (L)",
+      "revenueDataset": "Revenue (¥)"
+    }
+  }
+  ,
+  "sidebar": {
+    "group": { "main": "Menu" },
+    "items": {
+      "dashboard": "Dashboard",
+      "production": "Production",
+      "batchList": "Batch List",
+      "batchEdit": "Batch Edit",
+      "liquorTax": "Liquor Tax",
+      "packing": "Packing",
+      "taxCalc": "Tax Calculation",
+      "unpaidMove": "Unpaid Movement",
+      "returnBook": "Return Book",
+      "exportDutyFree": "Export Duty Free",
+      "recipe": "Recipe",
+      "recipeRegister": "Recipe Register",
+      "recipeList": "Recipe List",
+      "inventory": "Inventory",
+      "rawMaterial": "Raw Materials",
+      "productInventory": "Product Inventory",
+      "waste": "Waste",
+      "masterMaintenance": "Master Maintenance",
+      "catalogMaster": "Catalog Master",
+      "categoryMaster": "Category Master",
+      "taxMaster": "Tax Master",
+      "packingMaster": "Packing Master",
+      "beerMaster": "Beer Master",
+      "materialMaster": "Material Master",
+      "vendorMaster": "Vendor Master",
+      "customerMaster": "Customer Master",
+      "shipDestMaster": "Shipping Destinations",
+      "calendar": "Calendar",
+      "profile": "User Profile"
+    }
+  }
+  ,
+  "calendar": {
+    "title": "Calendar",
+    "subtitle": "Plan your next big moment: schedule or edit an event to stay on track",
+    "editTitle": "Edit Event",
+    "newTitle": "Add Event",
+    "fields": {
+      "title": "Event Title",
+      "color": "Event Color",
+      "start": "Enter Start Date",
+      "end": "Enter End Date"
+    },
+    "colors": {
+      "Danger": "Danger",
+      "Success": "Success",
+      "Primary": "Primary",
+      "Warning": "Warning"
+    },
+    "actions": {
+      "add": "Add Event",
+      "addShort": "Add Event +",
+      "update": "Update Changes",
+      "loadBrew": "Load Brew Events"
+    }
+  }
+  ,
+  "recipe": {
+    "statusMap": {
+      "draft": "draft",
+      "released": "released",
+      "retired": "retired"
+    },
+    "list": {
+      "title": "Recipe List",
+      "searchTitle": "Search",
+      "reset": "Reset",
+      "status": "Status",
+      "all": "All",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "keyword": "Keyword (name/version)",
+      "keywordPh": "e.g., IPA v1",
+      "showing": "Showing {count} records",
+      "recipeId": "Recipe ID",
+      "name": "Name",
+      "version": "Version",
+      "created": "Created",
+      "orgId": "Org ID (UUID)",
+      "editTitle": "Edit Recipe",
+      "newTitle": "Create Recipe",
+      "deleteConfirm": "Delete version {version} of {name}?"
+    },
+    "edit": {
+      "title": "Recipe Edit",
+      "selectVersion": "Select Recipe Version",
+      "recipe": "Recipe",
+      "version": "Version",
+      "selectPlaceholder": "select",
+      "addFromTemplate": "Add step from template…",
+      "add": "Add",
+      "saveAll": "Save All",
+      "stepKey": "Step Key",
+      "name": "Name",
+      "defaultDurationMin": "Default Duration (min)",
+      "config": "Config",
+      "qc": "QC (optional)",
+      "clear": "Clear",
+      "enable": "Enable",
+      "metricName": "Name",
+      "unit": "Unit",
+      "target": "Target",
+      "tolerance": "Tolerance",
+      "whenOptional": "when (optional)",
+      "addMetric": "Add metric",
+      "noStepsYet": "No steps yet",
+      "saved": "Saved",
+      "schemas": {
+        "MILL": "Milling",
+        "MASH": "Mashing",
+        "LAUTER": "Lautering",
+        "BOIL": "Boil",
+        "CHILL": "Chilling",
+        "FERM": "Fermentation",
+        "DRYHOP": "Dry Hopping",
+        "COND": "Conditioning",
+        "PACKAGE": "Packaging"
+      }
+    }
   }
 }

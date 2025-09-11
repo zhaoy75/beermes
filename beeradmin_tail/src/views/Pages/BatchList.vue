@@ -4,8 +4,12 @@
     <section class="mb-6 bg-white shadow rounded-lg p-4 border border-gray-200" aria-labelledby="searchHeading">
       <div class="flex items-center justify-between mb-4">
         <h2 id="searchHeading" class="text-lg font-semibold">{{ $t('batch.list.searchTitle') }}</h2>
-        <button class="text-sm px-3 py-1 rounded border border-gray-300 hover:bg-gray-100"
-          @click="resetSearch">{{ $t('batch.list.reset') }}</button>
+        <div class="flex items-center gap-2">
+          <button class="text-sm px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-700"
+            @click="goCreate">{{ $t('common.new') }}</button>
+          <button class="text-sm px-3 py-1 rounded border border-gray-300 hover:bg-gray-100"
+            @click="resetSearch">{{ $t('batch.list.reset') }}</button>
+        </div>
       </div>
       <form class="grid grid-cols-1 md:grid-cols-4 gap-4" @submit.prevent>
         <div>
@@ -29,7 +33,7 @@
             class="w-full h-[30px] border rounded px-3 py-2" />
         </div>
       </form>
-      <div class="mt-2 text-sm text-gray-500">{{ $t('batch.list.showing', { count: filteredLots.length, total: lots.length }) }}</div>
+      <div class="mt-2 text-sm text-gray-500">{{ $t('batch.list.showing', { count: filteredLots.length, total: allLots.length }) }}</div>
     </section>
 
 
@@ -39,7 +43,7 @@
 
       <!-- Mobile cards -->
       <div class="grid gap-4 md:hidden" role="list">
-        <div v-for="lot in filteredLots" :key="lot.lotId" role="listitem" class="border rounded-lg p-4 shadow">
+        <div v-for="lot in sortedLots" :key="lot.lotId" role="listitem" class="border rounded-lg p-4 shadow">
           <div class="flex items-center justify-between mb-2">
             <div class="font-semibold">{{ lot.lotId }} <span class="text-gray-500">• {{ lot.beerName }}</span></div>
             <span :class="['px-2 py-1 text-xs rounded-full', statusClass(lot.status)]">{{ $t('batch.statusMap.' + lot.status) }}</span>
@@ -54,6 +58,8 @@
             <button class="px-3 py-1 text-sm border rounded hover:bg-gray-100" @click="$emit('view', lot)">{{ $t('batch.list.view') }}</button>
             <button class="px-3 py-1 text-sm rounded bg-blue-600 text-white hover:bg-blue-700"
               @click="goEdit(lot)">{{ $t('batch.list.edit') }}</button>
+            <button class="px-3 py-1 text-sm rounded bg-red-600 text-white hover:bg-red-700"
+              @click="onDelete(lot)">{{ $t('common.delete') }}</button>
           </div>
         </div>
       </div>
@@ -63,18 +69,53 @@
         <table class="min-w-full border border-gray-200 divide-y divide-gray-200">
           <thead class="bg-gray-50">
             <tr>
-              <th class="px-3 py-2 text-left text-sm font-medium text-gray-600">{{ $t('batch.list.lotId') }}</th>
-              <th class="px-3 py-2 text-left text-sm font-medium text-gray-600">{{ $t('batch.list.beerName') }}</th>
-              <th class="px-3 py-2 text-left text-sm font-medium text-gray-600">{{ $t('batch.list.status') }}</th>
-              <th class="px-3 py-2 text-left text-sm font-medium text-gray-600">{{ $t('batch.list.brewDate') }}</th>
-              <th class="px-3 py-2 text-left text-sm font-medium text-gray-600">{{ $t('batch.list.finish') }}</th>
-              <th class="px-3 py-2 text-left text-sm font-medium text-gray-600">{{ $t('batch.list.style') }}</th>
-              <th class="px-3 py-2 text-right text-sm font-medium text-gray-600">{{ $t('batch.list.batchL') }}</th>
+              <th class="px-3 py-2 text-left text-sm font-medium text-gray-600">
+                <button class="inline-flex items-center gap-1" @click="setSort('lotId')">
+                  {{ $t('batch.list.lotId') }}
+                  <span class="text-xs opacity-60">{{ sortIcon('lotId') }}</span>
+                </button>
+              </th>
+              <th class="px-3 py-2 text-left text-sm font-medium text-gray-600">
+                <button class="inline-flex items-center gap-1" @click="setSort('beerName')">
+                  {{ $t('batch.list.beerName') }}
+                  <span class="text-xs opacity-60">{{ sortIcon('beerName') }}</span>
+                </button>
+              </th>
+              <th class="px-3 py-2 text-left text-sm font-medium text-gray-600">
+                <button class="inline-flex items-center gap-1" @click="setSort('status')">
+                  {{ $t('batch.list.status') }}
+                  <span class="text-xs opacity-60">{{ sortIcon('status') }}</span>
+                </button>
+              </th>
+              <th class="px-3 py-2 text-left text-sm font-medium text-gray-600">
+                <button class="inline-flex items-center gap-1" @click="setSort('brewDate')">
+                  {{ $t('batch.list.brewDate') }}
+                  <span class="text-xs opacity-60">{{ sortIcon('brewDate') }}</span>
+                </button>
+              </th>
+              <th class="px-3 py-2 text-left text-sm font-medium text-gray-600">
+                <button class="inline-flex items-center gap-1" @click="setSort('finishDate')">
+                  {{ $t('batch.list.finish') }}
+                  <span class="text-xs opacity-60">{{ sortIcon('finishDate') }}</span>
+                </button>
+              </th>
+              <th class="px-3 py-2 text-left text-sm font-medium text-gray-600">
+                <button class="inline-flex items-center gap-1" @click="setSort('style')">
+                  {{ $t('batch.list.style') }}
+                  <span class="text-xs opacity-60">{{ sortIcon('style') }}</span>
+                </button>
+              </th>
+              <th class="px-3 py-2 text-right text-sm font-medium text-gray-600">
+                <button class="inline-flex items-center gap-1" @click="setSort('batchSize')">
+                  {{ $t('batch.list.batchL') }}
+                  <span class="text-xs opacity-60">{{ sortIcon('batchSize') }}</span>
+                </button>
+              </th>
               <th class="px-3 py-2 text-sm font-medium text-gray-600">{{ $t('common.actions') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100">
-            <tr v-for="lot in filteredLots" :key="lot.lotId" class="hover:bg-gray-50">
+            <tr v-for="lot in sortedLots" :key="lot.lotId" class="hover:bg-gray-50">
               <td class="px-3 py-2 font-semibold">{{ lot.lotId }}</td>
               <td class="px-3 py-2">{{ lot.beerName }}</td>
               <td class="px-3 py-2"><span :class="['px-2 py-1 text-xs rounded-full', statusClass(lot.status)]">{{ $t('batch.statusMap.' + lot.status) }}</span></td>
@@ -87,6 +128,8 @@
                   @click="$emit('view', lot)">{{ $t('batch.list.view') }}</button>
                 <button class="px-3 py-1 text-sm rounded bg-blue-600 text-white hover:bg-blue-700"
                   @click="goEdit(lot)">{{ $t('batch.list.edit') }}</button>
+                <button class="px-3 py-1 text-sm rounded bg-red-600 text-white hover:bg-red-700"
+                  @click="onDelete(lot)">{{ $t('common.delete') }}</button>
               </td>
             </tr>
             <tr v-if="filteredLots.length === 0">
@@ -100,8 +143,7 @@
 </template>
 
 <script setup>
-import { computed, reactive, watch } from 'vue'
-import { ref } from "vue";
+import { computed, reactive, watch, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import AdminLayout from "@/components/layout/AdminLayout.vue";
@@ -120,6 +162,10 @@ function goEdit(lot) {
   } catch {}
 }
 
+function goCreate() {
+  router.push({ path: '/batchedit', query: { new: '1' } })
+}
+
 const props = defineProps({
   lots: {
     type: Array,
@@ -131,6 +177,10 @@ const props = defineProps({
     ]
   }
 })
+
+// Local data to support in-page deletion
+const allLots = ref([...props.lots])
+watch(() => props.lots, (val) => { allLots.value = [...val] }, { deep: true })
 
 const search = reactive({ status: '', startDate: '', endDate: '', q: '' })
 
@@ -167,7 +217,7 @@ const inRange = (dateStr, startStr, endStr) => {
 
 const filteredLots = computed(() => {
   const q = search.q.toLowerCase()
-  return props.lots.filter(lot => {
+  return allLots.value.filter(lot => {
     const statusOk = !search.status || lot.status === search.status
     const dateOk = inRange(lot.brewDate, search.startDate, search.endDate)
     const textOk = !q || `${lot.lotId} ${lot.beerName}`.toLowerCase().includes(q)
@@ -175,10 +225,53 @@ const filteredLots = computed(() => {
   })
 })
 
+const sortKey = ref('lotId')
+const sortDir = ref('asc') // 'asc' | 'desc'
+
+function setSort(key) {
+  if (sortKey.value === key) {
+    sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc'
+  } else {
+    sortKey.value = key
+    sortDir.value = 'asc'
+  }
+}
+
+function sortIcon(key) {
+  if (sortKey.value !== key) return '↕'
+  return sortDir.value === 'asc' ? '▲' : '▼'
+}
+
+const sortedLots = computed(() => {
+  const arr = [...filteredLots.value]
+  const dir = sortDir.value === 'asc' ? 1 : -1
+  const key = sortKey.value
+  const val = (l) => {
+    if (key === 'batchSize') return Number(l.batchSize ?? 0)
+    if (key === 'brewDate' || key === 'finishDate') return l[key] ? new Date(l[key] + 'T00:00:00').getTime() : 0
+    const v = (l[key] ?? '').toString().toLowerCase()
+    return v
+  }
+  arr.sort((a, b) => {
+    const va = val(a)
+    const vb = val(b)
+    if (va < vb) return -1 * dir
+    if (va > vb) return 1 * dir
+    return 0
+  })
+  return arr
+})
+
 function resetSearch() {
   search.status = ''
   search.startDate = ''
   search.endDate = ''
   search.q = ''
+}
+
+function onDelete(lot) {
+  const id = lot?.lotId || ''
+  if (!confirm(t('batch.list.deleteConfirm', { id }))) return
+  allLots.value = allLots.value.filter(l => l.lotId !== lot.lotId)
 }
 </script>

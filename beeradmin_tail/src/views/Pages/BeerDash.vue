@@ -4,19 +4,19 @@
     <!-- Top stats -->
     <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
       <div class="rounded-xl border border-gray-200 p-4 shadow-sm">
-        <div class="text-xs text-gray-500">In‑progress lots</div>
+        <div class="text-xs text-gray-500">{{ $t('dashboard.kpis.inProgress') }}</div>
         <div class="mt-1 text-2xl font-bold">{{ inProgressCount }}</div>
       </div>
       <div class="rounded-xl border border-gray-200 p-4 shadow-sm">
-        <div class="text-xs text-gray-500">Lots completed (30d)</div>
+        <div class="text-xs text-gray-500">{{ $t('dashboard.kpis.completed30d') }}</div>
         <div class="mt-1 text-2xl font-bold">{{ completed30d }}</div>
       </div>
       <div class="rounded-xl border border-gray-200 p-4 shadow-sm">
-        <div class="text-xs text-gray-500">Volume brewed (30d)</div>
+        <div class="text-xs text-gray-500">{{ $t('dashboard.kpis.volume30d') }}</div>
         <div class="mt-1 text-2xl font-bold">{{ volume30d.toLocaleString() }} L</div>
       </div>
       <div class="rounded-xl border border-gray-200 p-4 shadow-sm">
-        <div class="text-xs text-gray-500">Revenue (30d)</div>
+        <div class="text-xs text-gray-500">{{ $t('dashboard.kpis.revenue30d') }}</div>
         <div class="mt-1 text-2xl font-bold">¥{{ revenue30d.toLocaleString() }}</div>
       </div>
     </section>
@@ -28,7 +28,7 @@
         <!-- In-progress lots list -->
         <div class="rounded-xl border border-gray-200 shadow-sm">
           <div class="p-4 border-b border-gray-100 flex items-center justify-between">
-            <h2 class="text-base font-semibold">In‑progress Lots</h2>
+            <h2 class="text-base font-semibold">{{ $t('dashboard.lists.inProgressTitle') }}</h2>
             <span class="text-xs px-2 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200">{{
               inProgressCount }}</span>
           </div>
@@ -36,38 +36,37 @@
             <li v-for="lot in inProgressLots" :key="lot.lotId" class="p-3 flex items-center justify-between">
               <div>
                 <div class="font-medium">{{ lot.lotId }} <span class="text-gray-500">• {{ lot.beerName }}</span></div>
-                <div class="text-xs text-gray-500">Brewed {{ fmtDate(lot.brewDate) }} · {{ lot.style }} · {{
-                  lot.batchSize }} L</div>
+                <div class="text-xs text-gray-500">{{ $t('dashboard.lists.brewedMeta', { date: fmtDate(lot.brewDate), style: lot.style, liters: lot.batchSize }) }}</div>
               </div>
-              <span class="text-xs rounded-full px-2 py-1 bg-amber-100 text-amber-800">In progress</span>
+              <span class="text-xs rounded-full px-2 py-1 bg-amber-100 text-amber-800">{{ $t('batch.statusMap.In progress') }}</span>
             </li>
-            <li v-if="inProgressLots.length === 0" class="p-4 text-sm text-gray-500">No in‑progress lots.</li>
+            <li v-if="inProgressLots.length === 0" class="p-4 text-sm text-gray-500">{{ $t('dashboard.lists.none') }}</li>
           </ul>
         </div>
 
         <!-- TODOs -->
         <div class="rounded-xl border border-gray-200 shadow-sm">
           <div class="p-4 border-b border-gray-100 flex items-center justify-between">
-            <h2 class="text-base font-semibold">To‑do</h2>
-            <button class="text-sm px-2 py-1 border rounded hover:bg-gray-50" @click="addQuickTodo">Add</button>
+            <h2 class="text-base font-semibold">{{ $t('dashboard.todos.title') }}</h2>
+            <button class="text-sm px-2 py-1 border rounded hover:bg-gray-50" @click="addQuickTodo">{{ $t('dashboard.todos.add') }}</button>
           </div>
           <ul class="divide-y divide-gray-100">
             <li v-for="t in todos" :key="t.id" class="p-3 flex items-center gap-3">
               <input type="checkbox" v-model="t.done" class="h-4 w-4" />
               <div class="flex-1">
                 <div :class="['text-sm', t.done ? 'line-through text-gray-400' : '']">{{ t.text }}</div>
-                <div class="text-xs text-gray-500" v-if="t.due">Due: {{ fmtDate(t.due) }}</div>
+                <div class="text-xs text-gray-500" v-if="t.due">{{ $t('dashboard.todos.due', { date: fmtDate(t.due) }) }}</div>
               </div>
-              <button class="text-xs text-gray-500 hover:text-red-600" @click="removeTodo(t.id)">Remove</button>
+              <button class="text-xs text-gray-500 hover:text-red-600" @click="removeTodo(t.id)">{{ $t('dashboard.todos.remove') }}</button>
             </li>
-            <li v-if="todos.length === 0" class="p-4 text-sm text-gray-500">No tasks. Enjoy a beer 🍺</li>
+            <li v-if="todos.length === 0" class="p-4 text-sm text-gray-500">{{ $t('dashboard.todos.empty') }}</li>
           </ul>
           <div class="p-3 flex gap-2">
-            <input v-model.trim="newTodo" placeholder="New task…" class="flex-1 border rounded px-3 h-[38px]"
+            <input v-model.trim="newTodo" :placeholder="$t('dashboard.todos.newPlaceholder')" class="flex-1 border rounded px-3 h-[38px]"
               @keyup.enter="createTodo" />
             <input v-model="newTodoDue" type="date" class="border rounded px-2 h-[38px]" />
             <button class="px-3 rounded bg-blue-600 text-white hover:bg-blue-700 h-[38px]"
-              @click="createTodo">Add</button>
+              @click="createTodo">{{ $t('dashboard.todos.add') }}</button>
           </div>
         </div>
       </div>
@@ -76,8 +75,8 @@
       <div class="space-y-4 lg:col-span-2">
         <div class="rounded-xl border border-gray-200 p-3 shadow-sm">
           <div class="flex items-center justify-between mb-2">
-            <h2 class="text-base font-semibold">Total Volume Manufactured</h2>
-            <div class="text-xs text-gray-500">Monthly (last 12 months)</div>
+            <h2 class="text-base font-semibold">{{ $t('dashboard.charts.volumeTitle') }}</h2>
+            <div class="text-xs text-gray-500">{{ $t('dashboard.charts.monthly') }}</div>
           </div>
           <div class="max-h-[320px]">
             <canvas ref="volCanvas" height="140"></canvas>
@@ -85,8 +84,8 @@
         </div>
         <div class="rounded-xl border border-gray-200 p-3 shadow-sm">
           <div class="flex items-center justify-between mb-2">
-            <h2 class="text-base font-semibold">Total Revenue</h2>
-            <div class="text-xs text-gray-500">Monthly (last 12 months)</div>
+            <h2 class="text-base font-semibold">{{ $t('dashboard.charts.revenueTitle') }}</h2>
+            <div class="text-xs text-gray-500">{{ $t('dashboard.charts.monthly') }}</div>
           </div>
           <div class="max-h-[320px]">
             <canvas ref="revCanvas" height="140"></canvas>
@@ -98,12 +97,13 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, reactive, watch } from "vue";
+import { useI18n } from 'vue-i18n'
 import AdminLayout from "@/components/layout/AdminLayout.vue";
 import PageBreadcrumb from "@/components/common/PageBreadcrumb.vue";
 
-const currentPageTitle = ref("バッチ管理");
-import { computed, onMounted, onBeforeUnmount, reactive, watch } from 'vue'
+const { t } = useI18n()
+const currentPageTitle = computed(() => t('dashboard.title'))
 import { Chart, registerables } from 'chart.js'
 Chart.register(...registerables)
 
@@ -146,7 +146,7 @@ const todos = reactive([
 let todoSeq = 3
 const newTodo = ref('')
 const newTodoDue = ref('')
-const addQuickTodo = () => { newTodo.value = 'New task'; createTodo() }
+const addQuickTodo = () => { newTodo.value = t('dashboard.todos.quickNew'); createTodo() }
 const createTodo = () => {
   if(!newTodo.value.trim()) return
   todos.push({ id:todoSeq++, text:newTodo.value.trim(), done:false, due:newTodoDue.value || '' })
@@ -217,8 +217,8 @@ function makeLineChart(ctx, labels, data, label){
 }
 
 onMounted(()=>{
-  volChart = makeLineChart(volCanvas.value.getContext('2d'), volumeMonthly.value.labels, volumeMonthly.value.data, 'Volume (L)')
-  revChart = makeLineChart(revCanvas.value.getContext('2d'), revenueMonthly.value.labels, revenueMonthly.value.data, 'Revenue (¥)')
+  volChart = makeLineChart(volCanvas.value.getContext('2d'), volumeMonthly.value.labels, volumeMonthly.value.data, t('dashboard.charts.volumeDataset'))
+  revChart = makeLineChart(revCanvas.value.getContext('2d'), revenueMonthly.value.labels, revenueMonthly.value.data, t('dashboard.charts.revenueDataset'))
 })
 
 onBeforeUnmount(()=>{ volChart?.destroy(); revChart?.destroy() })

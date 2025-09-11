@@ -137,8 +137,9 @@
 </template>
 
 <script setup>
-import {  computed, reactive, watch, ref  } from "vue";
+import {  computed, reactive, watch, ref, onMounted  } from "vue";
 import { useI18n } from 'vue-i18n'
+import { useRoute } from 'vue-router'
 import AdminLayout from "@/components/layout/AdminLayout.vue";
 import PageBreadcrumb from "@/components/common/PageBreadcrumb.vue";
 
@@ -344,7 +345,17 @@ watch(lot, debouncedSave, { deep: true })
 watch(processes, debouncedSave, { deep: true })
 
 // Init
-load()
+const route = useRoute()
+onMounted(() => {
+  if (route.query && (route.query.new === '1' || route.query.new === 1)) {
+    try { localStorage.removeItem(STORAGE_KEY) } catch {}
+    Object.assign(lot, { lotId: '', beerName: '', style: '', batchSize: '', targetOG: '', targetFG: '', brewDate: '', notes: '' })
+    processes.splice(0, processes.length, ...DEFAULT_PROCESSES.map(p => blankSection(p)))
+    lastSaved.value = null
+  } else {
+    load()
+  }
+})
 </script>
 
 <!-- Using Tailwind utility classes; no scoped styles needed. -->

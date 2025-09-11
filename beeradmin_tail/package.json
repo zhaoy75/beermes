@@ -42,12 +42,13 @@
     "vuevectormap": "^2.0.1"
   },
   "devDependencies": {
+    "@babel/preset-react": "^7.27.1",
     "@tailwindcss/postcss": "^4.0.0",
     "@tsconfig/node22": "^22.0.0",
     "@types/node": "^22.10.7",
     "@types/tabulator-tables": "^6.2.9",
     "@vitejs/plugin-vue": "^5.2.1",
-    "@vitejs/plugin-vue-jsx": "^4.1.1",
+    "@vitejs/plugin-vue-jsx": "^4.2.0",
     "@vue/eslint-config-prettier": "^10.1.0",
     "@vue/eslint-config-typescript": "^14.3.0",
     "@vue/tsconfig": "^0.7.0",

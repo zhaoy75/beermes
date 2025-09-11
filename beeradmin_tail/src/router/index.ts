@@ -24,6 +24,24 @@ const router = createRouter({
         requiresAuth: true ,
       },
     },
+    {
+      path: '/recipeEdit/:recipeId?',
+      name: 'レシピ編集',
+      component: () => import('../views/pages/RecipeEdit.vue'),
+      meta: {
+        title: 'レシピ編集',
+        requiresAuth: true ,
+      },
+    },
+    {
+      path: '/recipeList',
+      name: 'レシピ一覧',
+      component: () => import('../views/pages/RecipeList.vue'),
+      meta: {
+        title: 'レシピ一覧',
+        requiresAuth: true ,
+      },
+    },
 
     {
       path: '/batchlist',

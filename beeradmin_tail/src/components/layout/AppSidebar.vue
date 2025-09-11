@@ -213,6 +213,7 @@
 <script setup>
 import { ref, computed } from "vue";
 import { useRoute } from "vue-router";
+import { useI18n } from 'vue-i18n'
 
 import {
   GridIcon,
@@ -235,16 +236,17 @@ import { useSidebar } from "@/composables/useSidebar";
 import path from "path";
 
 const route = useRoute();
+const { t } = useI18n()
 
 const { isExpanded, isMobileOpen, isHovered, openSubmenu } = useSidebar();
 
-const menuGroups = [
+const menuGroups = computed(() => [
   {
-    title: "メニュー",
+    title: t('sidebar.group.main'),
     items: [
       {
         icon: GridIcon,
-        name: "概要",
+        name: t('sidebar.items.dashboard'),
         path: "/",
         // subItems: [
         //   { name: "Ecommerce", path: "/", pro: false },
@@ -253,63 +255,59 @@ const menuGroups = [
       },
       {
         icon: CalenderIcon,
-        name: "生産管理",
+        name: t('sidebar.items.production'),
         subItems: [
-          { name: "バッチ管理", path: "/batchlist", pro: false },
-          { name: "バッチ情報更新", path: "/batchedit", pro: false }
+          { name: t('sidebar.items.batchList'), path: "/batchlist", pro: false },
+          { name: t('sidebar.items.calendar'), path: "/calendar", pro: false }
         ],
       },
       {
         icon: CalenderIcon,
-        name: "酒税計算",
+        name: t('sidebar.items.liquorTax'),
         subItems: [
-          { name: "充填管理", path: "/packing", pro: false},
-          { name: "課税計算", path: "/taxcalc", pro: false },
-          { name: "未納税搬入出", path: "/unpaid", pro: false },
-          { name: "戻入帳", path: "/return", pro: false },
-          { name: "輸出免税帳", path: "/export", pro: false }
+          { name: t('sidebar.items.packing'), path: "/packing", pro: false},
+          { name: t('sidebar.items.taxCalc'), path: "/taxcalc", pro: false },
+          { name: t('sidebar.items.unpaidMove'), path: "/unpaid", pro: false },
+          { name: t('sidebar.items.returnBook'), path: "/return", pro: false },
+          { name: t('sidebar.items.exportDutyFree'), path: "/export", pro: false }
         ],
 
       },
       {
         icon: CalenderIcon,
-        name: "レシピ管理",
+        name: t('sidebar.items.recipe'),
         subItems: [
-          { name: "レシピ登録", path: "/receiptMng", pro: false},
+          { name: t('sidebar.items.recipeList'), path: "/recipeList", pro: false},
         ],
       },
       {
         icon: CalenderIcon,
-        name: "在庫管理",
+        name: t('sidebar.items.inventory'),
         subItems: [
-          { name: "原材料管理", path: "/packing", pro: false},
-          { name: "製品在庫管理", path: "/taxcalc", pro: false },
-          { name: "廃棄物管理", path: "/unpaid", pro: false },
+          { name: t('sidebar.items.rawMaterial'), path: "/packing", pro: false},
+          { name: t('sidebar.items.productInventory'), path: "/taxcalc", pro: false },
+          { name: t('sidebar.items.waste'), path: "/unpaid", pro: false },
         ],
       },
       {
         icon: CalenderIcon,
-        name: "マスタメンテナンス",
+        name: t('sidebar.items.masterMaintenance'),
         subItems: [
-          { name: "カテゴリ登録", path: "/categoryMaster", pro: false },
-          { name: "酒税登録", path: "/taxMaster", pro: false },
-          { name: "詰口登録", path: "/PackingMaster", pro: false },
-          { name: "ビール銘柄登録", path: "/BeerMaster", pro: false },
-          { name: "原材料登録", path: "/MaterialMaster", pro: false },
-          { name: "仕入先登録", path: "/VendorMaster", pro: false },
-          { name: "顧客登録", path: "/CustomerMaster", pro: false },
-          { name: "搬入出先登録", path: "/CustomerMaster", pro: false }
+          { name: t('sidebar.items.categoryMaster'), path: "/categoryMaster", pro: false },
+          { name: t('sidebar.items.taxMaster'), path: "/taxMaster", pro: false },
+          { name: t('sidebar.items.packingMaster'), path: "/PackingMaster", pro: false },
+          { name: t('sidebar.items.beerMaster'), path: "/BeerMaster", pro: false },
+          { name: t('sidebar.items.materialMaster'), path: "/MaterialMaster", pro: false },
+          { name: t('sidebar.items.vendorMaster'), path: "/VendorMaster", pro: false },
+          { name: t('sidebar.items.customerMaster'), path: "/CustomerMaster", pro: false },
+          { name: t('sidebar.items.shipDestMaster'), path: "/CustomerMaster", pro: false }
         ],
       },
 
-      {
-        icon: CalenderIcon,
-        name: "Calendar",
-        path: "/calendar",
-      },
+      
       {
         icon: UserCircleIcon,
-        name: "User Profile",
+        name: t('sidebar.items.profile'),
         path: "/profile",
       },
 
@@ -370,7 +368,7 @@ const menuGroups = [
   //     // ... Add other menu items here
   //   ],
   // },
-];
+]);
 
 const isActive = (path) => route.path === path;
 
@@ -380,7 +378,7 @@ const toggleSubmenu = (groupIndex, itemIndex) => {
 };
 
 const isAnySubmenuRouteActive = computed(() => {
-  return menuGroups.some((group) =>
+  return menuGroups.value.some((group) =>
     group.items.some(
       (item) =>
         item.subItems && item.subItems.some((subItem) => isActive(subItem.path))
@@ -393,7 +391,7 @@ const isSubmenuOpen = (groupIndex, itemIndex) => {
   return (
     openSubmenu.value === key ||
     (isAnySubmenuRouteActive.value &&
-      menuGroups[groupIndex].items[itemIndex].subItems?.some((subItem) =>
+      menuGroups.value[groupIndex].items[itemIndex].subItems?.some((subItem) =>
         isActive(subItem.path)
       ))
   );

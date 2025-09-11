@@ -17,17 +17,13 @@
             <h5
               class="mb-2 font-semibold text-gray-800 modal-title text-theme-xl dark:text-white/90 lg:text-2xl"
             >
-              {{ selectedEvent ? 'Edit Event' : 'Add Event' }}
+              {{ selectedEvent ? $t('calendar.editTitle') : $t('calendar.newTitle') }}
             </h5>
-            <p class="text-sm text-gray-500 dark:text-gray-400">
-              Plan your next big moment: schedule or edit an event to stay on track
-            </p>
+            <p class="text-sm text-gray-500 dark:text-gray-400">{{ $t('calendar.subtitle') }}</p>
 
             <div class="mt-8">
               <div>
-                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                  Event Title
-                </label>
+                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">{{ $t('calendar.fields.title') }}</label>
                 <input
                   v-model="eventTitle"
                   type="text"
@@ -36,9 +32,7 @@
               </div>
 
               <div class="mt-6">
-                <label class="block mb-4 text-sm font-medium text-gray-700 dark:text-gray-400">
-                  Event Color
-                </label>
+                <label class="block mb-4 text-sm font-medium text-gray-700 dark:text-gray-400">{{ $t('calendar.fields.color') }}</label>
                 <div class="flex flex-wrap items-center gap-4 sm:gap-5">
                   <div v-for="(value, key) in calendarsEvents" :key="key" class="n-chk">
                     <div :class="`form-check form-check-${value} form-check-inline`">
@@ -61,7 +55,7 @@
                             <span class="w-2 h-2 bg-white rounded-full dark:bg-transparent"></span>
                           </span>
                         </span>
-                        {{ key }}
+                        {{ $t('calendar.colors.' + key) }}
                       </label>
                     </div>
                   </div>
@@ -69,9 +63,7 @@
               </div>
 
               <div class="mt-6">
-                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                  Enter Start Date
-                </label>
+                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">{{ $t('calendar.fields.start') }}</label>
                 <input
                   v-model="eventStartDate"
                   type="date"
@@ -80,9 +72,7 @@
               </div>
 
               <div class="mt-6">
-                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                  Enter End Date
-                </label>
+                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">{{ $t('calendar.fields.end') }}</label>
                 <input
                   v-model="eventEndDate"
                   type="date"
@@ -202,13 +192,13 @@
                 @click="closeModal"
                 class="flex w-full justify-center rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] sm:w-auto"
               >
-                Close
+                {{ $t('common.close') }}
               </button>
               <button
                 @click="handleAddOrUpdateEvent"
                 class="btn btn-success btn-update-event flex w-full justify-center rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600 sm:w-auto"
               >
-                {{ selectedEvent ? 'Update Changes' : 'Add Event' }}
+                {{ selectedEvent ? $t('calendar.actions.update') : $t('calendar.actions.add') }}
               </button>
             </div>
           </div>
@@ -222,8 +212,10 @@
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 
-const currentPageTitle = ref('Calendar')
-import { ref, reactive, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
+const { t, locale } = useI18n()
+const currentPageTitle = computed(() => t('calendar.title'))
+import { ref, reactive, onMounted, computed, watch } from 'vue'
 import FullCalendar from '@fullcalendar/vue3'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
@@ -239,34 +231,27 @@ const eventEndDate = ref('')
 const eventLevel = ref('')
 const events = ref([])
 
-const calendarsEvents = reactive({
-  Danger: 'danger',
-  Success: 'success',
-  Primary: 'primary',
-  Warning: 'warning',
-})
+const calendarsEvents = reactive({ Danger: 'danger', Success: 'success', Primary: 'primary', Warning: 'warning' })
 
 onMounted(() => {
+  // Hard-coded brew manufacturing process events (sample timeline)
+  const today = new Date()
+  const d = (n) => {
+    const x = new Date(today)
+    x.setDate(x.getDate() + n)
+    return x.toISOString().split('T')[0]
+  }
+  const lot = '2025-IPA-001'
   events.value = [
-    {
-      id: '1',
-      title: 'Event Conf.',
-      start: new Date().toISOString().split('T')[0],
-      extendedProps: { calendar: 'Danger' },
-    },
-    {
-      id: '2',
-      title: 'Meeting',
-      start: new Date(Date.now() + 86400000).toISOString().split('T')[0],
-      extendedProps: { calendar: 'Success' },
-    },
-    {
-      id: '3',
-      title: 'Workshop',
-      start: new Date(Date.now() + 172800000).toISOString().split('T')[0],
-      end: new Date(Date.now() + 259200000).toISOString().split('T')[0],
-      extendedProps: { calendar: 'Primary' },
-    },
+    { id: 'proc-milling', title: `${lot} — Milling`, start: d(0), allDay: true, extendedProps: { calendar: 'Primary' } },
+    { id: 'proc-mashing', title: `${lot} — Mashing`, start: d(0), allDay: true, extendedProps: { calendar: 'Primary' } },
+    { id: 'proc-lautering', title: `${lot} — Lautering`, start: d(0), allDay: true, extendedProps: { calendar: 'Primary' } },
+    { id: 'proc-boil', title: `${lot} — Boil`, start: d(0), allDay: true, extendedProps: { calendar: 'Warning' } },
+    { id: 'proc-whirlpool', title: `${lot} — Whirlpool`, start: d(0), allDay: true, extendedProps: { calendar: 'Warning' } },
+    { id: 'proc-cooling', title: `${lot} — Cooling`, start: d(0), allDay: true, extendedProps: { calendar: 'Success' } },
+    { id: 'proc-fermentation', title: `${lot} — Fermentation`, start: d(1), end: d(14), allDay: true, extendedProps: { calendar: 'Danger' } },
+    { id: 'proc-conditioning', title: `${lot} — Conditioning`, start: d(15), end: d(20), allDay: true, extendedProps: { calendar: 'Success' } },
+    { id: 'proc-packaging', title: `${lot} — Packaging`, start: d(21), allDay: true, extendedProps: { calendar: 'Primary' } },
   ]
 })
 
@@ -367,9 +352,14 @@ const calendarOptions = reactive({
   eventContent: renderEventContent,
   customButtons: {
     addEventButton: {
-      text: 'Add Event +',
+      text: t('calendar.actions.addShort'),
       click: openModal,
     },
   },
+})
+
+watch(locale, () => {
+  // update dynamic button text on locale change
+  calendarOptions.customButtons.addEventButton.text = t('calendar.actions.addShort')
 })
 </script>

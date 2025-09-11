@@ -40,7 +40,7 @@
         class="group border border-gray-200 rounded-xl bg-white shadow-sm overflow-hidden">
         <summary class="flex items-center justify-between gap-3 cursor-pointer select-none p-4">
           <div class="flex items-center gap-2">
-            <span class="font-semibold">{{ s.step_key }} — {{ s.name }}</span>
+            <span class="font-semibold">{{ $t('recipe.edit.schemas.' + s.step_key) }}</span>
             <span class="text-xs text-gray-500">(pos {{ s.position }})</span>
           </div>
           <div class="flex items-center gap-2">
@@ -53,14 +53,6 @@
         </summary>
         <div class="px-4 pb-4 pt-0">
           <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
-            <div>
-              <label class="block text-sm text-gray-600 mb-1">{{ $t('recipe.edit.stepKey') }}</label>
-              <input v-model.trim="s.step_key" class="w-full h-[38px] border rounded px-2" />
-            </div>
-            <div class="md:col-span-2">
-              <label class="block text-sm text-gray-600 mb-1">{{ $t('recipe.edit.name') }}</label>
-              <input v-model.trim="s.name" class="w-full h-[38px] border rounded px-2" />
-            </div>
             <div>
               <label class="block text-sm text-gray-600 mb-1">{{ $t('recipe.edit.defaultDurationMin') }}</label>
               <input v-model.number="s.default_duration_minutes" type="number" min="0"

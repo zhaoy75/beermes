@@ -1,658 +1,1277 @@
 <template>
   <AdminLayout>
-    <PageBreadcrumb :pageTitle="$t('recipe.edit.title')" />
+    <PageBreadcrumb :pageTitle="pageTitle" />
 
-    <!-- Select recipe/version -->
-    <section class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 mb-4">
-      <h2 class="text-lg font-semibold mb-3">{{ $t('recipe.edit.selectVersion') }}</h2>
-      <div v-if="!selectionLocked" class="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
-        <div>
-          <label class="block text-sm text-gray-600 mb-1">{{ $t('recipe.edit.recipe') }}</label>
-          <select v-model="selectedDefId" class="w-full h-[40px] border rounded px-3" @change="loadVersions">
-            <option :value="''">-- {{ $t('recipe.edit.selectPlaceholder') }} --</option>
-            <option v-for="d in definitions" :key="d.id" :value="d.id">{{ d.name }}</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-sm text-gray-600 mb-1">{{ $t('recipe.edit.version') }}</label>
-          <select v-model="selectedVersionId" class="w-full h-[40px] border rounded px-3" @change="loadSteps">
-            <option :value="''">-- {{ $t('recipe.edit.selectPlaceholder') }} --</option>
-            <option v-for="v in versions" :key="v.id" :value="v.id">{{ v.version }} ({{ v.status }})</option>
-          </select>
-        </div>
-      </div>
-      <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div class="p-3 border border-gray-200 rounded-lg bg-gray-50">
-          <p class="text-xs uppercase text-gray-500">{{ $t('recipe.edit.recipe') }}</p>
-          <p class="text-base font-semibold">{{ selectedDefinition?.name || selectedDefId }}</p>
-          <p v-if="selectedDefinition" class="text-xs text-gray-500">ID: {{ selectedDefinition.id }}</p>
-        </div>
-        <div class="p-3 border border-gray-200 rounded-lg bg-gray-50">
-          <p class="text-xs uppercase text-gray-500">{{ $t('recipe.edit.version') }}</p>
-          <p class="text-base font-semibold">{{ selectedVersion?.version || '-' }}</p>
-          <p v-if="selectedVersion" class="text-xs text-gray-500">{{ selectedVersion.status }}<span
-              v-if="selectedVersion.created_at"> · {{ formatDate(selectedVersion.created_at) }}</span></p>
-        </div>
-      </div>
-      <div class="flex gap-2 mt-4">
-        <select v-model="addKey" class="h-[40px] border rounded px-2 flex-1">
-          <option :value="''">{{ $t('recipe.edit.addFromTemplate') }}</option>
-          <option v-for="k in stepSchemaKeys" :key="k" :value="k">{{ schemaLabel(k) }}</option>
-        </select>
-        <button class="px-4 md:px-5 h-[40px] rounded bg-blue-600 text-white whitespace-nowrap shrink-0"
-          :disabled="!addKey || !selectedVersionId" @click="addStep">{{ $t('recipe.edit.add') }}</button>
-        <button class="px-4 md:px-5 h-[40px] rounded border whitespace-nowrap shrink-0"
-          :disabled="!selectedVersionId || saving" @click="saveAll">{{
-            saving ? $t('common.saving') : $t('recipe.edit.saveAll') }}</button>
-      </div>
-    </section>
+    <div class="space-y-6">
+      <section class="bg-white shadow rounded-lg border border-gray-200" aria-labelledby="recipeInfoHeading">
+        <header class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between p-4 border-b">
+          <div>
+            <h2 id="recipeInfoHeading" class="text-lg font-semibold text-gray-900">
+              {{ t('recipe.edit.infoTitle') }}
+            </h2>
+            <p class="text-sm text-gray-500">{{ t('recipe.edit.infoSubtitle') }}</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <button
+              class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-60"
+              :disabled="loadingRecipe"
+              @click="loadRecipe"
+            >
+              {{ t('common.refresh') }}
+            </button>
+            <button
+              class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
+              :disabled="savingRecipe"
+              @click="saveRecipeInfo"
+            >
+              {{ savingRecipe ? t('common.saving') : t('common.save') }}
+            </button>
+          </div>
+        </header>
 
-    <!-- Steps -->
-    <section v-if="selectedVersionId" class="space-y-3">
-      <details v-for="(s, idx) in steps" :key="s.localId" open
-        class="group border border-gray-200 rounded-xl bg-white shadow-sm overflow-hidden">
-        <summary class="flex items-center justify-between gap-3 cursor-pointer select-none p-4">
-          <div class="flex items-center gap-2">
-            <span class="font-semibold">{{ schemaLabel(s.step_key) }}</span>
-            <span class="text-xs text-gray-500">(pos {{ s.position }})</span>
+        <form class="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" @submit.prevent>
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.list.recipeId') }}<span class="text-red-600">*</span></label>
+            <input v-model.trim="recipeForm.code" class="w-full h-[40px] border rounded px-3" />
+            <p v-if="recipeErrors.code" class="text-xs text-red-600 mt-1">{{ recipeErrors.code }}</p>
           </div>
-          <div class="flex items-center gap-2">
-            <button class="px-2 py-1 text-xs border rounded" @click.stop="move(idx, -1)"
-              :disabled="idx === 0">↑</button>
-            <button class="px-2 py-1 text-xs border rounded" @click.stop="move(idx, 1)"
-              :disabled="idx === steps.length - 1">↓</button>
-            <button class="px-2 py-1 text-xs bg-red-600 text-white rounded" @click.stop="removeStep(idx)">{{
-              $t('common.delete') }}</button>
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.list.name') }}<span class="text-red-600">*</span></label>
+            <input v-model.trim="recipeForm.name" class="w-full h-[40px] border rounded px-3" />
+            <p v-if="recipeErrors.name" class="text-xs text-red-600 mt-1">{{ recipeErrors.name }}</p>
           </div>
-        </summary>
-        <div class="px-4 pb-4 pt-0">
-          <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
-            <div>
-              <label class="block text-sm text-gray-600 mb-1">{{ $t('recipe.edit.defaultDurationMin') }}</label>
-              <input v-model.number="s.default_duration_minutes" type="number" min="0"
-                class="w-full h-[38px] border rounded px-2" />
-            </div>
-          </div>
-
-          <!-- Config dynamic editor -->
-          <div class="border rounded-lg p-3">
-            <h4 class="font-semibold mb-2">{{ $t('recipe.edit.config') }}</h4>
-            <component :is="DynamicConfig" :modelValue="s.configObj" :schema="schemaFor(s.step_key)"
-              @update:modelValue="(val) => s.configObj = val" />
-          </div>
-
-          <!-- QC metrics (optional) -->
-          <div class="border rounded-lg p-3 mt-3">
-            <div class="flex items-center justify-between mb-2">
-              <h4 class="font-semibold">{{ $t('recipe.edit.qc') }}</h4>
-              <button class="px-2 py-1 text-xs border rounded" @click="toggleQc(s)">{{ s.qc?.metrics ?
-                $t('recipe.edit.clear') : $t('recipe.edit.enable') }}</button>
-            </div>
-            <div v-if="s.qc && Array.isArray(s.qc.metrics)" class="space-y-2">
-              <div v-for="(m, mi) in s.qc.metrics" :key="mi" class="grid grid-cols-1 md:grid-cols-5 gap-2 items-end">
-                <div><label class="block text-xs text-gray-600">{{ $t('recipe.edit.metricName') }}</label><input
-                    v-model.trim="m.name" class="w-full h-[34px] border rounded px-2" /></div>
-                <div><label class="block text-xs text-gray-600">{{ $t('recipe.edit.unit') }}</label><input
-                    v-model.trim="m.unit" class="w-full h-[34px] border rounded px-2" /></div>
-                <div><label class="block text-xs text-gray-600">{{ $t('recipe.edit.target') }}</label><input
-                    v-model.number="m.target" type="number" step="any" class="w-full h-[34px] border rounded px-2" />
-                </div>
-                <div><label class="block text-xs text-gray-600">{{ $t('recipe.edit.tolerance') }}</label><input
-                    v-model.number="m.tolerance" type="number" step="any" class="w-full h-[34px] border rounded px-2" />
-                </div>
-                <div class="flex gap-2"><input v-model.trim="m.when" class="w-full h-[34px] border rounded px-2"
-                    :placeholder="$t('recipe.edit.whenOptional')" /><button class="px-2 h-[34px] text-xs border rounded"
-                    @click="removeMetric(s, mi)">−</button></div>
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="block text-sm text-gray-600">{{ t('recipe.list.name') }}<span class="text-red-600">*</span></label>
+              <div class="flex items-center gap-2">
+                <span class="inline-flex items-center justify-center h-[32px] px-2 border rounded bg-gray-50 text-xs font-semibold">v{{ recipeForm.version }}</span>
+                <button
+                  type="button"
+                  class="px-3 py-1.5 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
+                  :disabled="versioning || savingRecipe"
+                  @click="versionUp"
+                >
+                  {{ versioning ? t('common.saving') : t('recipe.edit.versionUp') }}
+                </button>
               </div>
-              <button class="px-2 py-1 text-xs border rounded" @click="addMetric(s)">+ {{ $t('recipe.edit.addMetric')
-                }}</button>
+            </div>
+            <input v-model.trim="recipeForm.name" class="w-full h-[40px] border rounded px-3" />
+            <p v-if="recipeErrors.name" class="text-xs text-red-600 mt-1">{{ recipeErrors.name }}</p>
+          </div>
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.list.status') }}</label>
+            <select v-model="recipeForm.status" class="w-full h-[40px] border rounded px-3 bg-white">
+              <option v-for="status in STATUSES" :key="status" :value="status">
+                {{ statusLabel(status) }}
+              </option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.list.style') }}</label>
+            <input v-model.trim="recipeForm.style" class="w-full h-[40px] border rounded px-3" />
+          </div>
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.edit.batchSize') }}</label>
+            <input v-model.trim="recipeForm.batch_size_l" type="number" step="0.01" min="0" class="w-full h-[40px] border rounded px-3" />
+          </div>
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.edit.targetOg') }}</label>
+            <input v-model.trim="recipeForm.target_og" type="number" step="0.001" min="0" class="w-full h-[40px] border rounded px-3" />
+          </div>
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.edit.targetFg') }}</label>
+            <input v-model.trim="recipeForm.target_fg" type="number" step="0.001" min="0" class="w-full h-[40px] border rounded px-3" />
+          </div>
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.edit.targetAbv') }}</label>
+            <input v-model.trim="recipeForm.target_abv" type="number" step="0.01" min="0" class="w-full h-[40px] border rounded px-3" />
+          </div>
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.edit.targetIbu') }}</label>
+            <input v-model.trim="recipeForm.target_ibu" type="number" step="0.1" min="0" class="w-full h-[40px] border rounded px-3" />
+          </div>
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.edit.targetSrm') }}</label>
+            <input v-model.trim="recipeForm.target_srm" type="number" step="0.1" min="0" class="w-full h-[40px] border rounded px-3" />
+          </div>
+          <div class="lg:col-span-3">
+            <label class="block text-sm text-gray-600 mb-1">{{ t('labels.note') }}</label>
+            <textarea v-model.trim="recipeForm.notes" rows="3" class="w-full border rounded px-3 py-2"></textarea>
+          </div>
+        </form>
+      </section>
+
+      <section class="bg-white shadow rounded-lg border border-gray-200" aria-labelledby="ingredientHeading">
+        <header class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between p-4 border-b">
+          <div>
+            <h2 id="ingredientHeading" class="text-lg font-semibold text-gray-900">
+              {{ t('recipe.edit.ingredientsTitle') }}
+            </h2>
+            <p class="text-sm text-gray-500">{{ t('recipe.edit.ingredientsSubtitle') }}</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" @click="openIngredientCreate">
+              {{ t('recipe.edit.addIngredient') }}
+            </button>
+            <button
+              class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-60"
+              :disabled="ingredientsLoading"
+              @click="loadIngredients"
+            >
+              {{ t('common.refresh') }}
+            </button>
+          </div>
+        </header>
+
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50 text-xs uppercase text-gray-500">
+              <tr>
+                <th class="px-3 py-2 text-left">{{ t('recipe.edit.materialColumn') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('recipe.edit.amountColumn') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('recipe.edit.usageStage') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('labels.note') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('common.actions') }}</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 text-sm">
+              <tr v-for="row in ingredients" :key="row.id" class="hover:bg-gray-50">
+                <td class="px-3 py-2">
+                  <div class="font-medium text-gray-900">{{ materialLabel(row) }}</div>
+                  <div class="text-xs text-gray-500">{{ row.material?.code }}</div>
+                </td>
+                <td class="px-3 py-2">
+                  {{ row.amount ?? '—' }}
+                  <span v-if="row.uom" class="text-xs text-gray-500">{{ row.uom.code }}</span>
+                </td>
+                <td class="px-3 py-2">{{ row.usage_stage || '—' }}</td>
+                <td class="px-3 py-2 text-xs text-gray-600">{{ row.notes || '—' }}</td>
+                <td class="px-3 py-2 space-x-2">
+                  <button class="px-2 py-1 text-xs rounded border hover:bg-gray-100" @click="openIngredientEdit(row)">
+                    {{ t('common.edit') }}
+                  </button>
+                  <button class="px-2 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700" @click="deleteIngredient(row)">
+                    {{ t('common.delete') }}
+                  </button>
+                </td>
+              </tr>
+              <tr v-if="!ingredientsLoading && ingredients.length === 0">
+                <td colspan="5" class="px-3 py-6 text-center text-gray-500 text-sm">
+                  {{ t('recipe.edit.ingredientsEmpty') }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="bg-white shadow rounded-lg border border-gray-200" aria-labelledby="processHeading">
+        <header class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between p-4 border-b">
+          <div>
+            <h2 id="processHeading" class="text-lg font-semibold text-gray-900">
+              {{ t('recipe.edit.processTitle') }}
+            </h2>
+            <p class="text-sm text-gray-500">{{ t('recipe.edit.processSubtitle') }}</p>
+          </div>
+          <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" @click="openProcessCreate">
+            {{ t('recipe.edit.addProcess') }}
+          </button>
+        </header>
+
+        <div v-if="processesLoading" class="p-4 text-sm text-gray-500">{{ t('common.loading') }}</div>
+        <div v-else class="p-4 space-y-4">
+          <div v-if="processes.length === 0" class="text-sm text-gray-500">
+            {{ t('recipe.edit.processEmpty') }}
+          </div>
+          <article
+            v-for="process in processes"
+            :key="process.id"
+            class="border border-gray-200 rounded-lg"
+          >
+            <header class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between px-4 py-3 border-b">
+              <div>
+                <h3 class="text-base font-semibold text-gray-900">
+                  {{ process.name }}
+                  <span class="text-xs text-gray-500">v{{ process.version }}</span>
+                </h3>
+                <p class="text-xs text-gray-500">
+                  {{ process.is_active ? t('recipe.edit.processActive') : t('recipe.edit.processInactive') }}
+                </p>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <button class="px-3 py-1 text-sm rounded border hover:bg-gray-100" @click="openProcessEdit(process)">
+                  {{ t('common.edit') }}
+                </button>
+                <button class="px-3 py-1 text-sm rounded bg-red-600 text-white hover:bg-red-700" @click="deleteProcess(process)">
+                  {{ t('common.delete') }}
+                </button>
+              </div>
+            </header>
+
+            <div class="px-4 py-3 space-y-3">
+              <div v-if="process.notes" class="text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded p-3">
+                {{ process.notes }}
+              </div>
+
+              <div class="flex justify-between items-center">
+                <h4 class="text-sm font-semibold text-gray-700">{{ t('recipe.edit.stepsTitle') }}</h4>
+                <button class="px-3 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700" @click="openStepCreate(process)">
+                  {{ t('recipe.edit.addStep') }}
+                </button>
+              </div>
+
+              <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200 text-sm">
+                  <thead class="bg-gray-50 text-xs uppercase text-gray-500">
+                    <tr>
+                      <th class="px-3 py-2 text-left">#</th>
+                      <th class="px-3 py-2 text-left">{{ t('recipe.edit.stepType') }}</th>
+                      <th class="px-3 py-2 text-left">{{ t('recipe.edit.targetParams') }}</th>
+                      <th class="px-3 py-2 text-left">{{ t('recipe.edit.qaChecks') }}</th>
+                      <th class="px-3 py-2 text-left">{{ t('labels.note') }}</th>
+                      <th class="px-3 py-2 text-left">{{ t('common.actions') }}</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-100">
+                    <tr v-for="step in process.steps" :key="step.id" class="hover:bg-gray-50">
+                      <td class="px-3 py-2 font-mono text-xs text-gray-600">{{ step.step_no }}</td>
+                      <td class="px-3 py-2">{{ formatStepType(step.step) }}</td>
+                      <td class="px-3 py-2 text-xs text-gray-600">{{ summarizeJSON(step.target_params) }}</td>
+                      <td class="px-3 py-2 text-xs text-gray-600">{{ summarizeJSON(step.qa_checks) }}</td>
+                      <td class="px-3 py-2 text-xs text-gray-600">{{ step.notes || '—' }}</td>
+                      <td class="px-3 py-2 space-x-2">
+                        <button class="px-2 py-1 text-xs rounded border hover:bg-gray-100" @click="openStepEdit(process, step)">
+                          {{ t('common.edit') }}
+                        </button>
+                        <button class="px-2 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700" @click="deleteStep(process, step)">
+                          {{ t('common.delete') }}
+                        </button>
+                      </td>
+                    </tr>
+                    <tr v-if="process.steps.length === 0">
+                      <td colspan="6" class="px-3 py-4 text-sm text-gray-500 text-center">
+                        {{ t('recipe.edit.stepsEmpty') }}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+    </div>
+
+    <!-- Ingredient Modal -->
+    <div v-if="showIngredientModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div class="w-full max-w-2xl bg-white rounded-xl shadow-lg border border-gray-200">
+        <header class="px-4 py-3 border-b">
+          <h3 class="font-semibold text-gray-900">
+            {{ editingIngredient ? t('recipe.edit.editIngredient') : t('recipe.edit.addIngredient') }}
+          </h3>
+        </header>
+        <section class="p-4 space-y-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.edit.materialColumn') }}<span class="text-red-600">*</span></label>
+              <select v-model="ingredientForm.material_id" class="w-full h-[40px] border rounded px-3 bg-white">
+                <option value="">{{ t('recipe.edit.selectMaterial') }}</option>
+                <option v-for="material in materials" :key="material.id" :value="material.id">
+                  {{ material.code }} — {{ material.name || material.code }}
+                </option>
+              </select>
+              <p v-if="ingredientErrors.material" class="text-xs text-red-600 mt-1">{{ ingredientErrors.material }}</p>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.edit.amountColumn') }}</label>
+              <input v-model.trim="ingredientForm.amount" type="number" step="0.01" min="0" class="w-full h-[40px] border rounded px-3" />
+            </div>
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">{{ t('labels.uom') }}<span class="text-red-600">*</span></label>
+              <select v-model="ingredientForm.uom_id" class="w-full h-[40px] border rounded px-3 bg-white">
+                <option value="">{{ t('recipe.edit.selectUom') }}</option>
+                <option v-for="uom in uoms" :key="uom.id" :value="uom.id">
+                  {{ uom.code }} {{ uom.name ? `— ${uom.name}` : '' }}
+                </option>
+              </select>
+              <p v-if="ingredientErrors.uom" class="text-xs text-red-600 mt-1">{{ ingredientErrors.uom }}</p>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.edit.usageStage') }}</label>
+              <input v-model.trim="ingredientForm.usage_stage" class="w-full h-[40px] border rounded px-3" />
+            </div>
+            <div class="md:col-span-2">
+              <label class="block text-sm text-gray-600 mb-1">{{ t('labels.note') }}</label>
+              <textarea v-model.trim="ingredientForm.notes" rows="3" class="w-full border rounded px-3 py-2"></textarea>
             </div>
           </div>
-        </div>
-      </details>
-      <div v-if="steps.length === 0" class="text-center text-gray-500 py-8">{{ $t('recipe.edit.noStepsYet') }}</div>
-    </section>
+        </section>
+        <footer class="px-4 py-3 border-t flex items-center justify-end gap-2">
+          <button class="px-3 py-2 rounded border hover:bg-gray-100" @click="closeIngredientModal">
+            {{ t('common.cancel') }}
+          </button>
+          <button
+            class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
+            :disabled="ingredientSaving"
+            @click="saveIngredient"
+          >
+            {{ ingredientSaving ? t('common.saving') : t('common.save') }}
+          </button>
+        </footer>
+      </div>
+    </div>
+
+    <!-- Process Modal -->
+    <div v-if="showProcessModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div class="w-full max-w-xl bg-white rounded-xl shadow-lg border border-gray-200">
+        <header class="px-4 py-3 border-b">
+          <h3 class="font-semibold text-gray-900">
+            {{ editingProcess ? t('recipe.edit.editProcess') : t('recipe.edit.addProcess') }}
+          </h3>
+        </header>
+        <section class="p-4 space-y-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">{{ t('labels.name') }}<span class="text-red-600">*</span></label>
+              <input v-model.trim="processForm.name" class="w-full h-[40px] border rounded px-3" />
+              <p v-if="processErrors.name" class="text-xs text-red-600 mt-1">{{ processErrors.name }}</p>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.list.version') }}</label>
+              <input v-model.number="processForm.version" type="number" min="1" class="w-full h-[40px] border rounded px-3" />
+            </div>
+            <div class="md:col-span-2 flex items-center gap-2">
+              <input id="processActive" v-model="processForm.is_active" type="checkbox" class="h-4 w-4" />
+              <label for="processActive" class="text-sm text-gray-700">{{ t('recipe.edit.markActive') }}</label>
+            </div>
+            <div class="md:col-span-2">
+              <label class="block text-sm text-gray-600 mb-1">{{ t('labels.note') }}</label>
+              <textarea v-model.trim="processForm.notes" rows="3" class="w-full border rounded px-3 py-2"></textarea>
+            </div>
+          </div>
+        </section>
+        <footer class="px-4 py-3 border-t flex items-center justify-end gap-2">
+          <button class="px-3 py-2 rounded border hover:bg-gray-100" @click="closeProcessModal">
+            {{ t('common.cancel') }}
+          </button>
+          <button
+            class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
+            :disabled="processSaving"
+            @click="saveProcess"
+          >
+            {{ processSaving ? t('common.saving') : t('common.save') }}
+          </button>
+        </footer>
+      </div>
+    </div>
+
+    <!-- Step Modal -->
+    <div v-if="showStepModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div class="w-full max-w-3xl bg-white rounded-xl shadow-lg border border-gray-200">
+        <header class="px-4 py-3 border-b">
+          <h3 class="font-semibold text-gray-900">
+            {{ editingStep ? t('recipe.edit.editStep') : t('recipe.edit.addStep') }}
+          </h3>
+        </header>
+        <section class="p-4 space-y-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">{{ t('labels.name') }}</label>
+              <div class="text-sm text-gray-700">{{ currentProcess?.name }}</div>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.edit.stepNumber') }}<span class="text-red-600">*</span></label>
+              <input v-model.number="stepForm.step_no" type="number" min="1" class="w-full h-[40px] border rounded px-3" />
+              <p v-if="stepErrors.step_no" class="text-xs text-red-600 mt-1">{{ stepErrors.step_no }}</p>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.edit.stepType') }}<span class="text-red-600">*</span></label>
+              <select v-model="stepForm.step" class="w-full h-[40px] border rounded px-3 bg-white">
+                <option v-for="option in STEP_OPTIONS" :key="option" :value="option">
+                  {{ formatStepType(option) }}
+                </option>
+              </select>
+            </div>
+            <div class="md:col-span-2">
+              <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.edit.targetParams') }}</label>
+              <textarea
+                v-model="stepForm.target_params"
+                rows="4"
+                class="w-full border rounded px-3 py-2 font-mono text-xs"
+                placeholder="{ &quot;temp_c&quot;: 66 }"
+              ></textarea>
+              <p v-if="stepErrors.target_params" class="text-xs text-red-600 mt-1">{{ stepErrors.target_params }}</p>
+            </div>
+            <div class="md:col-span-2">
+              <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.edit.qaChecks') }}</label>
+              <textarea
+                v-model="stepForm.qa_checks"
+                rows="3"
+                class="w-full border rounded px-3 py-2 font-mono text-xs"
+                placeholder="[ &quot;Check pH&quot; ]"
+              ></textarea>
+              <p v-if="stepErrors.qa_checks" class="text-xs text-red-600 mt-1">{{ stepErrors.qa_checks }}</p>
+            </div>
+            <div class="md:col-span-2">
+              <label class="block text-sm text-gray-600 mb-1">{{ t('labels.note') }}</label>
+              <textarea v-model.trim="stepForm.notes" rows="3" class="w-full border rounded px-3 py-2"></textarea>
+            </div>
+          </div>
+        </section>
+        <footer class="px-4 py-3 border-t flex items-center justify-end gap-2">
+          <button class="px-3 py-2 rounded border hover:bg-gray-100" @click="closeStepModal">
+            {{ t('common.cancel') }}
+          </button>
+          <button
+            class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
+            :disabled="stepSaving"
+            @click="saveStep"
+          >
+            {{ stepSaving ? t('common.saving') : t('common.save') }}
+          </button>
+        </footer>
+      </div>
+    </div>
   </AdminLayout>
 </template>
 
-<script setup lang="tsx">
-import { ref, reactive, onMounted, toRaw, computed, watch } from 'vue'
+<script setup lang="ts">
+import { computed, onMounted, reactive, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import i18n from '@/i18n'
-import { useRoute } from 'vue-router'
-import { supabase } from '../../lib/supabase'
-import AdminLayout from "@/components/layout/AdminLayout.vue";
-import PageBreadcrumb from "@/components/common/PageBreadcrumb.vue";
+import AdminLayout from '@/components/layout/AdminLayout.vue'
+import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import { supabase } from '@/lib/supabase'
 
-// Module-level safe deep copy helper
-const deepCopy = (v: any) => {
-  try {
-    return v == null ? v : JSON.parse(JSON.stringify(v))
-  } catch {
-    return Array.isArray(v) ? v.slice() : { ...(v || {}) }
-  }
-}
+const STATUSES = ['draft', 'released', 'retired'] as const
+const STEP_OPTIONS = ['mashing', 'lautering', 'boil', 'whirlpool', 'cooling', 'fermentation', 'dry_hop', 'cold_crash', 'transfer', 'packaging', 'other']
 
-// ---- Step schemas (loaded from Supabase template) ----
-type StepTemplate = {
-  key: string
-  name?: string
-  fields?: Record<string, any>
-  defaults?: Record<string, any>
-  default_duration_minutes?: number | null
-  order?: number | null
-}
-
-type StepTemplateRecord = {
-  name?: string
-  version?: string
-  steps_fixed?: boolean
-  steps?: RawStep[]
-}
-
-type RawStep = {
-  key?: string
-  code?: string
-  step_key?: string
-  name?: string
-  label?: string | Record<string, string>
-  defaults?: Record<string, any>
-  fields?: Record<string, any>
-  default_duration_minutes?: number | null
-  order?: number | null
-}
-
-const stepTemplate = ref<StepTemplateRecord | null>(null)
-const stepSchemas = ref<Record<string, StepTemplate>>({})
-const stepSchemaKeys = computed(() => Object.keys(stepSchemas.value))
-
-const stepLabels = ref<Record<string, Record<string, string>>>({})
-
-const normalizeLabelText = (
-  label: string | Record<string, string> | undefined,
-  locale: string
-): string | null => {
-  if (!label) return null
-  if (typeof label === 'string') return label.trim() || null
-  if (typeof label === 'object') {
-    const prioritized = [locale, locale.split('-')[0], 'en', 'en-US', 'en-GB']
-    for (const key of prioritized) {
-      if (key && typeof label[key] === 'string' && label[key].trim()) return label[key].trim()
-    }
-    const first = Object.values(label).find((v) => typeof v === 'string' && v.trim())
-    return typeof first === 'string' ? first.trim() : null
-  }
-  return null
-}
-
-const resolveStepKey = (step: RawStep): string | null => {
-  const direct = step?.key ?? step?.code ?? step?.step_key ?? null
-  if (direct) return String(direct)
-  const fromLabel = normalizeLabelText(step?.label, 'en')
-  if (fromLabel) return fromLabel.replace(/[^A-Za-z0-9]+/g, '_').toUpperCase()
-  if (typeof step?.name === 'string' && step.name.trim()) {
-    return step.name.replace(/[^A-Za-z0-9]+/g, '_').toUpperCase()
-  }
-  if (typeof step?.order === 'number' && Number.isFinite(step.order)) {
-    return `STEP_${step.order}`
-  }
-  return null
-}
-
-async function loadStepTemplates() {
-  const { data, error } = await supabase
-    .from('process_step_template')
-    .select('schema')
-    .order('created_at', { ascending: false })
-    .limit(1)
-
-  if (error) {
-    console.error('Failed to load process step templates', error)
-    return
-  }
-
-  const record = Array.isArray(data) ? data[0] : data
-  const schema = (record?.schema ?? null) as StepTemplateRecord | null
-  if (!schema || !Array.isArray(schema.steps)) {
-    console.warn('process_step_template schema missing or malformed')
-    stepTemplate.value = schema
-    stepSchemas.value = {}
-    return
-  }
-
-  const map: Record<string, StepTemplate> = {}
-  const labelMap: Record<string, Record<string, string>> = {}
-  const locale = i18n.global.locale?.value || 'en'
-  for (const step of schema.steps) {
-    const key = resolveStepKey(step)
-    if (!key) continue
-    const labelObj: Record<string, string> = {}
-    if (typeof step.label === 'object') {
-      Object.entries(step.label).forEach(([k, v]) => {
-        if (typeof v === 'string' && v.trim()) labelObj[k] = v.trim()
-      })
-    } else if (typeof step.label === 'string' && step.label.trim()) {
-      labelObj.en = step.label.trim()
-    }
-    if (typeof step.name === 'string' && step.name.trim() && !labelObj.en) {
-      labelObj.en = step.name.trim()
-    }
-
-    labelMap[key] = labelObj
-
-    const displayName = normalizeLabelText(Object.keys(labelObj).length ? labelObj : undefined, locale) ?? step.name ?? key
-    map[key] = {
-      key,
-      name: displayName,
-      fields: step.fields ?? {},
-      defaults: step.defaults ?? {},
-      default_duration_minutes: step.default_duration_minutes ?? null,
-      order: typeof step.order === 'number' ? step.order : null,
-    }
-  }
-
-  stepTemplate.value = schema
-  stepSchemas.value = map
-  stepLabels.value = labelMap
-  applyLocaleToSchemas(locale)
-}
-
-// Dynamic config editor component (inline)
-const DynamicConfig = {
-  props: ['modelValue', 'schema'],
-  emits: ['update:modelValue'],
-  setup(props, { emit }) {
-    const deepCopy = (v) => {
-      try { return v == null ? v : JSON.parse(JSON.stringify(v)) } catch { return Array.isArray(v) ? v.slice() : { ...(v || {}) } }
-    }
-    const local = reactive(deepCopy(toRaw(props.modelValue) || {}))
-    const ensureDefault = (key, defVal) => { if (local[key] === undefined) local[key] = defVal }
-    // initialize defaults from schema
-    if (props.schema?.defaults) {
-      for (const [k, v] of Object.entries(props.schema.defaults)) ensureDefault(k, deepCopy(v))
-    }
-    const update = () => emit('update:modelValue', JSON.parse(JSON.stringify(local)))
-    const addArrayItem = (key, template) => { if (!Array.isArray(local[key])) local[key] = []; local[key].push(deepCopy(template)); update() }
-    const removeArrayItem = (key, idx) => { local[key].splice(idx, 1); update() }
-    const selectLabel = (labelDef, fallbackKey) => {
-      const loc = i18n.global.locale?.value || 'en'
-      if (!labelDef) return (t && typeof t === 'function') ? (t(`recipe.edit.fields.${fallbackKey}`) as string) : fallbackKey
-      if (typeof labelDef === 'string') return labelDef
-      return labelDef[loc] || labelDef.en || labelDef.ja || fallbackKey
-    }
-
-    const renderField = (key, type, value) => {
-      // Primitive types as strings
-      if (typeof type === 'string') {
-        if (type === 'number')
-          return (<input
-            type="number"
-            step="any"
-            class="w-full h-[34px] border rounded px-2"
-            v-model={[local[key], 'number']}
-            onInput={update}
-          />
-          )
-        else if (type === 'boolean')
-          return (<input type="checkbox" class="h-4 w-4" v-model={local[key]} onChange={update} />)
-        else
-          return (<input class="w-full h-[34px] border rounded px-2" v-model={local[key]} onInput={update} />)
-      }
-      // Descriptor object for primitive types
-      if (typeof type === 'object' && (type as any)?.type && typeof (type as any).type === 'string' && (type as any).type !== 'object' && (type as any).type !== 'array') {
-        const tt = (type as any).type as string
-        if (tt === 'number')
-          return (
-            <input
-              type="number"
-              step="any"
-              class="w-full h-[34px] border rounded px-2"
-              v-model={[local[key], 'number']}
-              onInput={update}
-            />
-          )
-        if (tt === 'boolean') return (<input type="checkbox" class="h-4 w-4" v-model={local[key]} onChange={update} />)
-        return (<input class="w-full h-[34px] border rounded px-2" v-model={local[key]} onInput={update} />)
-      }
-      if (type?.type === 'object') {
-        const f = type.fields || {}
-        return (
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
-            {Object.entries(f).map(([ck, ct]) => {
-              const lbl = typeof ct === 'object' && (ct as any).label
-              return (<div><label class="block text-xs text-gray-600">{selectLabel(lbl, ck)}</label>{renderFieldNested(local, ck, ct)}</div>)
-            })}
-          </div>
-        )
-      }
-      if (type?.type === 'array') {
-        const of = type.of
-        const template = typeof of === 'string' ? (of === 'number' ? 0 : '') : Object.fromEntries(Object.keys(of).map(k => {
-          const def = (of as any)[k]
-          const tp = typeof def === 'string' ? def : def.type
-          return [k, tp === 'number' ? 0 : (tp === 'boolean' ? false : '')]
-        }))
-        return (
-          <div>
-            {Array.isArray(local[key]) && local[key].map((item, idx) => (
-              <div key={idx} class="grid grid-cols-1 md:grid-cols-5 gap-2 items-end mb-2">
-                {typeof of === 'string' ? (
-                  <input class="w-full h-[34px] border rounded px-2" v-model={local[key][idx]} onInput={update} />
-                ) : (
-                  Object.keys(of).map((fk) => {
-                    const def = (of as any)[fk]
-                    const tp = typeof def === 'string' ? def : def.type
-                    const lbl = typeof def === 'object' && (def as any).label
-                    return (<div><label class="block text-xs text-gray-600">{selectLabel(lbl, fk)}</label>{renderArrayField(local[key][idx], fk, tp)}</div>)
-                  })
-                )}
-                <button class="px-2 h-[34px] text-xs border rounded" onClick={() => removeArrayItem(key, idx)}>−</button>
-              </div>
-            ))}
-            <button class="px-2 py-1 text-xs border rounded" onClick={() => addArrayItem(key, template)}>+ Add</button>
-          </div>
-        )
-      }
-    }
-    const renderFieldNested = (obj, ck, ct) => {
-      // Primitive as string
-      if (ct === 'number') return (
-        <input
-          type="number"
-          step="any"
-          class="w-full h-[34px] border rounded px-2"
-          value={obj[ck] ?? ''}
-          onInput={(e) => { const t = e.currentTarget; obj[ck] = t.value === '' ? null : Number(t.value); update() }}
-        />
-      )
-      if (ct === 'boolean') return (<input type="checkbox" class="h-4 w-4" v-model={obj[ck]} onChange={update} />)
-      if (typeof ct === 'string') return (<input class="w-full h-[34px] border rounded px-2" v-model={obj[ck]} onInput={update} />)
-      // Descriptor for primitive types
-      if (typeof ct === 'object' && (ct as any)?.type && typeof (ct as any).type === 'string' && (ct as any).type !== 'object' && (ct as any).type !== 'array') {
-        const tt = (ct as any).type as string
-        if (tt === 'number') return (
-          <input
-            type="number"
-            step="any"
-            class="w-full h-[34px] border rounded px-2"
-            value={obj[ck] ?? ''}
-            onInput={(e) => { const t = e.currentTarget; obj[ck] = t.value === '' ? null : Number(t.value); update() }}
-          />
-        )
-        if (tt === 'boolean') return (<input type="checkbox" class="h-4 w-4" v-model={obj[ck]} onChange={update} />)
-        return (<input class="w-full h-[34px] border rounded px-2" v-model={obj[ck]} onInput={update} />)
-      }
-      if (ct?.type === 'object') {
-        const f = ct.fields || {}
-        return (
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
-            {Object.entries(f).map(([k, t]) => {
-              const lbl = (t as any)?.label
-              const loc = i18n.global.locale?.value || 'en'
-              const text = lbl ? (lbl[loc] || lbl.en || lbl.ja) : k
-              return (<div><label class="block text-xs text-gray-600">{text}</label>{renderFieldNested(obj[ck] || (obj[ck] = {}), k, t)}</div>)
-            })}
-          </div>
-        )
-      }
-      return (<div class="text-xs text-gray-500">Unsupported</div>)
-    }
-    const renderArrayField = (row, fk, type) => {
-      if (type === 'number') return (
-        <input
-          type="number"
-          step="any"
-          class="w-full h-[34px] border rounded px-2"
-          value={row[fk] ?? ''}
-          onInput={(e) => { const t = e.currentTarget; row[fk] = t.value === '' ? null : Number(t.value); update() }}
-        />
-      )
-      if (type === 'boolean') return (<input type="checkbox" class="h-4 w-4" v-model={row[fk]} onChange={update} />)
-      return (<input class="w-full h-[34px] border rounded px-2" v-model={row[fk]} onInput={update} />)
-    }
-    return () => {
-      const schema = props.schema
-      if (!schema) return (<div>
-        <textarea class="w-full min-h-[120px] border rounded p-2 font-mono text-xs" v-model={local.__raw} placeholder="JSON config" onInput={() => { try { const v = JSON.parse(local.__raw || '{}'); emit('update:modelValue', v) } catch { } }}></textarea>
-      </div>)
-      const fields = schema.fields || {}
-      return (
-        <div class="grid grid-cols-1 gap-3">
-          {Object.entries(fields).map(([key, type]) => {
-            const lbl = typeof type === 'object' && (type as any).label
-            const loc = i18n.global.locale?.value || 'en'
-            const text = lbl ? (lbl[loc] || lbl.en || lbl.ja) : key
-            return (
-              <div>
-                <label class="block text-xs text-gray-600 mb-1">{text}</label>
-                {renderField(key, type, local[key])}
-              </div>
-            )
-          })}
-        </div>
-      )
-    }
-  }
-}
-
-// ----- State -----
-const prefilledRecipeId = ref<string | null>(null)
-
-const definitions = ref([])
-const versions = ref([])
-const selectedDefId = ref('')
-const selectedVersionId = ref('')
-const steps = ref([]) // {id?, localId, step_key, name, position, default_duration_minutes, configObj, qc}
-const addKey = ref('')
-const saving = ref(false)
-const pendingDeletes = new Set()
-
+const route = useRoute()
+const router = useRouter()
 const { t } = useI18n()
 
-const selectionLocked = computed(() => prefilledRecipeId.value !== null)
-const selectedDefinition = computed(() => definitions.value.find((d) => d.id === selectedDefId.value) || null)
-const selectedVersion = computed(() => versions.value.find((v) => v.id === selectedVersionId.value) || null)
+const recipeId = computed(() => route.params.recipeId as string | undefined)
+const pageTitle = computed(() => t('recipe.edit.title'))
 
-const getLabelForLocale = (step_key: string, locale: string): string | null => {
-  const labels = stepLabels.value[step_key]
-  if (labels) {
-    const prioritized = [locale, locale.split('-')[0], 'en', 'en-US', 'en-GB']
-    for (const key of prioritized) {
-      if (key && typeof labels[key] === 'string' && labels[key].trim()) return labels[key].trim()
-    }
-    const first = Object.values(labels).find((v) => typeof v === 'string' && v.trim())
-    if (typeof first === 'string') return first.trim()
-  }
-  return null
+interface RecipeDetail {
+  id: string
+  code: string
+  name: string
+  style: string | null
+  version: number
+  status: string
+  batch_size_l: number | null
+  target_og: number | null
+  target_fg: number | null
+  target_abv: number | null
+  target_ibu: number | null
+  target_srm: number | null
+  notes: string | null
+  created_at: string | null
 }
 
-const applyLocaleToSchemas = (locale = i18n.global.locale?.value || 'en') => {
-  if (!Object.keys(stepSchemas.value).length) return
-  const updated: Record<string, StepTemplate> = {}
-  for (const [key, schema] of Object.entries(stepSchemas.value)) {
-    const localized = getLabelForLocale(key, locale)
-    updated[key] = {
-      ...schema,
-      name: localized ?? schema.name ?? key,
-    }
-  }
-  stepSchemas.value = updated
-  steps.value.forEach((step) => {
-    step.name = schemaLabel(step.step_key)
-  })
+interface MaterialRow {
+  id: string
+  code: string
+  name: string | null
 }
 
-watch(
-  () => i18n.global.locale?.value,
-  (locale) => {
-    if (locale) applyLocaleToSchemas(locale)
-  }
-)
-
-function schemaFor(step_key) { return stepSchemas.value[step_key] || null }
-function schemaLabel(step_key: string) {
-  const locale = i18n.global.locale?.value || 'en'
-  return getLabelForLocale(step_key, locale) ?? stepSchemas.value[step_key]?.name ?? step_key
+interface UomRow {
+  id: string
+  code: string
+  name: string | null
 }
 
-const formatDate = (value?: string | null) => {
+interface IngredientRow {
+  id: string
+  recipe_id: string
+  material_id: string
+  amount: number | null
+  uom_id: string
+  usage_stage: string | null
+  notes: string | null
+  material: { id: string; code: string; name: string | null } | null
+  uom: { id: string; code: string; name: string | null } | null
+}
+
+interface StepRow {
+  id: string
+  process_id: string
+  step_no: number
+  step: string
+  target_params: unknown
+  qa_checks: unknown
+  notes: string | null
+}
+
+interface ProcessRow {
+  id: string
+  recipe_id: string
+  name: string
+  version: number
+  is_active: boolean
+  notes: string | null
+  steps: StepRow[]
+}
+
+type StepRecord = {
+  id: string
+  process_id: string
+  step_no: number
+  step: string
+  target_params: unknown
+  qa_checks: unknown
+  notes: string | null
+}
+
+type ProcessRecord = {
+  id: string
+  recipe_id: string
+  name: string
+  version: number
+  is_active: boolean
+  notes: string | null
+  prc_steps?: StepRecord[]
+}
+
+const recipe = ref<RecipeDetail | null>(null)
+const loadingRecipe = ref(false)
+const savingRecipe = ref(false)
+const versioning = ref(false)
+const recipeErrors = reactive<Record<string, string>>({})
+const recipeForm = reactive({
+  code: '',
+  name: '',
+  style: '',
+  version: 1,
+  status: STATUSES[0],
+  batch_size_l: '',
+  target_og: '',
+  target_fg: '',
+  target_abv: '',
+  target_ibu: '',
+  target_srm: '',
+  notes: '',
+})
+
+const materials = ref<MaterialRow[]>([])
+const uoms = ref<UomRow[]>([])
+const ingredients = ref<IngredientRow[]>([])
+const ingredientsLoading = ref(false)
+const ingredientSaving = ref(false)
+const ingredientErrors = reactive<Record<string, string>>({})
+const showIngredientModal = ref(false)
+const editingIngredient = ref(false)
+const ingredientForm = reactive({
+  id: '',
+  material_id: '',
+  uom_id: '',
+  amount: '',
+  usage_stage: '',
+  notes: '',
+})
+
+const processes = ref<ProcessRow[]>([])
+const processesLoading = ref(false)
+const processSaving = ref(false)
+const processErrors = reactive<Record<string, string>>({})
+const showProcessModal = ref(false)
+const editingProcess = ref(false)
+const processForm = reactive({
+  id: '',
+  name: '',
+  version: 1,
+  is_active: true,
+  notes: '',
+})
+
+const showStepModal = ref(false)
+const editingStep = ref(false)
+const stepSaving = ref(false)
+const currentProcess = ref<ProcessRow | null>(null)
+const stepErrors = reactive<Record<string, string>>({})
+const stepForm = reactive({
+  id: '',
+  step_no: 1,
+  step: STEP_OPTIONS[0],
+  target_params: '{\n\n}',
+  qa_checks: '[\n\n]',
+  notes: '',
+})
+
+const statusLabel = (status: string) => {
+  const key = `recipe.statusMap.${status}`
+  const label = t(key)
+  return label === key ? status : label
+}
+
+const formatStepType = (value: string) => {
   if (!value) return ''
-  const d = new Date(value)
-  return Number.isNaN(d.getTime()) ? value : d.toLocaleString()
+  return value
+    .split('_')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
 }
 
-function normalizeSteps(list) {
-  list.sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
-  steps.value = list.map((r, i) => ({
-    id: r.id ?? null,
-    localId: r.id || `${Date.now()}-${Math.random()}`,
-    step_key: r.step_key,
-    name: r.name ?? schemaLabel(r.step_key),
-    position: r.position ?? i,
-    default_duration_minutes: r.default_duration_minutes ?? null,
-    configObj: r.config ?? {},
-    qc: r.qc ?? null,
+const summarizeJSON = (value: unknown) => {
+  if (value === null || value === undefined) return '—'
+  if (typeof value === 'string') return value
+  try {
+    const json = JSON.stringify(value)
+    if (json.length > 80) return json.slice(0, 77) + '…'
+    return json
+  } catch {
+    return String(value)
+  }
+}
+
+const materialLabel = (row: IngredientRow) => {
+  if (row.material?.name) return row.material.name
+  if (row.material?.code) return row.material.code
+  return row.material_id
+}
+
+function numberOrNull(value: string) {
+  if (value === null || value === undefined || value === '') return null
+  const num = Number(value)
+  return Number.isNaN(num) ? null : num
+}
+
+function resetRecipeErrors() {
+  Object.keys(recipeErrors).forEach((key) => delete recipeErrors[key])
+}
+
+async function versionUp() {
+  if (!recipeId.value || versioning.value) return
+
+  resetRecipeErrors()
+  if (!recipeForm.code) recipeErrors.code = t('errors.required', { field: t('recipe.list.recipeId') })
+  if (!recipeForm.name) recipeErrors.name = t('errors.required', { field: t('recipe.list.name') })
+  if (Object.keys(recipeErrors).length > 0) return
+
+  versioning.value = true
+
+  const trimmedCode = recipeForm.code.trim()
+  const trimmedName = recipeForm.name.trim()
+  const trimmedStyle = recipeForm.style.trim()
+
+  const basePayload = {
+    code: trimmedCode,
+    name: trimmedName,
+    style: trimmedStyle || null,
+    version: recipeForm.version || 1,
+    status: recipeForm.status,
+    batch_size_l: numberOrNull(recipeForm.batch_size_l),
+    target_og: numberOrNull(recipeForm.target_og),
+    target_fg: numberOrNull(recipeForm.target_fg),
+    target_abv: numberOrNull(recipeForm.target_abv),
+    target_ibu: numberOrNull(recipeForm.target_ibu),
+    target_srm: numberOrNull(recipeForm.target_srm),
+    notes: recipeForm.notes.trim() || null,
+  }
+
+  try {
+    const { error: updateError } = await supabase
+      .from('rcp_recipes')
+      .update(basePayload)
+      .eq('id', recipeId.value)
+    if (updateError) throw updateError
+
+    const { data: versionRows, error: versionError } = await supabase
+      .from('rcp_recipes')
+      .select('version')
+      .eq('code', trimmedCode)
+      .order('version', { ascending: false })
+      .limit(1)
+    if (versionError) throw versionError
+
+    const highestVersion = versionRows?.[0]?.version ?? basePayload.version ?? 0
+    const newVersion = highestVersion + 1
+
+    const newRecipePayload = {
+      ...basePayload,
+      version: newVersion,
+      status: 'draft',
+    }
+
+    const { data: inserted, error: insertError } = await supabase
+      .from('rcp_recipes')
+      .insert(newRecipePayload)
+      .select('id, code, name, style, version, status, batch_size_l, target_og, target_fg, target_abv, target_ibu, target_srm, notes, created_at')
+      .single()
+    if (insertError || !inserted) throw insertError ?? new Error('Insert failed')
+
+    const { data: ingredientRows, error: ingredientError } = await supabase
+      .from('rcp_ingredients')
+      .select('material_id, amount, uom_id, usage_stage, notes')
+      .eq('recipe_id', recipeId.value)
+    if (ingredientError) throw ingredientError
+
+    if (ingredientRows && ingredientRows.length > 0) {
+      const ingredientPayload = ingredientRows.map((item) => ({
+        recipe_id: inserted.id,
+        material_id: item.material_id,
+        amount: item.amount,
+        uom_id: item.uom_id,
+        usage_stage: item.usage_stage,
+        notes: item.notes,
+      }))
+      const { error: ingredientInsertError } = await supabase
+        .from('rcp_ingredients')
+        .insert(ingredientPayload)
+      if (ingredientInsertError) throw ingredientInsertError
+    }
+
+    const { data: processRows, error: processError } = await supabase
+      .from('prc_processes')
+      .select('id, name, version, is_active, notes, prc_steps(id, step_no, step, target_params, qa_checks, notes)')
+      .eq('recipe_id', recipeId.value)
+    if (processError) throw processError
+
+    if (processRows && processRows.length > 0) {
+      type StepRecord = {
+        id: string
+        process_id: string
+        step_no: number
+        step: string
+        target_params: unknown
+        qa_checks: unknown
+        notes: string | null
+      }
+
+      type ProcessRecord = {
+        id: string
+        name: string
+        version: number
+        is_active: boolean
+        notes: string | null
+        prc_steps?: StepRecord[]
+      }
+
+      const parseObject = (value: unknown) => {
+        if (value && typeof value === 'object' && !Array.isArray(value)) return value as Record<string, unknown>
+        if (typeof value === 'string') {
+          try {
+            const parsed = JSON.parse(value)
+            return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+              ? (parsed as Record<string, unknown>)
+              : {}
+          } catch {
+            return {}
+          }
+        }
+        return {}
+      }
+
+      const parseArray = (value: unknown) => {
+        if (Array.isArray(value)) return value as unknown[]
+        if (typeof value === 'string') {
+          try {
+            const parsed = JSON.parse(value)
+            return Array.isArray(parsed) ? parsed : []
+          } catch {
+            return []
+          }
+        }
+        return []
+      }
+
+      for (const process of processRows as ProcessRecord[]) {
+        const { data: createdProcess, error: processInsertError } = await supabase
+          .from('prc_processes')
+          .insert({
+            recipe_id: inserted.id,
+            name: process.name,
+            version: process.version,
+            is_active: process.is_active,
+            notes: process.notes,
+          })
+          .select('id')
+          .single()
+        if (processInsertError || !createdProcess) throw processInsertError ?? new Error('Process copy failed')
+
+        const steps = process.prc_steps ?? []
+        if (steps.length > 0) {
+          const stepPayload = steps.map((step) => ({
+            process_id: createdProcess.id,
+            step_no: step.step_no,
+            step: step.step,
+            target_params: parseObject(step.target_params),
+            qa_checks: parseArray(step.qa_checks),
+            notes: step.notes,
+          }))
+          const { error: stepInsertError } = await supabase
+            .from('prc_steps')
+            .insert(stepPayload)
+          if (stepInsertError) throw stepInsertError
+        }
+      }
+    }
+
+    await router.replace(`/recipeEdit/${inserted.id}/${inserted.version}`)
+    await loadRecipe()
+    alert(t('recipe.edit.versionUpDone', { version: inserted.version }))
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error)
+    alert(t('recipe.edit.versionUpError', { message }))
+  } finally {
+    versioning.value = false
+  }
+}
+
+async function loadRecipe() {
+  if (!recipeId.value) {
+    alert('Missing recipe id')
+    router.push('/recipeList')
+    return
+  }
+  loadingRecipe.value = true
+  const { data, error } = await supabase
+    .from('rcp_recipes')
+    .select('id, code, name, style, version, status, batch_size_l, target_og, target_fg, target_abv, target_ibu, target_srm, notes, created_at')
+    .eq('id', recipeId.value)
+    .single()
+  loadingRecipe.value = false
+  if (error || !data) {
+    alert('Failed to load recipe: ' + (error?.message ?? ''))
+    router.push('/recipeList')
+    return
+  }
+  recipe.value = data
+  recipeForm.code = data.code ?? ''
+  recipeForm.name = data.name ?? ''
+  recipeForm.style = data.style ?? ''
+  recipeForm.version = data.version ?? 1
+  recipeForm.status = (STATUSES.includes(data.status as typeof STATUSES[number]) ? data.status : STATUSES[0]) as typeof STATUSES[number]
+  recipeForm.batch_size_l = data.batch_size_l != null ? String(data.batch_size_l) : ''
+  recipeForm.target_og = data.target_og != null ? String(data.target_og) : ''
+  recipeForm.target_fg = data.target_fg != null ? String(data.target_fg) : ''
+  recipeForm.target_abv = data.target_abv != null ? String(data.target_abv) : ''
+  recipeForm.target_ibu = data.target_ibu != null ? String(data.target_ibu) : ''
+  recipeForm.target_srm = data.target_srm != null ? String(data.target_srm) : ''
+  recipeForm.notes = data.notes ?? ''
+
+  await Promise.all([loadIngredients(), loadProcesses()])
+}
+
+async function loadMaterials() {
+  const { data, error } = await supabase
+    .from('mst_materials')
+    .select('id, code, name')
+    .order('code', { ascending: true })
+  if (error) {
+    console.warn('Load materials failed', error)
+    return
+  }
+  materials.value = data ?? []
+}
+
+async function loadUoms() {
+  const { data, error } = await supabase
+    .from('mst_uom')
+    .select('id, code, name')
+    .order('code', { ascending: true })
+  if (error) {
+    console.warn('Load uom failed', error)
+    return
+  }
+  uoms.value = data ?? []
+}
+
+async function loadIngredients() {
+  if (!recipeId.value) return
+  ingredientsLoading.value = true
+  const { data, error } = await supabase
+    .from('rcp_ingredients')
+    .select('id, recipe_id, material_id, amount, uom_id, usage_stage, notes, material:material_id(id, code, name), uom:uom_id(id, code, name)')
+    .eq('recipe_id', recipeId.value)
+    .order('usage_stage', { ascending: true, nullsLast: true })
+    .order('material_id', { ascending: true })
+  ingredientsLoading.value = false
+  if (error) {
+    alert('Failed to load ingredients: ' + error.message)
+    return
+  }
+  ingredients.value = (data ?? []) as IngredientRow[]
+}
+
+function resetIngredientForm() {
+  ingredientForm.id = ''
+  ingredientForm.material_id = ''
+  ingredientForm.uom_id = ''
+  ingredientForm.amount = ''
+  ingredientForm.usage_stage = ''
+  ingredientForm.notes = ''
+  Object.keys(ingredientErrors).forEach((key) => delete ingredientErrors[key])
+}
+
+function openIngredientCreate() {
+  editingIngredient.value = false
+  resetIngredientForm()
+  showIngredientModal.value = true
+}
+
+function openIngredientEdit(row: IngredientRow) {
+  editingIngredient.value = true
+  resetIngredientForm()
+  ingredientForm.id = row.id
+  ingredientForm.material_id = row.material_id
+  ingredientForm.uom_id = row.uom_id
+  ingredientForm.amount = row.amount != null ? String(row.amount) : ''
+  ingredientForm.usage_stage = row.usage_stage ?? ''
+  ingredientForm.notes = row.notes ?? ''
+  showIngredientModal.value = true
+}
+
+function closeIngredientModal() {
+  showIngredientModal.value = false
+}
+
+function validateIngredient() {
+  Object.keys(ingredientErrors).forEach((key) => delete ingredientErrors[key])
+  if (!ingredientForm.material_id) ingredientErrors.material = t('errors.required', { field: t('recipe.edit.materialColumn') })
+  if (!ingredientForm.uom_id) ingredientErrors.uom = t('errors.required', { field: t('labels.uom') })
+  return Object.keys(ingredientErrors).length === 0
+}
+
+async function saveIngredient() {
+  if (!recipeId.value) return
+  if (!validateIngredient()) return
+
+  ingredientSaving.value = true
+  const payload = {
+    recipe_id: recipeId.value,
+    material_id: ingredientForm.material_id,
+    uom_id: ingredientForm.uom_id,
+    amount: ingredientForm.amount !== '' ? Number(ingredientForm.amount) : null,
+    usage_stage: ingredientForm.usage_stage.trim() || null,
+    notes: ingredientForm.notes.trim() || null,
+  }
+
+  let response
+  if (editingIngredient.value && ingredientForm.id) {
+    response = await supabase
+      .from('rcp_ingredients')
+      .update(payload)
+      .eq('id', ingredientForm.id)
+      .select('id')
+      .single()
+  } else {
+    response = await supabase
+      .from('rcp_ingredients')
+      .insert(payload)
+      .select('id')
+      .single()
+  }
+
+  ingredientSaving.value = false
+  if (response.error) {
+    alert('Failed to save ingredient: ' + response.error.message)
+    return
+  }
+
+  closeIngredientModal()
+  await loadIngredients()
+}
+
+async function deleteIngredient(row: IngredientRow) {
+  if (!confirm(t('recipe.edit.deleteIngredientConfirm', { name: materialLabel(row) }))) return
+  const { error } = await supabase.from('rcp_ingredients').delete().eq('id', row.id)
+  if (error) {
+    alert('Failed to delete ingredient: ' + error.message)
+    return
+  }
+  ingredients.value = ingredients.value.filter((item) => item.id !== row.id)
+}
+
+async function loadProcesses() {
+  if (!recipeId.value) return
+  processesLoading.value = true
+  const { data, error } = await supabase
+    .from('prc_processes')
+    .select('id, recipe_id, name, version, is_active, notes, prc_steps(id, process_id, step_no, step, target_params, qa_checks, notes)')
+    .eq('recipe_id', recipeId.value)
+    .order('version', { ascending: false })
+    .order('step_no', { foreignTable: 'prc_steps', ascending: true })
+  processesLoading.value = false
+  if (error) {
+    alert('Failed to load processes: ' + error.message)
+    return
+  }
+
+  const rows = (data ?? []) as ProcessRecord[]
+  processes.value = rows.map((item) => ({
+    id: item.id,
+    recipe_id: item.recipe_id,
+    name: item.name,
+    version: item.version,
+    is_active: item.is_active,
+    notes: item.notes,
+    steps: (item.prc_steps ?? []).map((step) => ({
+      id: step.id,
+      process_id: step.process_id,
+      step_no: step.step_no,
+      step: step.step,
+      target_params: step.target_params,
+      qa_checks: step.qa_checks,
+      notes: step.notes,
+    })),
   }))
 }
 
-async function loadDefinitions() {
-  const { data, error } = await supabase
-    .from('process_definitions')
-    .select('id, name')
-    .order('created_at', { ascending: false })
-
-  if (!error) definitions.value = data ?? []
-  return data ?? []
+function resetProcessForm() {
+  processForm.id = ''
+  processForm.name = ''
+  processForm.version = 1
+  processForm.is_active = true
+  processForm.notes = ''
+  Object.keys(processErrors).forEach((key) => delete processErrors[key])
 }
 
-async function loadVersions() {
-  selectedVersionId.value = ''
-  steps.value = []
-  if (!selectedDefId.value) {
-    versions.value = []
-    return []
+function openProcessCreate() {
+  editingProcess.value = false
+  resetProcessForm()
+  if (processes.value.length > 0) {
+    const maxVersion = Math.max(...processes.value.map((p) => p.version))
+    processForm.version = maxVersion + 1
   }
-  const { data, error } = await supabase
-    .from('process_versions')
-    .select('*')
-    .eq('process_id', selectedDefId.value)
-    .order('created_at', { ascending: false })
-
-  if (!error) versions.value = data ?? []
-  return data ?? []
-}
-async function loadSteps() {
-  steps.value = []
-  if (!selectedVersionId.value) return
-  const { data, error } = await supabase.from('process_steps').select('id, step_key, name, position, default_duration_minutes, config').eq('process_version_id', selectedVersionId.value).order('position', { ascending: true })
-  if (error) { alert('Load steps error: ' + error.message); return }
-  normalizeSteps(data || [])
+  showProcessModal.value = true
 }
 
-function addStep() {
-  const key = addKey.value; if (!key) return
-  const schema = schemaFor(key)
-  if (!schema) {
-    console.warn('No schema found for step key', key)
-    return
-  }
-  const cfg = schema?.defaults ? deepCopy(schema.defaults) : {}
-  const pos = steps.value.length
-  const dispName = schemaLabel(key)
-  steps.value.push({ id: null, localId: `${Date.now()}-${Math.random()}`, step_key: key, name: dispName, position: pos, default_duration_minutes: schema?.default_duration_minutes ?? null, configObj: cfg, qc: null })
-  addKey.value = ''
+function openProcessEdit(process: ProcessRow) {
+  editingProcess.value = true
+  resetProcessForm()
+  processForm.id = process.id
+  processForm.name = process.name
+  processForm.version = process.version
+  processForm.is_active = process.is_active
+  processForm.notes = process.notes ?? ''
+  showProcessModal.value = true
 }
 
-function move(idx, delta) { const t = idx + delta; if (t < 0 || t >= steps.value.length) return; const [row] = steps.value.splice(idx, 1); steps.value.splice(t, 0, row); steps.value.forEach((r, i) => r.position = i) }
-function removeStep(idx) { const s = steps.value[idx]; if (s.id) pendingDeletes.add(s.id); steps.value.splice(idx, 1); steps.value.forEach((r, i) => r.position = i) }
-
-function addMetric(s) { if (!s.qc) s.qc = { metrics: [] }; if (!Array.isArray(s.qc.metrics)) s.qc.metrics = []; s.qc.metrics.push({ name: '', unit: '', target: null, tolerance: null, when: '' }) }
-function removeMetric(s, mi) { s.qc.metrics.splice(mi, 1) }
-function toggleQc(s) { if (s.qc?.metrics) s.qc = null; else s.qc = { metrics: [] } }
-
-async function saveAll() {
-  if (!selectedVersionId.value) return
-  saving.value = true
-  try {
-    // deletions
-    if (pendingDeletes.size) { const ids = [...pendingDeletes]; const { error } = await supabase.from('process_steps').delete().in('id', ids); if (error) throw new Error(error.message); pendingDeletes.clear() }
-    // upsert steps in order
-    for (const [i, s] of steps.value.entries()) {
-      const payload = { process_version_id: selectedVersionId.value, step_key: s.step_key, name: s.name, position: i, default_duration_minutes: s.default_duration_minutes, config: s.configObj }
-      if (s.id) { const { error } = await supabase.from('process_steps').update(payload).eq('id', s.id); if (error) throw new Error(error.message) }
-      else { const { data, error } = await supabase.from('process_steps').insert(payload).select('id').single(); if (error) throw new Error(error.message); s.id = data.id }
-    }
-    alert(t('recipe.edit.saved'))
-  } catch (e) { alert('Save error: ' + e.message) }
-  saving.value = false
+function closeProcessModal() {
+  showProcessModal.value = false
 }
 
-const route = useRoute()
-const initializeFromRoute = async () => {
-  const rid = route.params.recipeId as string | undefined
-  const vid = route.params.versionId as string | undefined
+function validateProcess() {
+  Object.keys(processErrors).forEach((key) => delete processErrors[key])
+  if (!processForm.name) processErrors.name = t('errors.required', { field: t('labels.name') })
+  return Object.keys(processErrors).length === 0
+}
 
-  prefilledRecipeId.value = rid ?? null
+async function saveProcess() {
+  if (!recipeId.value) return
+  if (!validateProcess()) return
 
-  if (!rid) {
-    selectedDefId.value = ''
-    versions.value = []
-    selectedVersionId.value = ''
-    steps.value = []
-    return
+  processSaving.value = true
+  const payload = {
+    recipe_id: recipeId.value,
+    name: processForm.name.trim(),
+    version: processForm.version || 1,
+    is_active: processForm.is_active,
+    notes: processForm.notes.trim() || null,
   }
 
-  selectedDefId.value = rid
-  const versionRows = await loadVersions()
-
-  let targetVersionId = ''
-  if (vid && versionRows.some((v: any) => v.id === vid)) {
-    targetVersionId = vid
-  } else if (versionRows.length) {
-    targetVersionId = versionRows[0].id
-  }
-
-  selectedVersionId.value = targetVersionId
-  if (targetVersionId) {
-    await loadSteps()
+  let response
+  if (editingProcess.value && processForm.id) {
+    response = await supabase
+      .from('prc_processes')
+      .update(payload)
+      .eq('id', processForm.id)
+      .select('id')
+      .single()
   } else {
-    steps.value = []
+    response = await supabase
+      .from('prc_processes')
+      .insert(payload)
+      .select('id')
+      .single()
+  }
+
+  processSaving.value = false
+  if (response.error) {
+    alert('Failed to save process: ' + response.error.message)
+    return
+  }
+
+  closeProcessModal()
+  await loadProcesses()
+}
+
+async function deleteProcess(process: ProcessRow) {
+  if (!confirm(t('recipe.edit.deleteProcessConfirm', { name: process.name, version: process.version }))) return
+  const { error } = await supabase.from('prc_processes').delete().eq('id', process.id)
+  if (error) {
+    alert('Failed to delete process: ' + error.message)
+    return
+  }
+  await loadProcesses()
+}
+
+function resetStepForm() {
+  stepForm.id = ''
+  stepForm.step_no = 1
+  stepForm.step = STEP_OPTIONS[0]
+  stepForm.target_params = '{}'
+  stepForm.qa_checks = '[]'
+  stepForm.notes = ''
+  Object.keys(stepErrors).forEach((key) => delete stepErrors[key])
+}
+
+function openStepCreate(process: ProcessRow) {
+  currentProcess.value = process
+  editingStep.value = false
+  resetStepForm()
+  const maxNo = process.steps.length > 0 ? Math.max(...process.steps.map((s) => s.step_no)) : 0
+  stepForm.step_no = maxNo + 1
+  showStepModal.value = true
+}
+
+function openStepEdit(process: ProcessRow, step: StepRow) {
+  currentProcess.value = process
+  editingStep.value = true
+  resetStepForm()
+  stepForm.id = step.id
+  stepForm.step_no = step.step_no
+  stepForm.step = STEP_OPTIONS.includes(step.step) ? step.step : STEP_OPTIONS[0]
+  stepForm.target_params = safeStringify(step.target_params)
+  stepForm.qa_checks = safeStringify(step.qa_checks)
+  stepForm.notes = step.notes ?? ''
+  showStepModal.value = true
+}
+
+function closeStepModal() {
+  showStepModal.value = false
+}
+
+function safeStringify(value: unknown) {
+  try {
+    return JSON.stringify(value ?? null, null, 2)
+  } catch {
+    return ''
   }
 }
 
-watch(
-  () => [route.params.recipeId, route.params.versionId],
-  () => {
-    initializeFromRoute()
+function parseJson(text: string, fallback: unknown) {
+  const trimmed = text.trim()
+  if (!trimmed) return fallback
+  try {
+    return JSON.parse(trimmed)
+  } catch {
+    throw new Error('invalid')
   }
-)
+}
+
+async function saveRecipeInfo() {
+  if (!recipeId.value) return
+  resetRecipeErrors()
+  if (!recipeForm.code) recipeErrors.code = t('errors.required', { field: t('recipe.list.recipeId') })
+  if (!recipeForm.name) recipeErrors.name = t('errors.required', { field: t('recipe.list.name') })
+  if (Object.keys(recipeErrors).length > 0) return
+
+  const payload = {
+    code: recipeForm.code.trim(),
+    name: recipeForm.name.trim(),
+    style: recipeForm.style.trim() || null,
+    version: recipeForm.version || 1,
+    status: recipeForm.status,
+    batch_size_l: numberOrNull(recipeForm.batch_size_l),
+    target_og: numberOrNull(recipeForm.target_og),
+    target_fg: numberOrNull(recipeForm.target_fg),
+    target_abv: numberOrNull(recipeForm.target_abv),
+    target_ibu: numberOrNull(recipeForm.target_ibu),
+    target_srm: numberOrNull(recipeForm.target_srm),
+    notes: recipeForm.notes.trim() || null,
+  }
+
+  savingRecipe.value = true
+  const { data, error } = await supabase
+    .from('rcp_recipes')
+    .update(payload)
+    .eq('id', recipeId.value)
+    .select('id, code, name, style, version, status, batch_size_l, target_og, target_fg, target_abv, target_ibu, target_srm, notes, created_at')
+    .single()
+  savingRecipe.value = false
+  if (error || !data) {
+    alert('Failed to save recipe: ' + (error?.message ?? ''))
+    return
+  }
+  recipe.value = data
+  alert(t('recipe.edit.recipeSaved'))
+}
+
+async function saveStep() {
+  if (!currentProcess.value) return
+  Object.keys(stepErrors).forEach((key) => delete stepErrors[key])
+  if (!stepForm.step_no || stepForm.step_no < 1) {
+    stepErrors.step_no = t('errors.mustBeInteger', { field: t('recipe.edit.stepNumber') })
+    return
+  }
+
+  let targetParams: unknown = {}
+  let qaChecks: unknown = []
+  try {
+    targetParams = parseJson(stepForm.target_params, {})
+  } catch {
+    stepErrors.target_params = t('recipe.edit.invalidJson')
+    return
+  }
+  try {
+    qaChecks = parseJson(stepForm.qa_checks, [])
+    if (!Array.isArray(qaChecks)) throw new Error('not array')
+  } catch {
+    stepErrors.qa_checks = t('recipe.edit.invalidJson')
+    return
+  }
+
+  stepSaving.value = true
+  const payload = {
+    process_id: currentProcess.value.id,
+    step_no: stepForm.step_no,
+    step: stepForm.step,
+    target_params: targetParams,
+    qa_checks: qaChecks,
+    notes: stepForm.notes.trim() || null,
+  }
+
+  let response
+  if (editingStep.value && stepForm.id) {
+    response = await supabase
+      .from('prc_steps')
+      .update(payload)
+      .eq('id', stepForm.id)
+      .select('id')
+      .single()
+  } else {
+    response = await supabase
+      .from('prc_steps')
+      .insert(payload)
+      .select('id')
+      .single()
+  }
+
+  stepSaving.value = false
+  if (response.error) {
+    alert('Failed to save step: ' + response.error.message)
+    return
+  }
+
+  closeStepModal()
+  await loadProcesses()
+}
+
+async function deleteStep(process: ProcessRow, step: StepRow) {
+  if (!confirm(t('recipe.edit.deleteStepConfirm', { step: formatStepType(step.step), number: step.step_no }))) return
+  const { error } = await supabase.from('prc_steps').delete().eq('id', step.id)
+  if (error) {
+    alert('Failed to delete step: ' + error.message)
+    return
+  }
+  await loadProcesses()
+}
 
 onMounted(async () => {
-  await loadStepTemplates()
-  await loadDefinitions()
-  await initializeFromRoute()
+  await Promise.all([loadMaterials(), loadUoms()])
+  await loadRecipe()
 })
 </script>
-
-<style scoped>
-details[open]>summary+* {
-  animation: fadeIn .2s ease-in
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: .7;
-    transform: translateY(-2px)
-  }
-
-  to {
-    opacity: 1;
-    transform: none
-  }
-}
-
-textarea,
-.font-mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-}
-</style>

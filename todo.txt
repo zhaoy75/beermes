@@ -128,3 +128,27 @@ create an vue page mainteenance for tax_beer, table definition should be referen
 -category should be a dropdown list to select from mst_category
 -taxrate should be a number with 2 decimal places
 -note is optional
+
+delete old
+
+create an recipe list mainteenance page 
+
+recipe list mainteenance page 
+
+- recipe list table following columns, all information is from rcp_recipes 
+　recipe id name and version, and status, and created_at.
+- all data should be list in a table 
+- table should be sortable by each column
+- crud is needed
+- search section (name, style, status) is needed 
+- click recipe name in table will go to recipe edit page
+
+
+create a recipe edit page, The requirement are as below:
+
+1. there should be 3 sections in the page
+2. recipe information section, field in rcp_recipe should be editable
+2. ingredients section, ingredient crud mainteenace, data is stored in rcp_ingredients
+3. process section 
+   process information is stored in rcp_processes
+   each process has multiple steps, step information is stored in rcp_steps

@@ -20,5 +20,18 @@
   ],
   "[typescript]": {
     "editor.defaultFormatter": "denoland.vscode-deno"
-  }
+  },
+  "sqltools.connections": [
+    {
+      "ssh": "Disabled",
+      "previewLimit": 50,
+      "server": "localhost",
+      "port": 54322,
+      "driver": "PostgreSQL",
+      "database": "postgres",
+      "username": "postgres",
+      "password": "postgres",
+      "name": "beer1"
+    }
+  ]
 }

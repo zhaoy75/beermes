@@ -27,7 +27,7 @@ const router = createRouter({
     {
       path: '/recipeEdit/:recipeId/:versionId?',
       name: 'レシピ編集',
-      component: () => import('../views/pages/RecipeEdit.vue'),
+      component: () => import('../views/Pages/RecipeEdit.vue'),
       meta: {
         title: 'レシピ編集',
         requiresAuth: true ,
@@ -36,7 +36,7 @@ const router = createRouter({
     {
       path: '/recipeList',
       name: 'レシピ一覧',
-      component: () => import('../views/pages/RecipeList.vue'),
+      component: () => import('../views/Pages/RecipeList.vue'),
       meta: {
         title: 'レシピ一覧',
         requiresAuth: true ,

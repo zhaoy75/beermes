@@ -1,322 +1,835 @@
 <template>
   <AdminLayout>
-    <PageBreadcrumb :pageTitle="currentPageTitle" />
+    <PageBreadcrumb :pageTitle="pageTitle" />
 
-    <!-- Search -->
-    <section class="mb-6 bg-white shadow rounded-lg p-4 border border-gray-200" aria-labelledby="searchHeading">
-      <div class="flex items-center justify-between mb-4">
-        <h2 id="searchHeading" class="text-lg font-semibold">{{ $t('recipe.list.searchTitle') }}</h2>
-        <div class="flex items-center gap-2">
-          <button class="text-sm px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-700" @click="openCreate">{{ $t('common.new') }}</button>
-          <button class="text-sm px-3 py-1 rounded border border-gray-300 hover:bg-gray-100" @click="resetSearch">{{ $t('recipe.list.reset') }}</button>
+    <section
+      class="mb-6 bg-white shadow rounded-lg p-4 border border-gray-200"
+      aria-labelledby="recipeSearchHeading"
+    >
+      <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-4">
+        <div>
+          <h2 id="recipeSearchHeading" class="text-lg font-semibold text-gray-900">
+            {{ t('recipe.list.searchTitle') }}
+          </h2>
+          <p class="text-sm text-gray-500">{{ t('recipe.list.showing', { count: filteredRecipes.length }) }}</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <button
+            class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
+            :disabled="loading"
+            @click="openCreate"
+          >
+            {{ t('common.new') }}
+          </button>
+          <button
+            class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-60"
+            :disabled="loading"
+            @click="refresh"
+          >
+            {{ t('common.refresh') }}
+          </button>
+          <button
+            class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-100"
+            :disabled="loading"
+            @click="resetFilters"
+          >
+            {{ t('recipe.list.reset') }}
+          </button>
         </div>
       </div>
-      <form class="grid grid-cols-1 md:grid-cols-5 gap-4" @submit.prevent>
+
+      <form class="grid grid-cols-1 md:grid-cols-4 gap-4" @submit.prevent>
         <div>
-          <label class="block text-sm text-gray-600 mb-1">{{ $t('recipe.list.status') }}</label>
-          <select v-model="search.status" class="w-full h-[36px] border rounded px-3 py-2">
-            <option value="">{{ $t('recipe.list.all') }}</option>
-            <option value="draft">{{ $t('recipe.statusMap.draft') }}</option>
-            <option value="released">{{ $t('recipe.statusMap.released') }}</option>
-            <option value="retired">{{ $t('recipe.statusMap.retired') }}</option>
+          <label for="recipeName" class="block text-sm text-gray-600 mb-1">
+            {{ t('recipe.list.name') }}
+          </label>
+          <input
+            id="recipeName"
+            v-model.trim="filters.name"
+            type="search"
+            class="w-full h-[40px] border rounded px-3"
+            :placeholder="t('recipe.list.keywordPh')"
+          />
+        </div>
+        <div>
+          <label for="recipeStyle" class="block text-sm text-gray-600 mb-1">
+            {{ t('recipe.list.style') }}
+          </label>
+          <select
+            id="recipeStyle"
+            v-model="filters.style"
+            class="w-full h-[40px] border rounded px-3 bg-white"
+          >
+            <option value="">{{ t('recipe.list.all') }}</option>
+            <option v-for="style in styleOptions" :key="style" :value="style">
+              {{ style || '—' }}
+            </option>
           </select>
         </div>
         <div>
-          <label class="block text-sm text-gray-600 mb-1">{{ $t('recipe.list.startDate') }}</label>
-          <input type="date" v-model="search.startDate" class="w-full h-[36px] border rounded px-3 py-2" />
+          <label for="recipeStatus" class="block text-sm text-gray-600 mb-1">
+            {{ t('recipe.list.status') }}
+          </label>
+          <select
+            id="recipeStatus"
+            v-model="filters.status"
+            class="w-full h-[40px] border rounded px-3 bg-white"
+          >
+            <option value="">{{ t('recipe.list.all') }}</option>
+            <option v-for="status in STATUSES" :key="status" :value="status">
+              {{ statusLabel(status) }}
+            </option>
+          </select>
         </div>
-        <div>
-          <label class="block text-sm text-gray-600 mb-1">{{ $t('recipe.list.endDate') }}</label>
-          <input type="date" v-model="search.endDate" class="w-full h-[36px] border rounded px-3 py-2" />
-        </div>
-        <div class="md:col-span-2">
-          <label class="block text-sm text-gray-600 mb-1">{{ $t('recipe.list.keyword') }}</label>
-          <input type="search" v-model.trim="search.q" :placeholder="$t('recipe.list.keywordPh')"
-            class="w-full h-[36px] border rounded px-3 py-2" />
+        <div class="flex items-center gap-2 pt-6">
+          <input
+            id="showAllVersions"
+            v-model="showAllVersions"
+            type="checkbox"
+            class="h-4 w-4"
+          />
+          <label for="showAllVersions" class="text-sm text-gray-700">
+            {{ t('recipe.list.showAllVersions') }}
+          </label>
         </div>
       </form>
-      <div class="mt-2 text-sm text-gray-500">{{ $t('recipe.list.showing', { count: sortedRows.length }) }}</div>
     </section>
 
-    <!-- Table -->
-    <section>
+    <section class="bg-white shadow rounded-lg border border-gray-200 overflow-hidden" aria-labelledby="recipeTableHeading">
+      <h2 id="recipeTableHeading" class="sr-only">{{ t('recipe.list.title') }}</h2>
+
       <div class="hidden md:block overflow-x-auto">
-        <table class="min-w-full border border-gray-200 divide-y divide-gray-200">
-          <thead class="bg-gray-50">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50 text-xs text-gray-600 uppercase">
             <tr>
-              <th class="px-3 py-2 text-left text-sm font-medium text-gray-600">
+              <th class="px-3 py-2 text-left">
+                <button class="inline-flex items-center gap-1" @click="setSort('code')">
+                  {{ t('recipe.list.recipeId') }}
+                  <span class="text-xs">{{ sortIcon('code') }}</span>
+                </button>
+              </th>
+              <th class="px-3 py-2 text-left">
                 <button class="inline-flex items-center gap-1" @click="setSort('name')">
-                  {{ $t('recipe.list.name') }} <span class="text-xs opacity-60">{{ sortIcon('name') }}</span>
+                  {{ t('recipe.list.name') }}
+                  <span class="text-xs">{{ sortIcon('name') }}</span>
                 </button>
               </th>
-              <th class="px-3 py-2 text-left text-sm font-medium text-gray-600">
+              <th class="px-3 py-2 text-left">
                 <button class="inline-flex items-center gap-1" @click="setSort('version')">
-                  {{ $t('recipe.list.version') }} <span class="text-xs opacity-60">{{ sortIcon('version') }}</span>
+                  {{ t('recipe.list.version') }}
+                  <span class="text-xs">{{ sortIcon('version') }}</span>
                 </button>
               </th>
-              <th class="px-3 py-2 text-left text-sm font-medium text-gray-600">
+              <th class="px-3 py-2 text-left">
                 <button class="inline-flex items-center gap-1" @click="setSort('status')">
-                  {{ $t('recipe.list.status') }} <span class="text-xs opacity-60">{{ sortIcon('status') }}</span>
+                  {{ t('recipe.list.status') }}
+                  <span class="text-xs">{{ sortIcon('status') }}</span>
                 </button>
               </th>
-              <th class="px-3 py-2 text-left text-sm font-medium text-gray-600">
+              <th class="px-3 py-2 text-left">
                 <button class="inline-flex items-center gap-1" @click="setSort('created_at')">
-                  {{ $t('recipe.list.created') }} <span class="text-xs opacity-60">{{ sortIcon('created_at') }}</span>
+                  {{ t('recipe.list.created') }}
+                  <span class="text-xs">{{ sortIcon('created_at') }}</span>
                 </button>
               </th>
-              <th class="px-3 py-2 text-sm font-medium text-gray-600">{{ $t('common.actions') }}</th>
+              <th class="px-3 py-2 text-left">{{ t('recipe.list.style') }}</th>
+              <th class="px-3 py-2 text-left">{{ t('common.actions') }}</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-100">
-            <tr v-for="r in sortedRows" :key="r.version_id" class="hover:bg-gray-50">
-              <td class="px-3 py-2">{{ r.name }}</td>
-              <td class="px-3 py-2">{{ r.version }}</td>
-              <td class="px-3 py-2"><span :class="['px-2 py-1 text-xs rounded-full', statusClass(r.status)]">{{ r.status }}</span></td>
-              <td class="px-3 py-2">{{ fmtDate(r.created_at) }}</td>
+          <tbody class="divide-y divide-gray-100 text-sm">
+            <tr v-for="row in sortedRecipes" :key="row.id" class="hover:bg-gray-50">
+              <td class="px-3 py-2 font-mono text-xs text-gray-700">{{ row.code }}</td>
+              <td class="px-3 py-2">
+                <button class="text-blue-600 hover:underline" @click="goEdit(row)">
+                  {{ row.name }}
+                </button>
+              </td>
+              <td class="px-3 py-2">v{{ row.version }}</td>
+              <td class="px-3 py-2">
+                <span class="px-2 py-1 rounded-full text-xs"
+                  :class="statusChip(row.status)">
+                  {{ statusLabel(row.status) }}
+                </span>
+              </td>
+              <td class="px-3 py-2 text-xs text-gray-500">{{ formatDate(row.created_at) }}</td>
+              <td class="px-3 py-2">{{ row.style || '—' }}</td>
               <td class="px-3 py-2 space-x-2">
-                <router-link
-                  :to="{ name: 'レシピ編集', params: { recipeId: r.recipe_id, versionId: r.version_id } }"
-                  class="px-2 py-1 text-sm border rounded hover:bg-gray-100"
-                >Details</router-link>
-                <button class="px-2 py-1 text-sm border rounded hover:bg-gray-100" @click="openEdit(r)">{{ $t('common.edit') }}</button>
-                <button class="px-2 py-1 text-sm rounded bg-red-600 text-white hover:bg-red-700" @click="confirmDelete(r)">{{ $t('common.delete') }}</button>
+                <button
+                  class="px-2 py-1 text-xs rounded border hover:bg-gray-100 disabled:opacity-60"
+                  :disabled="copyingId === row.id || copying"
+                  @click="openCopy(row)"
+                >
+                  {{ copyingId === row.id ? t('common.copying') : t('common.copy') }}
+                </button>
+                <button
+                  class="px-2 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700"
+                  @click="confirmDelete(row)"
+                >
+                  {{ t('common.delete') }}
+                </button>
               </td>
             </tr>
-            <tr v-if="sortedRows.length === 0">
-              <td colspan="5" class="px-3 py-6 text-center text-gray-500">{{ $t('common.noData') }}</td>
+            <tr v-if="!loading && sortedRecipes.length === 0">
+              <td colspan="7" class="px-3 py-6 text-center text-gray-500">
+                {{ t('common.noData') }}
+              </td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <!-- Mobile cards -->
-      <div class="grid gap-3 md:hidden">
-        <div v-for="r in sortedRows" :key="r.version_id" class="border rounded-lg p-3">
-          <div class="flex items-center justify-between">
-            <div class="text-sm font-semibold">{{ r.name }}</div>
-            <span :class="['px-2 py-1 text-xs rounded-full', statusClass(r.status)]">{{ r.status }}</span>
-          </div>
-          <div class="text-xs text-gray-500 mt-1">{{ $t('recipe.list.version') }}: {{ r.version }}</div>
-          <div class="text-xs text-gray-500">{{ fmtDate(r.created_at) }}</div>
-          <div class="flex justify-end gap-2 mt-2">
-            <router-link
-              :to="{ name: 'レシピ編集', params: { recipeId: r.recipe_id, versionId: r.version_id } }"
-              class="px-2 py-1 text-xs border rounded hover:bg-gray-100"
-            >Details</router-link>
-            <button class="px-2 py-1 text-xs border rounded hover:bg-gray-100" @click="openEdit(r)">{{ $t('common.edit') }}</button>
-            <button class="px-2 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700" @click="confirmDelete(r)">{{ $t('common.delete') }}</button>
-          </div>
-        </div>
+      <div class="md:hidden divide-y divide-gray-200">
+        <article
+          v-for="row in sortedRecipes"
+          :key="`card-${row.id}`"
+          class="p-4"
+        >
+          <header class="flex items-start justify-between">
+            <div>
+              <p class="text-xs uppercase tracking-wide text-gray-400">{{ row.code }}</p>
+              <button class="text-base font-semibold text-blue-600" @click="goEdit(row)">
+                {{ row.name }}
+              </button>
+            </div>
+            <span class="px-2 py-1 text-xs rounded-full" :class="statusChip(row.status)">
+              {{ statusLabel(row.status) }}
+            </span>
+          </header>
+          <dl class="mt-2 text-sm text-gray-600 space-y-1">
+            <div class="flex justify-between">
+              <dt>{{ t('recipe.list.version') }}</dt>
+              <dd>v{{ row.version }}</dd>
+            </div>
+            <div class="flex justify-between">
+              <dt>{{ t('recipe.list.style') }}</dt>
+              <dd>{{ row.style || '—' }}</dd>
+            </div>
+            <div class="flex justify-between text-xs text-gray-500">
+              <dt>{{ t('recipe.list.created') }}</dt>
+              <dd>{{ formatDate(row.created_at) }}</dd>
+            </div>
+          </dl>
+          <footer class="mt-3 flex gap-2">
+            <button
+              class="px-3 py-2 text-sm rounded border hover:bg-gray-100 disabled:opacity-60"
+              :disabled="copyingId === row.id || copying"
+              @click="openCopy(row)"
+            >
+              {{ copyingId === row.id ? t('common.copying') : t('common.copy') }}
+            </button>
+            <button class="px-3 py-2 text-sm rounded bg-red-600 text-white hover:bg-red-700" @click="confirmDelete(row)">
+              {{ t('common.delete') }}
+            </button>
+          </footer>
+        </article>
+        <p v-if="!loading && sortedRecipes.length === 0" class="p-4 text-sm text-gray-500 text-center">
+          {{ t('common.noData') }}
+        </p>
       </div>
     </section>
 
-    <!-- Editor Modal -->
-    <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div class="w-full max-w-2xl bg-white rounded-xl shadow-lg border border-gray-200">
-        <div class="flex items-center justify-between px-4 py-3 border-b">
-          <h2 class="text-base font-semibold">{{ form.version_id ? $t('recipe.list.editTitle') : $t('recipe.list.newTitle') }}</h2>
-          <button class="px-2 py-1 text-sm rounded border hover:bg-gray-50" @click="closeModal">{{ $t('common.close') }}</button>
-        </div>
-        <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm text-gray-600 mb-1">{{ $t('recipe.list.orgId') }}</label>
-            <input v-model.trim="form.org_id" :disabled="form.version_id" class="w-full h-[40px] border rounded px-3" placeholder="org uuid" />
-            <p v-if="errors.org_id" class="mt-1 text-xs text-red-600">{{ errors.org_id }}</p>
+        <header class="px-4 py-3 border-b">
+          <h3 class="font-semibold text-gray-900">
+            {{ editing ? t('recipe.list.editTitle') : t('recipe.list.newTitle') }}
+          </h3>
+        </header>
+        <section class="p-4 space-y-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.list.recipeId') }}<span class="text-red-600">*</span></label>
+              <input v-model.trim="form.code" class="w-full h-[40px] border rounded px-3" />
+              <p v-if="errors.code" class="mt-1 text-xs text-red-600">{{ errors.code }}</p>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.list.version') }}<span class="text-red-600">*</span></label>
+              <input v-model.number="form.version" type="number" min="1" class="w-full h-[40px] border rounded px-3" />
+            </div>
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.list.name') }}<span class="text-red-600">*</span></label>
+              <input v-model.trim="form.name" class="w-full h-[40px] border rounded px-3" />
+              <p v-if="errors.name" class="mt-1 text-xs text-red-600">{{ errors.name }}</p>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.list.status') }}<span class="text-red-600">*</span></label>
+              <select v-model="form.status" class="w-full h-[40px] border rounded px-3 bg-white">
+                <option v-for="status in STATUSES" :key="status" :value="status">
+                  {{ t('recipe.statusMap.' + status) }}
+                </option>
+              </select>
+            </div>
+            <div class="md:col-span-2">
+              <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.list.style') }}</label>
+              <input v-model.trim="form.style" class="w-full h-[40px] border rounded px-3" />
+            </div>
+            <div class="md:col-span-2">
+              <label class="block text-sm text-gray-600 mb-1">{{ t('labels.note') }}</label>
+              <textarea v-model.trim="form.notes" rows="3" class="w-full border rounded px-3 py-2"></textarea>
+            </div>
           </div>
-          <div>
-            <label class="block text-sm text-gray-600 mb-1">{{ $t('recipe.list.name') }}</label>
-            <input v-model.trim="form.name" class="w-full h-[40px] border rounded px-3" />
-            <p v-if="errors.name" class="mt-1 text-xs text-red-600">{{ errors.name }}</p>
-          </div>
-          <div>
-            <label class="block text-sm text-gray-600 mb-1">{{ $t('recipe.list.version') }}</label>
-            <input v-model.trim="form.version" class="w-full h-[40px] border rounded px-3" />
-            <p v-if="errors.version" class="mt-1 text-xs text-red-600">{{ errors.version }}</p>
-          </div>
-          <div>
-            <label class="block text-sm text-gray-600 mb-1">{{ $t('recipe.list.status') }}</label>
-            <select v-model="form.status" class="w-full h-[40px] border rounded px-3">
-              <option value="draft">draft</option>
-              <option value="released">released</option>
-              <option value="retired">retired</option>
-            </select>
-            <p v-if="errors.status" class="mt-1 text-xs text-red-600">{{ errors.status }}</p>
-          </div>
-        </div>
-        <div class="px-4 py-3 border-t flex items-center justify-end gap-2">
-          <button class="px-3 py-2 rounded border hover:bg-gray-50" @click="closeModal">{{ $t('common.cancel') }}</button>
-          <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" :disabled="saving" @click="saveRecord">{{ saving ? $t('common.saving') : $t('common.save') }}</button>
-        </div>
+        </section>
+        <footer class="px-4 py-3 border-t flex items-center justify-end gap-2">
+          <button class="px-3 py-2 rounded border hover:bg-gray-100" @click="closeModal">
+            {{ t('common.cancel') }}
+          </button>
+          <button
+            class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+            :disabled="saving"
+            @click="saveRecipe"
+          >
+            {{ saving ? t('common.saving') : t('common.save') }}
+          </button>
+        </footer>
       </div>
     </div>
 
-    <!-- Delete confirm -->
-    <div v-if="showDelete" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div class="w-full max-w-md bg-white rounded-xl shadow-lg border">
-        <div class="px-4 py-3 border-b">
-          <h3 class="font-semibold">{{ $t('common.delete') }}</h3>
-        </div>
-        <div class="p-4 text-sm">{{ $t('recipe.list.deleteConfirm', { version: toDelete?.version, name: toDelete?.name }) }}</div>
-        <div class="px-4 py-3 border-t flex items-center justify-end gap-2">
-          <button class="px-3 py-2 rounded border hover:bg-gray-50" @click="showDelete = false">{{ $t('common.cancel') }}</button>
-          <button class="px-3 py-2 rounded bg-red-600 text-white hover:bg-red-700" @click="deleteRecord">{{ $t('common.delete') }}</button>
-        </div>
+    <div v-if="showCopyModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div class="w-full max-w-md bg-white rounded-xl shadow-lg border border-gray-200">
+        <header class="px-4 py-3 border-b">
+          <h3 class="font-semibold text-gray-900">{{ t('recipe.list.copyTitle') }}</h3>
+          <p class="text-sm text-gray-500 mt-1">{{ t('recipe.list.copyDescription') }}</p>
+        </header>
+        <section class="p-4 space-y-4">
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.list.recipeId') }}<span class="text-red-600">*</span></label>
+            <input v-model.trim="copyForm.code" class="w-full h-[40px] border rounded px-3" />
+            <p v-if="copyErrors.code" class="text-xs text-red-600 mt-1">{{ copyErrors.code }}</p>
+          </div>
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.list.name') }}<span class="text-red-600">*</span></label>
+            <input v-model.trim="copyForm.name" class="w-full h-[40px] border rounded px-3" />
+            <p v-if="copyErrors.name" class="text-xs text-red-600 mt-1">{{ copyErrors.name }}</p>
+          </div>
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.list.style') }}</label>
+            <input v-model.trim="copyForm.style" class="w-full h-[40px] border rounded px-3" />
+          </div>
+          <div class="text-xs text-gray-500 bg-gray-50 border border-dashed border-gray-200 rounded px-3 py-2">
+            {{ t('recipe.list.copyVersionNote') }}
+          </div>
+        </section>
+        <footer class="px-4 py-3 border-t flex items-center justify-end gap-2">
+          <button class="px-3 py-2 rounded border hover:bg-gray-100" @click="closeCopyModal()">
+            {{ t('common.cancel') }}
+          </button>
+          <button
+            class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
+            :disabled="copying"
+            @click="executeCopy"
+          >
+            {{ copying ? t('common.copying') : t('recipe.list.copyConfirm') }}
+          </button>
+        </footer>
+      </div>
+    </div>
+
+    <div v-if="showDelete" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div class="w-full max-w-md bg-white rounded-xl shadow-lg border border-gray-200">
+        <header class="px-4 py-3 border-b">
+          <h3 class="font-semibold text-gray-900">{{ t('common.delete') }}</h3>
+        </header>
+        <section class="p-4 text-sm text-gray-700">
+          {{ t('recipe.list.deleteConfirm', { name: toDelete?.name ?? '', version: toDelete?.version ?? '' }) }}
+        </section>
+        <footer class="px-4 py-3 border-t flex items-center justify-end gap-2">
+          <button class="px-3 py-2 rounded border hover:bg-gray-100" @click="showDelete = false">
+            {{ t('common.cancel') }}
+          </button>
+          <button class="px-3 py-2 rounded bg-red-600 text-white hover:bg-red-700" @click="deleteRecipe">
+            {{ t('common.delete') }}
+          </button>
+        </footer>
       </div>
     </div>
   </AdminLayout>
 </template>
 
-<script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+<script setup lang="ts">
+import { computed, reactive, ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { supabase } from '../../lib/supabase'
-import AdminLayout from "@/components/layout/AdminLayout.vue";
-import PageBreadcrumb from "@/components/common/PageBreadcrumb.vue";
+import AdminLayout from '@/components/layout/AdminLayout.vue'
+import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import { supabase } from '@/lib/supabase'
+
+const STATUSES = ['draft', 'released', 'retired'] as const
 
 const { t } = useI18n()
-const currentPageTitle = computed(() => t('recipe.list.title'))
-const rows = ref([])
+const router = useRouter()
+
+const pageTitle = computed(() => t('recipe.list.title'))
+
+interface RecipeRow {
+  id: string
+  code: string
+  name: string
+  style: string | null
+  version: number
+  status: string
+  notes: string | null
+  created_at: string | null
+}
+
+type SortKey = 'code' | 'name' | 'version' | 'status' | 'created_at'
+type SortDirection = 'asc' | 'desc'
+
+const recipes = ref<RecipeRow[]>([])
 const loading = ref(false)
 const saving = ref(false)
+const sortKey = ref<SortKey>('created_at')
+const sortDirection = ref<SortDirection>('desc')
 
-// Modal state
+const filters = reactive({
+  name: '',
+  style: '',
+  status: '',
+})
+
+const form = reactive({
+  id: '',
+  code: '',
+  name: '',
+  style: '',
+  version: 1,
+  status: STATUSES[0],
+  notes: '',
+})
+
+const errors = reactive<Record<string, string>>({})
 const showModal = ref(false)
 const showDelete = ref(false)
-const toDelete = ref(null)
+const editing = ref(false)
+const toDelete = ref<RecipeRow | null>(null)
+const copyingId = ref<string | null>(null)
+const showAllVersions = ref(false)
+const showCopyModal = ref(false)
+const copyTarget = ref<RecipeRow | null>(null)
+const copyForm = reactive({ code: '', name: '', style: '' })
+const copyErrors = reactive<Record<string, string>>({})
+const copying = ref(false)
 
-const form = reactive({ version_id: null, process_id: null, recipe_id: null, org_id: '', name: '', version: '', status: 'draft' })
-const errors = reactive({})
+const styleOptions = computed(() => {
+  const set = new Set<string>()
+  recipes.value.forEach((row) => {
+    if (row.style) set.add(row.style)
+  })
+  return Array.from(set).sort((a, b) => a.localeCompare(b))
+})
 
-const search = reactive({ status: '', startDate: '', endDate: '', q: '' })
+const filteredRecipes = computed(() => {
+  const nameTerm = filters.name.trim().toLowerCase()
+  const styleTerm = filters.style.trim().toLowerCase()
+  const base = recipes.value.filter((row) => {
+    const matchesName = !nameTerm || row.name.toLowerCase().includes(nameTerm) || row.code.toLowerCase().includes(nameTerm)
+    const matchesStyle = !styleTerm || (row.style?.toLowerCase() ?? '').includes(styleTerm)
+    const matchesStatus = !filters.status || row.status === filters.status
+    return matchesName && matchesStyle && matchesStatus
+  })
+  if (showAllVersions.value) return base
 
-const sortKey = ref('created_at')
-const sortDir = ref('desc')
-
-function setSort(key) { if (sortKey.value === key) sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc'; else { sortKey.value = key; sortDir.value = 'asc' } }
-function sortIcon(key) { if (sortKey.value !== key) return '↕'; return sortDir.value === 'asc' ? '▲' : '▼' }
-
-function statusClass(s) { if (s === 'released') return 'bg-green-100 text-green-800'; if (s === 'draft') return 'bg-yellow-100 text-yellow-800'; if (s === 'retired') return 'bg-gray-200 text-gray-700'; return 'bg-gray-100 text-gray-800' }
-function fmtDate(d) { return d ? new Date(d).toLocaleString() : '' }
-
-async function fetchData() {
-  loading.value = true
-  const [defs, vers] = await Promise.all([
-    supabase.from('process_definitions').select('*'),
-    supabase.from('process_versions').select('*')
-  ])
-  loading.value = false
-  if (defs.error) { alert('Fetch definitions error: ' + defs.error.message); return }
-  if (vers.error) { alert('Fetch versions error: ' + vers.error.message); return }
-  const byId = Object.fromEntries((defs.data || []).map(d => [d.id, d]))
-  rows.value = (vers.data || []).map(v => {
-    const def = byId[v.process_id]
-    return {
-      version_id: v.id,
-      process_id: v.process_id,
-      recipe_id: def?.id ?? v.process_id,
-      name: def?.name ?? '(unknown)',
-      version: v.version,
-      status: v.status,
-      created_at: v.created_at,
-      org_id: def?.org_id ?? ''
+  const latestByCode = new Map<string, RecipeRow>()
+  for (const row of base) {
+    const existing = latestByCode.get(row.code)
+    if (!existing) {
+      latestByCode.set(row.code, row)
+      continue
     }
-  })
-}
 
-const parseDate = (d) => d ? new Date(d + 'T00:00:00') : null
-const inRange = (dateStr, startStr, endStr) => {
-  if (!dateStr) return true
-  const d = new Date(dateStr)
-  const s = parseDate(startStr)
-  const e = parseDate(endStr)
-  if (s && d < s) return false
-  if (e) { const eod = new Date(e); eod.setHours(23,59,59,999); if (d > eod) return false }
-  return true
-}
+    const existingVersion = existing.version ?? 0
+    const currentVersion = row.version ?? 0
+    const existingTimeRaw = existing.created_at ? new Date(existing.created_at).getTime() : Number.NaN
+    const currentTimeRaw = row.created_at ? new Date(row.created_at).getTime() : Number.NaN
+    const existingTime = Number.isNaN(existingTimeRaw) ? 0 : existingTimeRaw
+    const currentTime = Number.isNaN(currentTimeRaw) ? 0 : currentTimeRaw
 
-const filteredRows = computed(() => {
-  const q = search.q.toLowerCase()
-  return rows.value.filter(r => {
-    const statusOk = !search.status || r.status === search.status
-    const dateOk = inRange(r.created_at, search.startDate, search.endDate)
-    const textOk = !q || `${r.name} ${r.version}`.toLowerCase().includes(q)
-    return statusOk && dateOk && textOk
-  })
-})
+    const isNewerVersion = currentVersion > existingVersion
+    const isSameVersionNewerDate = currentVersion === existingVersion && currentTime > existingTime
 
-const sortedRows = computed(() => {
-  const arr = [...filteredRows.value]
-  const dir = sortDir.value === 'asc' ? 1 : -1
-  const key = sortKey.value
-  const val = (r) => {
-    if (key === 'created_at') return new Date(r.created_at).getTime()
-    return (r[key] ?? '').toString().toLowerCase()
+    if (isNewerVersion || isSameVersionNewerDate) {
+      latestByCode.set(row.code, row)
+    }
   }
-  arr.sort((a,b) => { const va = val(a), vb = val(b); if (va < vb) return -1*dir; if (va > vb) return 1*dir; return 0 })
-  return arr
+
+  return Array.from(latestByCode.values())
 })
 
-function openCreate() { Object.assign(form, { version_id: null, process_id: null, recipe_id: null, org_id: '', name: '', version: '', status: 'draft' }); clearErrors(); showModal.value = true }
-function openEdit(r) { Object.assign(form, r); clearErrors(); showModal.value = true }
-function closeModal() { showModal.value = false }
-function clearErrors() { for (const k of Object.keys(errors)) delete errors[k] }
+const sortedRecipes = computed(() => {
+  const sorted = [...filteredRecipes.value]
+  sorted.sort((a, b) => {
+    const key = sortKey.value
+    const dir = sortDirection.value === 'asc' ? 1 : -1
+
+    const av = a[key]
+    const bv = b[key]
+
+    if (av === null || av === undefined) return 1
+    if (bv === null || bv === undefined) return -1
+
+    if (typeof av === 'number' && typeof bv === 'number') {
+      return (av - bv) * dir
+    }
+
+    const aStr = String(av).toLowerCase()
+    const bStr = String(bv).toLowerCase()
+    if (aStr < bStr) return -1 * dir
+    if (aStr > bStr) return 1 * dir
+    return 0
+  })
+  return sorted
+})
+
+const sortIcon = (key: SortKey) => {
+  if (sortKey.value !== key) return ''
+  return sortDirection.value === 'asc' ? '▲' : '▼'
+}
+
+const statusChip = (status: string) => {
+  if (status === 'released') return 'bg-green-100 text-green-800'
+  if (status === 'draft') return 'bg-yellow-100 text-yellow-800'
+  if (status === 'retired') return 'bg-gray-200 text-gray-600'
+  return 'bg-gray-100 text-gray-600'
+}
+
+const statusLabel = (status: string) => {
+  const key = `recipe.statusMap.${status}`
+  const label = t(key)
+  return label === key ? status : label
+}
+
+function setSort(key: SortKey) {
+  if (sortKey.value === key) {
+    sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc'
+  } else {
+    sortKey.value = key
+    sortDirection.value = key === 'created_at' ? 'desc' : 'asc'
+  }
+}
+
+function formatDate(input: string | null) {
+  if (!input) return '—'
+  const date = new Date(input)
+  if (Number.isNaN(date.getTime())) return input
+  return date.toLocaleString()
+}
+
+function openCreate() {
+  editing.value = false
+  resetForm()
+  form.version = 1
+  form.status = STATUSES[0]
+  showModal.value = true
+}
+
+function closeModal() {
+  showModal.value = false
+}
+
+function confirmDelete(row: RecipeRow) {
+  toDelete.value = row
+  showDelete.value = true
+}
+
+function resetFilters() {
+  filters.name = ''
+  filters.style = ''
+  filters.status = ''
+}
+
+function resetForm() {
+  form.id = ''
+  form.code = ''
+  form.name = ''
+  form.style = ''
+  form.version = 1
+  form.status = STATUSES[0]
+  form.notes = ''
+  Object.keys(errors).forEach((key) => delete errors[key])
+}
 
 function validate() {
-  clearErrors()
-  if (!form.name) errors.name = 'name required'
-  if (!form.version) errors.version = 'version required'
-  if (!['draft','released','retired'].includes(form.status)) errors.status = 'invalid status'
-  if (!form.version_id && !/^\w{8}(-\w{4}){3}-\w{12}$/.test(String(form.org_id))) errors.org_id = 'org_id must be UUID'
+  Object.keys(errors).forEach((key) => delete errors[key])
+  if (!form.code) errors.code = t('errors.required', { field: t('recipe.list.recipeId') })
+  if (!form.name) errors.name = t('errors.required', { field: t('recipe.list.name') })
   return Object.keys(errors).length === 0
 }
 
-async function saveRecord() {
+async function fetchRecipes() {
+  loading.value = true
+  const { data, error } = await supabase
+    .from('rcp_recipes')
+    .select('id, code, name, style, version, status, notes, created_at')
+    .order('created_at', { ascending: false, nullsFirst: false })
+  loading.value = false
+  if (error) {
+    alert('Load error: ' + error.message)
+    return
+  }
+  recipes.value = data ?? []
+}
+
+async function refresh() {
+  await fetchRecipes()
+}
+
+async function saveRecipe() {
   if (!validate()) return
+
   saving.value = true
-  try {
-    if (form.version_id) {
-      // Update definition name
-      const { error: e1 } = await supabase.from('process_definitions').update({ name: form.name }).eq('id', form.recipe_id)
-      if (e1) throw new Error(e1.message)
-      // Update version entry
-      const { error: e2 } = await supabase.from('process_versions').update({ version: form.version, status: form.status }).eq('id', form.version_id)
-      if (e2) throw new Error(e2.message)
-    } else {
-      // Create definition then version
-      const { data: d1, error: e1 } = await supabase.from('process_definitions').insert({ org_id: form.org_id, name: form.name }).select('*').single()
-      if (e1) throw new Error(e1.message)
-      const payloadV = { process_id: d1.id, version: form.version, status: form.status }
-      const { data: d2, error: e2 } = await supabase.from('process_versions').insert(payloadV).select('*').single()
-      if (e2) throw new Error(e2.message)
-    }
-  } catch (e) {
-    saving.value = false; alert('Save error: ' + e.message); return
+  const payload = {
+    code: form.code.trim(),
+    name: form.name.trim(),
+    style: form.style.trim() || null,
+    version: form.version || 1,
+    status: form.status,
+    notes: form.notes.trim() || null,
   }
+
+  let response
+  if (editing.value && form.id) {
+    response = await supabase
+      .from('rcp_recipes')
+      .update(payload)
+      .eq('id', form.id)
+      .select('id, code, name, style, version, status, notes, created_at')
+      .single()
+  } else {
+    response = await supabase
+      .from('rcp_recipes')
+      .insert({ ...payload })
+      .select('id, code, name, style, version, status, notes, created_at')
+      .single()
+  }
+
   saving.value = false
-  showModal.value = false
-  fetchData()
-}
-
-function confirmDelete(r) { toDelete.value = r; showDelete.value = true }
-async function deleteRecord() {
-  if (!toDelete.value) return
-  const verId = toDelete.value.version_id
-  const procId = toDelete.value.process_id
-  const { error } = await supabase.from('process_versions').delete().eq('id', verId)
-  if (error) { alert('Delete error: ' + error.message); return }
-  // if no versions remain, delete definition too
-  const { data: remain, error: e2 } = await supabase.from('process_versions').select('id').eq('process_id', procId).limit(1)
-  if (!e2 && (remain || []).length === 0) {
-    await supabase.from('process_definitions').delete().eq('id', procId)
+  if (response.error) {
+    alert('Save error: ' + response.error.message)
+    return
   }
-  showDelete.value = false; toDelete.value = null; fetchData()
+
+  const saved = response.data
+  if (!saved) return
+
+  if (editing.value) {
+    const idx = recipes.value.findIndex((row) => row.id === saved.id)
+    if (idx >= 0) recipes.value[idx] = saved
+  } else {
+    recipes.value.unshift(saved)
+  }
+
+  closeModal()
 }
 
-function resetSearch() { search.status=''; search.startDate=''; search.endDate=''; search.q='' }
+async function deleteRecipe() {
+  if (!toDelete.value) return
+  const { error } = await supabase.from('rcp_recipes').delete().eq('id', toDelete.value.id)
+  if (error) {
+    alert('Delete error: ' + error.message)
+    return
+  }
+  recipes.value = recipes.value.filter((row) => row.id !== toDelete.value?.id)
+  showDelete.value = false
+  toDelete.value = null
+}
 
-onMounted(fetchData)
+function goEdit(row: RecipeRow) {
+  router.push(`/recipeEdit/${row.id}/${row.version}`)
+}
+
+const normalizeObject = (value: unknown) => {
+  if (value && typeof value === 'object' && !Array.isArray(value)) return value as Record<string, unknown>
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value)
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+        ? (parsed as Record<string, unknown>)
+        : {}
+    } catch {
+      return {}
+    }
+  }
+  return {}
+}
+
+const normalizeArray = (value: unknown) => {
+  if (Array.isArray(value)) return value as unknown[]
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value)
+      return Array.isArray(parsed) ? parsed : []
+    } catch {
+      return []
+    }
+  }
+  return []
+}
+
+function resetCopyErrors() {
+  Object.keys(copyErrors).forEach((key) => delete copyErrors[key])
+}
+
+function openCopy(row: RecipeRow) {
+  resetCopyErrors()
+  copyTarget.value = row
+  const suffix = (t('recipe.list.copySuffix') || 'copy').trim()
+  const normalizedSuffix = suffix ? suffix.replace(/\s+/g, '-') : 'copy'
+  const codeLowerSuffix = normalizedSuffix.toLowerCase()
+  const codeAlreadyHasSuffix = row.code.toLowerCase().endsWith(`-${codeLowerSuffix}`)
+  copyForm.code = codeAlreadyHasSuffix ? row.code : `${row.code}-${normalizedSuffix}`
+  copyForm.name = suffix ? `${row.name} ${suffix}`.trim() : row.name
+  copyForm.style = row.style ?? ''
+  copyingId.value = null
+  showCopyModal.value = true
+}
+
+function closeCopyModal(force = false) {
+  if (copying.value && !force) return
+  showCopyModal.value = false
+  copyTarget.value = null
+  copyForm.code = ''
+  copyForm.name = ''
+  copyForm.style = ''
+  copying.value = false
+  copyingId.value = null
+  resetCopyErrors()
+}
+
+async function executeCopy() {
+  if (!copyTarget.value || copying.value) return
+
+  resetCopyErrors()
+  const trimmedCode = copyForm.code.trim()
+  const trimmedName = copyForm.name.trim()
+  const trimmedStyle = copyForm.style.trim()
+
+  if (!trimmedCode) copyErrors.code = t('errors.required', { field: t('recipe.list.recipeId') })
+  if (!trimmedName) copyErrors.name = t('errors.required', { field: t('recipe.list.name') })
+  if (Object.keys(copyErrors).length > 0) return
+
+  copying.value = true
+  copyingId.value = copyTarget.value.id
+
+  try {
+    const { data: original, error: loadError } = await supabase
+      .from('rcp_recipes')
+      .select('id, code, name, style, version, status, notes, batch_size_l, target_og, target_fg, target_abv, target_ibu, target_srm')
+      .eq('id', copyTarget.value.id)
+      .single()
+    if (loadError || !original) throw loadError ?? new Error('Missing recipe')
+
+    const { data: inserted, error: insertError } = await supabase
+      .from('rcp_recipes')
+      .insert({
+        code: trimmedCode,
+        name: trimmedName,
+        style: trimmedStyle || null,
+        version: 1,
+        status: 'draft',
+        notes: original.notes,
+        batch_size_l: original.batch_size_l,
+        target_og: original.target_og,
+        target_fg: original.target_fg,
+        target_abv: original.target_abv,
+        target_ibu: original.target_ibu,
+        target_srm: original.target_srm,
+      })
+      .select('id, code, name, style, version, status, notes, created_at')
+      .single()
+    if (insertError || !inserted) throw insertError ?? new Error('Insert failed')
+
+    const { data: ingredientRows, error: ingredientLoadError } = await supabase
+      .from('rcp_ingredients')
+      .select('material_id, amount, uom_id, usage_stage, notes')
+      .eq('recipe_id', copyTarget.value.id)
+    if (ingredientLoadError) throw ingredientLoadError
+
+    if (ingredientRows && ingredientRows.length > 0) {
+      const ingredientPayload = ingredientRows.map((item) => ({
+        recipe_id: inserted.id,
+        material_id: item.material_id,
+        amount: item.amount,
+        uom_id: item.uom_id,
+        usage_stage: item.usage_stage,
+        notes: item.notes,
+      }))
+      const { error: ingredientInsertError } = await supabase
+        .from('rcp_ingredients')
+        .insert(ingredientPayload)
+      if (ingredientInsertError) throw ingredientInsertError
+    }
+
+    const { data: processRows, error: processLoadError } = await supabase
+      .from('prc_processes')
+      .select('id, name, version, is_active, notes, prc_steps(id, step_no, step, target_params, qa_checks, notes)')
+      .eq('recipe_id', copyTarget.value.id)
+    if (processLoadError) throw processLoadError
+
+    if (processRows && processRows.length > 0) {
+      type StepRecord = {
+        id: string
+        process_id: string
+        step_no: number
+        step: string
+        target_params: unknown
+        qa_checks: unknown
+        notes: string | null
+      }
+
+      type ProcessRecord = {
+        id: string
+        name: string
+        version: number
+        is_active: boolean
+        notes: string | null
+        prc_steps?: StepRecord[]
+      }
+
+      const processesToClone = processRows as ProcessRecord[]
+
+      for (const process of processesToClone) {
+        const { data: createdProcess, error: processInsertError } = await supabase
+          .from('prc_processes')
+          .insert({
+            recipe_id: inserted.id,
+            name: process.name,
+            version: process.version,
+            is_active: process.is_active,
+            notes: process.notes,
+          })
+          .select('id')
+          .single()
+        if (processInsertError || !createdProcess) throw processInsertError ?? new Error('Process copy failed')
+
+        const steps = process.prc_steps ?? []
+        if (steps.length > 0) {
+          const stepPayload = steps.map((step) => ({
+            process_id: createdProcess.id,
+            step_no: step.step_no,
+            step: step.step,
+            target_params: normalizeObject(step.target_params),
+            qa_checks: normalizeArray(step.qa_checks),
+            notes: step.notes,
+          }))
+          const { error: stepsInsertError } = await supabase
+            .from('prc_steps')
+            .insert(stepPayload)
+          if (stepsInsertError) throw stepsInsertError
+        }
+      }
+    }
+
+    recipes.value.unshift(inserted)
+    alert(t('recipe.list.copySuccess', { name: inserted.name, version: inserted.version }))
+    copying.value = false
+    closeCopyModal(true)
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error)
+    alert(t('recipe.list.copyError', { message }))
+  } finally {
+    copying.value = false
+    copyingId.value = null
+  }
+}
+
+onMounted(fetchRecipes)
 </script>
-
-<style scoped>
-th, td { white-space: nowrap; }
-</style>

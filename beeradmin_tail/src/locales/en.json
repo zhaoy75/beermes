@@ -9,7 +9,11 @@
     "cancel": "Cancel",
     "close": "Close",
     "actions": "Actions",
-    "noData": "No data"
+    "noData": "No data",
+    "all": "All",
+    "search": "Search",
+    "yes": "Yes",
+    "no": "No"
   },
   "batch": {
     "statusMap": {
@@ -79,29 +83,96 @@
   "labels": {
     "id": "id",
     "name": "name",
+    "code": "code",
     "category": "category",
     "note": "note",
     "taxrate": "taxrate",
     "created_date": "created_date",
     "effect_date": "effect_date",
-    "expire_date": "expire_date"
+    "expire_date": "expire_date",
+    "baseFactor": "base factor",
+    "baseCode": "base code",
+    "tenant": "tenant",
+    "uom": "uom",
+    "active": "active",
+    "createdAt": "created at"
   },
   "category": {
-    "title": "Brew Category Maintenance",
-    "subtitle": "Supabase-backed CRUD for brew categories",
-    "editTitle": "Edit Category",
+    "title": "Category Maintenance",
+    "subtitle": "Manage material categories shared across brewing operations",
     "newTitle": "New Category",
-    "idHelp": "Leave blank for auto-generated id",
+    "editTitle": "Edit Category",
     "deleteTitle": "Delete Category",
-    "deleteConfirm": "Are you sure you want to delete {id}? This cannot be undone.",
-    "selectPlaceholder": "-- Select category --"
+    "deleteConfirm": "Delete category {code}? This cannot be undone.",
+    "searchPlaceholder": "Search categories…"
   },
   "tax": {
     "title": "Beer Tax Maintenance",
-    "subtitle": "Supabase-backed CRUD for beer tax table",
-    "editTitle": "Edit Beer Tax",
-    "newTitle": "Create Beer Tax",
-    "categorySelect": "-- Select category --"
+    "subtitle": "Manage tax rates applied to beer categories",
+    "newTitle": "New Tax Rate",
+    "editTitle": "Edit Tax Rate",
+    "deleteTitle": "Delete Tax Rate",
+    "deleteConfirm": "Delete tax entry for {category} ({rate})?",
+    "searchPlaceholder": "Search tax rules…",
+    "categoryPlaceholder": "Select a category",
+    "invalidCategory": "Unknown category",
+    "missingCategories": "No categories available. Add one in Category Master first."
+  },
+  "uom": {
+    "title": "Unit of Measure Maintenance",
+    "subtitle": "Supabase-backed CRUD for measurement units",
+    "newTitle": "New Unit",
+    "editTitle": "Edit Unit",
+    "deleteTitle": "Delete Unit",
+    "deleteConfirm": "Delete unit {code}? This cannot be undone.",
+    "tenantHint": "Tenant: {tenant}"
+  },
+  "material": {
+    "title": "Material Master Maintenance",
+    "subtitle": "Manage raw-material records backing brewing operations",
+    "newTitle": "New Material",
+    "editTitle": "Edit Material",
+    "deleteTitle": "Delete Material",
+    "deleteConfirm": "Delete material {code}? This cannot be undone.",
+    "searchPlaceholder": "Search materials…",
+    "categoryPlaceholder": "Select a category",
+    "uomPlaceholder": "Select a unit of measure",
+    "activeLabel": "Material is active",
+    "invalidCategory": "Unknown category",
+    "categories": {
+      "malt": "Malt",
+      "hop": "Hop",
+      "yeast": "Yeast",
+      "adjunct": "Adjunct",
+      "water": "Water",
+      "packaging": "Packaging",
+      "chemical": "Chemical",
+      "cleaning": "Cleaning",
+      "other": "Other"
+    }
+  },
+  "auth": {
+    "signin": {
+      "backToDashboard": "Back to dashboard",
+      "title": "Sign In",
+      "subtitle": "Enter your email and password to sign in!",
+      "emailLabel": "Email",
+      "emailPlaceholder": "",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "Enter your password",
+      "keepLoggedIn": "Keep me logged in",
+      "forgotPassword": "Forgot password?",
+      "submit": "Sign In",
+      "noAccount": "Don't have an account?",
+      "signupLink": "Sign Up",
+      "sideCopy": "Craft Beer Admin",
+      "errorGeneric": "Sign-in failed",
+      "languageToggle": "Switch to {lang}",
+      "languageNames": {
+        "en": "English",
+        "ja": "Japanese"
+      }
+    }
   },
   "errors": {
     "required": "{field} is required",
@@ -164,9 +235,10 @@
       "productInventory": "Product Inventory",
       "waste": "Waste",
       "masterMaintenance": "Master Maintenance",
-      "catalogMaster": "Catalog Master",
       "categoryMaster": "Category Master",
       "taxMaster": "Tax Master",
+      "catalogMaster": "Catalog Master",
+      "uomMaster": "UOM Master",
       "packingMaster": "Packing Master",
       "beerMaster": "Beer Master",
       "materialMaster": "Material Master",

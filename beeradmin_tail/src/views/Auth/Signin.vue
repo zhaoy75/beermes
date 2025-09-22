@@ -4,7 +4,55 @@
       <div
         class="relative flex flex-col justify-center w-full h-screen lg:flex-row dark:bg-gray-900"
       >
-        <div class="flex flex-col flex-1 w-full lg:w-1/2">
+        <div class="relative flex flex-col flex-1 w-full lg:w-1/2">
+          <button
+            type="button"
+            @click="toggleLanguage"
+            class="absolute top-6 right-6 inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+            :aria-label="$t('auth.signin.languageToggle', { lang: nextLocaleLabel })"
+            :title="$t('auth.signin.languageToggle', { lang: nextLocaleLabel })"
+          >
+            <svg
+              class="h-5 w-5"
+              viewBox="0 0 20 20"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M10 18.3333C14.6023 18.3333 18.3333 14.6023 18.3333 10C18.3333 5.39763 14.6023 1.66663 10 1.66663C5.39763 1.66663 1.66663 5.39763 1.66663 10C1.66663 14.6023 5.39763 18.3333 10 18.3333Z"
+                stroke="currentColor"
+                stroke-width="1.2"
+              />
+              <path
+                d="M10 1.66663C12.0848 3.94953 13.25 6.87916 13.25 10C13.25 13.1208 12.0848 16.0504 10 18.3333"
+                stroke="currentColor"
+                stroke-width="1.2"
+              />
+              <path
+                d="M10 1.66663C7.91518 3.94953 6.75 6.87916 6.75 10C6.75 13.1208 7.91518 16.0504 10 18.3333"
+                stroke="currentColor"
+                stroke-width="1.2"
+              />
+              <path
+                d="M1.66663 10H18.3333"
+                stroke="currentColor"
+                stroke-width="1.2"
+              />
+              <path
+                d="M3.54163 5.20837H16.4583"
+                stroke="currentColor"
+                stroke-width="1.2"
+              />
+              <path
+                d="M3.54163 14.7916H16.4583"
+                stroke="currentColor"
+                stroke-width="1.2"
+              />
+            </svg>
+            <span class="sr-only">
+              {{ $t('auth.signin.languageToggle', { lang: nextLocaleLabel }) }}
+            </span>
+          </button>
           <div class="w-full max-w-md pt-10 mx-auto">
             <router-link
               to="/"
@@ -26,7 +74,7 @@
                   stroke-linejoin="round"
                 />
               </svg>
-              Back to dashboard
+              {{ $t('auth.signin.backToDashboard') }}
             </router-link>
           </div>
           <div class="flex flex-col justify-center flex-1 w-full max-w-md mx-auto">
@@ -35,10 +83,10 @@
                 <h1
                   class="mb-2 font-semibold text-gray-800 text-title-sm dark:text-white/90 sm:text-title-md"
                 >
-                  Sign In
+                  {{ $t('auth.signin.title') }}
                 </h1>
                 <p class="text-sm text-gray-500 dark:text-gray-400">
-                  Enter your email and password to sign in!
+                  {{ $t('auth.signin.subtitle') }}
                 </p>
               </div>
               <div>
@@ -109,14 +157,14 @@
                         for="email"
                         class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400"
                       >
-                        Email<span class="text-error-500">*</span>
+                        {{ $t('auth.signin.emailLabel') }}<span class="text-error-500">*</span>
                       </label>
                       <input
                         v-model="email"
                         type="email"
                         id="email"
                         name="email"
-                        placeholder="info@gmail.com"
+                        :placeholder="$t('auth.signin.emailPlaceholder')"
                         class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
                       />
                     </div>
@@ -126,14 +174,14 @@
                         for="password"
                         class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400"
                       >
-                        Password<span class="text-error-500">*</span>
+                        {{ $t('auth.signin.passwordLabel') }}<span class="text-error-500">*</span>
                       </label>
                       <div class="relative">
                         <input
                           v-model="password"
                           :type="showPassword ? 'text' : 'password'"
                           id="password"
-                          placeholder="Enter your password"
+                          :placeholder="$t('auth.signin.passwordPlaceholder')"
                           class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent py-2.5 pl-4 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
                         />
                         <span
@@ -216,13 +264,13 @@
                               </span>
                             </div>
                           </div>
-                          Keep me logged in
+                          {{ $t('auth.signin.keepLoggedIn') }}
                         </label>
                       </div>
                       <router-link
                         to="/signin"
                         class="text-sm text-brand-500 hover:text-brand-600 dark:text-brand-400"
-                        >Forgot password?</router-link
+                        >{{ $t('auth.signin.forgotPassword') }}</router-link
                       >
                     </div>
 
@@ -233,7 +281,7 @@
                         type="submit"
                         class="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white transition rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600"
                       >
-                        Sign In
+                        {{ $t('auth.signin.submit') }}
                       </button>
                     </div>
                   </div>
@@ -242,11 +290,11 @@
                   <p
                     class="text-sm font-normal text-center text-gray-700 dark:text-gray-400 sm:text-start"
                   >
-                    Don't have an account?
+                    {{ $t('auth.signin.noAccount') }}
                     <router-link
                       to="/signup"
                       class="text-brand-500 hover:text-brand-600 dark:text-brand-400"
-                      >Sign Up</router-link
+                      >{{ $t('auth.signin.signupLink') }}</router-link
                     >
                   </p>
                 </div>
@@ -261,10 +309,10 @@
             <common-grid-shape />
             <div class="flex flex-col items-center max-w-xs">
               <router-link to="/" class="block mb-4">
-                <img width="{231}" height="{48}" src="/images/logo/auth-logo.svg" alt="Logo" />
+                <img width="{231}" height="{48}" src="/images/logo/beer-auth.svg" alt="Logo" />
               </router-link>
               <p class="text-center text-gray-400 dark:text-white/60">
-                Free and Open-Source Tailwind CSS Admin Dashboard Template
+                {{ $t('auth.signin.sideCopy') }}
               </p>
             </div>
           </div>
@@ -275,25 +323,34 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import CommonGridShape from '@/components/common/CommonGridShape.vue'
 import FullScreenLayout from '@/components/layout/FullScreenLayout.vue'
+import { useAuthStore } from '../../stores/auth'
 
 const email = ref('')
 const password = ref('')
 const showPassword = ref(false)
 const keepLoggedIn = ref(false)
 
-import { useAuthStore } from '../../stores/auth'
-
 const auth = useAuthStore()
 const router = useRouter()
 const route = useRoute()
 const errorMsg = ref('')
+type LocaleOption = 'en' | 'ja'
+
+const { t, locale } = useI18n()
+const nextLocale = computed<LocaleOption>(() => (locale.value === 'ja' ? 'en' : 'ja'))
+const nextLocaleLabel = computed(() => t(`auth.signin.languageNames.${nextLocale.value}`))
 
 const togglePasswordVisibility = () => {
   showPassword.value = !showPassword.value
+}
+
+const toggleLanguage = () => {
+  locale.value = nextLocale.value
 }
 
 const handleSubmit = async () => {
@@ -309,7 +366,7 @@ const handleSubmit = async () => {
       router.replace(redirect)
   } catch (e) {
       const err = e as Error
-      errorMsg.value = err?.message ?? 'Sign-in failed'
+      errorMsg.value = err?.message ?? t('auth.signin.errorGeneric')
   } finally {
       // loading.value = false
   }

@@ -45,11 +45,6 @@
           <thead class="bg-gray-50">
             <tr>
               <th class="px-3 py-2 text-left text-sm font-medium text-gray-600">
-                <button class="inline-flex items-center gap-1" @click="setSort('recipe_id')">
-                  {{ $t('recipe.list.recipeId') }} <span class="text-xs opacity-60">{{ sortIcon('recipe_id') }}</span>
-                </button>
-              </th>
-              <th class="px-3 py-2 text-left text-sm font-medium text-gray-600">
                 <button class="inline-flex items-center gap-1" @click="setSort('name')">
                   {{ $t('recipe.list.name') }} <span class="text-xs opacity-60">{{ sortIcon('name') }}</span>
                 </button>
@@ -74,19 +69,21 @@
           </thead>
           <tbody class="divide-y divide-gray-100">
             <tr v-for="r in sortedRows" :key="r.version_id" class="hover:bg-gray-50">
-              <td class="px-3 py-2 font-mono text-xs">{{ r.recipe_id }}</td>
               <td class="px-3 py-2">{{ r.name }}</td>
               <td class="px-3 py-2">{{ r.version }}</td>
               <td class="px-3 py-2"><span :class="['px-2 py-1 text-xs rounded-full', statusClass(r.status)]">{{ r.status }}</span></td>
               <td class="px-3 py-2">{{ fmtDate(r.created_at) }}</td>
               <td class="px-3 py-2 space-x-2">
-                <router-link :to="{ path: `/recipeEdit/${r.recipe_id}` }" class="px-2 py-1 text-sm border rounded hover:bg-gray-100">Details</router-link>
+                <router-link
+                  :to="{ name: 'レシピ編集', params: { recipeId: r.recipe_id, versionId: r.version_id } }"
+                  class="px-2 py-1 text-sm border rounded hover:bg-gray-100"
+                >Details</router-link>
                 <button class="px-2 py-1 text-sm border rounded hover:bg-gray-100" @click="openEdit(r)">{{ $t('common.edit') }}</button>
                 <button class="px-2 py-1 text-sm rounded bg-red-600 text-white hover:bg-red-700" @click="confirmDelete(r)">{{ $t('common.delete') }}</button>
               </td>
             </tr>
             <tr v-if="sortedRows.length === 0">
-              <td colspan="6" class="px-3 py-6 text-center text-gray-500">{{ $t('common.noData') }}</td>
+              <td colspan="5" class="px-3 py-6 text-center text-gray-500">{{ $t('common.noData') }}</td>
             </tr>
           </tbody>
         </table>
@@ -96,13 +93,16 @@
       <div class="grid gap-3 md:hidden">
         <div v-for="r in sortedRows" :key="r.version_id" class="border rounded-lg p-3">
           <div class="flex items-center justify-between">
-            <div class="font-mono text-xs">{{ r.recipe_id }}</div>
+            <div class="text-sm font-semibold">{{ r.name }}</div>
             <span :class="['px-2 py-1 text-xs rounded-full', statusClass(r.status)]">{{ r.status }}</span>
           </div>
-          <div class="text-sm mt-1">{{ r.name }} <span class="text-gray-500">• {{ r.version }}</span></div>
+          <div class="text-xs text-gray-500 mt-1">{{ $t('recipe.list.version') }}: {{ r.version }}</div>
           <div class="text-xs text-gray-500">{{ fmtDate(r.created_at) }}</div>
           <div class="flex justify-end gap-2 mt-2">
-            <router-link :to="{ path: `/recipeEdit/${r.recipe_id}` }" class="px-2 py-1 text-xs border rounded hover:bg-gray-100">Details</router-link>
+            <router-link
+              :to="{ name: 'レシピ編集', params: { recipeId: r.recipe_id, versionId: r.version_id } }"
+              class="px-2 py-1 text-xs border rounded hover:bg-gray-100"
+            >Details</router-link>
             <button class="px-2 py-1 text-xs border rounded hover:bg-gray-100" @click="openEdit(r)">{{ $t('common.edit') }}</button>
             <button class="px-2 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700" @click="confirmDelete(r)">{{ $t('common.delete') }}</button>
           </div>

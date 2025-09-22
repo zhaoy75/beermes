@@ -37,7 +37,7 @@
         />
         <img
           v-else
-          src="/images/logo/logo-icon.svg"
+          src="/images/logo/beer-icon.svg"
           alt="Logo"
           width="32"
           height="32"
@@ -295,6 +295,7 @@ const menuGroups = computed(() => [
         subItems: [
           { name: t('sidebar.items.categoryMaster'), path: "/categoryMaster", pro: false },
           { name: t('sidebar.items.taxMaster'), path: "/taxMaster", pro: false },
+          { name: t('sidebar.items.uomMaster'), path: "/uomMaster", pro: false },
           { name: t('sidebar.items.packingMaster'), path: "/PackingMaster", pro: false },
           { name: t('sidebar.items.beerMaster'), path: "/BeerMaster", pro: false },
           { name: t('sidebar.items.materialMaster'), path: "/MaterialMaster", pro: false },
@@ -304,7 +305,7 @@ const menuGroups = computed(() => [
         ],
       },
 
-      
+
       {
         icon: UserCircleIcon,
         name: t('sidebar.items.profile'),

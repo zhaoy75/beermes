@@ -25,6 +25,13 @@ export const useAuthStore = defineStore('auth', {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) throw error
 
+      const { data1, error1 } = await supabase.functions.invoke("set-tenant", { body: {} });
+
+      // Refresh session so JWT includes tenant_id
+      await supabase.auth.refreshSession();
+
+      console.log((await supabase.auth.getSession()).data.session?.user?.app_metadata);
+
       const session = data.session
       this.accessToken = session?.access_token ?? null
       this.userId = session?.user?.id ?? null

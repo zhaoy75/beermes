@@ -9,7 +9,11 @@
     "cancel": "キャンセル",
     "close": "閉じる",
     "actions": "操作",
-    "noData": "データなし"
+    "noData": "データなし",
+    "all": "すべて",
+    "search": "検索",
+    "yes": "有効",
+    "no": "無効"
   },
   "batch": {
     "statusMap": {
@@ -79,29 +83,96 @@
   "labels": {
     "id": "ID",
     "name": "名称",
+    "code": "コード",
     "category": "カテゴリ",
     "note": "備考",
     "taxrate": "税率",
     "created_date": "作成日",
     "effect_date": "適用開始日",
-    "expire_date": "適用終了日"
+    "expire_date": "適用終了日",
+    "baseFactor": "基準係数",
+    "baseCode": "基準コード",
+    "tenant": "テナント",
+    "uom": "単位",
+    "active": "有効",
+    "createdAt": "作成日時"
   },
   "category": {
-    "title": "カテゴリ管理",
-    "subtitle": "Supabase 連携のカテゴリ CRUD",
-    "editTitle": "カテゴリ編集",
-    "newTitle": "カテゴリ新規",
-    "idHelp": "空欄で自動採番",
-    "deleteTitle": "カテゴリ削除",
-    "deleteConfirm": "本当に {id} を削除しますか？ この操作は元に戻せません。",
-    "selectPlaceholder": "-- カテゴリを選択 --"
+    "title": "カテゴリマスタ",
+    "subtitle": "原材料カテゴリを管理します",
+    "newTitle": "カテゴリの追加",
+    "editTitle": "カテゴリの編集",
+    "deleteTitle": "カテゴリの削除",
+    "deleteConfirm": "カテゴリ {code} を削除しますか？ この操作は元に戻せません。",
+    "searchPlaceholder": "カテゴリを検索…"
   },
   "tax": {
-    "title": "酒税管理",
-    "subtitle": "Supabase 連携の酒税テーブル",
-    "editTitle": "酒税編集",
-    "newTitle": "酒税新規作成",
-    "categorySelect": "-- カテゴリを選択 --"
+    "title": "酒税マスタ",
+    "subtitle": "ビールカテゴリごとの酒税率を管理します",
+    "newTitle": "酒税率の追加",
+    "editTitle": "酒税率の編集",
+    "deleteTitle": "酒税率の削除",
+    "deleteConfirm": "{category}（{rate}）の酒税レコードを削除しますか？",
+    "searchPlaceholder": "酒税率を検索…",
+    "categoryPlaceholder": "カテゴリを選択",
+    "invalidCategory": "未定義のカテゴリです",
+    "missingCategories": "カテゴリが登録されていません。先にカテゴリを追加してください。"
+  },
+  "uom": {
+    "title": "単位マスタ",
+    "subtitle": "計量単位を管理します",
+    "newTitle": "単位の追加",
+    "editTitle": "単位の編集",
+    "deleteTitle": "単位の削除",
+    "deleteConfirm": "単位 {code} を削除しますか？ この操作は元に戻せません。",
+    "tenantHint": "テナント: {tenant}"
+  },
+  "material": {
+    "title": "原材料マスタ",
+    "subtitle": "醸造で使用する原材料を管理します",
+    "newTitle": "原材料の追加",
+    "editTitle": "原材料の編集",
+    "deleteTitle": "原材料の削除",
+    "deleteConfirm": "原材料 {code} を削除しますか？ この操作は元に戻せません。",
+    "searchPlaceholder": "材料名で検索…",
+    "categoryPlaceholder": "カテゴリを選択",
+    "uomPlaceholder": "単位を選択",
+    "activeLabel": "この原材料を有効にする",
+    "invalidCategory": "未定義のカテゴリです",
+    "categories": {
+      "malt": "モルト",
+      "hop": "ホップ",
+      "yeast": "酵母",
+      "adjunct": "副原料",
+      "water": "水",
+      "packaging": "資材",
+      "chemical": "薬品",
+      "cleaning": "洗浄剤",
+      "other": "その他"
+    }
+  },
+  "auth": {
+    "signin": {
+      "backToDashboard": "ダッシュボードに戻る",
+      "title": "サインイン",
+      "subtitle": "メールアドレスとパスワードを入力してください",
+      "emailLabel": "メールアドレス",
+      "emailPlaceholder": "",
+      "passwordLabel": "パスワード",
+      "passwordPlaceholder": "パスワードを入力",
+      "keepLoggedIn": "ログイン状態を保持",
+      "forgotPassword": "パスワードをお忘れですか？",
+      "submit": "サインイン",
+      "noAccount": "アカウントをお持ちでない場合",
+      "signupLink": "新規登録",
+      "sideCopy": "クラフトビール管理",
+      "errorGeneric": "サインインに失敗しました",
+      "languageToggle": "{lang}に切り替える",
+      "languageNames": {
+        "en": "英語",
+        "ja": "日本語"
+      }
+    }
   },
   "errors": {
     "required": "{field} は必須です",
@@ -164,9 +235,10 @@
       "productInventory": "製品在庫管理",
       "waste": "廃棄物管理",
       "masterMaintenance": "マスタメンテナンス",
-      "catalogMaster": "酒類登録",
       "categoryMaster": "カテゴリ登録",
       "taxMaster": "酒税登録",
+      "catalogMaster": "酒類登録",
+      "uomMaster": "単位マスタ",
       "packingMaster": "詰口登録",
       "beerMaster": "ビール銘柄登録",
       "materialMaster": "原材料登録",

@@ -1,0 +1,561 @@
+{
+    "name": "Standard Brewing Process",
+    "version": "1.0.0",
+    "steps_fixed" : true,
+    "steps": [
+    {
+      "order": 1,
+      "name": "Milling",
+      "label": {
+        "en": "Milling",
+        "ja": "粉砕"
+      },
+      "fields": {
+        "target_grist_ratio": {
+          "type": "object",
+          "label": {
+            "en": "Target grist ratio",
+            "ja": "粉砕比率"
+          },
+          "fields": {
+            "fine_percent": {
+              "type": "number",
+              "label": {
+                "en": "Fine %",
+                "ja": "微粉％"
+              }
+            },
+            "coarse_percent": {
+              "type": "number",
+              "label": {
+                "en": "Coarse %",
+                "ja": "粗粉％"
+              }
+            }
+          }
+        },
+        "malt_bill": {
+          "type": "array",
+          "label": {
+            "en": "Malt bill",
+            "ja": "モルト配合"
+          },
+          "of": {
+            "name": {
+              "type": "string",
+              "label": {
+                "en": "Name",
+                "ja": "名称"
+              }
+            },
+            "percent": {
+              "type": "number",
+              "label": {
+                "en": "Percent",
+                "ja": "比率％"
+              }
+            }
+          }
+        },
+        "equipment_id": {
+          "type": "string",
+          "label": {
+            "en": "Equipment",
+            "ja": "設備"
+          }
+        },
+        "sop_url": {
+          "type": "string",
+          "label": {
+            "en": "SOP URL",
+            "ja": "手順書URL"
+          }
+        }
+      },
+      "defaults": {
+        "target_grist_ratio": {
+          "fine_percent": 70,
+          "coarse_percent": 30
+        },
+        "malt_bill": [],
+        "equipment_id": "",
+        "sop_url": ""
+      },
+      "default_duration_minutes": 30
+    },
+    {
+      "order": 2,
+      "name": "Lautering",
+      "label": {
+        "en": "Lautering",
+        "ja": "濾過"
+      },
+      "fields": {
+        "sparge_temp_c": {
+          "type": "number",
+          "label": {
+            "en": "Sparge temp (°C)",
+            "ja": "スパージ温度 (°C)"
+          }
+        },
+        "sparge_volume_l": {
+          "type": "number",
+          "label": {
+            "en": "Sparge volume (L)",
+            "ja": "スパージ量 (L)"
+          }
+        },
+        "recirculation_min": {
+          "type": "number",
+          "label": {
+            "en": "Recirculation (min)",
+            "ja": "循環 (分)"
+          }
+        },
+        "target_preboil_gravity": {
+          "type": "number",
+          "label": {
+            "en": "Target pre-boil gravity",
+            "ja": "煮沸前比重 目標"
+          }
+        },
+        "equipment_id": {
+          "type": "string",
+          "label": {
+            "en": "Equipment",
+            "ja": "設備"
+          }
+        },
+        "sensors": {
+          "type": "object",
+          "label": {
+            "en": "Sensors",
+            "ja": "センサー"
+          },
+          "fields": {
+            "flow_meter": {
+              "type": "string",
+              "label": {
+                "en": "Flow meter",
+                "ja": "流量計"
+              }
+            }
+          }
+        }
+      },
+      "defaults": {},
+      "default_duration_minutes": 60
+    },
+    {
+      "order": 3,
+      "name": "Boil",
+        "label": {
+            "en": "Boil",
+            "ja": "煮沸"
+        },
+      "fields": {
+        "boil_minutes": {
+          "type": "number",
+          "label": {
+            "en": "Boil (min)",
+            "ja": "煮沸 (分)"
+          }
+        },
+        "hop_schedule": {
+          "type": "array",
+          "label": {
+            "en": "Hop schedule",
+            "ja": "ホップスケジュール"
+          },
+          "of": {
+            "at_min": {
+              "type": "number",
+              "label": {
+                "en": "At (min)",
+                "ja": "投入 (分)"
+              }
+            },
+            "hop": {
+              "type": "string",
+              "label": {
+                "en": "Hop",
+                "ja": "ホップ"
+              }
+            },
+            "form": {
+              "type": "string",
+              "label": {
+                "en": "Form",
+                "ja": "形状"
+              }
+            },
+            "amount_g": {
+              "type": "number",
+              "label": {
+                "en": "Amount (g)",
+                "ja": "量 (g)"
+              }
+            },
+            "purpose": {
+              "type": "string",
+              "label": {
+                "en": "Purpose",
+                "ja": "目的"
+              }
+            },
+            "method": {
+              "type": "string",
+              "label": {
+                "en": "Method",
+                "ja": "方法"
+              }
+            }
+          }
+        },
+        "boil_off_rate_lph": {
+          "type": "number",
+          "label": {
+            "en": "Boil-off rate (L/h)",
+            "ja": "蒸発量 (L/h)"
+          }
+        },
+        "whirlpool_min": {
+          "type": "number",
+          "label": {
+            "en": "Whirlpool (min)",
+            "ja": "ワールプール (分)"
+          }
+        },
+        "equipment_id": {
+          "type": "string",
+          "label": {
+            "en": "Equipment",
+            "ja": "設備"
+          }
+        }
+      },
+      "defaults": {
+        "hop_schedule": []
+      },
+      "default_duration_minutes": 60
+    },
+    {
+      "order": 4,
+      "name": "Chilling",
+        "label": {
+            "en": "Chilling",
+            "ja": "冷却"
+        },
+      "fields": {
+        "target_wort_temp_c": {
+          "type": "number",
+          "label": {
+            "en": "Target wort temp (°C)",
+            "ja": "麦汁目標温度 (°C)"
+          }
+        },
+        "heat_exchanger": {
+          "type": "string",
+          "label": {
+            "en": "Heat exchanger",
+            "ja": "熱交換器"
+          }
+        },
+        "oxygenation_ppm": {
+          "type": "number",
+          "label": {
+            "en": "Oxygenation (ppm)",
+            "ja": "酸素溶解 (ppm)"
+          }
+        },
+        "transfer_to": {
+          "type": "string",
+          "label": {
+            "en": "Transfer to",
+            "ja": "移送先"
+          }
+        }
+      },
+      "defaults": {},
+      "default_duration_minutes": 25
+    },
+    {
+      "order": 5,
+      "name": "Fermentation",
+      "label": {
+        "en": "Fermentation",
+        "ja": "発酵"
+      },
+      "fields": {
+        "style": {
+          "type": "string",
+          "label": {
+            "en": "Style",
+            "ja": "スタイル"
+          }
+        },
+        "yeast": {
+          "type": "string",
+          "label": {
+            "en": "Yeast",
+            "ja": "酵母"
+          }
+        },
+        "pitch_rate_million_cells_per_ml_plato": {
+          "type": "number",
+          "label": {
+            "en": "Pitch rate (M cells/ml/°P)",
+            "ja": "ピッチレート (百万cells/ml/°P)"
+          }
+        },
+        "fermentation_profile": {
+          "type": "array",
+          "label": {
+            "en": "Fermentation profile",
+            "ja": "発酵プロファイル"
+          },
+          "of": {
+            "day": {
+              "type": "number",
+              "label": {
+                "en": "Day",
+                "ja": "日"
+              }
+            },
+            "temp_c": {
+              "type": "number",
+              "label": {
+                "en": "Temp (°C)",
+                "ja": "温度 (°C)"
+              }
+            }
+          }
+        },
+        "spunding": {
+          "type": "object",
+          "label": {
+            "en": "Spunding",
+            "ja": "スプンディング"
+          },
+          "fields": {
+            "enable": {
+              "type": "boolean",
+              "label": {
+                "en": "Enable",
+                "ja": "有効"
+              }
+            },
+            "target_pressure_bar": {
+              "type": "number",
+              "label": {
+                "en": "Target pressure (bar)",
+                "ja": "目標圧力 (bar)"
+              }
+            }
+          }
+        },
+        "diacetyl_rest": {
+          "type": "object",
+          "label": {
+            "en": "Diacetyl rest",
+            "ja": "ジアセチルレスト"
+          },
+          "fields": {
+            "trigger": {
+              "type": "string",
+              "label": {
+                "en": "Trigger",
+                "ja": "トリガー"
+              }
+            },
+            "temp_c": {
+              "type": "number",
+              "label": {
+                "en": "Temp (°C)",
+                "ja": "温度 (°C)"
+              }
+            },
+            "min_hours": {
+              "type": "number",
+              "label": {
+                "en": "Min hours",
+                "ja": "最小時間"
+              }
+            }
+          }
+        },
+        "equipment_id": {
+          "type": "string",
+          "label": {
+            "en": "Equipment",
+            "ja": "設備"
+          }
+        },
+        "logging_interval_min": {
+          "type": "number",
+          "label": {
+            "en": "Logging interval (min)",
+            "ja": "ログ間隔 (分)"
+          }
+        }
+      },
+      "defaults": {
+        "fermentation_profile": [],
+        "spunding": {
+          "enable": false
+        }
+      },
+      "default_duration_minutes": 10080
+    },
+    {
+      "order": 6,
+      "name": "Dry Hopping",
+        "label": {
+            "en": "Dry Hopping",
+            "ja": "ドライホッピング"
+        },
+      "fields": {
+        "additions": {
+          "type": "array",
+          "label": {
+            "en": "Additions",
+            "ja": "添加"
+          },
+          "of": {
+            "day": {
+              "type": "number",
+              "label": {
+                "en": "Day",
+                "ja": "日"
+              }
+            },
+            "hop": {
+              "type": "string",
+              "label": {
+                "en": "Hop",
+                "ja": "ホップ"
+              }
+            },
+            "amount_g_per_l": {
+              "type": "number",
+              "label": {
+                "en": "Amount (g/L)",
+                "ja": "量 (g/L)"
+              }
+            }
+          }
+        },
+        "purge_with_co2": {
+          "type": "boolean",
+          "label": {
+            "en": "Purge with CO₂",
+            "ja": "CO₂パージ"
+          }
+        },
+        "max_oxygen_ppb": {
+          "type": "number",
+          "label": {
+            "en": "Max oxygen (ppb)",
+            "ja": "酸素上限 (ppb)"
+          }
+        }
+      },
+      "defaults": {
+        "additions": []
+      },
+      "default_duration_minutes": 2880
+    },
+    {
+      "order": 7,
+      "name": "Conditioning",
+        "label": {
+            "en": "Conditioning",
+            "ja": "コンディショニング"
+        },
+      "fields": {
+        "cold_crash_c": {
+          "type": "number",
+          "label": {
+            "en": "Cold-crash (°C)",
+            "ja": "コールドクラッシュ (°C)"
+          }
+        },
+        "cold_crash_hours": {
+          "type": "number",
+          "label": {
+            "en": "Cold-crash hours",
+            "ja": "コールドクラッシュ時間"
+          }
+        },
+        "clarifier_addition": {
+          "type": "object",
+          "label": {
+            "en": "Clarifier addition",
+            "ja": "清澄剤添加"
+          },
+          "fields": {
+            "name": {
+              "type": "string",
+              "label": {
+                "en": "Name",
+                "ja": "名称"
+              }
+            },
+            "ml_per_hl": {
+              "type": "number",
+              "label": {
+                "en": "mL/hL",
+                "ja": "mL/hL"
+              }
+            }
+          }
+        }
+      },
+      "defaults": {},
+      "default_duration_minutes": 4320
+    },
+    {
+      "order": 8,
+      "name": "Packaging",
+        "label": {
+            "en": "Packaging",
+            "ja": "包装"
+        },
+      "fields": {
+        "format": {
+          "type": "array",
+          "label": {
+            "en": "Package format",
+            "ja": "容器形式"
+          },
+          "of": "string"
+        },
+        "target_co2_vols": {
+          "type": "number",
+          "label": {
+            "en": "Target CO₂ vols",
+            "ja": "目標CO₂体積"
+          }
+        },
+        "dissolved_oxygen_ppb_max": {
+          "type": "number",
+          "label": {
+            "en": "Dissolved oxygen max (ppb)",
+            "ja": "溶存酸素上限 (ppb)"
+          }
+        },
+        "line": {
+          "type": "string",
+          "label": {
+            "en": "Line",
+            "ja": "ライン"
+          }
+        }
+      },
+      "defaults": {
+        "format": []
+      },
+      "default_duration_minutes": 180
+    }
+  ]
+}

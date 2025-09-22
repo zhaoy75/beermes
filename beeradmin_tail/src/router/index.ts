@@ -25,7 +25,7 @@ const router = createRouter({
       },
     },
     {
-      path: '/recipeEdit/:recipeId?',
+      path: '/recipeEdit/:recipeId/:versionId?',
       name: 'レシピ編集',
       component: () => import('../views/pages/RecipeEdit.vue'),
       meta: {
@@ -49,7 +49,7 @@ const router = createRouter({
       component: () => import('../views/pages/BatchList.vue'),
       meta: {
         title: 'バッチ管理',
-        requiresAuth: false ,
+        requiresAuth: true ,
       },
     },
     {
@@ -58,7 +58,7 @@ const router = createRouter({
       component: () => import('../views/pages/BatchEdit.vue'),
       meta: {
         title: 'バッチ編集',
-        requiresAuth: false ,
+        requiresAuth: true ,
       },
     },
     {
@@ -75,16 +75,34 @@ const router = createRouter({
       name: '酒税',
       component: () => import('../views/pages/TaxMaster.vue'),
       meta: {
-        title: '酒税',
+        title: 'Tax Maintenance',
+        requiresAuth: true ,
+      },
+    },
+    {
+      path: '/uomMaster',
+      name: '単位マスタ',
+      component: () => import('../views/pages/UomMaster.vue'),
+      meta: {
+        title: 'Unit of Measure',
         requiresAuth: true ,
       },
     },
     {
       path: '/categoryMaster',
-      name: 'カテゴリ',
+      name: 'カテゴリマスタ',
       component: () => import('../views/pages/CategoryMaster.vue'),
       meta: {
-        title: 'カテゴリ',
+        title: 'Category Master',
+        requiresAuth: true ,
+      },
+    },
+    {
+      path: '/MaterialMaster',
+      name: '原材料マスタ',
+      component: () => import('../views/pages/MaterialMaster.vue'),
+      meta: {
+        title: 'Material Master',
         requiresAuth: true ,
       },
     },
@@ -237,6 +255,8 @@ const router = createRouter({
     },
   ],
 })
+
+router.addRoute({ path: '/:pathMatch(.*)*', redirect: '/error-404' })
 
 export default router
 

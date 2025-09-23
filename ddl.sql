@@ -87,6 +87,18 @@ create table if not exists mst_materials (
   unique (tenant_id, code)
 );
 
+create table if not exists mst_beer_package_category (
+  id uuid primary key default gen_random_uuid(),
+  tenant_id uuid not null,
+  package_code text not null,
+  package_name text,
+  size numeric,
+  uom_id uuid references mst_uom(id),
+  size_fixed boolean default false,
+  created_at timestamptz default now(),
+  unique (tenant_id, package_code)
+);
+
 create table if not exists public.mst_category (
   id uuid primary key default gen_random_uuid(),
   code text not null,
@@ -95,28 +107,41 @@ create table if not exists public.mst_category (
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   unique (tenant_id, code)
 );
+
+
+
+
 -- =========================================
 -- Recipe & Process
 -- =========================================
-create table if not exists rcp_recipes (
-  id uuid primary key default gen_random_uuid(),
-  tenant_id uuid not null,
-  code text not null,
-  name text not null,
-  style text,
-  batch_size_l numeric,
-  target_og numeric,
-  target_fg numeric,
-  target_abv numeric,
-  target_ibu numeric,
-  target_srm numeric,
-  version int not null default 1,
-  status text not null default 'active',
-  notes text,
-  created_by uuid,
-  created_at timestamptz default now(),
-  unique (tenant_id, code, version)
+CREATE TABLE public.rcp_recipes (
+	id uuid DEFAULT gen_random_uuid() NOT NULL,
+	tenant_id uuid DEFAULT ((auth.jwt() -> 'app_metadata'::text) ->> 'tenant_id'::text)::uuid NOT NULL,
+	code text NOT NULL,
+	"name" text NOT NULL,
+	"style" text NULL,
+	batch_size_l numeric NULL,
+	target_og numeric NULL,
+	target_fg numeric NULL,
+	target_abv numeric NULL,
+	target_ibu numeric NULL,
+	target_srm numeric NULL,
+	"version" int4 DEFAULT 1 NOT NULL,
+	status text DEFAULT 'active'::text NOT NULL,
+	notes text NULL,
+	created_by uuid NULL,
+	created_at timestamptz DEFAULT now() NULL,
+	basic_template_flg bool NULL,
+	category uuid NULL,
+	CONSTRAINT rcp_recipes_pkey PRIMARY KEY (id),
+	CONSTRAINT rcp_recipes_tenant_id_code_version_key UNIQUE (tenant_id, code, version)
 );
+ALTER TABLE public.rcp_recipes ADD CONSTRAINT rcp_recipes_category_fkey FOREIGN KEY (category) REFERENCES public.mst_category(id);
+
+
+-- public.rcp_recipes foreign keys
+
+ALTER TABLE public.rcp_recipes ADD CONSTRAINT rcp_recipes_category_fkey FOREIGN KEY (category) REFERENCES public.mst_category(id);
 
 create table if not exists rcp_ingredients (
   id uuid primary key default gen_random_uuid(),
@@ -267,11 +292,13 @@ create table if not exists pkg_packages (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null,
   lot_id uuid not null references prd_lots(id),
-  package_code text not null,
-  package_size_l numeric not null,
+  fill_at date default current_date,
+  package_id uuid not null references mst_beer_package_category(id),
+  package_size_l numeric,
   package_qty int not null,
+  notes text,
   created_at timestamptz default now(),
-  unique (tenant_id, lot_id, package_code)
+  unique (tenant_id, lot_id, fill_at, package_id)
 );
 
 -- =========================================
@@ -364,6 +391,9 @@ alter table mst_uom
 alter table mst_materials
   alter column tenant_id set default (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid;
 
+alter table mst_beer_package_category
+  alter column tenant_id set default (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid;
+
 alter table mst_category
   alter column tenant_id set default (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid;
 
@@ -438,6 +468,9 @@ create index if not exists idx_mst_materials_tenant_category
   on mst_materials (tenant_id, category);
 create index if not exists idx_mst_materials_uom
   on mst_materials (uom_id);
+
+create index if not exists idx_mst_beer_package_category_tenant_code
+  on mst_beer_package_category (tenant_id, package_code);
 
 -- Recipes & Process
 create index if not exists idx_rcp_recipes_tenant_code_version
@@ -524,8 +557,8 @@ create index if not exists idx_ord_order_lines_uom
 
 create index if not exists idx_pkg_packages_tenant_lot
   on pkg_packages (tenant_id, lot_id);
-create index if not exists idx_pkg_packages_package_code
-  on pkg_packages (package_code);
+create index if not exists idx_pkg_packages_package
+  on pkg_packages (package_id);
 create index if not exists idx_pkg_packages_created_at
   on pkg_packages (created_at);
 
@@ -564,6 +597,7 @@ grant usage on schema brewery to authenticated;
 -- Enable RLS
 alter table mst_uom         enable row level security;
 alter table mst_materials   enable row level security;
+alter table mst_beer_package_category enable row level security;
 alter table mst_category    enable row level security;
 alter table rcp_recipes     enable row level security;
 alter table rcp_ingredients enable row level security;
@@ -597,6 +631,13 @@ create policy "mst_uom_tenant_all"
 drop policy if exists "mst_materials_tenant_all" on mst_materials;
 create policy "mst_materials_tenant_all"
   on mst_materials
+  for all
+  using (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid)
+  with check (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid);
+
+drop policy if exists "mst_beer_package_category_tenant_all" on mst_beer_package_category;
+create policy "mst_beer_package_category_tenant_all"
+  on mst_beer_package_category
   for all
   using (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid)
   with check (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid);
@@ -747,5 +788,3 @@ create policy "qc_measurements_tenant_all"
   for all
   using (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid)
   with check (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid);
-
-

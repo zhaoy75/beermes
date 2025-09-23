@@ -152,3 +152,36 @@ create a recipe edit page, The requirement are as below:
 3. process section 
    process information is stored in rcp_processes
    each process has multiple steps, step information is stored in rcp_steps
+
+
+create an lots list mainteenance page
+
+lots list mainteenance page
+
+- process lot list table following columns, all information is from prc_lots
+　lot id, name, version, status, created_at, planned_start_date, planned_end_date, actual_start_date, actual_end_date
+- all data should be list in a table
+- table should be sortable by each column
+- crud is needed
+  create will auto generate lot name with prefix LOT-YYYYMMDD-XXXX
+  create will call supabase funtion create_lot_from_recipe
+- search section (name, start date, end date) is needed
+- click lot name in table will go to lot edit page
+- there should be an summary button to show lot summary report in a dialog
+  report will show lot information, ingredient used, step completed, qc data
+
+create a lot edit page, The requirement are as below:
+
+1. there should be 3 sections in the page
+2. lot information section, field in prd_lots should be editable
+3. ingredients section, ingredient crud mainteenace, data is stored in rcp_ingredients
+4. process information is stored in prd_lots
+   each process has multiple steps, step information is stored in prd_lots_steps
+   
+create a waste management to show list of waste. 
+CUD is not needed.search section is needed to filter by date 
+range and lot no. Data is from prd_wastes table.
+
+
+create an vue page mainteenance for mst_beer_package_category, table definition should be reference to ddl.sql
+

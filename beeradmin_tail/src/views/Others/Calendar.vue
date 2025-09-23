@@ -216,43 +216,129 @@ import { useI18n } from 'vue-i18n'
 const { t, locale } = useI18n()
 const currentPageTitle = computed(() => t('calendar.title'))
 import { ref, reactive, onMounted, computed, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import FullCalendar from '@fullcalendar/vue3'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import Modal from '@/components/profile/Modal.vue'
+import { supabase } from '@/lib/supabase'
 
 const calendarRef = ref(null)
+const router = useRouter()
 const isOpen = ref(false)
 const selectedEvent = ref(null)
 const eventTitle = ref('')
+const ACTIVE_LOT_STATUSES = ['planned', 'in_progress']
+const STATUS_COLOR_MAP = {
+  planned: 'Primary',
+  in_progress: 'Success',
+  completed: 'Warning',
+  cancelled: 'Danger',
+}
+
+const DEFAULT_LOT_COLOR = 'Primary'
+
 const eventStartDate = ref('')
 const eventEndDate = ref('')
-const eventLevel = ref('')
+const eventLevel = ref(DEFAULT_LOT_COLOR)
 const events = ref([])
+
+const tenantId = ref(null)
+const loadingLots = ref(false)
 
 const calendarsEvents = reactive({ Danger: 'danger', Success: 'success', Primary: 'primary', Warning: 'warning' })
 
-onMounted(() => {
-  // Hard-coded brew manufacturing process events (sample timeline)
-  const today = new Date()
-  const d = (n) => {
-    const x = new Date(today)
-    x.setDate(x.getDate() + n)
-    return x.toISOString().split('T')[0]
+async function ensureTenant() {
+  if (tenantId.value) return tenantId.value
+  const { data, error } = await supabase.auth.getUser()
+  if (error) throw error
+  const id = data.user?.app_metadata?.tenant_id
+  if (!id) throw new Error('Tenant not resolved for calendar view')
+  tenantId.value = id
+  return id
+}
+
+function extractIsoDate(value) {
+  if (!value) return null
+  if (typeof value === 'string') {
+    return value.length >= 10 ? value.slice(0, 10) : null
   }
-  const lot = '2025-IPA-001'
-  events.value = [
-    { id: 'proc-milling', title: `${lot} — Milling`, start: d(0), allDay: true, extendedProps: { calendar: 'Primary' } },
-    { id: 'proc-mashing', title: `${lot} — Mashing`, start: d(0), allDay: true, extendedProps: { calendar: 'Primary' } },
-    { id: 'proc-lautering', title: `${lot} — Lautering`, start: d(0), allDay: true, extendedProps: { calendar: 'Primary' } },
-    { id: 'proc-boil', title: `${lot} — Boil`, start: d(0), allDay: true, extendedProps: { calendar: 'Warning' } },
-    { id: 'proc-whirlpool', title: `${lot} — Whirlpool`, start: d(0), allDay: true, extendedProps: { calendar: 'Warning' } },
-    { id: 'proc-cooling', title: `${lot} — Cooling`, start: d(0), allDay: true, extendedProps: { calendar: 'Success' } },
-    { id: 'proc-fermentation', title: `${lot} — Fermentation`, start: d(1), end: d(14), allDay: true, extendedProps: { calendar: 'Danger' } },
-    { id: 'proc-conditioning', title: `${lot} — Conditioning`, start: d(15), end: d(20), allDay: true, extendedProps: { calendar: 'Success' } },
-    { id: 'proc-packaging', title: `${lot} — Packaging`, start: d(21), allDay: true, extendedProps: { calendar: 'Primary' } },
-  ]
+  if (value instanceof Date && !Number.isNaN(value.valueOf())) {
+    return value.toISOString().slice(0, 10)
+  }
+  return null
+}
+
+function addDaysToIsoDate(dateStr, days) {
+  if (!dateStr) return null
+  const parts = dateStr.split('-').map((part) => Number.parseInt(part, 10))
+  if (parts.length !== 3 || parts.some((n) => Number.isNaN(n))) return null
+  const utcDate = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]))
+  utcDate.setUTCDate(utcDate.getUTCDate() + days)
+  const year = utcDate.getUTCFullYear()
+  const month = String(utcDate.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(utcDate.getUTCDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function mapLotToEvent(lot) {
+  const startDate = extractIsoDate(lot.planned_start)
+  if (!startDate) return null
+  const endDate = addDaysToIsoDate(startDate, 7)
+  const status = lot.status || ''
+  const calendarKey = STATUS_COLOR_MAP[status] || DEFAULT_LOT_COLOR
+  return {
+    id: `lot-${lot.id}`,
+    title: status ? `${lot.lot_code} (${status})` : lot.lot_code,
+    start: startDate,
+    end: endDate ?? startDate,
+    allDay: true,
+    extendedProps: {
+      calendar: calendarKey,
+      source: 'lot',
+      status,
+      lotId: lot.id,
+    },
+  }
+}
+
+function applyLotEvents(lotEvents) {
+  const manualEvents = events.value.filter((event) => event?.extendedProps?.source !== 'lot')
+  events.value = [...lotEvents, ...manualEvents]
+}
+
+async function loadLotEvents() {
+  try {
+    loadingLots.value = true
+    const tenant = await ensureTenant()
+    const query = supabase
+      .from('prd_lots')
+      .select('id, lot_code, status, planned_start')
+      .eq('tenant_id', tenant)
+      .not('planned_start', 'is', null)
+
+    if (ACTIVE_LOT_STATUSES.length > 0) {
+      query.in('status', ACTIVE_LOT_STATUSES)
+    }
+
+    const { data, error } = await query
+    if (error) throw error
+
+    const lotEvents = (data ?? [])
+      .map((lot) => mapLotToEvent(lot))
+      .filter((event) => event !== null)
+
+    applyLotEvents(lotEvents)
+  } catch (error) {
+    console.error('Failed to load lot events', error)
+  } finally {
+    loadingLots.value = false
+  }
+}
+
+onMounted(() => {
+  loadLotEvents()
 })
 
 const openModal = () => {
@@ -268,7 +354,7 @@ const resetModalFields = () => {
   eventTitle.value = ''
   eventStartDate.value = ''
   eventEndDate.value = ''
-  eventLevel.value = ''
+  eventLevel.value = DEFAULT_LOT_COLOR
   selectedEvent.value = null
 }
 
@@ -276,20 +362,26 @@ const handleDateSelect = (selectInfo) => {
   resetModalFields()
   eventStartDate.value = selectInfo.startStr
   eventEndDate.value = selectInfo.endStr || selectInfo.startStr
+  eventLevel.value = DEFAULT_LOT_COLOR
   openModal()
 }
 
 const handleEventClick = (clickInfo) => {
   const event = clickInfo.event
+  if (event.extendedProps?.source === 'lot' && event.extendedProps?.lotId) {
+    router.push(`/lots/${event.extendedProps.lotId}`)
+    return
+  }
   selectedEvent.value = event
   eventTitle.value = event.title
-  eventStartDate.value = event.start?.toISOString().split('T')[0] || ''
-  eventEndDate.value = event.end?.toISOString().split('T')[0] || ''
-  eventLevel.value = event.extendedProps.calendar
+  eventStartDate.value = event.startStr || ''
+  eventEndDate.value = event.endStr || event.startStr || ''
+  eventLevel.value = event.extendedProps?.calendar || DEFAULT_LOT_COLOR
   openModal()
 }
 
 const handleAddOrUpdateEvent = () => {
+  const calendarKey = eventLevel.value || DEFAULT_LOT_COLOR
   if (selectedEvent.value) {
     // Update existing event
     events.value = events.value.map((event) =>
@@ -299,19 +391,22 @@ const handleAddOrUpdateEvent = () => {
             title: eventTitle.value,
             start: eventStartDate.value,
             end: eventEndDate.value,
-            extendedProps: { calendar: eventLevel.value },
+            extendedProps: {
+              ...event.extendedProps,
+              calendar: calendarKey,
+            },
           }
         : event,
     )
   } else {
     // Add new event
     const newEvent = {
-      id: Date.now().toString(),
+      id: `manual-${Date.now().toString()}`,
       title: eventTitle.value,
       start: eventStartDate.value,
       end: eventEndDate.value,
       allDay: true,
-      extendedProps: { calendar: eventLevel.value },
+      extendedProps: { calendar: calendarKey, source: 'manual' },
     }
     events.value.push(newEvent)
   }
@@ -325,7 +420,8 @@ const handleDeleteEvent = () => {
 }
 
 const renderEventContent = (eventInfo) => {
-  const colorClass = `fc-bg-${eventInfo.event.extendedProps.calendar.toLowerCase()}`
+  const colorKey = (eventInfo.event.extendedProps?.calendar || DEFAULT_LOT_COLOR).toLowerCase()
+  const colorClass = `fc-bg-${colorKey}`
   return {
     html: `
       <div class="event-fc-color flex fc-event-main ${colorClass} p-1 rounded-sm">

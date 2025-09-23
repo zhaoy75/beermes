@@ -71,6 +71,15 @@
             <input v-model.trim="recipeForm.style" class="w-full h-[40px] border rounded px-3" />
           </div>
           <div>
+            <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.edit.category') }}</label>
+            <select v-model="recipeForm.category" class="w-full h-[40px] border rounded px-3 bg-white">
+              <option value="">{{ t('recipe.edit.selectCategory') }}</option>
+              <option v-for="category in categories" :key="category.id" :value="category.id">
+                {{ category.name || category.code }}
+              </option>
+            </select>
+          </div>
+          <div>
             <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.edit.batchSize') }}</label>
             <input v-model.trim="recipeForm.batch_size_l" type="number" step="0.01" min="0" class="w-full h-[40px] border rounded px-3" />
           </div>
@@ -236,8 +245,31 @@
                     <tr v-for="step in process.steps" :key="step.id" class="hover:bg-gray-50">
                       <td class="px-3 py-2 font-mono text-xs text-gray-600">{{ step.step_no }}</td>
                       <td class="px-3 py-2">{{ formatStepType(step.step) }}</td>
-                      <td class="px-3 py-2 text-xs text-gray-600">{{ summarizeJSON(step.target_params) }}</td>
-                      <td class="px-3 py-2 text-xs text-gray-600">{{ summarizeJSON(step.qa_checks) }}</td>
+                      <td class="px-3 py-2 text-xs text-gray-600">
+                        <div v-if="targetParamSummary(step.target_params).length > 0" class="space-y-1">
+                          <div
+                            v-for="(item, idx) in targetParamSummary(step.target_params)"
+                            :key="`${step.id}-tp-${idx}`"
+                            class="flex flex-wrap items-baseline gap-x-1"
+                          >
+                            <span class="font-medium text-gray-700">{{ item.name }}</span>
+                            <span v-if="item.display" class="text-gray-500">—</span>
+                            <span v-if="item.display">{{ item.display }}</span>
+                          </div>
+                        </div>
+                        <span v-else>—</span>
+                      </td>
+                      <td class="px-3 py-2 text-xs text-gray-600">
+                        <div v-if="qaChecksSummary(step.qa_checks).length > 0" class="space-y-1">
+                          <div
+                            v-for="(item, idx) in qaChecksSummary(step.qa_checks)"
+                            :key="`${step.id}-qa-${idx}`"
+                          >
+                            {{ item }}
+                          </div>
+                        </div>
+                        <span v-else>—</span>
+                      </td>
                       <td class="px-3 py-2 text-xs text-gray-600">{{ step.notes || '—' }}</td>
                       <td class="px-3 py-2 space-x-2">
                         <button class="px-2 py-1 text-xs rounded border hover:bg-gray-100" @click="openStepEdit(process, step)">
@@ -291,7 +323,7 @@
               <select v-model="ingredientForm.uom_id" class="w-full h-[40px] border rounded px-3 bg-white">
                 <option value="">{{ t('recipe.edit.selectUom') }}</option>
                 <option v-for="uom in uoms" :key="uom.id" :value="uom.id">
-                  {{ uom.code }} {{ uom.name ? `— ${uom.name}` : '' }}
+                  {{ uomLabel(uom) }}
                 </option>
               </select>
               <p v-if="ingredientErrors.uom" class="text-xs text-red-600 mt-1">{{ ingredientErrors.uom }}</p>
@@ -392,25 +424,118 @@
                 </option>
               </select>
             </div>
-            <div class="md:col-span-2">
-              <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.edit.targetParams') }}</label>
-              <textarea
-                v-model="stepForm.target_params"
-                rows="4"
-                class="w-full border rounded px-3 py-2 font-mono text-xs"
-                placeholder="{ &quot;temp_c&quot;: 66 }"
-              ></textarea>
-              <p v-if="stepErrors.target_params" class="text-xs text-red-600 mt-1">{{ stepErrors.target_params }}</p>
+            <div class="md:col-span-2 space-y-2">
+              <label class="block text-sm text-gray-600">{{ t('recipe.edit.targetParams') }}</label>
+              <div class="overflow-x-auto border border-gray-200 rounded-lg">
+                <table class="min-w-full divide-y divide-gray-200 text-sm">
+                  <thead class="bg-gray-50 text-xs uppercase text-gray-500">
+                    <tr>
+                      <th class="px-3 py-2 text-left">{{ t('recipe.edit.targetParamName') }}</th>
+                      <th class="px-3 py-2 text-left">{{ t('recipe.edit.targetParamTarget') }}</th>
+                      <th class="px-3 py-2 text-left">{{ t('labels.uom') }}</th>
+                      <th class="px-3 py-2 text-left">{{ t('common.actions') }}</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-100">
+                    <tr v-for="(row, index) in targetParamRows" :key="row.key" class="bg-white">
+                      <td class="px-3 py-2 align-top">
+                        <input
+                          v-model.trim="row.name"
+                          class="w-full border rounded px-2 py-1 text-sm"
+                          :placeholder="t('recipe.edit.targetParamNamePlaceholder')"
+                        />
+                      </td>
+                      <td class="px-3 py-2 align-top">
+                        <input
+                          v-model.trim="row.target"
+                          class="w-full border rounded px-2 py-1 text-sm"
+                          :placeholder="t('recipe.edit.targetParamTargetPlaceholder')"
+                        />
+                      </td>
+                      <td class="px-3 py-2 align-top">
+                        <select v-model="row.uom_id" class="w-full border rounded px-2 py-1 bg-white text-sm">
+                          <option value="">{{ t('recipe.edit.selectUom') }}</option>
+                          <option v-for="uom in uoms" :key="uom.id" :value="uom.id">
+                            {{ uomLabel(uom) }}
+                          </option>
+                        </select>
+                      </td>
+                      <td class="px-3 py-2 align-top text-right">
+                        <button
+                          type="button"
+                          class="px-2 py-1 text-xs rounded border hover:bg-gray-100"
+                          @click="removeTargetParamRow(index)"
+                        >
+                          {{ t('common.delete') }}
+                        </button>
+                      </td>
+                    </tr>
+                    <tr v-if="targetParamRows.length === 0">
+                      <td colspan="4" class="px-3 py-4 text-center text-sm text-gray-500">
+                        {{ t('common.noData') }}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="flex justify-end">
+                <button
+                  type="button"
+                  class="px-3 py-1.5 text-sm rounded border border-dashed hover:bg-gray-50"
+                  @click="addTargetParamRow"
+                >
+                  {{ t('recipe.edit.addTargetParam') }}
+                </button>
+              </div>
+              <p v-if="stepErrors.target_params" class="text-xs text-red-600">{{ stepErrors.target_params }}</p>
             </div>
-            <div class="md:col-span-2">
-              <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.edit.qaChecks') }}</label>
-              <textarea
-                v-model="stepForm.qa_checks"
-                rows="3"
-                class="w-full border rounded px-3 py-2 font-mono text-xs"
-                placeholder="[ &quot;Check pH&quot; ]"
-              ></textarea>
-              <p v-if="stepErrors.qa_checks" class="text-xs text-red-600 mt-1">{{ stepErrors.qa_checks }}</p>
+            <div class="md:col-span-2 space-y-2">
+              <label class="block text-sm text-gray-600">{{ t('recipe.edit.qaChecks') }}</label>
+              <div class="overflow-x-auto border border-gray-200 rounded-lg">
+                <table class="min-w-full divide-y divide-gray-200 text-sm">
+                  <thead class="bg-gray-50 text-xs uppercase text-gray-500">
+                    <tr>
+                      <th class="px-3 py-2 text-left">{{ t('recipe.edit.qaCheckDescription') }}</th>
+                      <th class="px-3 py-2 text-left">{{ t('common.actions') }}</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-100">
+                    <tr v-for="(row, index) in qaCheckRows" :key="row.key" class="bg-white">
+                      <td class="px-3 py-2 align-top">
+                        <input
+                          v-model.trim="row.description"
+                          class="w-full border rounded px-2 py-1 text-sm"
+                          :placeholder="t('recipe.edit.qaCheckPlaceholder')"
+                        />
+                      </td>
+                      <td class="px-3 py-2 align-top text-right">
+                        <button
+                          type="button"
+                          class="px-2 py-1 text-xs rounded border hover:bg-gray-100"
+                          @click="removeQaCheckRow(index)"
+                        >
+                          {{ t('common.delete') }}
+                        </button>
+                      </td>
+                    </tr>
+                    <tr v-if="qaCheckRows.length === 0">
+                      <td colspan="2" class="px-3 py-4 text-center text-sm text-gray-500">
+                        {{ t('common.noData') }}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="flex justify-end">
+                <button
+                  type="button"
+                  class="px-3 py-1.5 text-sm rounded border border-dashed hover:bg-gray-50"
+                  @click="addQaCheckRow"
+                >
+                  {{ t('recipe.edit.addQaCheck') }}
+                </button>
+              </div>
+              <p v-if="stepErrors.qa_checks" class="text-xs text-red-600">{{ stepErrors.qa_checks }}</p>
             </div>
             <div class="md:col-span-2">
               <label class="block text-sm text-gray-600 mb-1">{{ t('labels.note') }}</label>
@@ -468,6 +593,7 @@ interface RecipeDetail {
   target_srm: number | null
   notes: string | null
   created_at: string | null
+  category: string | null
 }
 
 interface MaterialRow {
@@ -477,6 +603,12 @@ interface MaterialRow {
 }
 
 interface UomRow {
+  id: string
+  code: string
+  name: string | null
+}
+
+interface CategoryRow {
   id: string
   code: string
   name: string | null
@@ -514,6 +646,26 @@ interface ProcessRow {
   steps: StepRow[]
 }
 
+interface TargetParamRow {
+  key: string
+  name: string
+  target: string
+  uom_id: string
+}
+
+interface QaCheckRow {
+  key: string
+  description: string
+}
+
+interface TargetParamEntry {
+  name: string
+  target: string
+  uom_id: string
+}
+
+type QaCheckEntry = { description: string }
+
 type StepRecord = {
   id: string
   process_id: string
@@ -543,6 +695,7 @@ const recipeForm = reactive({
   code: '',
   name: '',
   style: '',
+  category: '',
   version: 1,
   status: STATUSES[0],
   batch_size_l: '',
@@ -556,6 +709,7 @@ const recipeForm = reactive({
 
 const materials = ref<MaterialRow[]>([])
 const uoms = ref<UomRow[]>([])
+const categories = ref<CategoryRow[]>([])
 const ingredients = ref<IngredientRow[]>([])
 const ingredientsLoading = ref(false)
 const ingredientSaving = ref(false)
@@ -594,10 +748,14 @@ const stepForm = reactive({
   id: '',
   step_no: 1,
   step: STEP_OPTIONS[0],
-  target_params: '{\n\n}',
-  qa_checks: '[\n\n]',
   notes: '',
 })
+
+let targetParamRowId = 0
+let qaCheckRowId = 0
+
+const targetParamRows = ref<TargetParamRow[]>([])
+const qaCheckRows = ref<QaCheckRow[]>([])
 
 const statusLabel = (status: string) => {
   const key = `recipe.statusMap.${status}`
@@ -613,17 +771,119 @@ const formatStepType = (value: string) => {
     .join(' ')
 }
 
-const summarizeJSON = (value: unknown) => {
-  if (value === null || value === undefined) return '—'
-  if (typeof value === 'string') return value
-  try {
-    const json = JSON.stringify(value)
-    if (json.length > 80) return json.slice(0, 77) + '…'
-    return json
-  } catch {
-    return String(value)
+const uomLabel = (row: UomRow) => {
+  if (!row) return ''
+  return row.name ? `${row.code} — ${row.name}` : row.code
+}
+
+const uomLookup = computed(() => {
+  const map = new Map<string, UomRow>()
+  for (const item of uoms.value) {
+    map.set(item.id, item)
+  }
+  return map
+})
+
+function createTargetParamRow(initial?: Partial<Omit<TargetParamRow, 'key'>>) {
+  return {
+    key: `tp-${++targetParamRowId}`,
+    name: initial?.name ?? '',
+    target: initial?.target ?? '',
+    uom_id: initial?.uom_id ?? '',
   }
 }
+
+function createQaCheckRow(initial?: Partial<Omit<QaCheckRow, 'key'>>) {
+  return {
+    key: `qa-${++qaCheckRowId}`,
+    description: initial?.description ?? '',
+  }
+}
+
+targetParamRows.value = [createTargetParamRow()]
+qaCheckRows.value = [createQaCheckRow()]
+
+function extractTargetParamEntries(value: unknown): TargetParamEntry[] {
+  const parsed = parseJsonLike(value)
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return []
+
+  const entries: TargetParamEntry[] = []
+  for (const [name, raw] of Object.entries(parsed as Record<string, unknown>)) {
+    if (!name) continue
+    let target = ''
+    let uom_id = ''
+
+    if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+      const rawObj = raw as Record<string, unknown>
+      const rawTarget = rawObj.target ?? rawObj.value ?? null
+      target = rawTarget == null ? '' : String(rawTarget)
+      const uomValue = rawObj.uom_id ?? rawObj.uom ?? null
+      if (typeof uomValue === 'string') uom_id = uomValue
+    } else {
+      target = raw == null ? '' : String(raw)
+    }
+
+    entries.push({ name, target, uom_id })
+  }
+  return entries
+}
+
+function extractQaCheckEntries(value: unknown): QaCheckEntry[] {
+  const parsed = parseJsonLike(value)
+  if (Array.isArray(parsed)) {
+    return parsed
+      .map((item) => (item == null ? '' : String(item).trim()))
+      .filter((item): item is string => item.length > 0)
+      .map((description) => ({ description }))
+  }
+  if (typeof parsed === 'string') {
+    const trimmed = parsed.trim()
+    return trimmed ? [{ description: trimmed }] : []
+  }
+  return []
+}
+
+function parseJsonLike(value: unknown) {
+  if (typeof value !== 'string') return value
+  try {
+    return JSON.parse(value)
+  } catch {
+    return null
+  }
+}
+
+function hydrateTargetParamRows(value: unknown) {
+  const entries = extractTargetParamEntries(value)
+  return entries.map((entry) => createTargetParamRow(entry))
+}
+
+function hydrateQaCheckRows(value: unknown) {
+  const entries = extractQaCheckEntries(value)
+  return entries.map((entry) => createQaCheckRow(entry))
+}
+
+function normalizeTargetValue(value: string) {
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  const numeric = Number(trimmed)
+  return Number.isNaN(numeric) ? trimmed : numeric
+}
+
+const targetParamSummary = (value: unknown) => {
+  const entries = extractTargetParamEntries(value)
+  return entries.map((entry) => {
+    const uom = entry.uom_id ? uomLookup.value.get(entry.uom_id) : undefined
+    const labelParts: string[] = []
+    if (entry.target) labelParts.push(entry.target)
+    if (uom) labelParts.push(uom.name || uom.code)
+    return {
+      ...entry,
+      display: labelParts.join(' '),
+    }
+  })
+}
+
+const qaChecksSummary = (value: unknown) => extractQaCheckEntries(value).map((entry) => entry.description)
 
 const materialLabel = (row: IngredientRow) => {
   if (row.material?.name) return row.material.name
@@ -661,6 +921,7 @@ async function versionUp() {
     style: trimmedStyle || null,
     version: recipeForm.version || 1,
     status: recipeForm.status,
+    category: recipeForm.category || null,
     batch_size_l: numberOrNull(recipeForm.batch_size_l),
     target_og: numberOrNull(recipeForm.target_og),
     target_fg: numberOrNull(recipeForm.target_fg),
@@ -697,7 +958,7 @@ async function versionUp() {
     const { data: inserted, error: insertError } = await supabase
       .from('rcp_recipes')
       .insert(newRecipePayload)
-      .select('id, code, name, style, version, status, batch_size_l, target_og, target_fg, target_abv, target_ibu, target_srm, notes, created_at')
+      .select('id, code, name, style, version, status, batch_size_l, target_og, target_fg, target_abv, target_ibu, target_srm, notes, created_at, category')
       .single()
     if (insertError || !inserted) throw insertError ?? new Error('Insert failed')
 
@@ -828,7 +1089,7 @@ async function loadRecipe() {
   loadingRecipe.value = true
   const { data, error } = await supabase
     .from('rcp_recipes')
-    .select('id, code, name, style, version, status, batch_size_l, target_og, target_fg, target_abv, target_ibu, target_srm, notes, created_at')
+    .select('id, code, name, style, version, status, batch_size_l, target_og, target_fg, target_abv, target_ibu, target_srm, notes, created_at, category')
     .eq('id', recipeId.value)
     .single()
   loadingRecipe.value = false
@@ -841,6 +1102,7 @@ async function loadRecipe() {
   recipeForm.code = data.code ?? ''
   recipeForm.name = data.name ?? ''
   recipeForm.style = data.style ?? ''
+  recipeForm.category = data.category ?? ''
   recipeForm.version = data.version ?? 1
   recipeForm.status = (STATUSES.includes(data.status as typeof STATUSES[number]) ? data.status : STATUSES[0]) as typeof STATUSES[number]
   recipeForm.batch_size_l = data.batch_size_l != null ? String(data.batch_size_l) : ''
@@ -876,6 +1138,18 @@ async function loadUoms() {
     return
   }
   uoms.value = data ?? []
+}
+
+async function loadCategories() {
+  const { data, error } = await supabase
+    .from('mst_category')
+    .select('id, code, name')
+    .order('name', { ascending: true, nullsFirst: false })
+  if (error) {
+    console.warn('Load categories failed', error)
+    return
+  }
+  categories.value = data ?? []
 }
 
 async function loadIngredients() {
@@ -1112,10 +1386,34 @@ function resetStepForm() {
   stepForm.id = ''
   stepForm.step_no = 1
   stepForm.step = STEP_OPTIONS[0]
-  stepForm.target_params = '{}'
-  stepForm.qa_checks = '[]'
   stepForm.notes = ''
+  targetParamRows.value = [createTargetParamRow()]
+  qaCheckRows.value = [createQaCheckRow()]
   Object.keys(stepErrors).forEach((key) => delete stepErrors[key])
+}
+
+function addTargetParamRow() {
+  targetParamRows.value.push(createTargetParamRow())
+}
+
+function removeTargetParamRow(index: number) {
+  if (index < 0 || index >= targetParamRows.value.length) return
+  targetParamRows.value.splice(index, 1)
+  if (targetParamRows.value.length === 0) {
+    targetParamRows.value.push(createTargetParamRow())
+  }
+}
+
+function addQaCheckRow() {
+  qaCheckRows.value.push(createQaCheckRow())
+}
+
+function removeQaCheckRow(index: number) {
+  if (index < 0 || index >= qaCheckRows.value.length) return
+  qaCheckRows.value.splice(index, 1)
+  if (qaCheckRows.value.length === 0) {
+    qaCheckRows.value.push(createQaCheckRow())
+  }
 }
 
 function openStepCreate(process: ProcessRow) {
@@ -1134,32 +1432,16 @@ function openStepEdit(process: ProcessRow, step: StepRow) {
   stepForm.id = step.id
   stepForm.step_no = step.step_no
   stepForm.step = STEP_OPTIONS.includes(step.step) ? step.step : STEP_OPTIONS[0]
-  stepForm.target_params = safeStringify(step.target_params)
-  stepForm.qa_checks = safeStringify(step.qa_checks)
   stepForm.notes = step.notes ?? ''
+  const hydratedParams = hydrateTargetParamRows(step.target_params)
+  targetParamRows.value = hydratedParams.length > 0 ? hydratedParams : [createTargetParamRow()]
+  const hydratedQa = hydrateQaCheckRows(step.qa_checks)
+  qaCheckRows.value = hydratedQa.length > 0 ? hydratedQa : [createQaCheckRow()]
   showStepModal.value = true
 }
 
 function closeStepModal() {
   showStepModal.value = false
-}
-
-function safeStringify(value: unknown) {
-  try {
-    return JSON.stringify(value ?? null, null, 2)
-  } catch {
-    return ''
-  }
-}
-
-function parseJson(text: string, fallback: unknown) {
-  const trimmed = text.trim()
-  if (!trimmed) return fallback
-  try {
-    return JSON.parse(trimmed)
-  } catch {
-    throw new Error('invalid')
-  }
 }
 
 async function saveRecipeInfo() {
@@ -1175,6 +1457,7 @@ async function saveRecipeInfo() {
     style: recipeForm.style.trim() || null,
     version: recipeForm.version || 1,
     status: recipeForm.status,
+    category: recipeForm.category || null,
     batch_size_l: numberOrNull(recipeForm.batch_size_l),
     target_og: numberOrNull(recipeForm.target_og),
     target_fg: numberOrNull(recipeForm.target_fg),
@@ -1189,7 +1472,7 @@ async function saveRecipeInfo() {
     .from('rcp_recipes')
     .update(payload)
     .eq('id', recipeId.value)
-    .select('id, code, name, style, version, status, batch_size_l, target_og, target_fg, target_abv, target_ibu, target_srm, notes, created_at')
+    .select('id, code, name, style, version, status, batch_size_l, target_og, target_fg, target_abv, target_ibu, target_srm, notes, created_at, category')
     .single()
   savingRecipe.value = false
   if (error || !data) {
@@ -1197,6 +1480,7 @@ async function saveRecipeInfo() {
     return
   }
   recipe.value = data
+  recipeForm.category = data.category ?? ''
   alert(t('recipe.edit.recipeSaved'))
 }
 
@@ -1208,28 +1492,52 @@ async function saveStep() {
     return
   }
 
-  let targetParams: unknown = {}
-  let qaChecks: unknown = []
-  try {
-    targetParams = parseJson(stepForm.target_params, {})
-  } catch {
-    stepErrors.target_params = t('recipe.edit.invalidJson')
+  const normalizedTargetRows = targetParamRows.value
+    .map((row) => ({
+      name: row.name.trim(),
+      target: row.target.trim(),
+      uom_id: row.uom_id,
+    }))
+    .filter((row) => row.name || row.target || row.uom_id)
+
+  if (normalizedTargetRows.some((row) => !row.name)) {
+    stepErrors.target_params = t('recipe.edit.targetParamNameRequired')
     return
   }
-  try {
-    qaChecks = parseJson(stepForm.qa_checks, [])
-    if (!Array.isArray(qaChecks)) throw new Error('not array')
-  } catch {
-    stepErrors.qa_checks = t('recipe.edit.invalidJson')
-    return
+
+  const seen = new Set<string>()
+  for (const row of normalizedTargetRows) {
+    const key = row.name.toLowerCase()
+    if (seen.has(key)) {
+      stepErrors.target_params = t('recipe.edit.targetParamDuplicate')
+      return
+    }
+    seen.add(key)
   }
+
+  const targetParams: Record<string, unknown> = {}
+  for (const row of normalizedTargetRows) {
+    const value = normalizeTargetValue(row.target)
+    if (!row.uom_id && value !== null) {
+      targetParams[row.name] = value
+    } else {
+      const entry: Record<string, unknown> = {}
+      if (value !== null) entry.target = value
+      if (row.uom_id) entry.uom_id = row.uom_id
+      targetParams[row.name] = entry
+    }
+  }
+
+  const qaChecks = qaCheckRows.value
+    .map((row) => row.description.trim())
+    .filter((value) => value.length > 0)
 
   stepSaving.value = true
   const payload = {
     process_id: currentProcess.value.id,
     step_no: stepForm.step_no,
     step: stepForm.step,
-    target_params: targetParams,
+    target_params: Object.keys(targetParams).length > 0 ? targetParams : {},
     qa_checks: qaChecks,
     notes: stepForm.notes.trim() || null,
   }
@@ -1271,7 +1579,7 @@ async function deleteStep(process: ProcessRow, step: StepRow) {
 }
 
 onMounted(async () => {
-  await Promise.all([loadMaterials(), loadUoms()])
+  await Promise.all([loadMaterials(), loadUoms(), loadCategories()])
   await loadRecipe()
 })
 </script>

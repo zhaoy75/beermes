@@ -16,7 +16,13 @@
     "no": "無効",
     "loading": "読み込み中…",
     "copy": "コピー",
-    "copying": "コピー中…"
+    "copying": "コピー中…",
+    "reset": "リセット",
+    "add": "追加",
+    "collapse": "折りたたむ",
+    "expand": "展開",
+    "none": "なし",
+    "select": "選択"
   },
   "batch": {
     "statusMap": {
@@ -81,6 +87,187 @@
         "invalidJson": "JSON ファイルが不正です",
         "confirmReset": "すべてのデータをリセットしますか？"
       }
+    }
+  },
+  "lot": {
+    "list": {
+      "title": "ロット管理",
+      "searchTitle": "ロット検索",
+      "newLot": "ロット作成",
+      "nameLabel": "ロット名／メモ",
+      "namePlaceholder": "LOT-20240601-0001",
+      "startDate": "開始日",
+      "endDate": "終了日",
+      "showing": "{total}件中{count}件を表示",
+      "tableTitle": "ロット一覧",
+      "colLotCode": "ロットコード",
+      "colName": "名称",
+      "colVersion": "工程版",
+      "colStatus": "ステータス",
+      "colCreated": "作成日時",
+      "colPlannedStart": "計画開始",
+      "colPlannedEnd": "計画終了",
+      "colActualStart": "実績開始",
+      "colActualEnd": "実績終了",
+      "summary": "サマリー"
+    },
+    "create": {
+      "title": "ロット作成",
+      "subtitle": "レシピを選択するとロットコードは自動採番されます。",
+      "recipe": "レシピ",
+      "recipePlaceholder": "レシピを選択",
+      "plannedStart": "計画開始",
+      "processVersion": "工程バージョン",
+      "processPlaceholder": "最新を使用",
+      "targetVolume": "目標仕込み量 (L)",
+      "notes": "メモ",
+      "autoCodeHint": "ロットコードは LOT-YYYYMMDD-XXXX 形式で自動生成されます。",
+      "createButton": "作成"
+    },
+    "delete": {
+      "title": "ロット削除",
+      "confirm": "ロット {code} を削除しますか？ この操作は元に戻せません。",
+      "warning": "関連する工程ステップも削除されます。"
+    },
+    "summary": {
+      "title": "ロット {code} サマリー",
+      "subtitle": "計画と進捗の概要",
+      "overview": "概要",
+      "status": "ステータス",
+      "recipe": "レシピ",
+      "plannedStart": "計画開始",
+      "plannedEnd": "計画終了",
+      "actualStart": "実績開始",
+      "actualEnd": "実績終了",
+      "targetVolume": "目標仕込み量",
+      "processVersion": "工程バージョン",
+      "notes": "メモ",
+      "ingredients": "原材料",
+      "ingredient": "原材料",
+      "amount": "数量",
+      "usageStage": "投入工程",
+      "noIngredients": "原材料の記録がありません。",
+      "steps": "工程ステップ",
+      "step": "ステップ",
+      "qa": "品質チェック",
+      "noSteps": "工程が登録されていません。"
+    },
+    "edit": {
+      "title": "ロット編集",
+      "notFound": "ロットが見つからないか、権限がありません。",
+      "infoTitle": "ロット情報",
+      "infoSubtitle": "スケジュールやステータス、メモを更新します。",
+      "lotCode": "ロットコード",
+      "status": "ステータス",
+      "processVersion": "工程バージョン",
+      "plannedStart": "計画開始",
+      "plannedEnd": "計画終了",
+      "actualStart": "実績開始",
+      "actualEnd": "実績終了",
+      "targetVolume": "目標仕込み量",
+      "vessel": "タンク",
+      "notes": "メモ"
+    },
+    "ingredients": {
+      "sectionTitle": "原材料",
+      "sectionSubtitle": "このロットで使用するレシピ原材料を管理します。",
+      "material": "原材料",
+      "amount": "数量",
+      "uom": "単位",
+      "stage": "工程",
+      "notes": "メモ",
+      "addTitle": "原材料の追加",
+      "editTitle": "原材料の編集",
+      "materialPlaceholder": "原材料を選択",
+      "uomPlaceholder": "単位を選択",
+      "deleteConfirm": "原材料 {name} を削除しますか？"
+    },
+    "steps": {
+      "sectionTitle": "工程ステップ",
+      "sectionSubtitle": "進捗と実績値を記録します。",
+      "step": "ステップ",
+      "status": "ステータス",
+      "planned": "計画値",
+      "actualParams": "実績パラメータ",
+      "notes": "メモ"
+    },
+    "yeast": {
+      "sectionTitle": "酵母スターター管理",
+      "sectionSubtitle": "ロットやタンク間の酵母の受け渡しを記録します。",
+      "totalPulled": "タンクから採取",
+      "totalReturned": "タンクへ戻し",
+      "totalDumped": "廃棄量",
+      "colTimestamp": "記録日時",
+      "colSourceLot": "供給ロット",
+      "colTankFrom": "Fromタンク",
+      "colTankTo": "Toタンク",
+      "colVolumePulled": "採取量",
+      "colVolumeReturned": "戻し量",
+      "colVolumeDumped": "廃棄量",
+      "colNotes": "メモ",
+      "noData": "酵母移動の記録がありません。",
+      "todoHint": "※ データベースを準備したら、この表と接続してください。"
+    },
+    "packaging": {
+      "sectionTitle": "パッケージ管理",
+      "sectionSubtitle": "このロットで充填された数量を記録します。",
+      "addButton": "パッケージを追加",
+      "addTitle": "パッケージ記録の追加",
+      "editTitle": "パッケージ記録の編集",
+      "deleteConfirm": "パッケージ {code} の記録を削除しますか？",
+      "noData": "パッケージ記録がありません。",
+      "packagePlaceholder": "パッケージを選択",
+      "defaultSizeHint": "既定容量: {size}",
+      "noDefaultSize": "既定容量なし",
+      "lUnit": "L",
+      "summaryTotalProduct": "仕込み量",
+      "summaryFilled": "充填済み",
+      "summaryRemaining": "残量",
+      "columns": {
+        "fillDate": "充填日",
+        "package": "パッケージ",
+        "quantity": "数量",
+        "unitSize": "単位あたり容量",
+        "totalVolume": "総容量",
+        "notes": "メモ",
+        "sizeOverride": "単位容量 (L)"
+      }
+    }
+  },
+  "packageCategory": {
+    "title": "ビールパッケージ区分",
+    "subtitle": "製品で使用するパッケージの容量と単位を管理します。",
+    "searchPlaceholder": "コード／名称／単位で検索…",
+    "newTitle": "パッケージ区分の追加",
+    "editTitle": "パッケージ区分の編集",
+    "deleteTitle": "パッケージ区分の削除",
+    "deleteConfirm": "パッケージ {code} を削除しますか？ この操作は元に戻せません。",
+    "uomPlaceholder": "単位を選択",
+    "sizeFixedLabel": "このパッケージは容量が固定",
+    "columns": {
+      "code": "コード",
+      "name": "名称",
+      "size": "容量",
+      "uom": "単位",
+      "sizeFixed": "固定",
+      "createdAt": "作成日時"
+    }
+  },
+  "waste": {
+    "list": {
+      "title": "廃棄管理",
+      "searchTitle": "廃棄データ検索",
+      "startDate": "開始日",
+      "endDate": "終了日",
+      "lotCode": "ロットコード",
+      "lotPlaceholder": "LOT-20240601-0001",
+      "showing": "{total}件中{count}件を表示",
+      "tableTitle": "廃棄一覧",
+      "colCreated": "記録日時",
+      "colLot": "ロット",
+      "colMaterial": "原材料",
+      "colQty": "数量",
+      "colReason": "理由"
     }
   },
   "labels": {
@@ -223,34 +410,189 @@
       "dashboard": "概要",
       "production": "生産管理",
       "batchList": "バッチ管理",
+      "lotList": "ロット管理",
       "batchEdit": "バッチ情報更新",
       "liquorTax": "酒税計算",
+      "taxYearSummary": "年間課税概要",
       "packing": "充填管理",
       "taxCalc": "課税計算",
       "unpaidMove": "未納税搬入出",
       "returnBook": "戻入帳",
       "exportDutyFree": "輸出免税帳",
+      "siteMovements": "サイト間移動",
       "recipe": "レシピ管理",
+      "lotYield": "エキス収率",
+      "recipemng": "レシピ管理",
       "recipeRegister": "レシピ登録",
       "recipeList": "レシピ一覧",
       "inventory": "在庫管理",
       "rawMaterial": "原材料管理",
       "productInventory": "製品在庫管理",
       "waste": "廃棄物管理",
-      "masterMaintenance": "マスタメンテナンス",
+      "masterMaintenance": "マスターメンテナンス",
+      "systemMaintenance": "システムメンテナンス",
       "categoryMaster": "カテゴリ登録",
       "taxMaster": "酒税登録",
+      "siteTypeMaster": "サイト種別登録",
       "catalogMaster": "酒類登録",
       "uomMaster": "単位マスタ",
       "packingMaster": "詰口登録",
       "beerMaster": "ビール銘柄登録",
+      "beerPackageCategory": "パッケージ区分",
       "materialMaster": "原材料登録",
       "vendorMaster": "仕入先登録",
       "customerMaster": "顧客登録",
       "shipDestMaster": "搬入出先登録",
+      "siteMaster": "サイト登録",
       "calendar": "カレンダー",
       "profile": "ユーザープロファイル"
     }
+  }
+  ,
+  "siteType": {
+    "title": "サイト種別",
+    "subtitle": "テナントごとのサイト種別マスタを管理します。",
+    "newTitle": "サイト種別を追加",
+    "editTitle": "サイト種別を編集",
+    "deleteTitle": "サイト種別の削除",
+    "deleteConfirm": "サイト種別 {code} を削除しますか？この操作は元に戻せません。",
+    "table": {
+      "code": "コード",
+      "name": "名称",
+      "nameJa": "日本語名称",
+      "active": "有効",
+      "createdAt": "作成日時"
+    },
+    "form": {
+      "codeRequired": "コードは必須です。",
+      "nameRequired": "名称は必須です。",
+      "jaLabel": "日本語名称 (flags.ja)"
+    }
+  }
+  ,
+  "site": {
+    "title": "サイト",
+    "subtitle": "醸造所・倉庫・顧客などの拠点情報を管理します。",
+    "newTitle": "サイトを追加",
+    "editTitle": "サイトを編集",
+    "deleteTitle": "サイトの削除",
+    "deleteConfirm": "サイト {code} を削除しますか？この操作は元に戻せません。",
+    "filters": {
+      "namePlaceholder": "名称またはコードで絞り込み",
+      "siteType": "サイト種別"
+    },
+    "table": {
+      "code": "コード",
+      "name": "名称",
+      "siteType": "サイト種別",
+      "parent": "親サイト",
+      "active": "有効",
+      "createdAt": "作成日時"
+    },
+    "form": {
+      "codeRequired": "コードは必須です。",
+      "nameRequired": "名称は必須です。",
+      "siteTypeRequired": "サイト種別は必須です。",
+      "address": "住所 (JSON)",
+      "contact": "連絡先 (JSON)",
+      "notes": "備考",
+      "active": "有効フラグ"
+    },
+    "errors": {
+      "invalidAddress": "住所は正しいJSON形式で入力してください。",
+      "invalidContact": "連絡先は正しいJSON形式で入力してください。"
+    }
+  }
+  ,
+  "siteMovement": {
+    "title": "サイト間移動",
+    "subtitle": "拠点間の在庫移動を記録・管理します。",
+    "newTitle": "移動伝票を作成",
+    "editTitle": "移動伝票を編集",
+    "deleteTitle": "移動伝票の削除",
+    "deleteConfirm": "伝票 {docNo} を削除しますか？この操作は元に戻せません。",
+    "filters": {
+      "docNo": "伝票番号",
+      "docPlaceholder": "伝票番号で検索",
+      "source": "出庫サイト",
+      "destination": "入庫サイト",
+      "dateFrom": "開始日",
+      "dateTo": "終了日"
+    },
+    "table": {
+      "docNo": "伝票番号",
+      "docType": "種別",
+      "movementDate": "移動日",
+      "source": "出庫サイト",
+      "destination": "入庫サイト",
+      "status": "ステータス",
+      "createdAt": "作成日時"
+    },
+    "form": {
+      "docNo": "伝票番号",
+      "docType": "伝票種別",
+      "movementDate": "移動日",
+      "status": "ステータス",
+      "source": "出庫サイト",
+      "destination": "入庫サイト",
+      "notes": "備考",
+      "lines": "明細行",
+      "material": "原材料",
+      "quantity": "数量",
+      "uom": "単位",
+      "lineNotes": "明細備考",
+      "addLine": "明細を追加"
+    },
+    "errors": {
+      "docNoRequired": "伝票番号は必須です。",
+      "movementDateRequired": "移動日は必須です。",
+      "siteRequired": "出庫サイトと入庫サイトを選択してください。",
+      "docTypeRequired": "伝票種別を選択してください。",
+      "linesRequired": "少なくとも1件の明細が必要です。",
+      "materialRequired": "原材料を選択してください。",
+      "qtyRequired": "数量は0より大きい値を入力してください。"
+    },
+    "statusMap": {
+      "open": "未処理",
+      "posted": "確定",
+      "void": "取消"
+    },
+    "docTypeMap": {
+      "transfer": "社内移動",
+      "tax_transfer": "税倉庫移動",
+      "production_issue": "仕込払出",
+      "production_receipt": "仕込受入"
+    }
+  }
+  ,
+  "lotYield": {
+    "title": "エキス収率サマリー",
+    "subtitle": "完了したロットから仕込室収率（エキス）を分析します。",
+    "filters": {
+      "style": "スタイル",
+      "recipe": "レシピ",
+      "status": "ロットステータス",
+      "dateFrom": "開始日",
+      "dateTo": "終了日"
+    },
+    "summary": {
+      "style": "スタイル",
+      "recipe": "レシピ",
+      "lotCount": "ロット数",
+      "targetVolume": "目標量 (L)",
+      "actualVolume": "充填量 (L)",
+      "yield": "収率 (%)"
+    },
+    "lots": {
+      "lotCode": "ロット",
+      "planned": "開始予定日",
+      "target": "目標量 (L)",
+      "actual": "充填量 (L)",
+      "yield": "収率 (%)",
+      "status": "ステータス"
+    },
+    "noData": "条件に合致する完了ロットはありません。",
+    "yieldLabel": "収率"
   }
   ,
   "calendar": {
@@ -278,6 +620,28 @@
     }
   }
   ,
+  "taxYearSummary": {
+    "title": "年間課税概要",
+    "subtitle": "カテゴリ別の年間生産量と酒税額を確認します。",
+    "yearLabel": "課税年度",
+    "selectYear": "年度を選択",
+    "summaryHeading": "カテゴリ別サマリー",
+    "category": "カテゴリ",
+    "volume": "生産量 (L)",
+    "taxAmount": "酒税額",
+    "noData": "指定した年度のデータはありません。",
+    "monthlyChartTitle": "月別生産量と酒税額",
+    "volumeSeries": "生産量 (L)",
+    "taxSeries": "酒税額 (¥)",
+    "lotsSectionTitle": "月別ロット明細",
+    "monthTotal": "小計",
+    "lot": "ロット",
+    "fillDate": "充填日",
+    "volumeShort": "生産量",
+    "taxShort": "酒税",
+    "loading": "読み込み中…"
+  }
+  ,
   "recipe": {
     "statusMap": {
       "draft": "下書き",
@@ -298,6 +662,7 @@
       "recipeId": "レシピID",
       "name": "名称",
       "style": "スタイル",
+      "category": "カテゴリ",
       "version": "版",
       "created": "作成日時",
       "orgId": "組織ID (UUID)",
@@ -311,7 +676,8 @@
       "copyTitle": "レシピをコピー",
       "copyDescription": "複製するレシピの情報を設定してください。",
       "copyVersionNote": "コピー後のレシピは版 1・ステータス下書きで作成されます。",
-      "copyConfirm": "コピー"
+      "copyConfirm": "コピー",
+      "selectCategory": "カテゴリを選択"
     },
     "edit": {
       "title": "レシピ編集",
@@ -342,12 +708,24 @@
       "processEmpty": "工程が登録されていません。",
       "markActive": "工程を有効にする",
       "stepsTitle": "ステップ",
+      "category": "カテゴリ",
+      "selectCategory": "カテゴリを選択",
       "addStep": "ステップを追加",
       "editStep": "ステップを編集",
       "stepNumber": "ステップ番号",
       "stepType": "ステップ種別",
-      "targetParams": "目標パラメータ (JSON)",
-      "qaChecks": "品質チェック (JSON配列)",
+      "targetParams": "目標パラメータ",
+      "targetParamName": "項目名",
+      "targetParamTarget": "目標値",
+      "targetParamNamePlaceholder": "例: マッシュ温度",
+      "targetParamTargetPlaceholder": "例: 66",
+      "addTargetParam": "パラメータを追加",
+      "qaChecks": "品質チェック",
+      "qaCheckDescription": "内容",
+      "qaCheckPlaceholder": "例: 比重を確認",
+      "addQaCheck": "チェックを追加",
+      "targetParamNameRequired": "各パラメータに名称が必要です。",
+      "targetParamDuplicate": "パラメータ名は重複できません。",
       "stepsEmpty": "ステップが登録されていません。",
       "invalidJson": "JSONの形式が正しくありません",
       "recipeSaved": "レシピを保存しました。",

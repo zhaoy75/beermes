@@ -132,6 +132,7 @@
                   <span class="text-xs">{{ sortIcon('created_at') }}</span>
                 </button>
               </th>
+              <th class="px-3 py-2 text-left">{{ t('recipe.list.category') }}</th>
               <th class="px-3 py-2 text-left">{{ t('recipe.list.style') }}</th>
               <th class="px-3 py-2 text-left">{{ t('common.actions') }}</th>
             </tr>
@@ -152,6 +153,7 @@
                 </span>
               </td>
               <td class="px-3 py-2 text-xs text-gray-500">{{ formatDate(row.created_at) }}</td>
+              <td class="px-3 py-2">{{ categoryLabel(row.category) }}</td>
               <td class="px-3 py-2">{{ row.style || '—' }}</td>
               <td class="px-3 py-2 space-x-2">
                 <button
@@ -170,7 +172,7 @@
               </td>
             </tr>
             <tr v-if="!loading && sortedRecipes.length === 0">
-              <td colspan="7" class="px-3 py-6 text-center text-gray-500">
+              <td colspan="8" class="px-3 py-6 text-center text-gray-500">
                 {{ t('common.noData') }}
               </td>
             </tr>
@@ -203,6 +205,10 @@
             <div class="flex justify-between">
               <dt>{{ t('recipe.list.style') }}</dt>
               <dd>{{ row.style || '—' }}</dd>
+            </div>
+            <div class="flex justify-between">
+              <dt>{{ t('recipe.list.category') }}</dt>
+              <dd>{{ categoryLabel(row.category) }}</dd>
             </div>
             <div class="flex justify-between text-xs text-gray-500">
               <dt>{{ t('recipe.list.created') }}</dt>
@@ -256,6 +262,15 @@
               <select v-model="form.status" class="w-full h-[40px] border rounded px-3 bg-white">
                 <option v-for="status in STATUSES" :key="status" :value="status">
                   {{ t('recipe.statusMap.' + status) }}
+                </option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.list.category') }}</label>
+              <select v-model="form.category" class="w-full h-[40px] border rounded px-3 bg-white">
+                <option value="">{{ t('recipe.list.selectCategory') }}</option>
+                <option v-for="option in categoryOptions" :key="option.value" :value="option.value">
+                  {{ option.label }}
                 </option>
               </select>
             </div>
@@ -369,6 +384,13 @@ interface RecipeRow {
   status: string
   notes: string | null
   created_at: string | null
+  category: string | null
+}
+
+interface CategoryRow {
+  id: string
+  code: string
+  name: string | null
 }
 
 type SortKey = 'code' | 'name' | 'version' | 'status' | 'created_at'
@@ -379,6 +401,7 @@ const loading = ref(false)
 const saving = ref(false)
 const sortKey = ref<SortKey>('created_at')
 const sortDirection = ref<SortDirection>('desc')
+const categories = ref<CategoryRow[]>([])
 
 const filters = reactive({
   name: '',
@@ -391,6 +414,7 @@ const form = reactive({
   code: '',
   name: '',
   style: '',
+  category: '',
   version: 1,
   status: STATUSES[0],
   notes: '',
@@ -416,6 +440,18 @@ const styleOptions = computed(() => {
   })
   return Array.from(set).sort((a, b) => a.localeCompare(b))
 })
+
+const categoryMap = computed(() => {
+  const map = new Map<string, string>()
+  categories.value.forEach((row) => {
+    map.set(row.id, row.name || row.code)
+  })
+  return map
+})
+
+const categoryOptions = computed(() =>
+  categories.value.map((row) => ({ value: row.id, label: row.name || row.code })),
+)
 
 const filteredRecipes = computed(() => {
   const nameTerm = filters.name.trim().toLowerCase()
@@ -541,6 +577,7 @@ function resetForm() {
   form.code = ''
   form.name = ''
   form.style = ''
+  form.category = ''
   form.version = 1
   form.status = STATUSES[0]
   form.notes = ''
@@ -554,11 +591,24 @@ function validate() {
   return Object.keys(errors).length === 0
 }
 
+async function fetchCategories() {
+  try {
+    const { data, error } = await supabase
+      .from('mst_category')
+      .select('id, code, name')
+      .order('name', { ascending: true, nullsFirst: false })
+    if (error) throw error
+    categories.value = data ?? []
+  } catch (err) {
+    console.warn('Failed to load categories', err)
+  }
+}
+
 async function fetchRecipes() {
   loading.value = true
   const { data, error } = await supabase
     .from('rcp_recipes')
-    .select('id, code, name, style, version, status, notes, created_at')
+    .select('id, code, name, style, version, status, notes, created_at, category')
     .order('created_at', { ascending: false, nullsFirst: false })
   loading.value = false
   if (error) {
@@ -583,6 +633,7 @@ async function saveRecipe() {
     version: form.version || 1,
     status: form.status,
     notes: form.notes.trim() || null,
+    category: form.category || null,
   }
 
   let response
@@ -591,13 +642,13 @@ async function saveRecipe() {
       .from('rcp_recipes')
       .update(payload)
       .eq('id', form.id)
-      .select('id, code, name, style, version, status, notes, created_at')
+      .select('id, code, name, style, version, status, notes, created_at, category')
       .single()
   } else {
     response = await supabase
       .from('rcp_recipes')
       .insert({ ...payload })
-      .select('id, code, name, style, version, status, notes, created_at')
+      .select('id, code, name, style, version, status, notes, created_at, category')
       .single()
   }
 
@@ -634,6 +685,11 @@ async function deleteRecipe() {
 
 function goEdit(row: RecipeRow) {
   router.push(`/recipeEdit/${row.id}/${row.version}`)
+}
+
+function categoryLabel(id: string | null | undefined) {
+  if (!id) return '—'
+  return categoryMap.value.get(id) ?? '—'
 }
 
 const normalizeObject = (value: unknown) => {
@@ -712,7 +768,7 @@ async function executeCopy() {
   try {
     const { data: original, error: loadError } = await supabase
       .from('rcp_recipes')
-      .select('id, code, name, style, version, status, notes, batch_size_l, target_og, target_fg, target_abv, target_ibu, target_srm')
+      .select('id, code, name, style, version, status, notes, batch_size_l, target_og, target_fg, target_abv, target_ibu, target_srm, category')
       .eq('id', copyTarget.value.id)
       .single()
     if (loadError || !original) throw loadError ?? new Error('Missing recipe')
@@ -732,6 +788,7 @@ async function executeCopy() {
         target_abv: original.target_abv,
         target_ibu: original.target_ibu,
         target_srm: original.target_srm,
+        category: original.category,
       })
       .select('id, code, name, style, version, status, notes, created_at')
       .single()
@@ -831,5 +888,7 @@ async function executeCopy() {
   }
 }
 
-onMounted(fetchRecipes)
+onMounted(async () => {
+  await Promise.all([fetchCategories(), fetchRecipes()])
+})
 </script>

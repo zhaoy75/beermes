@@ -16,7 +16,13 @@
     "no": "No",
     "loading": "Loading…",
     "copy": "Copy",
-    "copying": "Copying…"
+    "copying": "Copying…",
+    "reset": "Reset",
+    "add": "Add",
+    "collapse": "Collapse",
+    "expand": "Expand",
+    "none": "None",
+    "select": "Select"
   },
   "batch": {
     "statusMap": {
@@ -81,6 +87,187 @@
         "invalidJson": "Invalid JSON file",
         "confirmReset": "Reset all data?"
       }
+    }
+  },
+  "lot": {
+    "list": {
+      "title": "Production Lots",
+      "searchTitle": "Search Lots",
+      "newLot": "Create Lot",
+      "nameLabel": "Lot name/notes",
+      "namePlaceholder": "LOT-20240601-0001",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "showing": "Showing {count} / {total} lots",
+      "tableTitle": "Lot Table",
+      "colLotCode": "Lot code",
+      "colName": "Name",
+      "colVersion": "Process ver",
+      "colStatus": "Status",
+      "colCreated": "Created",
+      "colPlannedStart": "Planned start",
+      "colPlannedEnd": "Planned end",
+      "colActualStart": "Actual start",
+      "colActualEnd": "Actual end",
+      "summary": "Summary"
+    },
+    "create": {
+      "title": "Create Lot",
+      "subtitle": "Choose a recipe and optional overrides. Code is assigned automatically.",
+      "recipe": "Recipe",
+      "recipePlaceholder": "Select a recipe",
+      "plannedStart": "Planned start",
+      "processVersion": "Process version",
+      "processPlaceholder": "Default latest",
+      "targetVolume": "Target volume (L)",
+      "notes": "Lot note",
+      "autoCodeHint": "Lot code will be generated like LOT-YYYYMMDD-XXXX.",
+      "createButton": "Create Lot"
+    },
+    "delete": {
+      "title": "Delete Lot",
+      "confirm": "Delete lot {code}? This action cannot be undone.",
+      "warning": "Associated step records will also be removed."
+    },
+    "summary": {
+      "title": "Lot {code} Summary",
+      "subtitle": "Snapshot of lot plan and execution",
+      "overview": "Overview",
+      "status": "Status",
+      "recipe": "Recipe",
+      "plannedStart": "Planned start",
+      "plannedEnd": "Planned end",
+      "actualStart": "Actual start",
+      "actualEnd": "Actual end",
+      "targetVolume": "Target volume (L)",
+      "processVersion": "Process version",
+      "notes": "Notes",
+      "ingredients": "Ingredients",
+      "ingredient": "Ingredient",
+      "amount": "Amount",
+      "usageStage": "Usage stage",
+      "noIngredients": "No ingredients recorded.",
+      "steps": "Process steps",
+      "step": "Step",
+      "qa": "QC checks",
+      "noSteps": "No steps recorded."
+    },
+    "edit": {
+      "title": "Lot Editor",
+      "notFound": "Lot not found or you do not have access.",
+      "infoTitle": "Lot Information",
+      "infoSubtitle": "Update scheduling, status, and notes for this lot.",
+      "lotCode": "Lot code",
+      "status": "Status",
+      "processVersion": "Process version",
+      "plannedStart": "Planned start",
+      "plannedEnd": "Planned end",
+      "actualStart": "Actual start",
+      "actualEnd": "Actual end",
+      "targetVolume": "Target volume (L)",
+      "vessel": "Vessel",
+      "notes": "Notes"
+    },
+    "ingredients": {
+      "sectionTitle": "Ingredients",
+      "sectionSubtitle": "Manage the recipe ingredients used for this lot.",
+      "material": "Material",
+      "amount": "Amount",
+      "uom": "UOM",
+      "stage": "Stage",
+      "notes": "Notes",
+      "addTitle": "Add Ingredient",
+      "editTitle": "Edit Ingredient",
+      "materialPlaceholder": "Select a material",
+      "uomPlaceholder": "Select a unit",
+      "deleteConfirm": "Remove ingredient {name}?"
+    },
+    "steps": {
+      "sectionTitle": "Process Steps",
+      "sectionSubtitle": "Track execution progress and record actual data.",
+      "step": "Step",
+      "status": "Status",
+      "planned": "Planned params",
+      "actualParams": "Actual params",
+      "notes": "Notes"
+    },
+    "yeast": {
+      "sectionTitle": "Yeast Starter Maintenance",
+      "sectionSubtitle": "Log transfers between lots and tanks to keep your yeast program on track.",
+      "totalPulled": "Pulled from tank",
+      "totalReturned": "Returned to tank",
+      "totalDumped": "Discarded",
+      "colTimestamp": "Recorded",
+      "colSourceLot": "Source lot",
+      "colTankFrom": "From tank",
+      "colTankTo": "To tank",
+      "colVolumePulled": "Pulled",
+      "colVolumeReturned": "Returned",
+      "colVolumeDumped": "Discarded",
+      "colNotes": "Notes",
+      "noData": "No yeast movements captured yet.",
+      "todoHint": "TODO: connect this table to your yeast starter tracking table when ready."
+    },
+    "packaging": {
+      "sectionTitle": "Packaging",
+      "sectionSubtitle": "Track packaged quantities for this lot.",
+      "addButton": "Add Package",
+      "addTitle": "Add Package Entry",
+      "editTitle": "Edit Package Entry",
+      "deleteConfirm": "Delete package entry {code}?",
+      "noData": "No packages recorded yet.",
+      "packagePlaceholder": "Select a package",
+      "defaultSizeHint": "Default size: {size}",
+      "noDefaultSize": "No default size",
+      "lUnit": "L",
+      "summaryTotalProduct": "Batch target",
+      "summaryFilled": "Filled",
+      "summaryRemaining": "Remaining",
+      "columns": {
+        "fillDate": "Fill date",
+        "package": "Package",
+        "quantity": "Quantity",
+        "unitSize": "Unit size",
+        "totalVolume": "Total volume",
+        "notes": "Notes",
+        "sizeOverride": "Unit size (L)"
+      }
+    }
+  },
+  "packageCategory": {
+    "title": "Beer Package Categories",
+    "subtitle": "Define packaging sizes and units used across your products.",
+    "searchPlaceholder": "Search by code, name, or unit…",
+    "newTitle": "New Package Category",
+    "editTitle": "Edit Package Category",
+    "deleteTitle": "Delete Package Category",
+    "deleteConfirm": "Delete package {code}? This cannot be undone.",
+    "uomPlaceholder": "Select a unit of measure",
+    "sizeFixedLabel": "Volume is fixed for this package",
+    "columns": {
+      "code": "Code",
+      "name": "Name",
+      "size": "Size",
+      "uom": "Unit",
+      "sizeFixed": "Fixed",
+      "createdAt": "Created"
+    }
+  },
+  "waste": {
+    "list": {
+      "title": "Waste Management",
+      "searchTitle": "Filter Waste",
+      "startDate": "From date",
+      "endDate": "To date",
+      "lotCode": "Lot code",
+      "lotPlaceholder": "LOT-20240601-0001",
+      "showing": "Showing {count} / {total} records",
+      "tableTitle": "Waste Records",
+      "colCreated": "Recorded",
+      "colLot": "Lot",
+      "colMaterial": "Material",
+      "colQty": "Quantity",
+      "colReason": "Reason"
     }
   },
   "labels": {
@@ -223,34 +410,189 @@
       "dashboard": "Dashboard",
       "production": "Production",
       "batchList": "Batch List",
+      "lotList": "Lot List",
       "batchEdit": "Batch Edit",
       "liquorTax": "Liquor Tax",
+      "taxYearSummary": "Tax Year Summary",
       "packing": "Packing",
       "taxCalc": "Tax Calculation",
       "unpaidMove": "Unpaid Movement",
       "returnBook": "Return Book",
       "exportDutyFree": "Export Duty Free",
+      "siteMovements": "Site Movements",
       "recipe": "Recipe",
+      "recipemng": "Recipe Management",
       "recipeRegister": "Recipe Register",
       "recipeList": "Recipe List",
+      "lotYield": "Extract Yield",
       "inventory": "Inventory",
       "rawMaterial": "Raw Materials",
       "productInventory": "Product Inventory",
       "waste": "Waste",
       "masterMaintenance": "Master Maintenance",
+      "systemMaintenance": "System Maintenance",
       "categoryMaster": "Category Master",
       "taxMaster": "Tax Master",
+      "siteTypeMaster": "Site Type Master",
       "catalogMaster": "Catalog Master",
       "uomMaster": "UOM Master",
       "packingMaster": "Packing Master",
       "beerMaster": "Beer Master",
+      "beerPackageCategory": "Beer Package Categories",
       "materialMaster": "Material Master",
       "vendorMaster": "Vendor Master",
       "customerMaster": "Customer Master",
       "shipDestMaster": "Shipping Destinations",
+      "siteMaster": "Sites",
       "calendar": "Calendar",
       "profile": "User Profile"
     }
+  }
+  ,
+  "siteType": {
+    "title": "Site Types",
+    "subtitle": "Maintain site type classifications for tenants.",
+    "newTitle": "New Site Type",
+    "editTitle": "Edit Site Type",
+    "deleteTitle": "Delete Site Type",
+    "deleteConfirm": "Delete site type {code}? This cannot be undone.",
+    "table": {
+      "code": "Code",
+      "name": "Name",
+      "nameJa": "Japanese Name",
+      "active": "Active",
+      "createdAt": "Created"
+    },
+    "form": {
+      "codeRequired": "Code is required.",
+      "nameRequired": "Name is required.",
+      "jaLabel": "Japanese name (flags.ja)"
+    }
+  }
+  ,
+  "site": {
+    "title": "Sites",
+    "subtitle": "Manage breweries, warehouses, customers, and other locations.",
+    "newTitle": "New Site",
+    "editTitle": "Edit Site",
+    "deleteTitle": "Delete Site",
+    "deleteConfirm": "Delete site {code}? This cannot be undone.",
+    "filters": {
+      "namePlaceholder": "Filter by name or code",
+      "siteType": "Site type"
+    },
+    "table": {
+      "code": "Code",
+      "name": "Name",
+      "siteType": "Site type",
+      "parent": "Parent site",
+      "active": "Active",
+      "createdAt": "Created"
+    },
+    "form": {
+      "codeRequired": "Code is required.",
+      "nameRequired": "Name is required.",
+      "siteTypeRequired": "Site type is required.",
+      "address": "Address JSON",
+      "contact": "Contact JSON",
+      "notes": "Notes",
+      "active": "Active"
+    },
+    "errors": {
+      "invalidAddress": "Address must be valid JSON.",
+      "invalidContact": "Contact must be valid JSON."
+    }
+  }
+  ,
+  "siteMovement": {
+    "title": "Site Movements",
+    "subtitle": "Record and track inventory transfers between sites.",
+    "newTitle": "New Movement",
+    "editTitle": "Edit Movement",
+    "deleteTitle": "Delete Movement",
+    "deleteConfirm": "Delete document {docNo}? This cannot be undone.",
+    "filters": {
+      "docNo": "Document #",
+      "docPlaceholder": "Search doc number",
+      "source": "Source site",
+      "destination": "Destination site",
+      "dateFrom": "From",
+      "dateTo": "To"
+    },
+    "table": {
+      "docNo": "Document #",
+      "docType": "Type",
+      "movementDate": "Movement date",
+      "source": "Source site",
+      "destination": "Destination site",
+      "status": "Status",
+      "createdAt": "Created"
+    },
+    "form": {
+      "docNo": "Document #",
+      "docType": "Document type",
+      "movementDate": "Movement date",
+      "status": "Status",
+      "source": "Source site",
+      "destination": "Destination site",
+      "notes": "Notes",
+      "lines": "Line items",
+      "material": "Material",
+      "quantity": "Quantity",
+      "uom": "UOM",
+      "lineNotes": "Line notes",
+      "addLine": "Add line"
+    },
+    "errors": {
+      "docNoRequired": "Document number is required.",
+      "movementDateRequired": "Movement date is required.",
+      "siteRequired": "Source and destination sites are required.",
+      "docTypeRequired": "Document type is required.",
+      "linesRequired": "At least one line item is required.",
+      "materialRequired": "Material is required.",
+      "qtyRequired": "Quantity must be greater than zero."
+    },
+    "statusMap": {
+      "open": "Open",
+      "posted": "Posted",
+      "void": "Void"
+    },
+    "docTypeMap": {
+      "transfer": "Transfer",
+      "tax_transfer": "Tax transfer",
+      "production_issue": "Production issue",
+      "production_receipt": "Production receipt"
+    }
+  }
+  ,
+  "lotYield": {
+    "title": "Extract Yield Summary",
+    "subtitle": "Analyse finished lots to understand brewhouse extract efficiency.",
+    "filters": {
+      "style": "Style",
+      "recipe": "Recipe",
+      "status": "Lot status",
+      "dateFrom": "From",
+      "dateTo": "To"
+    },
+    "summary": {
+      "style": "Style",
+      "recipe": "Recipe",
+      "lotCount": "Lots",
+      "targetVolume": "Target volume (L)",
+      "actualVolume": "Packaged volume (L)",
+      "yield": "Extract yield (%)"
+    },
+    "lots": {
+      "lotCode": "Lot",
+      "planned": "Planned start",
+      "target": "Target volume (L)",
+      "actual": "Packaged volume (L)",
+      "yield": "Yield (%)",
+      "status": "Status"
+    },
+    "noData": "No finished lots match the filters.",
+    "yieldLabel": "Yield"
   }
   ,
   "calendar": {
@@ -277,6 +619,28 @@
       "loadBrew": "Load Brew Events"
     }
   }
+ ,
+  "taxYearSummary": {
+    "title": "Tax Year Summary",
+    "subtitle": "Review annual production volumes and tax amounts by category.",
+    "yearLabel": "Tax year",
+    "selectYear": "Select year",
+    "summaryHeading": "Summary by category",
+    "category": "Category",
+    "volume": "Volume (L)",
+    "taxAmount": "Tax amount",
+    "noData": "No records for the selected year.",
+    "monthlyChartTitle": "Monthly production and tax",
+    "volumeSeries": "Production volume (L)",
+    "taxSeries": "Tax amount (¥)",
+    "lotsSectionTitle": "Lots by month",
+    "monthTotal": "Subtotal",
+    "lot": "Lot",
+    "fillDate": "Fill date",
+    "volumeShort": "Volume",
+    "taxShort": "Tax",
+    "loading": "Loading…"
+  }
   ,
   "recipe": {
     "statusMap": {
@@ -298,6 +662,7 @@
       "recipeId": "Recipe ID",
       "name": "Name",
       "style": "Style",
+      "category": "Category",
       "version": "Version",
       "created": "Created",
       "orgId": "Org ID (UUID)",
@@ -311,7 +676,8 @@
       "copyTitle": "Copy Recipe",
       "copyDescription": "Set the new recipe details for the duplicate.",
       "copyVersionNote": "The duplicated recipe will start at version 1 in draft status.",
-      "copyConfirm": "Copy"
+      "copyConfirm": "Copy",
+      "selectCategory": "Select a category"
     },
     "edit": {
       "title": "Recipe Edit",
@@ -342,12 +708,24 @@
       "processEmpty": "No processes yet.",
       "markActive": "Mark as active",
       "stepsTitle": "Steps",
+      "category": "Category",
+      "selectCategory": "Select a category",
       "addStep": "Add Step",
       "editStep": "Edit Step",
       "stepNumber": "Step Number",
       "stepType": "Step Type",
-      "targetParams": "Target Parameters (JSON)",
-      "qaChecks": "QA Checks (JSON array)",
+      "targetParams": "Target Parameters",
+      "targetParamName": "Name",
+      "targetParamTarget": "Target",
+      "targetParamNamePlaceholder": "e.g., Mash temp",
+      "targetParamTargetPlaceholder": "e.g., 66",
+      "addTargetParam": "Add parameter",
+      "qaChecks": "QA Checks",
+      "qaCheckDescription": "Description",
+      "qaCheckPlaceholder": "e.g., Verify specific gravity",
+      "addQaCheck": "Add QA check",
+      "targetParamNameRequired": "Each target parameter needs a name.",
+      "targetParamDuplicate": "Target parameter names must be unique.",
       "stepsEmpty": "No steps defined.",
       "invalidJson": "Invalid JSON value",
       "recipeSaved": "Recipe saved.",

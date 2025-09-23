@@ -254,30 +254,37 @@ const menuGroups = computed(() => [
         // ],
       },
       {
+        icon: GridIcon,
+        name: t('sidebar.items.calendar'),
+        path: "/calendar",
+        // subItems: [
+        //   { name: "Ecommerce", path: "/", pro: false },
+        //   { name: "DashBoard", path: "/beerdash", pro: false }
+        // ],
+      },
+      {
+        icon: CalenderIcon,
+        name: t('sidebar.items.recipemng'),
+        subItems: [
+          { name: t('sidebar.items.recipeList'), path: "/recipeList", pro: false },
+          { name: t('sidebar.items.lotYield'), path: "/lotYieldSummary", pro: false },
+
+        ],
+      },
+      {
         icon: CalenderIcon,
         name: t('sidebar.items.production'),
         subItems: [
-          { name: t('sidebar.items.batchList'), path: "/batchlist", pro: false },
-          { name: t('sidebar.items.calendar'), path: "/calendar", pro: false }
+          { name: t('sidebar.items.lotList'), path: "/lots", pro: false },
+          { name: t('sidebar.items.waste'), path: "/waste", pro: false },
         ],
       },
       {
         icon: CalenderIcon,
         name: t('sidebar.items.liquorTax'),
         subItems: [
-          { name: t('sidebar.items.packing'), path: "/packing", pro: false},
-          { name: t('sidebar.items.taxCalc'), path: "/taxcalc", pro: false },
-          { name: t('sidebar.items.unpaidMove'), path: "/unpaid", pro: false },
-          { name: t('sidebar.items.returnBook'), path: "/return", pro: false },
-          { name: t('sidebar.items.exportDutyFree'), path: "/export", pro: false }
-        ],
-
-      },
-      {
-        icon: CalenderIcon,
-        name: t('sidebar.items.recipe'),
-        subItems: [
-          { name: t('sidebar.items.recipeList'), path: "/recipeList", pro: false},
+          { name: t('sidebar.items.taxYearSummary'), path: "/taxYearSummary", pro: false },
+          { name: t('sidebar.items.siteMovements'), path: "/siteMovements", pro: false }
         ],
       },
       {
@@ -286,22 +293,26 @@ const menuGroups = computed(() => [
         subItems: [
           { name: t('sidebar.items.rawMaterial'), path: "/packing", pro: false},
           { name: t('sidebar.items.productInventory'), path: "/taxcalc", pro: false },
-          { name: t('sidebar.items.waste'), path: "/unpaid", pro: false },
+
         ],
       },
       {
         icon: CalenderIcon,
         name: t('sidebar.items.masterMaintenance'),
         subItems: [
+          { name: t('sidebar.items.materialMaster'), path: "/MaterialMaster", pro: false },
+          { name: t('sidebar.items.siteMaster'), path: "/siteMaster", pro: false }
+        ],
+      },
+      {
+        icon: CalenderIcon,
+        name: t('sidebar.items.systemMaintenance'),
+        subItems: [
           { name: t('sidebar.items.categoryMaster'), path: "/categoryMaster", pro: false },
+          { name: t('sidebar.items.siteTypeMaster'), path: "/siteTypeMaster", pro: false },
           { name: t('sidebar.items.taxMaster'), path: "/taxMaster", pro: false },
           { name: t('sidebar.items.uomMaster'), path: "/uomMaster", pro: false },
-          { name: t('sidebar.items.packingMaster'), path: "/PackingMaster", pro: false },
-          { name: t('sidebar.items.beerMaster'), path: "/BeerMaster", pro: false },
-          { name: t('sidebar.items.materialMaster'), path: "/MaterialMaster", pro: false },
-          { name: t('sidebar.items.vendorMaster'), path: "/VendorMaster", pro: false },
-          { name: t('sidebar.items.customerMaster'), path: "/CustomerMaster", pro: false },
-          { name: t('sidebar.items.shipDestMaster'), path: "/CustomerMaster", pro: false }
+          { name: t('sidebar.items.beerPackageCategory'), path: "/beerPackageCategory", pro: false },
         ],
       },
 

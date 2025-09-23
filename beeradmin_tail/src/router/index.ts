@@ -44,20 +44,29 @@ const router = createRouter({
     },
 
     {
-      path: '/batchlist',
-      name: 'batchlist',
-      component: () => import('../views/pages/BatchList.vue'),
+      path: '/lots',
+      name: 'lots',
+      component: () => import('../views/Pages/LotList.vue'),
       meta: {
-        title: 'バッチ管理',
+        title: 'Lot Management',
         requiresAuth: true ,
       },
     },
     {
-      path: '/batchedit',
-      name: 'batchedit',
-      component: () => import('../views/pages/BatchEdit.vue'),
+      path: '/lots/:lotId',
+      name: 'lotEdit',
+      component: () => import('../views/Pages/LotEdit.vue'),
       meta: {
-        title: 'バッチ編集',
+        title: 'Lot Edit',
+        requiresAuth: true ,
+      },
+    },
+    {
+      path: '/waste',
+      name: 'waste',
+      component: () => import('../views/Pages/WasteList.vue'),
+      meta: {
+        title: 'Waste Management',
         requiresAuth: true ,
       },
     },
@@ -80,6 +89,24 @@ const router = createRouter({
       },
     },
     {
+      path: '/taxYearSummary',
+      name: 'TaxYearSummary',
+      component: () => import('../views/Pages/TaxYearSummary.vue'),
+      meta: {
+        title: 'Tax Year Summary',
+        requiresAuth: true ,
+      },
+    },
+    {
+      path: '/siteMovements',
+      name: 'SiteMovements',
+      component: () => import('../views/Pages/SiteMovement.vue'),
+      meta: {
+        title: 'Site Movements',
+        requiresAuth: true ,
+      },
+    },
+    {
       path: '/uomMaster',
       name: '単位マスタ',
       component: () => import('../views/pages/UomMaster.vue'),
@@ -94,6 +121,42 @@ const router = createRouter({
       component: () => import('../views/pages/CategoryMaster.vue'),
       meta: {
         title: 'Category Master',
+        requiresAuth: true ,
+      },
+    },
+    {
+      path: '/siteTypeMaster',
+      name: 'サイト種別マスタ',
+      component: () => import('../views/Pages/SiteTypeMaster.vue'),
+      meta: {
+        title: 'Site Type Master',
+        requiresAuth: true ,
+      },
+    },
+    {
+      path: '/siteMaster',
+      name: 'サイトマスタ',
+      component: () => import('../views/Pages/SiteMaster.vue'),
+      meta: {
+        title: 'Site Master',
+        requiresAuth: true ,
+      },
+    },
+    {
+      path: '/lotYieldSummary',
+      name: 'LotYieldSummary',
+      component: () => import('../views/Pages/LotYieldSummary.vue'),
+      meta: {
+        title: 'Lot Yield Summary',
+        requiresAuth: true ,
+      },
+    },
+    {
+      path: '/beerPackageCategory',
+      name: 'beerPackageCategory',
+      component: () => import('../views/Pages/BeerPackageCategory.vue'),
+      meta: {
+        title: 'Beer Package Category',
         requiresAuth: true ,
       },
     },

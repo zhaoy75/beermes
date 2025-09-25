@@ -79,6 +79,8 @@ import { useI18n } from 'vue-i18n'
 import { supabase } from '../../lib/supabase'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import { toast } from 'vue3-toastify'
+import 'vue3-toastify/dist/index.css'
 
 const ALLOWED_CATEGORIES = ['malt', 'hop', 'yeast', 'adjunct'] as const
 
@@ -195,7 +197,7 @@ async function fetchInventory() {
       })
   } catch (err) {
     console.error(err)
-    alert(err instanceof Error ? err.message : String(err))
+    toast.error(err instanceof Error ? err.message : String(err))
   } finally {
     loading.value = false
   }

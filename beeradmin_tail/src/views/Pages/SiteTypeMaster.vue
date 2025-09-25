@@ -194,6 +194,8 @@ import { useI18n } from 'vue-i18n'
 import { supabase } from '@/lib/supabase'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import { toast } from 'vue3-toastify'
+import 'vue3-toastify/dist/index.css'
 
 interface SiteTypeRow {
   id: string
@@ -402,7 +404,7 @@ async function saveRecord() {
     await fetchRows()
   } catch (err) {
     console.error(err)
-    alert(err instanceof Error ? err.message : String(err))
+    toast.error(err instanceof Error ? err.message : String(err))
   } finally {
     saving.value = false
   }
@@ -418,7 +420,7 @@ async function deleteRecord() {
     await fetchRows()
   } catch (err) {
     console.error(err)
-    alert(err instanceof Error ? err.message : String(err))
+    toast.error(err instanceof Error ? err.message : String(err))
   }
 }
 

@@ -588,6 +588,8 @@ import { useI18n } from 'vue-i18n'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { supabase } from '@/lib/supabase'
+import { toast } from 'vue3-toastify'
+import 'vue3-toastify/dist/index.css'
 
 const STATUSES = ['draft', 'released', 'retired'] as const
 const STEP_OPTIONS = ['mashing', 'lautering', 'boil', 'whirlpool', 'cooling', 'fermentation', 'dry_hop', 'cold_crash', 'transfer', 'packaging', 'other']
@@ -1134,10 +1136,10 @@ async function versionUp() {
 
     await router.replace(`/recipeEdit/${inserted.id}/${inserted.version}`)
     await loadRecipe()
-    alert(t('recipe.edit.versionUpDone', { version: inserted.version }))
+    toast.success(t('recipe.edit.versionUpDone', { version: inserted.version }))
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error)
-    alert(t('recipe.edit.versionUpError', { message }))
+    toast.error(t('recipe.edit.versionUpError', { message }))
   } finally {
     versioning.value = false
   }
@@ -1145,7 +1147,7 @@ async function versionUp() {
 
 async function loadRecipe() {
   if (!recipeId.value) {
-    alert('Missing recipe id')
+    toast.error('Missing recipe id')
     router.push('/recipeList')
     return
   }
@@ -1157,7 +1159,7 @@ async function loadRecipe() {
     .single()
   loadingRecipe.value = false
   if (error || !data) {
-    alert('Failed to load recipe: ' + (error?.message ?? ''))
+    toast.error('Failed to load recipe: ' + (error?.message ?? ''))
     router.push('/recipeList')
     return
   }
@@ -1226,7 +1228,7 @@ async function loadIngredients() {
     .order('material_id', { ascending: true })
   ingredientsLoading.value = false
   if (error) {
-    alert('Failed to load ingredients: ' + error.message)
+    toast.error('Failed to load ingredients: ' + error.message)
     return
   }
   ingredients.value = (data ?? []) as IngredientRow[]
@@ -1303,7 +1305,7 @@ async function saveIngredient() {
 
   ingredientSaving.value = false
   if (response.error) {
-    alert('Failed to save ingredient: ' + response.error.message)
+    toast.error('Failed to save ingredient: ' + response.error.message)
     return
   }
 
@@ -1315,7 +1317,7 @@ async function deleteIngredient(row: IngredientRow) {
   if (!confirm(t('recipe.edit.deleteIngredientConfirm', { name: materialLabel(row) }))) return
   const { error } = await supabase.from('rcp_ingredients').delete().eq('id', row.id)
   if (error) {
-    alert('Failed to delete ingredient: ' + error.message)
+    toast.error('Failed to delete ingredient: ' + error.message)
     return
   }
   ingredients.value = ingredients.value.filter((item) => item.id !== row.id)
@@ -1332,7 +1334,7 @@ async function loadProcesses() {
     .order('step_no', { foreignTable: 'prc_steps', ascending: true })
   processesLoading.value = false
   if (error) {
-    alert('Failed to load processes: ' + error.message)
+    toast.error('Failed to load processes: ' + error.message)
     return
   }
 
@@ -1427,7 +1429,7 @@ async function saveProcess() {
 
   processSaving.value = false
   if (response.error) {
-    alert('Failed to save process: ' + response.error.message)
+    toast.error('Failed to save process: ' + response.error.message)
     return
   }
 
@@ -1439,7 +1441,7 @@ async function deleteProcess(process: ProcessRow) {
   if (!confirm(t('recipe.edit.deleteProcessConfirm', { name: process.name, version: process.version }))) return
   const { error } = await supabase.from('prc_processes').delete().eq('id', process.id)
   if (error) {
-    alert('Failed to delete process: ' + error.message)
+    toast.error('Failed to delete process: ' + error.message)
     return
   }
   await loadProcesses()
@@ -1539,12 +1541,12 @@ async function saveRecipeInfo() {
     .single()
   savingRecipe.value = false
   if (error || !data) {
-    alert('Failed to save recipe: ' + (error?.message ?? ''))
+    toast.error('Failed to save recipe: ' + (error?.message ?? ''))
     return
   }
   recipe.value = data
   recipeForm.category = data.category ?? ''
-  alert(t('recipe.edit.recipeSaved'))
+  toast.success(t('recipe.edit.recipeSaved'))
 }
 
 async function saveStep() {
@@ -1623,7 +1625,7 @@ async function saveStep() {
 
   stepSaving.value = false
   if (response.error) {
-    alert('Failed to save step: ' + response.error.message)
+    toast.error('Failed to save step: ' + response.error.message)
     return
   }
 
@@ -1635,7 +1637,7 @@ async function deleteStep(process: ProcessRow, step: StepRow) {
   if (!confirm(t('recipe.edit.deleteStepConfirm', { step: formatStepType(step.step), number: step.step_no }))) return
   const { error } = await supabase.from('prc_steps').delete().eq('id', step.id)
   if (error) {
-    alert('Failed to delete step: ' + error.message)
+    toast.error('Failed to delete step: ' + error.message)
     return
   }
   await loadProcesses()

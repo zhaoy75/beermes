@@ -120,6 +120,8 @@ import { useI18n } from 'vue-i18n'
 import { supabase } from '../../lib/supabase'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import { toast } from 'vue3-toastify'
+import 'vue3-toastify/dist/index.css'
 
 type UomRow = {
   id: string
@@ -208,7 +210,7 @@ async function fetchUoms() {
     .order('code', { ascending: true })
   loading.value = false
   if (error) {
-    alert('Fetch error: ' + error.message)
+    toast.error('Fetch error: ' + error.message)
     return
   }
   rows.value = (data ?? []) as UomRow[]
@@ -246,7 +248,7 @@ async function deleteRecord() {
   if (!toDelete.value) return
   const { error } = await supabase.from(TABLE).delete().eq('id', toDelete.value.id)
   if (error) {
-    alert('Delete error: ' + error.message)
+    toast.error('Delete error: ' + error.message)
     return
   }
   rows.value = rows.value.filter((r) => r.id !== toDelete.value?.id)
@@ -299,7 +301,7 @@ async function saveRecord() {
 
   saving.value = false
   if (response.error) {
-    alert('Save error: ' + response.error.message)
+    toast.error('Save error: ' + response.error.message)
     return
   }
 

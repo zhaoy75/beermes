@@ -513,7 +513,7 @@ async function saveRecord() {
     await fetchSites()
   } catch (err) {
     console.error(err)
-    alert(err instanceof Error ? err.message : String(err))
+    toast.error(err instanceof Error ? err.message : String(err))
   } finally {
     saving.value = false
   }

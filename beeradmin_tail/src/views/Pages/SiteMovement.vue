@@ -250,6 +250,8 @@ import { useI18n } from 'vue-i18n'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { supabase } from '@/lib/supabase'
+import { toast } from 'vue3-toastify'
+import 'vue3-toastify/dist/index.css'
 
 const DOC_TYPES = ['transfer', 'tax_transfer', 'production_issue', 'production_receipt'] as const
 const STATUSES = ['open', 'posted', 'void'] as const
@@ -688,7 +690,7 @@ async function saveRecord() {
     await fetchMovements()
   } catch (err) {
     console.error(err)
-    alert(err instanceof Error ? err.message : String(err))
+    toast.error(err instanceof Error ? err.message : String(err))
   } finally {
     saving.value = false
   }
@@ -704,7 +706,7 @@ async function deleteRecord() {
     await fetchMovements()
   } catch (err) {
     console.error(err)
-    alert(err instanceof Error ? err.message : String(err))
+    toast.error(err instanceof Error ? err.message : String(err))
   }
 }
 

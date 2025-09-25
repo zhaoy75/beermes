@@ -367,6 +367,8 @@ import { useI18n } from 'vue-i18n'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { supabase } from '@/lib/supabase'
+import { toast } from 'vue3-toastify'
+import 'vue3-toastify/dist/index.css'
 
 const STATUSES = ['draft', 'released', 'retired'] as const
 
@@ -612,7 +614,7 @@ async function fetchRecipes() {
     .order('created_at', { ascending: false, nullsFirst: false })
   loading.value = false
   if (error) {
-    alert('Load error: ' + error.message)
+    toast.error('Load error: ' + error.message)
     return
   }
   recipes.value = data ?? []
@@ -654,7 +656,7 @@ async function saveRecipe() {
 
   saving.value = false
   if (response.error) {
-    alert('Save error: ' + response.error.message)
+    toast.error('Save error: ' + response.error.message)
     return
   }
 
@@ -675,7 +677,7 @@ async function deleteRecipe() {
   if (!toDelete.value) return
   const { error } = await supabase.from('rcp_recipes').delete().eq('id', toDelete.value.id)
   if (error) {
-    alert('Delete error: ' + error.message)
+    toast.error('Delete error: ' + error.message)
     return
   }
   recipes.value = recipes.value.filter((row) => row.id !== toDelete.value?.id)
@@ -876,12 +878,12 @@ async function executeCopy() {
     }
 
     recipes.value.unshift(inserted)
-    alert(t('recipe.list.copySuccess', { name: inserted.name, version: inserted.version }))
+    toast.success(t('recipe.list.copySuccess', { name: inserted.name, version: inserted.version }))
     copying.value = false
     closeCopyModal(true)
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error)
-    alert(t('recipe.list.copyError', { message }))
+    toast.error(t('recipe.list.copyError', { message }))
   } finally {
     copying.value = false
     copyingId.value = null

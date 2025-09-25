@@ -277,6 +277,8 @@ import { useI18n } from 'vue-i18n'
 import { supabase } from '../../lib/supabase'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import { toast } from 'vue3-toastify'
+import 'vue3-toastify/dist/index.css'
 
 const DOC_TYPE = 'purchase'
 const ALLOWED_CATEGORIES = ['malt', 'hop', 'yeast', 'adjunct'] as const
@@ -658,7 +660,7 @@ async function fetchReceipts() {
     })
   } catch (err) {
     console.error(err)
-    alert(err instanceof Error ? err.message : String(err))
+    toast.error(err instanceof Error ? err.message : String(err))
   } finally {
     loading.value = false
   }
@@ -716,7 +718,7 @@ async function saveRecord() {
     await fetchReceipts()
   } catch (err) {
     console.error(err)
-    alert(err instanceof Error ? err.message : String(err))
+    toast.error(err instanceof Error ? err.message : String(err))
   } finally {
     saving.value = false
   }
@@ -732,7 +734,7 @@ async function deleteRecord() {
     await fetchReceipts()
   } catch (err) {
     console.error(err)
-    alert(err instanceof Error ? err.message : String(err))
+    toast.error(err instanceof Error ? err.message : String(err))
   }
 }
 
@@ -740,7 +742,7 @@ async function postMovement(row: MovementRow) {
   if (row.status !== 'open') return
   const warehouseId = row.dest_site_id
   if (!warehouseId) {
-    alert(t('rawMaterialReceipts.errors.warehouseRequired'))
+    toast.warning(t('rawMaterialReceipts.errors.warehouseRequired'))
     return
   }
   try {
@@ -749,7 +751,7 @@ async function postMovement(row: MovementRow) {
     await fetchReceipts()
   } catch (err) {
     console.error(err)
-    alert(err instanceof Error ? err.message : String(err))
+    toast.error(err instanceof Error ? err.message : String(err))
   } finally {
     saving.value = false
   }

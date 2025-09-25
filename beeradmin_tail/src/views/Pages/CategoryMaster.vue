@@ -161,6 +161,8 @@ import { useI18n } from 'vue-i18n'
 import { supabase } from '../../lib/supabase'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import { toast } from 'vue3-toastify'
+import 'vue3-toastify/dist/index.css'
 
 type CategoryRow = {
   id: string
@@ -262,7 +264,7 @@ async function fetchCategories() {
   loading.value = false
 
   if (error) {
-    alert('Fetch error: ' + error.message)
+    toast.error('Fetch error: ' + error.message)
     return
   }
 
@@ -335,7 +337,7 @@ async function saveRecord() {
 
   saving.value = false
   if (response.error) {
-    alert('Save error: ' + response.error.message)
+    toast.error('Save error: ' + response.error.message)
     return
   }
 
@@ -356,7 +358,7 @@ async function deleteRecord() {
 
   const { error } = await supabase.from(TABLE).delete().eq('id', toDelete.value.id)
   if (error) {
-    alert('Delete error: ' + error.message)
+    toast.error('Delete error: ' + error.message)
     return
   }
 

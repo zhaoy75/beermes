@@ -7,6 +7,9 @@ import 'jsvectormap/dist/jsvectormap.css'
 import 'flatpickr/dist/flatpickr.css'
 import { createPinia } from 'pinia'
 import piniaPersist from 'pinia-plugin-persistedstate'
+import Toast from 'vue3-toastify';
+import 'vue3-toastify/dist/index.css';
+
 
 import { createApp } from 'vue'
 import App from './App.vue'
@@ -24,5 +27,13 @@ app.use(pinia)
 app.use(router)
 app.use(VueApexCharts)
 app.use(i18n)
+app.use(Toast, {
+    position: 'bottom-center',
+    autoClose: 3000,
+    transition: 'fade',
+    toastClassName: 'rounded-md shadow-md font-medium', // Tailwind
+    bodyClassName: 'text-sm',
+    progressClassName: 'bg-white h-1',
+  })
 
 app.mount('#app')

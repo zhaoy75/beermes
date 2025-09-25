@@ -81,7 +81,7 @@
               <td class="px-3 py-2 font-mono text-xs text-gray-700">{{ row.doc_no }}</td>
               <td class="px-3 py-2 text-gray-700">{{ formatDateTime(row.movement_at) }}</td>
               <td class="px-3 py-2">{{ row.supplier_label || '—' }}</td>
-              <td class="px-3 py-2">{{ warehouseLabel(row.warehouse_id) }}</td>
+              <td class="px-3 py-2">{{ warehouseLabel(row.dest_site_id) }}</td>
               <td class="px-3 py-2">{{ statusLabel(row.status) }}</td>
               <td class="px-3 py-2">{{ formatQuantity(row.total_qty) }}</td>
               <td class="px-3 py-2 text-xs text-gray-500">{{ formatDateTime(row.created_at) }}</td>
@@ -115,7 +115,7 @@
           <div class="flex items-center justify-between mb-2">
             <div>
               <p class="text-xs uppercase tracking-wide text-gray-400">{{ row.doc_no }}</p>
-              <h2 class="text-lg font-semibold text-gray-900">{{ warehouseLabel(row.warehouse_id) }}</h2>
+              <h2 class="text-lg font-semibold text-gray-900">{{ warehouseLabel(row.dest_site_id) }}</h2>
             </div>
             <span class="text-xs font-medium px-2 py-1 rounded-full" :class="row.status === 'posted' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'">
               {{ statusLabel(row.status) }}
@@ -172,19 +172,12 @@
                 </select>
               </div>
               <div>
-                <label class="block text-sm text-gray-600 mb-1">{{ t('rawMaterialReceipts.form.destination') }}</label>
+                <label class="block text-sm text-gray-600 mb-1">{{ t('rawMaterialReceipts.form.destination') }}<span class="text-red-600">*</span></label>
                 <select v-model="form.dest_site_id" class="w-full h-[40px] border rounded px-3 bg-white" :disabled="readOnly">
-                  <option value="">{{ t('common.select') }}</option>
-                  <option v-for="option in siteOptions" :key="`dest-${option.value}`" :value="option.value">{{ option.label }}</option>
-                </select>
-              </div>
-              <div>
-                <label class="block text-sm text-gray-600 mb-1">{{ t('rawMaterialReceipts.form.warehouse') }}<span class="text-red-600">*</span></label>
-                <select v-model="form.dest_warehouse_id" class="w-full h-[40px] border rounded px-3 bg-white" :disabled="readOnly">
                   <option value="">{{ t('common.select') }}</option>
                   <option v-for="option in warehouseOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
                 </select>
-                <p v-if="errors.dest_warehouse_id" class="text-xs text-red-600 mt-1">{{ errors.dest_warehouse_id }}</p>
+                <p v-if="errors.dest_site_id" class="text-xs text-red-600 mt-1">{{ errors.dest_site_id }}</p>
               </div>
             </div>
             <div>
@@ -297,7 +290,6 @@ interface MovementRow {
   movement_at: string
   src_site_id: string | null
   dest_site_id: string | null
-  warehouse_id: string | null
   supplier_label: string | null
   notes: string
   created_at: string | null
@@ -379,7 +371,6 @@ const form = reactive({
   movement_at: '',
   src_site_id: '',
   dest_site_id: '',
-  dest_warehouse_id: '',
   notes: '',
   lines: [] as ReceiptLine[],
 })
@@ -429,7 +420,7 @@ const filteredRows = computed(() => {
   return rows.value.filter((row) => {
     const matchDoc = !doc || row.doc_no.toLowerCase().includes(doc)
     const matchSupplier = !filters.supplier || row.src_site_id === filters.supplier
-    const matchWarehouse = !filters.warehouse || row.warehouse_id === filters.warehouse
+    const matchWarehouse = !filters.warehouse || row.dest_site_id === filters.warehouse
     const matchStatus = !filters.status || row.status === filters.status
     const matchDateFrom = !filters.dateFrom || (row.movement_at && row.movement_at >= `${filters.dateFrom}T00:00:00`)
     const matchDateTo = !filters.dateTo || (row.movement_at && row.movement_at <= `${filters.dateTo}T23:59:59`)
@@ -478,7 +469,6 @@ function resetForm() {
   form.movement_at = new Date().toISOString().slice(0, 16)
   form.src_site_id = ''
   form.dest_site_id = ''
-  form.dest_warehouse_id = ''
   form.notes = ''
   form.lines = [blankLine()]
   lineErrors.value = [{}]
@@ -500,7 +490,6 @@ async function openView(row: MovementRow) {
   form.movement_at = row.movement_at ? new Date(row.movement_at).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16)
   form.src_site_id = row.src_site_id ?? ''
   form.dest_site_id = row.dest_site_id ?? ''
-  form.dest_warehouse_id = row.warehouse_id ?? ''
   form.notes = row.notes ?? ''
   readOnly.value = row.status !== 'open'
   await loadLines(row.id)
@@ -575,7 +564,7 @@ function validateForm() {
   Object.keys(errors).forEach((key) => delete errors[key])
   if (!form.doc_no) errors.doc_no = t('rawMaterialReceipts.errors.docNoRequired')
   if (!form.movement_at) errors.movement_at = t('rawMaterialReceipts.errors.movementDateRequired')
-  if (!form.dest_warehouse_id) errors.dest_warehouse_id = t('rawMaterialReceipts.errors.warehouseRequired')
+  if (!form.dest_site_id) errors.dest_site_id = t('rawMaterialReceipts.errors.warehouseRequired')
   const linesValid = validateLines()
   return Object.keys(errors).length === 0 && linesValid
 }
@@ -660,8 +649,7 @@ async function fetchReceipts() {
         status: row.status,
         movement_at: row.movement_at,
         src_site_id: row.src_site_id ?? null,
-        dest_site_id: row.dest_site_id ?? null,
-        warehouse_id: row.meta?.warehouse_id ?? null,
+        dest_site_id: row.meta?.site_id ?? row.dest_site_id ?? null,
         supplier_label: supplierLabel,
         notes: row.notes ?? '',
         created_at: row.created_at ?? null,
@@ -692,7 +680,7 @@ async function saveRecord() {
       src_site_id: form.src_site_id || null,
       dest_site_id: form.dest_site_id || null,
       notes: form.notes.trim() || null,
-      meta: { warehouse_id: form.dest_warehouse_id },
+      meta: { site_id: form.dest_site_id || null },
     }
 
     let movementId = form.id
@@ -723,6 +711,7 @@ async function saveRecord() {
       if (lineError) throw lineError
     }
 
+    await postMovementById(movementId, form.dest_site_id)
     closeModal()
     await fetchReceipts()
   } catch (err) {
@@ -749,49 +738,14 @@ async function deleteRecord() {
 
 async function postMovement(row: MovementRow) {
   if (row.status !== 'open') return
-  const warehouseId = row.warehouse_id
+  const warehouseId = row.dest_site_id
   if (!warehouseId) {
     alert(t('rawMaterialReceipts.errors.warehouseRequired'))
     return
   }
   try {
     saving.value = true
-    const { data: lines, error } = await supabase
-      .from('inv_movement_lines')
-      .select('material_id, qty, uom_id')
-      .eq('movement_id', row.id)
-    if (error) throw error
-    if (!lines || lines.length === 0) throw new Error(t('rawMaterialReceipts.errors.linesRequired'))
-
-    for (const line of lines) {
-      if (!line.material_id || !line.qty) continue
-      const { data: existing, error: fetchError } = await supabase
-        .from('inv_inventory')
-        .select('id, qty')
-        .eq('warehouse_id', warehouseId)
-        .eq('material_id', line.material_id)
-        .maybeSingle()
-      if (fetchError) throw fetchError
-      if (existing) {
-        const newQty = (existing.qty ?? 0) + line.qty
-        const { error: updateError } = await supabase
-          .from('inv_inventory')
-          .update({ qty: newQty, uom_id: line.uom_id })
-          .eq('id', existing.id)
-        if (updateError) throw updateError
-      } else {
-        const { error: insertError } = await supabase.from('inv_inventory').insert({
-          warehouse_id: warehouseId,
-          material_id: line.material_id,
-          qty: line.qty,
-          uom_id: line.uom_id,
-        })
-        if (insertError) throw insertError
-      }
-    }
-
-    const { error: statusError } = await supabase.from('inv_movements').update({ status: 'posted' }).eq('id', row.id)
-    if (statusError) throw statusError
+    await postMovementById(row.id, warehouseId)
     await fetchReceipts()
   } catch (err) {
     console.error(err)
@@ -799,6 +753,47 @@ async function postMovement(row: MovementRow) {
   } finally {
     saving.value = false
   }
+}
+
+async function postMovementById(movementId: string, warehouseId: string | null) {
+  if (!warehouseId) throw new Error(t('rawMaterialReceipts.errors.warehouseRequired'))
+
+  const { data: lines, error } = await supabase
+    .from('inv_movement_lines')
+    .select('material_id, qty, uom_id')
+    .eq('movement_id', movementId)
+  if (error) throw error
+  if (!lines || lines.length === 0) throw new Error(t('rawMaterialReceipts.errors.linesRequired'))
+
+  for (const line of lines) {
+    if (!line.material_id || !line.qty) continue
+    const { data: existing, error: fetchError } = await supabase
+      .from('inv_inventory')
+      .select('id, qty')
+      .eq('site_id', warehouseId)
+      .eq('material_id', line.material_id)
+      .maybeSingle()
+    if (fetchError) throw fetchError
+    if (existing) {
+      const newQty = (existing.qty ?? 0) + line.qty
+      const { error: updateError } = await supabase
+        .from('inv_inventory')
+        .update({ qty: newQty, uom_id: line.uom_id })
+        .eq('id', existing.id)
+      if (updateError) throw updateError
+    } else {
+      const { error: insertError } = await supabase.from('inv_inventory').insert({
+        site_id: warehouseId,
+        material_id: line.material_id,
+        qty: line.qty,
+        uom_id: line.uom_id,
+      })
+      if (insertError) throw insertError
+    }
+  }
+
+  const { error: statusError } = await supabase.from('inv_movements').update({ status: 'posted' }).eq('id', movementId)
+  if (statusError) throw statusError
 }
 
 watch(locale, () => {

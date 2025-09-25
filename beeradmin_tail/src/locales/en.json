@@ -449,6 +449,30 @@
       "qty": "Quantity"
     }
   },
+  "beerInventory": {
+    "title": "Beer Inventory",
+    "subtitle": "Check packaged beer quantities by warehouse site.",
+    "filters": {
+      "site": "Site",
+      "category": "Beer Style"
+    },
+    "table": {
+      "beer": "Beer",
+      "category": "Style",
+      "site": "Site",
+      "qty": "Quantity",
+      "uom": "UOM"
+    },
+    "categories": {
+      "ipa": "IPA",
+      "lager": "Lager",
+      "ale": "Ale",
+      "pilsner": "Pilsner",
+      "stout": "Stout",
+      "porter": "Porter",
+      "other": "Other"
+    }
+  },
   "auth": {
     "signin": {
       "backToDashboard": "Back to dashboard",
@@ -536,7 +560,7 @@
       "inventory": "Inventory",
       "rawMaterialReceipts": "Raw Material Receipts",
       "rawMaterialInventory": "Raw Material Inventory",
-      "productInventory": "Product Inventory",
+      "beerInventory": "Beer Inventory",
       "waste": "Waste",
       "masterMaintenance": "Master Maintenance",
       "systemMaintenance": "System Maintenance",

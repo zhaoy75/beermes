@@ -134,6 +134,15 @@ const router = createRouter({
       },
     },
     {
+      path: '/beerInventory',
+      name: 'BeerInventory',
+      component: () => import('../views/Pages/BeerInventory.vue'),
+      meta: {
+        title: 'Beer Inventory',
+        requiresAuth: true ,
+      },
+    },
+    {
       path: '/tankMaintenance',
       name: 'TankMaintenance',
       component: () => import('../views/Pages/TankMaintenance.vue'),

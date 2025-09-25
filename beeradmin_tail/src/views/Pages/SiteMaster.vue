@@ -187,8 +187,12 @@
 import { computed, reactive, ref, watch, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { supabase } from '@/lib/supabase'
+import {mapSupabaseError} from '@/lib/supabaseErrors'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import { toast } from 'vue3-toastify'
+import 'vue3-toastify/dist/index.css';
+
 
 interface SiteRow {
   id: string
@@ -525,7 +529,8 @@ async function deleteRecord() {
     await fetchSites()
   } catch (err) {
     console.error(err)
-    alert(err instanceof Error ? err.message : String(err))
+    const friendlyError = mapSupabaseError(err) ? mapSupabaseError(err).message : "Error occurred"
+    toast(friendlyError)
   }
 }
 

@@ -449,6 +449,30 @@
       "qty": "数量"
     }
   },
+  "beerInventory": {
+    "title": "ビール在庫一覧",
+    "subtitle": "倉庫別の完成品在庫を確認します。",
+    "filters": {
+      "site": "倉庫",
+      "category": "ビアスタイル"
+    },
+    "table": {
+      "beer": "ビール",
+      "category": "スタイル",
+      "site": "倉庫",
+      "qty": "数量",
+      "uom": "単位"
+    },
+    "categories": {
+      "ipa": "IPA",
+      "lager": "ラガー",
+      "ale": "エール",
+      "pilsner": "ピルスナー",
+      "stout": "スタウト",
+      "porter": "ポーター",
+      "other": "その他"
+    }
+  },
   "auth": {
     "signin": {
       "backToDashboard": "ダッシュボードに戻る",
@@ -536,7 +560,7 @@
       "inventory": "在庫管理",
       "rawMaterialReceipts": "原材料受入",
       "rawMaterialInventory": "原材料在庫",
-      "productInventory": "製品在庫管理",
+      "beerInventory": "ビール在庫",
       "waste": "廃棄物管理",
       "masterMaintenance": "マスターメンテナンス",
       "systemMaintenance": "システムメンテナンス",

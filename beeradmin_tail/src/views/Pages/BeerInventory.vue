@@ -4,8 +4,8 @@
     <div class="min-h-screen bg-white text-gray-900 p-4 max-w-6xl mx-auto space-y-4">
       <header class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 class="text-xl font-semibold">{{ t('rawMaterialInventory.title') }}</h1>
-          <p class="text-sm text-gray-500">{{ t('rawMaterialInventory.subtitle') }}</p>
+          <h1 class="text-xl font-semibold">{{ t('beerInventory.title') }}</h1>
+          <p class="text-sm text-gray-500">{{ t('beerInventory.subtitle') }}</p>
         </div>
         <div class="flex flex-wrap items-center gap-2">
           <button
@@ -25,14 +25,14 @@
             <input v-model.trim="filters.keyword" type="search" class="w-full h-[40px] border rounded px-3" />
           </div>
           <div>
-            <label class="block text-sm text-gray-600 mb-1">{{ t('rawMaterialInventory.filters.warehouse') }}</label>
-            <select v-model="filters.warehouse" class="w-full h-[40px] border rounded px-3 bg-white">
+            <label class="block text-sm text-gray-600 mb-1">{{ t('beerInventory.filters.site') }}</label>
+            <select v-model="filters.site" class="w-full h-[40px] border rounded px-3 bg-white">
               <option value="">{{ t('common.all') }}</option>
-              <option v-for="option in warehouseOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+              <option v-for="option in siteOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
             </select>
           </div>
           <div>
-            <label class="block text-sm text-gray-600 mb-1">{{ t('rawMaterialInventory.filters.category') }}</label>
+            <label class="block text-sm text-gray-600 mb-1">{{ t('beerInventory.filters.category') }}</label>
             <select v-model="filters.category" class="w-full h-[40px] border rounded px-3 bg-white">
               <option value="">{{ t('common.all') }}</option>
               <option v-for="option in categoryOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
@@ -45,21 +45,21 @@
         <table class="min-w-full divide-y divide-gray-200 text-sm">
           <thead class="bg-gray-50 text-xs uppercase text-gray-600">
             <tr>
-              <th class="px-3 py-2 text-left">{{ t('rawMaterialInventory.table.material') }}</th>
-              <th class="px-3 py-2 text-left">{{ t('labels.category') }}</th>
-              <th class="px-3 py-2 text-left">{{ t('rawMaterialInventory.table.warehouse') }}</th>
-              <th class="px-3 py-2 text-left">{{ t('rawMaterialInventory.table.qty') }}</th>
-              <th class="px-3 py-2 text-left">{{ t('labels.uom') }}</th>
+              <th class="px-3 py-2 text-left">{{ t('beerInventory.table.beer') }}</th>
+              <th class="px-3 py-2 text-left">{{ t('beerInventory.table.category') }}</th>
+              <th class="px-3 py-2 text-left">{{ t('beerInventory.table.site') }}</th>
+              <th class="px-3 py-2 text-left">{{ t('beerInventory.table.qty') }}</th>
+              <th class="px-3 py-2 text-left">{{ t('beerInventory.table.uom') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100">
             <tr v-for="row in filteredRows" :key="row.id" class="hover:bg-gray-50">
               <td class="px-3 py-2">
-                <div class="font-medium text-gray-900">{{ row.material_code }}</div>
-                <div class="text-xs text-gray-500">{{ row.material_name }}</div>
+                <div class="font-medium text-gray-900">{{ row.beer_code }}</div>
+                <div class="text-xs text-gray-500">{{ row.beer_name }}</div>
               </td>
-              <td class="px-3 py-2">{{ categoryLabel(row.material_category) }}</td>
-              <td class="px-3 py-2">{{ warehouseLabel(row.warehouse_id) }}</td>
+              <td class="px-3 py-2">{{ beerCategoryLabel(row.beer_category) }}</td>
+              <td class="px-3 py-2">{{ siteLabel(row.site_id) }}</td>
               <td class="px-3 py-2">{{ formatQuantity(row.qty) }}</td>
               <td class="px-3 py-2">{{ row.uom_code || '—' }}</td>
             </tr>
@@ -80,59 +80,53 @@ import { supabase } from '../../lib/supabase'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 
-const ALLOWED_CATEGORIES = ['malt', 'hop', 'yeast', 'adjunct'] as const
-
 interface InventoryRow {
   id: string
-  material_id: string
-  material_code: string
-  material_name: string
-  material_category: string
-  warehouse_id: string
-  warehouse_code: string
-  warehouse_name: string
+  beer_id: string
+  beer_code: string
+  beer_name: string
+  beer_category: string | null
+  site_id: string
   qty: number
   uom_id: string
   uom_code: string | null
 }
 
-interface WarehouseOption {
+interface OptionItem {
   value: string
-  code: string
-  name: string
   label: string
 }
 
 const { t, locale } = useI18n()
-const pageTitle = computed(() => t('rawMaterialInventory.title'))
+const pageTitle = computed(() => t('beerInventory.title'))
 
 const rows = ref<InventoryRow[]>([])
 const loading = ref(false)
 
-const warehouseOptions = ref<WarehouseOption[]>([])
-const warehouseMap = computed(() => {
-  const map = new Map<string, WarehouseOption>()
-  warehouseOptions.value.forEach((item) => map.set(item.value, item))
+const siteOptions = ref<OptionItem[]>([])
+const siteMap = computed(() => {
+  const map = new Map<string, OptionItem>()
+  siteOptions.value.forEach((item) => map.set(item.value, item))
   return map
 })
 
-const categoryOptions = computed(() =>
-  ALLOWED_CATEGORIES.map((value) => ({ value, label: categoryLabel(value) }))
-)
+const categoryOptions = computed(() => {
+  const categories = ['ipa', 'lager', 'ale', 'pilsner', 'stout', 'porter', 'other']
+  return categories.map((value) => ({ value, label: beerCategoryLabel(value) }))
+})
 
-const filters = reactive({ keyword: '', warehouse: '', category: '' })
+const filters = reactive({ keyword: '', site: '', category: '' })
 
-function categoryLabel(value: string | null | undefined) {
-  if (!value) return '—'
-  const key = `material.categories.${value}`
+function beerCategoryLabel(value: string | null | undefined) {
+  if (!value) return t('beerInventory.categories.other')
+  const key = `beerInventory.categories.${value}`
   const translated = t(key as any)
   return translated === key ? value : translated
 }
 
-function warehouseLabel(id: string | null | undefined) {
+function siteLabel(id: string | null | undefined) {
   if (!id) return '—'
-  const option = warehouseMap.value.get(id)
-  return option?.label ?? '—'
+  return siteMap.value.get(id)?.label ?? '—'
 }
 
 function formatQuantity(value: number | null | undefined) {
@@ -145,27 +139,22 @@ const filteredRows = computed(() => {
   return rows.value.filter((row) => {
     const matchKeyword =
       keyword === '' ||
-      row.material_code.toLowerCase().includes(keyword) ||
-      (row.material_name ?? '').toLowerCase().includes(keyword)
-    const matchWarehouse = !filters.warehouse || row.warehouse_id === filters.warehouse
-    const matchCategory = !filters.category || row.material_category === filters.category
-    return matchKeyword && matchWarehouse && matchCategory
+      row.beer_code.toLowerCase().includes(keyword) ||
+      (row.beer_name ?? '').toLowerCase().includes(keyword)
+    const matchSite = !filters.site || row.site_id === filters.site
+    const matchCategory = !filters.category || row.beer_category === filters.category
+    return matchKeyword && matchSite && matchCategory
   })
 })
 
-async function loadWarehouses() {
+async function loadSites() {
   const { data, error } = await supabase
     .from('v_sites')
-    .select('id, code, name, site_type_code')
+    .select('id, code, name')
     .eq('site_type_code', 'warehouse')
     .order('code', { ascending: true })
   if (error) throw error
-  warehouseOptions.value = (data ?? []).map((row: any) => ({
-    value: row.id,
-    code: row.code,
-    name: row.name,
-    label: `${row.code} — ${row.name}`,
-  }))
+  siteOptions.value = (data ?? []).map((row: any) => ({ value: row.id, label: `${row.code} — ${row.name}` }))
 }
 
 async function fetchInventory() {
@@ -173,26 +162,21 @@ async function fetchInventory() {
     loading.value = true
     const { data, error } = await supabase
       .from('inv_inventory')
-      .select('id, qty, uom_id, site_id, material:material_id(id, code, name, category, uom_id), uom:uom_id(code)')
+      .select('id, qty, uom_id, site_id, material:material_id(id, code, name, category, meta), uom:uom_id(code)')
     if (error) throw error
     rows.value = (data ?? [])
-      .filter((row: any) => ALLOWED_CATEGORIES.includes(row.material?.category))
-      .map((row: any) => {
-        const warehouseOption = warehouseMap.value.get(row.site_id ?? '')
-        return {
-          id: row.id,
-          material_id: row.material?.id ?? '',
-          material_code: row.material?.code ?? '',
-          material_name: row.material?.name ?? '',
-          material_category: row.material?.category ?? '',
-          site_id: row.site_id ?? '',
-          warehouse_code: warehouseOption?.code ?? '',
-          warehouse_name: warehouseOption?.name ?? '',
-          qty: row.qty ?? 0,
-          uom_id: row.uom_id ?? row.material?.uom_id ?? '',
-          uom_code: row.uom?.code ?? null,
-        }
-      })
+      .filter((row: any) => row.material?.meta?.type === 'beer')
+      .map((row: any) => ({
+        id: row.id,
+        beer_id: row.material?.id ?? '',
+        beer_code: row.material?.code ?? '',
+        beer_name: row.material?.name ?? '',
+        beer_category: row.material?.meta?.style ?? row.material?.category ?? null,
+        site_id: row.site_id ?? '',
+        qty: row.qty ?? 0,
+        uom_id: row.uom_id ?? row.material?.uom_id ?? '',
+        uom_code: row.uom?.code ?? null,
+      }))
   } catch (err) {
     console.error(err)
     alert(err instanceof Error ? err.message : String(err))
@@ -202,7 +186,7 @@ async function fetchInventory() {
 }
 
 onMounted(async () => {
-  await loadWarehouses()
+  await loadSites()
   await fetchInventory()
 })
 </script>

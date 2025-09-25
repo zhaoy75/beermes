@@ -254,6 +254,11 @@ create an vue page to maintain raw_material regist under 在庫管理 menu.
 i also want an vue page to show current inventory of raw material under 在庫管理 menu
 
 
+create an vue page to current inventory of beer under 在庫管理 menu
+
+
+
+
 http://127.0.0.1:1234
 
 curl http://localhost:1234/v1/chat/completions \

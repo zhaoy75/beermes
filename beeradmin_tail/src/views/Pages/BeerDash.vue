@@ -1,98 +1,131 @@
 <template>
   <AdminLayout>
     <PageBreadcrumb :pageTitle="currentPageTitle" />
-    <!-- Top stats -->
-    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-      <div class="rounded-xl border border-gray-200 p-4 shadow-sm">
-        <div class="text-xs text-gray-500">{{ $t('dashboard.kpis.inProgress') }}</div>
-        <div class="mt-1 text-2xl font-bold">{{ inProgressCount }}</div>
-      </div>
-      <div class="rounded-xl border border-gray-200 p-4 shadow-sm">
-        <div class="text-xs text-gray-500">{{ $t('dashboard.kpis.completed30d') }}</div>
-        <div class="mt-1 text-2xl font-bold">{{ completed30d }}</div>
-      </div>
-      <div class="rounded-xl border border-gray-200 p-4 shadow-sm">
-        <div class="text-xs text-gray-500">{{ $t('dashboard.kpis.volume30d') }}</div>
-        <div class="mt-1 text-2xl font-bold">{{ volume30d.toLocaleString() }} L</div>
-      </div>
-      <div class="rounded-xl border border-gray-200 p-4 shadow-sm">
-        <div class="text-xs text-gray-500">{{ $t('dashboard.kpis.revenue30d') }}</div>
-        <div class="mt-1 text-2xl font-bold">¥{{ revenue30d.toLocaleString() }}</div>
-      </div>
-    </section>
+    <div class="max-w-6xl mx-auto px-2 sm:px-4 lg:px-0 pb-10 space-y-6">
+      <!-- Top stats -->
+      <section class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <article v-for="card in kpiCards" :key="card.id" class="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div class="absolute inset-0 pointer-events-none opacity-90" :class="card.gradient"></div>
+          <div class="relative flex items-start justify-between">
+            <div>
+              <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{{ card.label }}</p>
+              <p class="mt-3 text-3xl font-semibold text-slate-900">{{ card.value }}</p>
+            </div>
+            <span class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/70 text-lg shadow-sm ring-1 ring-slate-200 backdrop-blur-sm">{{ card.icon }}</span>
+          </div>
+          <span v-if="card.chip" class="relative mt-5 inline-flex items-center rounded-full border border-slate-200 px-3 py-1 text-[11px] font-semibold tracking-wide text-slate-500">{{ card.chip }}</span>
+        </article>
+      </section>
 
-    <!-- Main grid -->
-    <section class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-      <!-- Left column: lists -->
-      <div class="space-y-4 lg:col-span-1">
-        <!-- In-progress lots list -->
-        <div class="rounded-xl border border-gray-200 shadow-sm">
-          <div class="p-4 border-b border-gray-100 flex items-center justify-between">
-            <h2 class="text-base font-semibold">{{ $t('dashboard.lists.inProgressTitle') }}</h2>
-            <span class="text-xs px-2 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200">{{
+      <!-- Main grid -->
+      <section class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        <!-- In-progress lots -->
+        <div class="flex h-full flex-col rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+            <div>
+              <h2 class="text-base font-semibold text-slate-900">{{ $t('dashboard.lists.inProgressTitle') }}</h2>
+              <p class="text-xs text-slate-500">{{ $t('dashboard.kpis.inProgress') }}</p>
+            </div>
+            <span class="inline-flex min-w-[2.5rem] justify-center rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-800">{{
               inProgressCount }}</span>
           </div>
-          <ul class="divide-y divide-gray-100">
-            <li v-for="lot in inProgressLots" :key="lot.lotId" class="p-3 flex items-center justify-between">
-              <div>
-                <div class="font-medium">{{ lot.lotId }} <span class="text-gray-500">• {{ lot.beerName }}</span></div>
-                <div class="text-xs text-gray-500">{{ $t('dashboard.lists.brewedMeta', { date: fmtDate(lot.brewDate), style: lot.style, liters: lot.batchSize }) }}</div>
+          <ul class="flex-1 divide-y divide-slate-100">
+            <li
+              v-for="lot in inProgressLots"
+              :key="lot.lotId"
+              class="group flex items-start justify-between gap-3 px-5 py-4 transition hover:bg-slate-50/70"
+            >
+              <div class="space-y-1">
+                <div class="text-sm font-semibold text-slate-800">
+                  {{ lot.lotId }}
+                  <span class="text-slate-500">• {{ lot.beerName }}</span>
+                </div>
+                <div class="text-xs text-slate-500">{{
+                  $t('dashboard.lists.brewedMeta', {
+                    date: fmtDate(lot.brewDate),
+                    style: lot.style,
+                    liters: lot.batchSize,
+                  })
+                }}</div>
               </div>
-              <span class="text-xs rounded-full px-2 py-1 bg-amber-100 text-amber-800">{{ $t('batch.statusMap.In progress') }}</span>
+              <span class="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-amber-700">{{
+                $t('dashboard.lists.inProgressBadge') }}</span>
             </li>
-            <li v-if="inProgressLots.length === 0" class="p-4 text-sm text-gray-500">{{ $t('dashboard.lists.none') }}</li>
+            <li v-if="inProgressLots.length === 0" class="px-5 py-10 text-center text-sm text-slate-500">{{ $t('dashboard.lists.none') }}</li>
           </ul>
         </div>
 
         <!-- TODOs -->
-        <div class="rounded-xl border border-gray-200 shadow-sm">
-          <div class="p-4 border-b border-gray-100 flex items-center justify-between">
-            <h2 class="text-base font-semibold">{{ $t('dashboard.todos.title') }}</h2>
-            <button class="text-sm px-2 py-1 border rounded hover:bg-gray-50" @click="addQuickTodo">{{ $t('dashboard.todos.add') }}</button>
+        <div class="flex h-full flex-col rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+            <h2 class="text-base font-semibold text-slate-900">{{ $t('dashboard.todos.title') }}</h2>
+            <button class="inline-flex items-center gap-1 rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
+              @click="addQuickTodo">
+              <span class="text-base leading-none">＋</span>
+              {{ $t('dashboard.todos.add') }}
+            </button>
           </div>
-          <ul class="divide-y divide-gray-100">
-            <li v-for="t in todos" :key="t.id" class="p-3 flex items-center gap-3">
-              <input type="checkbox" v-model="t.done" class="h-4 w-4" />
-              <div class="flex-1">
-                <div :class="['text-sm', t.done ? 'line-through text-gray-400' : '']">{{ t.text }}</div>
-                <div class="text-xs text-gray-500" v-if="t.due">{{ $t('dashboard.todos.due', { date: fmtDate(t.due) }) }}</div>
+          <ul class="flex-1 divide-y divide-slate-100">
+            <li v-for="t in todos" :key="t.id" class="flex items-start gap-3 px-5 py-4">
+              <input type="checkbox" v-model="t.done" class="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+              <div class="flex-1 space-y-1">
+                <div :class="['text-sm font-medium', t.done ? 'text-slate-400 line-through' : 'text-slate-700']">{{ t.text }}</div>
+                <div v-if="t.due" class="text-xs text-slate-500">{{ $t('dashboard.todos.due', { date: fmtDate(t.due) }) }}</div>
               </div>
-              <button class="text-xs text-gray-500 hover:text-red-600" @click="removeTodo(t.id)">{{ $t('dashboard.todos.remove') }}</button>
+              <button class="text-xs font-semibold text-slate-400 transition hover:text-red-600" @click="removeTodo(t.id)">{{
+                $t('dashboard.todos.remove') }}</button>
             </li>
-            <li v-if="todos.length === 0" class="p-4 text-sm text-gray-500">{{ $t('dashboard.todos.empty') }}</li>
+            <li v-if="todos.length === 0" class="px-5 py-10 text-center text-sm text-slate-500">{{ $t('dashboard.todos.empty') }}</li>
           </ul>
-          <div class="p-3 flex gap-2">
-            <input v-model.trim="newTodo" :placeholder="$t('dashboard.todos.newPlaceholder')" class="flex-1 border rounded px-3 h-[38px]"
-              @keyup.enter="createTodo" />
-            <input v-model="newTodoDue" type="date" class="border rounded px-2 h-[38px]" />
-            <button class="px-3 rounded bg-blue-600 text-white hover:bg-blue-700 h-[38px]"
-              @click="createTodo">{{ $t('dashboard.todos.add') }}</button>
+          <div class="flex flex-col gap-3 border-t border-slate-100 px-5 py-4 sm:flex-row">
+            <input
+              v-model.trim="newTodo"
+              :placeholder="$t('dashboard.todos.newPlaceholder')"
+              class="flex-1 rounded-full border border-slate-200 px-4 py-2 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+              @keyup.enter="createTodo"
+            />
+            <div class="flex flex-col gap-3 sm:flex-row sm:gap-2">
+              <input
+                v-model="newTodoDue"
+                type="date"
+                class="w-full rounded-full border border-slate-200 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+              />
+              <button
+                class="inline-flex min-w-[96px] w-full items-center justify-center rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 sm:w-auto"
+                @click="createTodo"
+              >{{ $t('dashboard.todos.add') }}</button>
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- Right column: charts -->
-      <div class="space-y-4 lg:col-span-2">
-        <div class="rounded-xl border border-gray-200 p-3 shadow-sm">
-          <div class="flex items-center justify-between mb-2">
-            <h2 class="text-base font-semibold">{{ $t('dashboard.charts.volumeTitle') }}</h2>
-            <div class="text-xs text-gray-500">{{ $t('dashboard.charts.monthly') }}</div>
+        <!-- Charts -->
+        <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div class="mb-4 flex items-center justify-between">
+            <div>
+              <h2 class="text-base font-semibold text-slate-900">{{ $t('dashboard.charts.volumeTitle') }}</h2>
+              <p class="text-xs text-slate-500">{{ $t('dashboard.charts.monthly') }}</p>
+            </div>
+            <span class="inline-flex items-center rounded-full bg-sky-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-sky-700">L</span>
           </div>
-          <div class="max-h-[320px]">
-            <canvas ref="volCanvas" height="140"></canvas>
-          </div>
-        </div>
-        <div class="rounded-xl border border-gray-200 p-3 shadow-sm">
-          <div class="flex items-center justify-between mb-2">
-            <h2 class="text-base font-semibold">{{ $t('dashboard.charts.revenueTitle') }}</h2>
-            <div class="text-xs text-gray-500">{{ $t('dashboard.charts.monthly') }}</div>
-          </div>
-          <div class="max-h-[320px]">
-            <canvas ref="revCanvas" height="140"></canvas>
+          <div class="h-72">
+            <canvas ref="volCanvas"></canvas>
           </div>
         </div>
-      </div>
-    </section>
+
+        <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div class="mb-4 flex items-center justify-between">
+            <div>
+              <h2 class="text-base font-semibold text-slate-900">{{ $t('dashboard.charts.revenueTitle') }}</h2>
+              <p class="text-xs text-slate-500">{{ $t('dashboard.charts.monthly') }}</p>
+            </div>
+            <span class="inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-700">¥</span>
+          </div>
+          <div class="h-72">
+            <canvas ref="revCanvas"></canvas>
+          </div>
+        </div>
+      </section>
+    </div>
   </AdminLayout>
 </template>
 
@@ -195,6 +228,41 @@ const revenue30d = computed(()=> props.sales
   .reduce((a,b)=> a + Number(b.revenue||0), 0))
 const completed30d = computed(()=> completedLots.value
   .filter(l => l.finishDate && (Date.now() - new Date(l.finishDate+'T00:00:00')) <= 30*24*3600*1000).length)
+
+const kpiCards = computed(() => [
+  {
+    id: 'in-progress',
+    label: t('dashboard.kpis.inProgress'),
+    value: inProgressCount.value.toLocaleString(),
+    chip: 'LIVE',
+    icon: '🧪',
+    gradient: 'bg-gradient-to-br from-amber-200/45 via-white to-transparent',
+  },
+  {
+    id: 'completed',
+    label: t('dashboard.kpis.completed30d'),
+    value: completed30d.value.toLocaleString(),
+    chip: '30D',
+    icon: '✅',
+    gradient: 'bg-gradient-to-br from-indigo-200/45 via-white to-transparent',
+  },
+  {
+    id: 'volume',
+    label: t('dashboard.kpis.volume30d'),
+    value: `${volume30d.value.toLocaleString()} L`,
+    chip: '30D',
+    icon: '🛢️',
+    gradient: 'bg-gradient-to-br from-sky-200/45 via-white to-transparent',
+  },
+  {
+    id: 'revenue',
+    label: t('dashboard.kpis.revenue30d'),
+    value: `¥${revenue30d.value.toLocaleString()}`,
+    chip: '30D',
+    icon: '💴',
+    gradient: 'bg-gradient-to-br from-emerald-200/45 via-white to-transparent',
+  },
+])
 
 /***** Charts *****/
 const volCanvas = ref(null)

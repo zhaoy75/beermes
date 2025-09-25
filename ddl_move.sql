@@ -39,8 +39,8 @@ alter table public.mst_site_types enable row level security;
 drop policy if exists mst_site_types_rls on public.mst_site_types;
 create policy mst_site_types_rls on public.mst_site_types
 for all
-using (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'active_tenant_id')::uuid)
-with check (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'active_tenant_id')::uuid);
+using (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid)
+with check (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid);
 
 -- =====================================================
 -- MASTER: Sites (locations, plants, suppliers, customers)
@@ -92,8 +92,8 @@ alter table public.mst_sites enable row level security;
 drop policy if exists mst_sites_rls on public.mst_sites;
 create policy mst_sites_rls on public.mst_sites
 for all
-using (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'active_tenant_id')::uuid)
-with check (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'active_tenant_id')::uuid);
+using (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid)
+with check (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid);
 
 -- =====================================================
 -- TRANSACTION HEADER: Inventory Movements
@@ -110,6 +110,7 @@ create table if not exists public.inv_movements (
   external_ref text,                            -- supplier invoice, PO, SO, etc.
   reason text,
   meta jsonb default '{}'::jsonb,
+  notes text,
   created_by uuid,
   created_at timestamptz default now(),
   unique (tenant_id, doc_no)
@@ -130,8 +131,8 @@ alter table public.inv_movements enable row level security;
 drop policy if exists inv_movements_rls on public.inv_movements;
 create policy inv_movements_rls on public.inv_movements
 for all
-using (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'active_tenant_id')::uuid)
-with check (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'active_tenant_id')::uuid);
+using (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid)
+with check (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid);
 
 -- =====================================================
 -- TRANSACTION LINES: Movement Lines
@@ -187,8 +188,22 @@ alter table public.inv_movement_lines enable row level security;
 drop policy if exists inv_movement_lines_rls on public.inv_movement_lines;
 create policy inv_movement_lines_rls on public.inv_movement_lines
 for all
-using (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'active_tenant_id')::uuid)
-with check (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'active_tenant_id')::uuid);
+using (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid)
+with check (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid);
+
+
+alter table mst_site_types
+  alter column tenant_id set default (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid;
+
+alter table mst_sites
+  alter column tenant_id set default (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid;
+
+alter table inv_movements
+  alter column tenant_id set default (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid;
+
+
+alter table inv_movement_lines
+  alter column tenant_id set default (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid;
 
 -- =====================================================
 -- VIEW: Sites with type info (optional)

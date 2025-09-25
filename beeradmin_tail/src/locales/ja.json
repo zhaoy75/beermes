@@ -341,6 +341,114 @@
       "other": "その他"
     }
   },
+  "tank": {
+    "title": "タンク管理",
+    "subtitle": "設備カテゴリの原材料として登録された醸造タンクを管理します。",
+    "newTitle": "タンクの追加",
+    "editTitle": "タンクの編集",
+    "deleteTitle": "タンクの削除",
+    "deleteConfirm": "タンク {code} を削除しますか？ この操作は元に戻せません。",
+    "searchPlaceholder": "タンクを検索…",
+    "table": {
+      "tankName": "タンク名",
+      "capacity": "容量",
+      "steps": "使用工程",
+      "noSteps": "未設定",
+      "noCapacity": "未設定"
+    },
+    "form": {
+      "tankName": "タンク名",
+      "capacity": "容量",
+      "uomPlaceholder": "単位を選択",
+      "usedSteps": "使用工程",
+      "activeLabel": "タンクを有効にする"
+    },
+    "steps": {
+      "mashing": "糖化",
+      "lautering": "ろ過",
+      "boil": "煮沸",
+      "whirlpool": "ワールプール",
+      "cooling": "冷却",
+      "fermentation": "発酵",
+      "dry_hop": "ドライホップ",
+      "cold_crash": "コールドクラッシュ",
+      "packaging": "パッケージング",
+      "transfer": "移送",
+      "other": "その他"
+    },
+    "errors": {
+      "fetchUoms": "単位の取得に失敗しました: {message}",
+      "fetchTanks": "タンクの取得に失敗しました: {message}",
+      "save": "タンクの保存に失敗しました: {message}",
+      "delete": "タンクの削除に失敗しました: {message}"
+    }
+  },
+  "rawMaterialReceipts": {
+    "title": "原材料受入管理",
+    "subtitle": "仕入先からの原材料受入を記録し在庫を更新します。",
+    "newTitle": "受入を追加",
+    "editTitle": "受入を編集",
+    "deleteTitle": "受入の削除",
+    "deleteConfirm": "受入伝票 {docNo} を削除しますか？ この操作は元に戻せません。",
+    "filters": {
+      "docNo": "伝票番号",
+      "dateFrom": "受入日(自)",
+      "dateTo": "受入日(至)",
+      "supplier": "仕入先",
+      "warehouse": "倉庫",
+      "status": "ステータス"
+    },
+    "table": {
+      "docNo": "伝票番号",
+      "movementDate": "受入日",
+      "supplier": "仕入先",
+      "warehouse": "倉庫",
+      "status": "ステータス",
+      "totalQty": "合計数量"
+    },
+    "form": {
+      "docNo": "伝票番号",
+      "movementDate": "受入日",
+      "supplier": "仕入先",
+      "destination": "受入先サイト",
+      "warehouse": "倉庫",
+      "notes": "備考",
+      "lines": "明細",
+      "addLine": "明細を追加",
+      "material": "原材料",
+      "quantity": "数量",
+      "uom": "単位",
+      "lineNotes": "明細メモ"
+    },
+    "actions": {
+      "post": "確定"
+    },
+    "errors": {
+      "docNoRequired": "伝票番号は必須です",
+      "movementDateRequired": "受入日は必須です",
+      "warehouseRequired": "倉庫を選択してください",
+      "materialRequired": "原材料を選択してください",
+      "qtyRequired": "数量は0より大きい値を入力してください",
+      "linesRequired": "確定する前に明細を入力してください"
+    },
+    "status": {
+      "open": "未確定",
+      "posted": "確定済み"
+    }
+  },
+  "rawMaterialInventory": {
+    "title": "原材料在庫一覧",
+    "subtitle": "主要原材料の現在庫を確認します。",
+    "filters": {
+      "warehouse": "倉庫",
+      "category": "カテゴリ"
+    },
+    "table": {
+      "material": "原材料",
+      "warehouse": "倉庫",
+      "qty": "数量"
+    }
+  },
   "auth": {
     "signin": {
       "backToDashboard": "ダッシュボードに戻る",
@@ -426,7 +534,8 @@
       "recipeRegister": "レシピ登録",
       "recipeList": "レシピ一覧",
       "inventory": "在庫管理",
-      "rawMaterial": "原材料管理",
+      "rawMaterialReceipts": "原材料受入",
+      "rawMaterialInventory": "原材料在庫",
       "productInventory": "製品在庫管理",
       "waste": "廃棄物管理",
       "masterMaintenance": "マスターメンテナンス",
@@ -438,6 +547,7 @@
       "uomMaster": "単位マスタ",
       "packingMaster": "詰口登録",
       "beerMaster": "ビール銘柄登録",
+      "tankMaintenance": "タンク管理",
       "beerPackageCategory": "パッケージ区分",
       "materialMaster": "原材料登録",
       "vendorMaster": "仕入先登録",
@@ -696,9 +806,11 @@
       "materialColumn": "原材料",
       "amountColumn": "数量",
       "usageStage": "使用工程",
+      "materialTypeFilter": "原材料種別",
       "selectMaterial": "原材料を選択",
       "selectUom": "単位を選択",
       "ingredientsEmpty": "原材料が登録されていません。",
+      "ingredientsFilteredEmpty": "選択した種別の原材料はありません。",
       "processTitle": "工程とステップ",
       "processSubtitle": "工程バージョンと各ステップを管理します。",
       "addProcess": "工程を追加",

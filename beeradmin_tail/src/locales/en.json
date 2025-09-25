@@ -341,6 +341,114 @@
       "other": "Other"
     }
   },
+  "tank": {
+    "title": "Tank Maintenance",
+    "subtitle": "Manage brewing tanks stored under equipment materials.",
+    "newTitle": "New Tank",
+    "editTitle": "Edit Tank",
+    "deleteTitle": "Delete Tank",
+    "deleteConfirm": "Delete tank {code}? This cannot be undone.",
+    "searchPlaceholder": "Search tanks…",
+    "table": {
+      "tankName": "Tank Name",
+      "capacity": "Capacity",
+      "steps": "Used Steps",
+      "noSteps": "Not specified",
+      "noCapacity": "Not specified"
+    },
+    "form": {
+      "tankName": "Tank Name",
+      "capacity": "Capacity",
+      "uomPlaceholder": "Select a unit of measure",
+      "usedSteps": "Used Steps",
+      "activeLabel": "Tank is active"
+    },
+    "steps": {
+      "mashing": "Mashing",
+      "lautering": "Lautering",
+      "boil": "Boil",
+      "whirlpool": "Whirlpool",
+      "cooling": "Cooling",
+      "fermentation": "Fermentation",
+      "dry_hop": "Dry Hop",
+      "cold_crash": "Cold Crash",
+      "packaging": "Packaging",
+      "transfer": "Transfer",
+      "other": "Other"
+    },
+    "errors": {
+      "fetchUoms": "Failed to load units: {message}",
+      "fetchTanks": "Failed to load tanks: {message}",
+      "save": "Failed to save tank: {message}",
+      "delete": "Failed to delete tank: {message}"
+    }
+  },
+  "rawMaterialReceipts": {
+    "title": "Raw Material Receipts",
+    "subtitle": "Record supplier receipts of brewing ingredients and update stock.",
+    "newTitle": "New Receipt",
+    "editTitle": "Edit Receipt",
+    "deleteTitle": "Delete Receipt",
+    "deleteConfirm": "Delete receipt {docNo}? This cannot be undone.",
+    "filters": {
+      "docNo": "Document #",
+      "dateFrom": "From",
+      "dateTo": "To",
+      "supplier": "Supplier",
+      "warehouse": "Warehouse",
+      "status": "Status"
+    },
+    "table": {
+      "docNo": "Document #",
+      "movementDate": "Receipt Date",
+      "supplier": "Supplier",
+      "warehouse": "Warehouse",
+      "status": "Status",
+      "totalQty": "Total Qty"
+    },
+    "form": {
+      "docNo": "Document #",
+      "movementDate": "Receipt Date",
+      "supplier": "Supplier",
+      "destination": "Destination Site",
+      "warehouse": "Warehouse",
+      "notes": "Notes",
+      "lines": "Line Items",
+      "addLine": "Add line",
+      "material": "Material",
+      "quantity": "Quantity",
+      "uom": "UOM",
+      "lineNotes": "Line notes"
+    },
+    "actions": {
+      "post": "Post"
+    },
+    "errors": {
+      "docNoRequired": "Document number is required",
+      "movementDateRequired": "Receipt date is required",
+      "warehouseRequired": "Warehouse is required",
+      "materialRequired": "Material is required",
+      "qtyRequired": "Quantity must be greater than zero",
+      "linesRequired": "Add at least one line before posting"
+    },
+    "status": {
+      "open": "Open",
+      "posted": "Posted"
+    }
+  },
+  "rawMaterialInventory": {
+    "title": "Raw Material Inventory",
+    "subtitle": "View on-hand balances for core brewing ingredients.",
+    "filters": {
+      "warehouse": "Warehouse",
+      "category": "Category"
+    },
+    "table": {
+      "material": "Material",
+      "warehouse": "Warehouse",
+      "qty": "Quantity"
+    }
+  },
   "auth": {
     "signin": {
       "backToDashboard": "Back to dashboard",
@@ -426,7 +534,8 @@
       "recipeList": "Recipe List",
       "lotYield": "Extract Yield",
       "inventory": "Inventory",
-      "rawMaterial": "Raw Materials",
+      "rawMaterialReceipts": "Raw Material Receipts",
+      "rawMaterialInventory": "Raw Material Inventory",
       "productInventory": "Product Inventory",
       "waste": "Waste",
       "masterMaintenance": "Master Maintenance",
@@ -438,6 +547,7 @@
       "uomMaster": "UOM Master",
       "packingMaster": "Packing Master",
       "beerMaster": "Beer Master",
+      "tankMaintenance": "Tank Maintenance",
       "beerPackageCategory": "Beer Package Categories",
       "materialMaster": "Material Master",
       "vendorMaster": "Vendor Master",
@@ -696,9 +806,11 @@
       "materialColumn": "Material",
       "amountColumn": "Amount",
       "usageStage": "Usage Stage",
+      "materialTypeFilter": "Material type",
       "selectMaterial": "Select a material",
       "selectUom": "Select a unit",
       "ingredientsEmpty": "No ingredients yet.",
+      "ingredientsFilteredEmpty": "No ingredients match the selected material type.",
       "processTitle": "Process & Steps",
       "processSubtitle": "Manage process versions and their steps.",
       "addProcess": "Add Process",

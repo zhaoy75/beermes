@@ -282,17 +282,7 @@ type UomOption = {
 const MATERIAL_TABLE = 'mst_materials'
 const UOM_TABLE = 'mst_uom'
 
-const CATEGORY_SOURCE = [
-  'malt',
-  'hop',
-  'yeast',
-  'adjunct',
-  'water',
-  'packaging',
-  'chemical',
-  'cleaning',
-  'other',
-] as const
+const CATEGORY_SOURCE = ['malt', 'hop', 'yeast', 'adjunct'] as const
 
 type CategoryValue = (typeof CATEGORY_SOURCE)[number]
 
@@ -436,7 +426,7 @@ function openEdit(row: MaterialDisplayRow) {
     id: row.id,
     code: row.code,
     name: row.name ?? '',
-    category: row.category,
+    category: CATEGORY_SOURCE.includes(row.category as CategoryValue) ? row.category : CATEGORY_SOURCE[0],
     uom_id: row.uom_id,
     active: Boolean(row.active),
   })
@@ -492,9 +482,11 @@ async function fetchUoms() {
 
 async function fetchMaterials() {
   loading.value = true
+  const allowedCategories = [...CATEGORY_SOURCE]
   const { data, error } = await supabase
     .from<MaterialRow>(MATERIAL_TABLE)
     .select('id, code, name, category, uom_id, active, created_at')
+    .in('category', allowedCategories)
     .order('code', { ascending: true })
   loading.value = false
 
@@ -503,7 +495,10 @@ async function fetchMaterials() {
     return
   }
 
-  rows.value = (data ?? []).map((item) => ({
+  const allowedSet = new Set(allowedCategories)
+  const sanitized = (data ?? []).filter((item) => allowedSet.has(item.category))
+
+  rows.value = sanitized.map((item) => ({
     ...item,
     name: item.name ?? '',
     active: Boolean(item.active),

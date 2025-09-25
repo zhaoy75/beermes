@@ -116,6 +116,33 @@ const router = createRouter({
       },
     },
     {
+      path: '/rawMaterialReceipts',
+      name: 'RawMaterialReceipts',
+      component: () => import('../views/Pages/RawMaterialReceipts.vue'),
+      meta: {
+        title: 'Raw Material Receipts',
+        requiresAuth: true ,
+      },
+    },
+    {
+      path: '/rawMaterialInventory',
+      name: 'RawMaterialInventory',
+      component: () => import('../views/Pages/RawMaterialInventory.vue'),
+      meta: {
+        title: 'Raw Material Inventory',
+        requiresAuth: true ,
+      },
+    },
+    {
+      path: '/tankMaintenance',
+      name: 'TankMaintenance',
+      component: () => import('../views/Pages/TankMaintenance.vue'),
+      meta: {
+        title: 'Tank Maintenance',
+        requiresAuth: true ,
+      },
+    },
+    {
       path: '/categoryMaster',
       name: 'カテゴリマスタ',
       component: () => import('../views/pages/CategoryMaster.vue'),

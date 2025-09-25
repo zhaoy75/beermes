@@ -206,6 +206,13 @@ interface SiteRow {
   parentName: string | null
 }
 
+interface SiteTypeRow {
+  id: string
+  code: string
+  name: string
+  flags: Record<string, any> | null
+}
+
 type SortKey = 'code' | 'name' | 'site_type_name' | 'parent_name' | 'active' | 'created_at'
 type SortDirection = 'asc' | 'desc'
 
@@ -228,7 +235,7 @@ const sortDirection = ref<SortDirection>('asc')
 const filters = reactive({ keyword: '', siteType: '' })
 const tenantId = ref<string | null>(null)
 
-const siteTypes = ref<Array<{ id: string; code: string; name: string }>>([])
+const siteTypes = ref<SiteTypeRow[]>([])
 
 const form = reactive({
   id: '',
@@ -247,7 +254,10 @@ const errors = reactive<Record<string, string>>({})
 const sortGlyph = computed(() => (sortDirection.value === 'asc' ? '▲' : '▼'))
 
 const siteTypeOptions = computed(() =>
-  siteTypes.value.map((item) => ({ value: item.id, label: item.name || item.code })),
+  siteTypes.value.map((item) => {
+    const label = resolveSiteTypeLabel(item) || item.name || item.code
+    return { value: item.id, label }
+  }),
 )
 
 const parentOptions = computed(() =>
@@ -255,6 +265,16 @@ const parentOptions = computed(() =>
     .filter((row) => !form.id || row.id !== form.id)
     .map((row) => ({ value: row.id, label: `${row.code} — ${row.name}` })),
 )
+
+function resolveSiteTypeLabel(source: any): string | null {
+  if (!source) return null
+  const flags = parseJson(source.flags)
+  const jaLabel = flags && typeof flags.ja === 'string' ? flags.ja.trim() : ''
+  if (jaLabel) return jaLabel
+  if (typeof source.name === 'string' && source.name.trim()) return source.name
+  if (typeof source.code === 'string' && source.code.trim()) return source.code
+  return null
+}
 
 const filteredRows = computed(() => {
   const keyword = filters.keyword.trim().toLowerCase()
@@ -389,11 +409,16 @@ async function fetchSiteTypes() {
   const tenant = await ensureTenant()
   const { data, error } = await supabase
     .from('mst_site_types')
-    .select('id, code, name')
+    .select('id, code, name, flags')
     .eq('tenant_id', tenant)
     .order('code', { ascending: true })
   if (error) throw error
-  siteTypes.value = data ?? []
+  siteTypes.value = (data ?? []).map((item: any) => ({
+    id: item.id,
+    code: item.code,
+    name: item.name,
+    flags: parseJson(item.flags),
+  }))
 }
 
 function parseJson(value: any) {
@@ -415,7 +440,7 @@ async function fetchSites() {
     const tenant = await ensureTenant()
     let query = supabase
       .from(TABLE)
-      .select('id, tenant_id, code, name, site_type_id, parent_site_id, address, contact, notes, active, created_at, site_type:site_type_id(id, code, name), parent:parent_site_id(id, code, name)')
+      .select('id, tenant_id, code, name, site_type_id, parent_site_id, address, contact, notes, active, created_at, site_type:site_type_id(id, code, name, flags), parent:parent_site_id(id, code, name)')
       .eq('tenant_id', tenant)
       .order('code', { ascending: true })
 
@@ -441,7 +466,7 @@ async function fetchSites() {
       notes: row.notes ?? null,
       active: row.active ?? false,
       created_at: row.created_at ?? null,
-      siteTypeName: row.site_type?.name || row.site_type?.code || null,
+      siteTypeName: resolveSiteTypeLabel(row.site_type),
       parentName: row.parent?.name || row.parent?.code || null,
     }))
   } catch (err) {

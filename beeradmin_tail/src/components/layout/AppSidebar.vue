@@ -291,9 +291,9 @@ const menuGroups = computed(() => [
         icon: CalenderIcon,
         name: t('sidebar.items.inventory'),
         subItems: [
-          { name: t('sidebar.items.rawMaterial'), path: "/packing", pro: false},
+          { name: t('sidebar.items.rawMaterialReceipts'), path: "/rawMaterialReceipts", pro: false },
+          { name: t('sidebar.items.rawMaterialInventory'), path: "/rawMaterialInventory", pro: false },
           { name: t('sidebar.items.productInventory'), path: "/taxcalc", pro: false },
-
         ],
       },
       {
@@ -301,7 +301,8 @@ const menuGroups = computed(() => [
         name: t('sidebar.items.masterMaintenance'),
         subItems: [
           { name: t('sidebar.items.materialMaster'), path: "/MaterialMaster", pro: false },
-          { name: t('sidebar.items.siteMaster'), path: "/siteMaster", pro: false }
+          { name: t('sidebar.items.siteMaster'), path: "/siteMaster", pro: false },
+          { name: t('sidebar.items.tankMaintenance'), path: "/tankMaintenance", pro: false }
         ],
       },
       {

@@ -71,6 +71,7 @@ create table if not exists mst_uom (
   name text,
   base_factor numeric,
   base_code text,
+  meta jsonb default '{}'::jsonb,
   created_at timestamptz default now(),
   unique (tenant_id, code)
 );
@@ -213,24 +214,13 @@ create table if not exists prd_lot_steps (
   unique (tenant_id, lot_id, step_no)
 );
 
--- =========================================
--- Inventory & Warehouse
--- =========================================
-create table if not exists inv_warehouses (
-  id uuid primary key default gen_random_uuid(),
-  tenant_id uuid not null,
-  code text not null,
-  name text not null,
-  location text,
-  created_at timestamptz default now(),
-  unique (tenant_id, code)
-);
+
 
 create table if not exists inv_inventory (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null,
   material_id uuid not null references mst_materials(id),
-  warehouse_id uuid not null references inv_warehouses(id),
+  site_id uuid not null references mst_sites(id),
   qty numeric not null default 0,
   uom_id uuid not null references mst_uom(id),
   batch_code text,
@@ -415,8 +405,6 @@ alter table prd_lots
 alter table prd_lot_steps
   alter column tenant_id set default (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid;
 
-alter table inv_warehouses
-  alter column tenant_id set default (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid;
 
 alter table inv_inventory
   alter column tenant_id set default (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid;
@@ -520,12 +508,11 @@ create index if not exists idx_prd_lot_steps_actual_params_gin
   on prd_lot_steps using gin (actual_params);
 
 -- Inventory
-create index if not exists idx_inv_warehouses_tenant_code
-  on inv_warehouses (tenant_id, code);
+
 create index if not exists idx_inv_inventory_material
   on inv_inventory (material_id);
 create index if not exists idx_inv_inventory_tenant_wh_material
-  on inv_inventory (tenant_id, warehouse_id, material_id);
+  on inv_inventory (tenant_id, site_id, material_id);
 create index if not exists idx_inv_inventory_batch_code
   on inv_inventory (batch_code);
 
@@ -605,7 +592,6 @@ alter table prc_processes   enable row level security;
 alter table prc_steps       enable row level security;
 alter table prd_lots        enable row level security;
 alter table prd_lot_steps   enable row level security;
-alter table inv_warehouses  enable row level security;
 alter table inv_inventory   enable row level security;
 alter table wst_waste       enable row level security;
 alter table tax_beer        enable row level security;
@@ -694,12 +680,6 @@ create policy "prd_lot_steps_tenant_all"
   with check (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid);
 
 -- Inventory
-drop policy if exists "inv_warehouses_tenant_all" on inv_warehouses;
-create policy "inv_warehouses_tenant_all"
-  on inv_warehouses
-  for all
-  using (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid)
-  with check (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid);
 
 drop policy if exists "inv_inventory_tenant_all" on inv_inventory;
 create policy "inv_inventory_tenant_all"

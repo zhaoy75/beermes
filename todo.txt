@@ -185,3 +185,134 @@ range and lot no. Data is from prd_wastes table.
 
 create an vue page mainteenance for mst_beer_package_category, table definition should be reference to ddl.sql
 
+I want to create 年間課税概要（Tax Year Summary) page to shows there section 
+・Tax year summary include 
+  - tax year
+  - total production volume (in liters) by category
+  - total tax amount by category 
+  - a bar chart showing monthly production volumes and tax amounts for the year 
+・production volume and tax amount by lots with subtotals by months
+
+I want to create non tax beer transfer page to show a table of non tax beer transfer records -data is yet to be define so, just create ui
+-table should be sortable by each column
+-search section is needed to filter by date range and transfer source and destination
+-crud is needed
+
+In the calendar.vue, if a lot related event is clicked please jump to lotedit.vue with lot id.
+
+create an vue page to maintain mst_site_type table. table definition should be reference to ddl_move.sql
+-create, update, delete is needed
+-list all data in a table
+-no search section is needed
+-validate check is needed for data type
+-backend is supabase
+-edit japanese name in flags column
+
+create an vue page to maintain mst_site table. table definition should be reference to ddl_move.sql
+-search section is needed to filter by site type and name
+-create, update, delete is needed
+-list all data in a table
+-validate check is needed for data type
+-backend is supabase
+
+create an vue page to manage move between site. table definition should be reference to inv_movements and inv_movement_lines. this page will be under liqurer tax menu
+-search section is needed to filter by doc_no, date range, source site and destination site
+-create, update, delete is needed
+-list all data in a table
+-validate check is needed for data type
+-backend is supabase
+-create a dropdown to select source site and destination site from mst_site
+-when create a movement document, user need to add line items, line item should select material from mst_material
+-and input quantity, uom will auto filled based on material selection 
+
+create an vue page to show summary of finished lots to caculate 仕込室収率(%) called エキス. The link to this page should be under recipe mmn menu.
+- you can filter by style, recipe, lot status and date range
+- the 仕込室収率(%) will be caculate based on the data get from selected finished lots
+- lots should be group by style and recipe
+- lots summary information should be listed in table 
+
+create an vue page for tank maintennace under system maintennace menu. 
+-I want use mst_materials to management tanks in beer production. The category　field is equipment. 
+ meta data should include {"type" ="tank",size, name, used step list).  
+-create, update, delete is needed
+-list all data in a table
+-validate check is needed for data type
+-backend is supabase
+
+please modify TankMaintennace.vue
+-make TankMaintennance.vue multi-language.
+-Move tankmaintennace.vue under master maintennace
+
+please modify MaterialMaster.vue, I only want this page to maintennace raw material include hops, malt, yeast and adjuncts.
+
+create an vue page to maintain raw_material regist under 在庫管理 menu. 
+-table definition should be reference to inv_movements and inv_movement_lines.
+-inv_doc_type is purchase
+-material category is raw material include hops, malt, yeast and adjuncts
+-inv_inventory  table should be updated based on the movement document
+
+i also want an vue page to show current inventory of raw material under 在庫管理 menu
+
+
+http://127.0.0.1:1234
+
+curl http://localhost:1234/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-oss-120b",
+    "messages": [
+      { "role": "system", "content": "Always answer in rhymes. Today is Thursday" },
+      { "role": "user", "content": "What day is it today?" }
+    ],
+    "temperature": 0.7,
+    "max_tokens": -1,
+    "stream": false
+}'
+
+curl http://localhost:1234/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-oss-120b",
+    "messages": [
+           {"role":"system","content":"You are a helpful assistant that helps to create BM25 search queries."},
+          {"role":"user","content":"「育児時短制度がありますか？」という質問に対するBM25検索クエリを作成します。"}
+    ],
+    "temperature": 0,
+    "max_tokens": -1,
+    "stream": false,
+    "thinking": false
+}'
+
+
+curl http://localhost:1234/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "qwen3-30b-a3b-mlx",
+    "messages": [
+      { "role": "system", "content": "You are a helpful assistant that helps to create BM25 search queries." },
+      { "role": "user", "content": "「育児時短制度がありますか？」という質問に対するBM25検索クエリを作成してください。" }
+    ],
+    "temperature": 0.7,
+    "max_tokens": -1,
+    "stream": false,
+    "thinking": false
+}'
+
+
+
+curl http://127.0.0.1:1234/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $OPENAI_API_KEY" \
+  -d '{
+        "model": "gpt-oss-120b",
+        "messages": [
+          {"role":"system","content":"You are a helpful assistant that helps to create BM25 search queries."},
+          {"role":"user","content":"「育児時短制度がありますか？」という質問に対するBM25検索クエリを作成します。"}
+        ],
+        "temperature": 0,          # <-- no randomness → no internal “thinking”
+        "top_p": 1,
+        "max_tokens": 200,
+        "stream": false,
+        "logit_bias": {},          # optional – leave empty
+        "tool_choice": "none"      # <-- disable tool calls (if supported)
+      }'

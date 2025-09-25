@@ -119,6 +119,20 @@
             <p class="text-sm text-gray-500">{{ t('recipe.edit.ingredientsSubtitle') }}</p>
           </div>
           <div class="flex flex-wrap items-center gap-2">
+            <div class="flex items-center gap-2">
+              <label for="ingredientTypeFilter" class="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                {{ t('recipe.edit.materialTypeFilter') }}
+              </label>
+              <select
+                id="ingredientTypeFilter"
+                v-model="materialCategoryFilter"
+                class="h-[38px] min-w-[150px] rounded border border-gray-300 bg-white px-3 text-sm"
+              >
+                <option v-for="option in materialTypeOptions" :key="option.value" :value="option.value">
+                  {{ option.label }}
+                </option>
+              </select>
+            </div>
             <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" @click="openIngredientCreate">
               {{ t('recipe.edit.addIngredient') }}
             </button>
@@ -144,10 +158,13 @@
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-100 text-sm">
-              <tr v-for="row in ingredients" :key="row.id" class="hover:bg-gray-50">
+              <tr v-for="row in filteredIngredients" :key="row.id" class="hover:bg-gray-50">
                 <td class="px-3 py-2">
                   <div class="font-medium text-gray-900">{{ materialLabel(row) }}</div>
                   <div class="text-xs text-gray-500">{{ row.material?.code }}</div>
+                  <div v-if="ingredientCategoryLabel(row)" class="text-[11px] uppercase tracking-wide text-gray-400">
+                    {{ ingredientCategoryLabel(row) }}
+                  </div>
                 </td>
                 <td class="px-3 py-2">
                   {{ row.amount ?? '—' }}
@@ -164,9 +181,13 @@
                   </button>
                 </td>
               </tr>
-              <tr v-if="!ingredientsLoading && ingredients.length === 0">
+              <tr v-if="!ingredientsLoading && filteredIngredients.length === 0">
                 <td colspan="5" class="px-3 py-6 text-center text-gray-500 text-sm">
-                  {{ t('recipe.edit.ingredientsEmpty') }}
+                  {{
+                    ingredients.length === 0
+                      ? t('recipe.edit.ingredientsEmpty')
+                      : t('recipe.edit.ingredientsFilteredEmpty')
+                  }}
                 </td>
               </tr>
             </tbody>
@@ -570,6 +591,9 @@ import { supabase } from '@/lib/supabase'
 
 const STATUSES = ['draft', 'released', 'retired'] as const
 const STEP_OPTIONS = ['mashing', 'lautering', 'boil', 'whirlpool', 'cooling', 'fermentation', 'dry_hop', 'cold_crash', 'transfer', 'packaging', 'other']
+const MATERIAL_CATEGORIES = ['malt', 'hop', 'yeast', 'adjunct', 'water', 'packaging', 'chemical', 'cleaning', 'other'] as const
+
+type MaterialCategory = (typeof MATERIAL_CATEGORIES)[number]
 
 const route = useRoute()
 const router = useRouter()
@@ -600,6 +624,7 @@ interface MaterialRow {
   id: string
   code: string
   name: string | null
+  category: MaterialCategory
 }
 
 interface UomRow {
@@ -622,7 +647,7 @@ interface IngredientRow {
   uom_id: string
   usage_stage: string | null
   notes: string | null
-  material: { id: string; code: string; name: string | null } | null
+  material: { id: string; code: string; name: string | null; category: MaterialCategory | null } | null
   uom: { id: string; code: string; name: string | null } | null
 }
 
@@ -711,6 +736,7 @@ const materials = ref<MaterialRow[]>([])
 const uoms = ref<UomRow[]>([])
 const categories = ref<CategoryRow[]>([])
 const ingredients = ref<IngredientRow[]>([])
+const materialCategoryFilter = ref<'all' | MaterialCategory>('all')
 const ingredientsLoading = ref(false)
 const ingredientSaving = ref(false)
 const ingredientErrors = reactive<Record<string, string>>({})
@@ -771,6 +797,13 @@ const formatStepType = (value: string) => {
     .join(' ')
 }
 
+function materialCategoryLabel(value: string | null | undefined) {
+  if (!value) return ''
+  const key = `material.categories.${value}`
+  const translated = t(key as any)
+  return translated === key ? value : translated
+}
+
 const uomLabel = (row: UomRow) => {
   if (!row) return ''
   return row.name ? `${row.code} — ${row.name}` : row.code
@@ -783,6 +816,33 @@ const uomLookup = computed(() => {
   }
   return map
 })
+
+const materialTypeOptions = computed(() => [
+  { value: 'all' as const, label: t('common.all') },
+  ...MATERIAL_CATEGORIES.map((category) => ({ value: category, label: materialCategoryLabel(category) })),
+])
+
+const materialMap = computed(() => {
+  const map = new Map<string, MaterialRow>()
+  for (const item of materials.value) {
+    map.set(item.id, item)
+  }
+  return map
+})
+
+const filteredIngredients = computed(() => {
+  const filter = materialCategoryFilter.value
+  if (filter === 'all') return ingredients.value
+  return ingredients.value.filter((row) => {
+    const category = row.material?.category ?? materialMap.value.get(row.material_id)?.category ?? null
+    return category === filter
+  })
+})
+
+const ingredientCategoryLabel = (row: IngredientRow) => {
+  const category = row.material?.category ?? materialMap.value.get(row.material_id)?.category ?? null
+  return category ? materialCategoryLabel(category) : ''
+}
 
 function createTargetParamRow(initial?: Partial<Omit<TargetParamRow, 'key'>>) {
   return {
@@ -888,6 +948,9 @@ const qaChecksSummary = (value: unknown) => extractQaCheckEntries(value).map((en
 const materialLabel = (row: IngredientRow) => {
   if (row.material?.name) return row.material.name
   if (row.material?.code) return row.material.code
+  const fallback = materialMap.value.get(row.material_id)
+  if (fallback?.name) return fallback.name
+  if (fallback?.code) return fallback.code
   return row.material_id
 }
 
@@ -1119,7 +1182,7 @@ async function loadRecipe() {
 async function loadMaterials() {
   const { data, error } = await supabase
     .from('mst_materials')
-    .select('id, code, name')
+    .select('id, code, name, category')
     .order('code', { ascending: true })
   if (error) {
     console.warn('Load materials failed', error)
@@ -1157,7 +1220,7 @@ async function loadIngredients() {
   ingredientsLoading.value = true
   const { data, error } = await supabase
     .from('rcp_ingredients')
-    .select('id, recipe_id, material_id, amount, uom_id, usage_stage, notes, material:material_id(id, code, name), uom:uom_id(id, code, name)')
+    .select('id, recipe_id, material_id, amount, uom_id, usage_stage, notes, material:material_id(id, code, name, category), uom:uom_id(id, code, name)')
     .eq('recipe_id', recipeId.value)
     .order('usage_stage', { ascending: true, nullsLast: true })
     .order('material_id', { ascending: true })

@@ -321,3 +321,106 @@ curl http://127.0.0.1:1234/v1/chat/completions \
         "logit_bias": {},          # optional – leave empty
         "tool_choice": "none"      # <-- disable tool calls (if supported)
       }'
+
+I want to add an vue page to this project which i use ai to forecast the beer sales for next 12 months
+-the page should have a button to call an ai api to get the forecast data
+-the ai api will need several minutes to process the request, so please show a loading icon when waiting for the response
+-the forecast data should be show in a line chart
+-the page should be access in main menu with beer sales forecast name
+
+when i click the forecast button, i want to show a process dialog to show the progress of the ai forecast request 
+stop call ai api when user click cancel button in the progress dialog
+
+I want to add an ai assistant page under ai automation menu
+-the page should include an ai chat history area to show the previous question and answer
+-the page should have a text input area and a submit buttom to ask question to ai api
+
+I want to add an ai order assistant page under ai automation menu
+-the page should include button to create purchase order based on the material inventory level 
+-the page should show the created purchase order in a table
+-for each order line item, user can click a button to send the order to supplier via email
+-for each order line item, user can click a button to create purchase order in supabase system via supabase api
+
+for ai order assistant page, i want to made the following changes:
+- i want to add a table showing the current inventory level of raw material
+- i want to add a table of beer should be made for next two month
+- this page is a ui only, no backend call is needed
+
+for ai order assistant page, i want to made the following changes:
+- table of current inventory level of raw material should be folded by default
+- table of Upcoming production plan should be expanded by default
+
+for ai order assistant page, i want to made the following changes:
+- change label supabase regist to confirm order in the purchase order table
+
+
+受注しました。１２月開始、2026/6 Phase1納品。計画とスケジュールを作成してください。
+Agile開発手法を採用するので、設計資料を最小限にし、開発を中心に進めてください。
+
+
+背景：
+　酒税計算関連を中心に機能を提供します。
+　2025/12, 2026/1 要件定義。同時に開発を進む。
+　要件定義は業務フロー、DB、機能一覧、酒税の計算　ロジックを中心に作成。
+　2025/4までに開発完了。
+　2025/5-6 テスト、本番環境構築、データ移行。　
+
+計画について：
+　成果物を整理してください。マイルストーンを設定し、各マイルストーンに対して必要なタスクを洗い出してください。
+　各タスクに対して、担当者、開始日、終了日を設定してください
+
+
+【体制（仮）】
+  PM: 誰でもOK。趙、周
+  要件定義：　印出、趙
+  開発：　周、趙、印出
+  データ移行：　周、趙
+
+【会議体】
+　2025/12/10~2026/2/5　
+　　要件定義・進捗会議：毎週○曜日 17:00~ 60分〜100分 (火、木？) 録画したい
+　　不定期臨時会議：　　必要に応じて
+　　内部MTG：外部会議準備　毎週月曜日　21:30~
+　　　　　　　外部進捗後に振り返りMTG 約３０分
+　2025/2/12~2026/4/30　
+　　開発進捗会議：隔週○曜日　60分
+　
+【成果物】
+　◆ 要件定義
+    - 業務フロー
+    - DB設計
+    - 機能一覧（User Story）
+    - 酒税計算ロジック仕様
+    # Phase1の機能分け、酒税計算ロジック
+
+  ◆ 開発成果物
+    - 酒税計算API
+    - 入力/確認画面
+    - ログ・監査
+　
+マイルストーン
+  M1：2025/12中旬 開発環境整備（github, supabase, codex）
+  M2：2026/1 要件定義完了
+  M3：2026/2-4 Sprint1〜6（開発中心）
+  M4：2026/4 開発完了
+  M5：2026/4-5 テスト
+  M6：2026/5-6 本番構築＋移行
+  M7：2026/6中旬 Phase1納品
+
+品質担保
+  
+開発環境
+　開発環境と本番環境
+
+その他
+　契約書、開発環境整備、開発管理ツールの整備
+  🔳契約書の雛方連携　周　12/8
+  🔳GithubのRepository作成　12/2 アカウント招待　12/5
+  🔳開発環境サーバー情報連携 周　
+  🔳開発環境構築手順メモ作成　趙 12/8
+  🔳KickOFF MTG資料作成　趙 12/8
+  　設計資料の雛方連携　印出 12/8
+  🔳KickOFF MTG    12/10
+  🔳一回目の質問準備　12/16
+
+　

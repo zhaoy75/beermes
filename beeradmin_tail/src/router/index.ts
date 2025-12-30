@@ -80,6 +80,33 @@ const router = createRouter({
       },
     },
     {
+      path: '/beer-sales-forecast',
+      name: 'BeerSalesForecast',
+      component: () => import('../views/Pages/BeerSalesForecast.vue'),
+      meta: {
+        title: 'AI Sales Forecast',
+        requiresAuth: true ,
+      },
+    },
+    {
+      path: '/ai-assistant',
+      name: 'AIAssistant',
+      component: () => import('../views/Pages/AIAssistant.vue'),
+      meta: {
+        title: 'AI Assistant',
+        requiresAuth: true ,
+      },
+    },
+    {
+      path: '/ai-order-assistant',
+      name: 'AIOrderAssistant',
+      component: () => import('../views/Pages/AIOrderAssistant.vue'),
+      meta: {
+        title: 'AI Order Assistant',
+        requiresAuth: true ,
+      },
+    },
+    {
       path: '/taxMaster',
       name: '酒税',
       component: () => import('../views/pages/TaxMaster.vue'),

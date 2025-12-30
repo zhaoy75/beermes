@@ -536,8 +536,128 @@
     }
   }
   ,
+  "forecast": {
+    "title": "AI Sales Forecast",
+    "subtitle": "Use AI to predict the next 12 months of beer sales and plan production with confidence.",
+    "hint": "The AI service can take a few minutes to respond. Keep this tab open and we will update the chart when the data arrives.",
+    "button": {
+      "label": "Run AI forecast",
+      "loading": "Requesting forecast…"
+    },
+    "lastUpdated": "Last updated {time}",
+    "loadingTitle": "Generating forecast",
+    "loadingMessage": "This may take several minutes. Feel free to continue working in another tab.",
+    "chart": {
+      "seriesName": "Projected sales",
+      "axisLabel": "Cases sold",
+      "unit": "cases",
+      "empty": "No forecast yet. Run the AI forecast to see the projection.",
+      "defaultLabel": "Month {index}"
+    },
+    "errors": {
+      "http": "Unable to generate forecast (code {code}).",
+      "empty": "The API returned no forecast points.",
+      "generic": "Unable to generate the forecast. Please try again."
+    },
+    "process": {
+      "title": "AI forecast in progress",
+      "subtitle": "Hang tight while we run the request through the forecasting service.",
+      "eta": "Typical runtime: 2‑3 minutes",
+      "steps": {
+        "queue": {
+          "title": "Preparing request",
+          "description": "Packaging recent sales & context for the model."
+        },
+        "generation": {
+          "title": "AI model crunching numbers",
+          "description": "The model generates projections month by month."
+        },
+        "chart": {
+          "title": "Formatting the chart",
+          "description": "We turn the forecast into a chart you can review."
+        }
+      }
+    }
+  }
+  ,
+  "assistant": {
+    "title": "AI Assistant",
+    "subtitle": "Ask operational questions and get AI powered answers using recent brewery context.",
+    "seedMessage": "Hi! I'm your brewery co-pilot. Ask me anything about production, inventory, or planning.",
+    "emptyState": "No questions yet. Ask something below to start the conversation.",
+    "promptLabel": "Ask a question",
+    "promptPlaceholder": "e.g., How many 330ml bottles can we package with current inventory?",
+    "disclaimer": "Experimental feature. Verify important answers before acting.",
+    "submit": "Send",
+    "submitSending": "Sending…",
+    "waiting": "Waiting for the AI assistant…",
+    "errorGeneric": "Unable to fetch the AI response. Please try again.",
+    "fallbackAnswer": "I'm not sure about that yet, but I'm learning every day!",
+    "subtitleTips": "Provide as much context as possible for better answers."
+  }
+  ,
+  "orderAssistant": {
+    "title": "AI Order Assistant",
+    "subtitle": "Let AI draft purchase orders based on low inventory signals and send them with one click.",
+    "generateBtn": "Create AI purchase order",
+    "generating": "Creating purchase order…",
+    "lastRun": "Last generated {time}",
+    "emptyState": "No purchase suggestions yet. Generate an AI-based recommendation to see line items.",
+    "columns": {
+      "material": "Material",
+      "qty": "Quantity",
+      "supplier": "Supplier",
+      "email": "Supplier email",
+      "supabase": "Confirm order",
+      "actions": "Actions"
+    },
+    "actions": {
+      "email": "Send email",
+      "supabase": "Confirm order"
+    },
+    "status": {
+      "idle": "Pending",
+      "running": "Processing…",
+      "success": "Completed",
+      "error": "Retry"
+    },
+    "inventory": {
+      "title": "Raw material inventory snapshot",
+      "subtitle": "Live view of the core ingredients feeding upcoming brews.",
+      "coverageDays": "days",
+      "columns": {
+        "material": "Material",
+        "onHand": "On hand",
+        "safety": "Safety stock",
+        "coverage": "Coverage",
+        "status": "Status"
+      },
+      "status": {
+        "healthy": "Healthy",
+        "warning": "Watch",
+        "critical": "Critical"
+      }
+    },
+    "production": {
+      "title": "Upcoming production (next 60 days)",
+      "subtitle": "AI suggests these batches to meet demand.",
+      "columns": {
+        "beer": "Beer",
+        "brewDate": "Brew date",
+        "volume": "Volume (L)",
+        "status": "Status",
+        "notes": "Notes"
+      },
+      "status": {
+        "scheduled": "Scheduled",
+        "planning": "Planning",
+        "waiting": "Waiting"
+      }
+    }
+  }
+  ,
   "sidebar": {
-    "group": { "main": "Menu" },
+    "group": { "main": "Menu", "ai": "AI Automation" },
     "items": {
       "dashboard": "Dashboard",
       "production": "Production",
@@ -579,6 +699,9 @@
       "shipDestMaster": "Shipping Destinations",
       "siteMaster": "Sites",
       "calendar": "Calendar",
+      "aiOrderAssistant": "AI Order Assistant",
+      "aiAssistant": "AI Assistant",
+      "beerSalesForecast": "AI Sales Forecast",
       "profile": "User Profile"
     }
   }

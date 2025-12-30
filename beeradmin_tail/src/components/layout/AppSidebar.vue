@@ -347,6 +347,26 @@ const menuGroups = computed(() => [
       // },
     ],
   },
+  {
+    title: t('sidebar.group.ai'),
+    items: [
+      {
+        icon: PieChartIcon,
+        name: t('sidebar.items.beerSalesForecast'),
+        path: "/beer-sales-forecast",
+      },
+      {
+        icon: BoxCubeIcon,
+        name: t('sidebar.items.aiOrderAssistant'),
+        path: "/ai-order-assistant",
+      },
+      {
+        icon: ChatIcon,
+        name: t('sidebar.items.aiAssistant'),
+        path: "/ai-assistant",
+      },
+    ],
+  },
   // {
   //   title: "Others",
   //   items: [

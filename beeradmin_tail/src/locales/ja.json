@@ -536,8 +536,127 @@
     }
   }
   ,
+  "forecast": {
+    "title": "AI売上予測",
+    "subtitle": "AIを使って今後12か月のビール売上を予測し、生産計画に活用します。",
+    "hint": "AIサービスの応答には数分かかる場合があります。このタブを開いたままにすると、結果が届き次第グラフを更新します。",
+    "button": {
+      "label": "AI予測を実行",
+      "loading": "予測をリクエスト中…"
+    },
+    "lastUpdated": "最終更新 {time}",
+    "loadingTitle": "予測を生成しています",
+    "loadingMessage": "処理には数分かかる場合があります。他の作業をしながらお待ちください。",
+    "chart": {
+      "seriesName": "予測売上",
+      "axisLabel": "販売ケース数",
+      "unit": "ケース",
+      "empty": "まだ予測はありません。AI予測を実行すると結果が表示されます。",
+      "defaultLabel": "{index}か月目"
+    },
+    "errors": {
+      "http": "予測の生成に失敗しました（コード {code}）。",
+      "empty": "APIから予測データが返されませんでした。",
+      "generic": "予測の生成に失敗しました。もう一度お試しください。"
+    },
+    "process": {
+      "title": "AI予測を処理中",
+      "subtitle": "予測サービスにリクエストを送信しています。しばらくお待ちください。",
+      "eta": "目安時間: 約2〜3分",
+      "steps": {
+        "queue": {
+          "title": "リクエストを準備",
+          "description": "直近の売上データと文脈をモデル用にまとめています。"
+        },
+        "generation": {
+          "title": "AIモデルで計算中",
+          "description": "モデルが月ごとの売上予測を生成しています。"
+        },
+        "chart": {
+          "title": "チャートに整形",
+          "description": "得られた予測値をグラフに描画しています。"
+        }
+      }
+    }
+  }
+  ,
+  "assistant": {
+    "title": "AIアシスタント",
+    "subtitle": "醸造・在庫・計画に関する質問を入力すると、AIが最新情報をもとに回答します。",
+    "seedMessage": "こんにちは！醸造所コーパイロットです。生産や在庫、計画について何でも聞いてください。",
+    "emptyState": "まだ会話がありません。下の入力欄から質問して開始しましょう。",
+    "promptLabel": "質問内容",
+    "promptPlaceholder": "例）現在の在庫で330mlボトルは何本充填できますか？",
+    "disclaimer": "実験機能です。重要な内容は必ず確認してください。",
+    "submit": "送信",
+    "submitSending": "送信中…",
+    "waiting": "AIアシスタントの回答を待っています…",
+    "errorGeneric": "AIの応答を取得できませんでした。もう一度お試しください。",
+    "fallbackAnswer": "まだ確かな情報がありませんが、学習を続けています！"
+  }
+  ,
+  "orderAssistant": {
+    "title": "AI発注アシスタント",
+    "subtitle": "在庫不足の材料をAIが検出し、仕入先への発注案を自動作成します。",
+    "generateBtn": "AIで発注案を作成",
+    "generating": "発注案を作成中…",
+    "lastRun": "最終生成 {time}",
+    "emptyState": "まだ発注案はありません。AI発注案を作成してラインアイテムを確認してください。",
+    "columns": {
+      "material": "材料",
+      "qty": "数量",
+      "supplier": "仕入先",
+      "email": "メール送信",
+      "supabase": "発注確定",
+      "actions": "アクション"
+    },
+    "actions": {
+      "email": "メール送信",
+      "supabase": "発注確定"
+    },
+    "status": {
+      "idle": "待機中",
+      "running": "処理中…",
+      "success": "完了",
+      "error": "再試行"
+    },
+    "inventory": {
+      "title": "原材料在庫スナップショット",
+      "subtitle": "今後の仕込みに直結する主要材料の在庫状況です。",
+      "coverageDays": "日分",
+      "columns": {
+        "material": "材料",
+        "onHand": "在庫",
+        "safety": "安全在庫",
+        "coverage": "カバレッジ",
+        "status": "ステータス"
+      },
+      "status": {
+        "healthy": "十分",
+        "warning": "注意",
+        "critical": "不足"
+      }
+    },
+    "production": {
+      "title": "今後60日の仕込み計画",
+      "subtitle": "需要を満たすためにAIが提案するバッチです。",
+      "columns": {
+        "beer": "ビール",
+        "brewDate": "仕込み日",
+        "volume": "仕込み量 (L)",
+        "status": "ステータス",
+        "notes": "メモ"
+      },
+      "status": {
+        "scheduled": "確定",
+        "planning": "計画中",
+        "waiting": "調整中"
+      }
+    }
+  }
+  ,
   "sidebar": {
-    "group": { "main": "メニュー" },
+    "group": { "main": "メニュー", "ai": "AIオートメーション" },
     "items": {
       "dashboard": "概要",
       "production": "生産管理",
@@ -579,6 +698,9 @@
       "shipDestMaster": "搬入出先登録",
       "siteMaster": "サイト登録",
       "calendar": "カレンダー",
+      "aiOrderAssistant": "AI発注アシスタント",
+      "aiAssistant": "AIアシスタント",
+      "beerSalesForecast": "AI売上予測",
       "profile": "ユーザープロファイル"
     }
   }

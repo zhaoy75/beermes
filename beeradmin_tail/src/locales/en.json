@@ -451,26 +451,93 @@
   },
   "beerInventory": {
     "title": "Beer Inventory",
-    "subtitle": "Check packaged beer quantities by warehouse site.",
-    "filters": {
-      "site": "Site",
-      "category": "Beer Style"
+    "subtitle": "Track packaged beer inventory and movements.",
+    "sections": {
+      "inventory": "Inventory",
+      "movements": "Movements"
     },
-    "table": {
-      "beer": "Beer",
-      "category": "Style",
-      "site": "Site",
-      "qty": "Quantity",
-      "uom": "UOM"
+    "inventory": {
+      "subtitle": "Inventory of packaged beer by lot and package.",
+      "table": {
+        "beerName": "Beer name",
+        "category": "Category",
+        "packageType": "Package type",
+        "lotNo": "Production lot no",
+        "productionDate": "Production date",
+        "qtyLiters": "Quantity (L)",
+        "qtyPackages": "Quantity (packages)",
+        "site": "Site location"
+      }
     },
-    "categories": {
-      "ipa": "IPA",
-      "lager": "Lager",
-      "ale": "Ale",
-      "pilsner": "Pilsner",
-      "stout": "Stout",
-      "porter": "Porter",
-      "other": "Other"
+    "movement": {
+      "subtitle": "Movements between warehouses and customers.",
+      "filters": {
+        "beerName": "Beer name",
+        "category": "Category",
+        "packageType": "Package type",
+        "lotNo": "Production lot no",
+        "dateFrom": "Date from",
+        "dateTo": "Date to",
+        "movementType": "Movement type"
+      },
+      "types": {
+        "domestic": "Domestic customer",
+        "foreign": "Foreign customer",
+        "internal": "Internal transfer",
+        "disposal": "Disposal"
+      },
+      "table": {
+        "docNo": "Document no",
+        "movementDate": "Movement date",
+        "docType": "Type",
+        "beerName": "Beer name",
+        "category": "Category",
+        "packageType": "Package type",
+        "lotNo": "Lot no",
+        "qtyPackages": "Packages",
+        "qtyLiters": "Liters",
+        "source": "Source",
+        "destination": "Destination",
+        "status": "Status"
+      },
+      "form": {
+        "titleNew": "New movement",
+        "titleEdit": "Edit movement",
+        "docNo": "Document no",
+        "docType": "Type",
+        "movementDate": "Movement date",
+        "source": "Source site",
+        "destination": "Destination site",
+        "notes": "Notes",
+        "lines": "Movement lines",
+        "addLine": "Add line",
+        "package": "Package",
+        "packageQty": "Package qty",
+        "lot": "Lot",
+        "packageType": "Package type",
+        "qtyLiters": "Liters"
+      },
+      "errors": {
+        "docNoRequired": "Document no is required.",
+        "docTypeRequired": "Movement type is required.",
+        "movementDateRequired": "Movement date is required.",
+        "siteRequired": "Source and destination are required.",
+        "linesRequired": "Add at least one package line.",
+        "packageRequired": "Package is required.",
+        "packageQtyRequired": "Package quantity must be greater than zero.",
+        "packageSizeRequired": "Package size is missing for liters calculation."
+      },
+      "docTypeMap": {
+        "sale": "Domestic sale",
+        "tax_transfer": "Foreign transfer",
+        "transfer": "Internal transfer",
+        "waste": "Disposal"
+      },
+      "statusMap": {
+        "open": "Open",
+        "posted": "Posted",
+        "void": "Void"
+      }
     }
   },
   "auth": {
@@ -666,6 +733,7 @@
       "batchEdit": "Batch Edit",
       "liquorTax": "Liquor Tax",
       "taxYearSummary": "Tax Year Summary",
+      "taxReport": "Tax Report",
       "packing": "Packing",
       "taxCalc": "Tax Calculation",
       "unpaidMove": "Unpaid Movement",
@@ -897,6 +965,59 @@
     "volumeShort": "Volume",
     "taxShort": "Tax",
     "loading": "Loading…"
+  }
+  ,
+  "taxReport": {
+    "title": "Tax Report",
+    "subtitle": "Create and manage craft beer tax reports.",
+    "actions": {
+      "new": "Create report",
+      "createXml": "Create XML"
+    },
+    "filters": {
+      "taxYear": "Tax year",
+      "taxMonth": "Month",
+      "status": "Status"
+    },
+    "table": {
+      "taxYear": "Tax year",
+      "taxMonth": "Month",
+      "productionVolume": "Production volume (by type & ABV)",
+      "totalTax": "Total tax amount",
+      "files": "Report files",
+      "xmlFiles": "XML files",
+      "attachments": "Attachments"
+    },
+    "modal": {
+      "newTitle": "New tax report",
+      "editTitle": "Edit tax report"
+    },
+    "form": {
+      "taxYear": "Tax year",
+      "taxMonth": "Month",
+      "status": "Status",
+      "totalTax": "Total tax amount",
+      "breakdown": "Volume breakdown",
+      "xmlFiles": "XML files",
+      "xmlPlaceholder": "Enter file names, one per line",
+      "attachments": "Attachment files",
+      "attachmentsPlaceholder": "Enter attachment file names, one per line"
+    },
+    "emptyBreakdown": "No production data found for this year.",
+    "selectTaxYear": "Select a tax year and month to generate a report.",
+    "generating": "Generating report data…",
+    "abvUnknown": "ABV n/a",
+    "statusMap": {
+      "draft": "Draft",
+      "submitted": "Submitted",
+      "approved": "Approved"
+    },
+    "errors": {
+      "taxYearRequired": "Tax year is required.",
+      "taxMonthRequired": "Month is required.",
+      "statusRequired": "Status is required.",
+      "breakdownRequired": "Production data is required."
+    }
   }
   ,
   "recipe": {

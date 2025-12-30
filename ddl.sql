@@ -253,6 +253,22 @@ create table if not exists tax_beer (
   expire_date date
 );
 
+create table if not exists tax_reports (
+  id uuid primary key default gen_random_uuid(),
+  tenant_id uuid not null,
+  tax_year int not null,
+  tax_month int not null,
+  status text not null default 'draft',
+  total_tax_amount numeric not null default 0,
+  volume_breakdown jsonb default '[]'::jsonb,
+  report_files jsonb default '[]'::jsonb,
+  attachment_files jsonb default '[]'::jsonb,
+  created_at timestamptz default now(),
+  unique (tenant_id, tax_year, tax_month),
+  constraint tax_reports_status_check check (status in ('draft','submitted','approved')),
+  constraint tax_reports_month_check check (tax_month between 1 and 12)
+);
+
 -- =========================================
 -- Orders & Packaging
 -- =========================================
@@ -415,6 +431,9 @@ alter table wst_waste
 alter table tax_beer
   alter column tenant_id set default (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid;
 
+alter table tax_reports
+  alter column tenant_id set default (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid;
+
 alter table ord_orders
   alter column tenant_id set default (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid;
 
@@ -526,6 +545,10 @@ create index if not exists idx_wst_waste_created_at
 
 create index if not exists idx_tax_beer_tenant_category_dates
   on tax_beer (tenant_id, category, effect_date, expire_date);
+create index if not exists idx_tax_reports_tenant_year_month
+  on tax_reports (tenant_id, tax_year, tax_month);
+create index if not exists idx_tax_reports_tenant_status
+  on tax_reports (tenant_id, status);
 
 -- Orders & Packaging
 create index if not exists idx_ord_orders_tenant_code
@@ -595,6 +618,7 @@ alter table prd_lot_steps   enable row level security;
 alter table inv_inventory   enable row level security;
 alter table wst_waste       enable row level security;
 alter table tax_beer        enable row level security;
+alter table tax_reports     enable row level security;
 alter table ord_orders      enable row level security;
 alter table ord_order_lines enable row level security;
 alter table pkg_packages    enable row level security;
@@ -699,6 +723,13 @@ create policy "wst_waste_tenant_all"
 drop policy if exists "tax_beer_tenant_all" on tax_beer;
 create policy "tax_beer_tenant_all"
   on tax_beer
+  for all
+  using (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid)
+  with check (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid);
+
+drop policy if exists "tax_reports_tenant_all" on tax_reports;
+create policy "tax_reports_tenant_all"
+  on tax_reports
   for all
   using (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid)
   with check (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid);

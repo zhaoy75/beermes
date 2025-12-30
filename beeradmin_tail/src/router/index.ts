@@ -125,6 +125,15 @@ const router = createRouter({
       },
     },
     {
+      path: '/taxReports',
+      name: 'TaxReport',
+      component: () => import('../views/Pages/TaxReport.vue'),
+      meta: {
+        title: 'Tax Report',
+        requiresAuth: true ,
+      },
+    },
+    {
       path: '/siteMovements',
       name: 'SiteMovements',
       component: () => import('../views/Pages/SiteMovement.vue'),

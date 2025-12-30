@@ -284,6 +284,7 @@ const menuGroups = computed(() => [
         name: t('sidebar.items.liquorTax'),
         subItems: [
           { name: t('sidebar.items.taxYearSummary'), path: "/taxYearSummary", pro: false },
+          { name: t('sidebar.items.taxReport'), path: "/taxReports", pro: false },
           { name: t('sidebar.items.siteMovements'), path: "/siteMovements", pro: false }
         ],
       },

@@ -449,8 +449,8 @@
       "qty": "数量"
     }
   },
-  "beerInventory": {
-    "title": "ビール在庫",
+  "producedBeer": {
+    "title": "製品ビール管理",
     "subtitle": "製品ビールの在庫と移動を管理します。",
     "sections": {
       "inventory": "在庫",
@@ -481,41 +481,77 @@
         "movementType": "移動種別"
       },
       "types": {
-        "domestic": "国内顧客",
-        "foreign": "海外顧客",
+        "taxed": "課税移出",
+        "export": "輸出免税",
+        "returning": "移入戻り",
         "internal": "社内移動",
         "disposal": "廃棄"
       },
-      "table": {
-        "docNo": "伝票番号",
-        "movementDate": "移動日",
-        "docType": "種別",
-        "beerName": "ビール名",
-        "category": "カテゴリ",
-        "packageType": "パッケージ種別",
-        "lotNo": "ロット",
-        "qtyPackages": "数量(本/箱)",
-        "qtyLiters": "数量(L)",
-        "source": "移動元",
-        "destination": "移動先",
-        "status": "状態"
+      "docTypeMap": {
+        "sale": "課税移出",
+        "tax_transfer": "輸出免税",
+        "return": "移入戻り",
+        "transfer": "社内移動",
+        "waste": "廃棄"
       },
-      "form": {
-        "titleNew": "移動登録",
-        "titleEdit": "移動編集",
+      "actions": {
+        "new": "移動登録",
+        "edit": "移動編集"
+      },
+      "card": {
         "docNo": "伝票番号",
-        "docType": "種別",
         "movementDate": "移動日",
         "source": "移動元",
         "destination": "移動先",
-        "notes": "備考",
+        "totalLiters": "数量(L)",
+        "totalPackages": "数量(本/箱)",
         "lines": "明細",
-        "addLine": "明細追加",
-        "package": "パッケージ",
+        "lineBeer": "ビール名",
+        "lineCategory": "カテゴリ",
+        "linePackageType": "パッケージ種別",
+        "lineLot": "ロット",
+        "lineQtyPackages": "数量(本/箱)",
+        "lineQtyLiters": "数量(L)"
+      }
+    },
+    "edit": {
+      "breadcrumb": "ビール移動",
+      "titleNew": "移動登録",
+      "titleEdit": "移動編集",
+      "subtitle": "移動元在庫を選択して明細を作成します。",
+      "back": "一覧へ戻る",
+      "form": {
+        "docNo": "伝票番号",
+        "docType": "種別",
+        "movementDate": "移動日",
+        "sourceSite": "移動元",
+        "destinationSite": "移動先"
+      },
+      "source": {
+        "title": "移動元",
+        "subtitle": "在庫をダブルクリックして明細に追加します。"
+      },
+      "destination": {
+        "title": "移動先",
+        "subtitle": "明細の内容を確認してください。"
+      },
+      "lines": {
+        "title": "明細",
+        "hint": "移動元の在庫一覧から明細を追加します。",
+        "columns": {
+          "beer": "ビール名",
+          "category": "カテゴリ",
+          "packageType": "パッケージ種別",
+          "lot": "ロット",
+          "qtyPackages": "数量(本/箱)",
+          "qtyLiters": "数量(L)"
+        }
+      },
+      "moveDialog": {
+        "title": "移動数量",
         "packageQty": "数量(本/箱)",
-        "lot": "ロット",
-        "packageType": "パッケージ種別",
-        "qtyLiters": "数量(L)"
+        "qtyLiters": "数量(L)",
+        "confirm": "明細に追加"
       },
       "errors": {
         "docNoRequired": "伝票番号は必須です。",
@@ -523,20 +559,12 @@
         "movementDateRequired": "移動日は必須です。",
         "siteRequired": "移動元と移動先は必須です。",
         "linesRequired": "明細を追加してください。",
-        "packageRequired": "パッケージは必須です。",
-        "packageQtyRequired": "数量は1以上で入力してください。",
-        "packageSizeRequired": "パッケージ容量が未設定です。"
+        "moveQtyRequired": "数量は1以上で入力してください。",
+        "moveQtyExceed": "在庫数量を超えています。",
+        "sourceRequired": "先に移動元を選択してください。"
       },
-      "docTypeMap": {
-        "sale": "国内出荷",
-        "tax_transfer": "海外出荷",
-        "transfer": "社内移動",
-        "waste": "廃棄"
-      },
-      "statusMap": {
-        "open": "未確定",
-        "posted": "確定",
-        "void": "取消"
+      "toast": {
+        "saved": "移動を保存しました。"
       }
     }
   },
@@ -747,7 +775,7 @@
       "inventory": "在庫管理",
       "rawMaterialReceipts": "原材料受入",
       "rawMaterialInventory": "原材料在庫",
-      "beerInventory": "ビール在庫",
+      "producedBeer": "製品ビール管理",
       "waste": "廃棄物管理",
       "masterMaintenance": "マスターメンテナンス",
       "systemMaintenance": "システムメンテナンス",
@@ -971,19 +999,21 @@
     "subtitle": "クラフトビールの税務申告書を作成・管理します。",
     "actions": {
       "new": "申告書作成",
-      "createXml": "XML生成"
+      "createXml": "XML生成",
+      "downloadXml": "XMLダウンロード"
     },
     "filters": {
+      "taxType": "課税種別",
       "taxYear": "課税年度",
       "taxMonth": "月",
       "status": "ステータス"
     },
-    "table": {
-      "taxYear": "課税年度",
-      "taxMonth": "月",
-      "productionVolume": "生産量（種別・ABV別）",
+    "card": {
+      "taxType": "課税種別",
+      "period": "対象期間",
+      "status": "ステータス",
       "totalTax": "酒税額合計",
-      "files": "ファイル",
+      "productionVolume": "生産量（種別・ABV別）",
       "xmlFiles": "申告XML",
       "attachments": "添付ファイル"
     },
@@ -992,6 +1022,7 @@
       "editTitle": "申告書編集"
     },
     "form": {
+      "taxType": "課税種別",
       "taxYear": "課税年度",
       "taxMonth": "月",
       "status": "ステータス",
@@ -1000,18 +1031,54 @@
       "xmlFiles": "XMLファイル",
       "xmlPlaceholder": "ファイル名を1行ずつ入力",
       "attachments": "添付ファイル",
-      "attachmentsPlaceholder": "添付ファイル名を1行ずつ入力"
+      "attachmentsHint": "添付ファイルをアップロードしてください。"
     },
-    "emptyBreakdown": "対象年度の生産データがありません。",
-    "selectTaxYear": "課税年度と月を選択してください。",
+    "emptyBreakdown": "対象期間の生産データがありません。",
+    "createPrompt": {
+      "title": "申告書作成",
+      "subtitle": "課税種別と対象期間を選択してください。",
+      "confirm": "生成"
+    },
+    "templateMissing": "XMLテンプレートが見つかりません。",
     "generating": "申告データを生成中…",
     "abvUnknown": "ABV不明",
+    "taxTypeMap": {
+      "monthly": "月次",
+      "yearly": "年次"
+    },
+    "movementTypeMap": {
+      "sale": "課税移出",
+      "tax_transfer": "輸出免税",
+      "return": "戻入",
+      "transfer": "社内移動",
+      "waste": "廃棄",
+      "unknown": "不明"
+    },
+    "breakdown": {
+      "columns": {
+        "movementType": "移動種別",
+        "category": "ビール種別",
+        "abv": "ABV(%)",
+        "volume": "数量(L)"
+      }
+    },
+    "sections": {
+      "summary": {
+        "title": "サマリー",
+        "subtitle": "移動内訳を確認・編集します。"
+      },
+      "dispose": {
+        "title": "廃棄",
+        "subtitle": "廃棄のみの数量を確認・編集します。"
+      }
+    },
     "statusMap": {
       "draft": "下書き",
       "submitted": "提出済み",
       "approved": "承認済み"
     },
     "errors": {
+      "taxTypeRequired": "課税種別は必須です。",
       "taxYearRequired": "課税年度は必須です。",
       "taxMonthRequired": "月は必須です。",
       "statusRequired": "ステータスは必須です。",

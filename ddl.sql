@@ -256,6 +256,7 @@ create table if not exists tax_beer (
 create table if not exists tax_reports (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null,
+  tax_type text not null default 'monthly',
   tax_year int not null,
   tax_month int not null,
   status text not null default 'draft',

@@ -170,11 +170,20 @@ const router = createRouter({
       },
     },
     {
-      path: '/beerInventory',
-      name: 'BeerInventory',
-      component: () => import('../views/Pages/BeerInventory.vue'),
+      path: '/producedBeer',
+      name: 'ProducedBeer',
+      component: () => import('../views/Pages/ProducedBeer.vue'),
       meta: {
-        title: 'Beer Inventory',
+        title: 'Produced Craft Beer',
+        requiresAuth: true ,
+      },
+    },
+    {
+      path: '/producedBeerMovement',
+      name: 'ProducedBeerMovement',
+      component: () => import('../views/Pages/ProducedBeerMovementEdit.vue'),
+      meta: {
+        title: 'Produced Beer Movement',
         requiresAuth: true ,
       },
     },

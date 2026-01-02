@@ -246,6 +246,7 @@
 
 <script setup lang="ts">
 import { computed, reactive, ref, watch, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
@@ -286,6 +287,7 @@ interface MovementLine {
 }
 
 const { t, locale } = useI18n()
+const route = useRoute()
 const pageTitle = computed(() => t('siteMovement.title'))
 
 const loading = ref(false)
@@ -463,6 +465,13 @@ function resetFilters() {
   filters.dateTo = ''
   filters.sourceSite = ''
   filters.destSite = ''
+}
+
+function applyRouteFilters() {
+  const docNo = route.query.docNo
+  if (typeof docNo === 'string' && docNo.trim()) {
+    filters.docNo = docNo.trim()
+  }
 }
 
 function formatInputDateTime(date: Date) {
@@ -725,6 +734,14 @@ watch(locale, () => {
 onMounted(async () => {
   await ensureTenant()
   await Promise.all([loadSites(), loadMaterials()])
+  applyRouteFilters()
   await fetchMovements()
 })
+
+watch(
+  () => route.query.docNo,
+  () => {
+    applyRouteFilters()
+  }
+)
 </script>

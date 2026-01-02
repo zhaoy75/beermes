@@ -281,11 +281,16 @@ const menuGroups = computed(() => [
       },
       {
         icon: CalenderIcon,
+        name: t('sidebar.items.producedBeer'),
+        path: "/producedBeer",
+      },
+      {
+        icon: CalenderIcon,
         name: t('sidebar.items.liquorTax'),
         subItems: [
           { name: t('sidebar.items.taxYearSummary'), path: "/taxYearSummary", pro: false },
           { name: t('sidebar.items.taxReport'), path: "/taxReports", pro: false },
-          { name: t('sidebar.items.siteMovements'), path: "/siteMovements", pro: false }
+          // { name: t('sidebar.items.siteMovements'), path: "/siteMovements", pro: false }
         ],
       },
       {
@@ -294,7 +299,6 @@ const menuGroups = computed(() => [
         subItems: [
           { name: t('sidebar.items.rawMaterialReceipts'), path: "/rawMaterialReceipts", pro: false },
           { name: t('sidebar.items.rawMaterialInventory'), path: "/rawMaterialInventory", pro: false },
-          { name: t('sidebar.items.beerInventory'), path: "/beerInventory", pro: false },
         ],
       },
       {

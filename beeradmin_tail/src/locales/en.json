@@ -449,15 +449,15 @@
       "qty": "Quantity"
     }
   },
-  "beerInventory": {
-    "title": "Beer Inventory",
-    "subtitle": "Track packaged beer inventory and movements.",
+  "producedBeer": {
+    "title": "Produced Craft Beer",
+    "subtitle": "Monitor packaged craft beer inventory and movements.",
     "sections": {
       "inventory": "Inventory",
       "movements": "Movements"
     },
     "inventory": {
-      "subtitle": "Inventory of packaged beer by lot and package.",
+      "subtitle": "Inventory of produced craft beer by lot and package.",
       "table": {
         "beerName": "Beer name",
         "category": "Category",
@@ -470,7 +470,7 @@
       }
     },
     "movement": {
-      "subtitle": "Movements between warehouses and customers.",
+      "subtitle": "Movements between warehouses, customers, and disposals.",
       "filters": {
         "beerName": "Beer name",
         "category": "Category",
@@ -481,62 +481,90 @@
         "movementType": "Movement type"
       },
       "types": {
-        "domestic": "Domestic customer",
-        "foreign": "Foreign customer",
+        "taxed": "Taxed shipment",
+        "export": "Export (tax exempt)",
+        "returning": "Return",
         "internal": "Internal transfer",
         "disposal": "Disposal"
       },
-      "table": {
-        "docNo": "Document no",
-        "movementDate": "Movement date",
-        "docType": "Type",
-        "beerName": "Beer name",
-        "category": "Category",
-        "packageType": "Package type",
-        "lotNo": "Lot no",
-        "qtyPackages": "Packages",
-        "qtyLiters": "Liters",
-        "source": "Source",
-        "destination": "Destination",
-        "status": "Status"
+      "docTypeMap": {
+        "sale": "Taxed shipment",
+        "tax_transfer": "Export (tax exempt)",
+        "return": "Return",
+        "transfer": "Internal transfer",
+        "waste": "Disposal"
       },
-      "form": {
-        "titleNew": "New movement",
-        "titleEdit": "Edit movement",
+      "actions": {
+        "new": "New movement",
+        "edit": "Edit movement"
+      },
+      "card": {
         "docNo": "Document no",
-        "docType": "Type",
         "movementDate": "Movement date",
         "source": "Source site",
         "destination": "Destination site",
-        "notes": "Notes",
+        "totalLiters": "Total liters",
+        "totalPackages": "Total packages",
         "lines": "Movement lines",
-        "addLine": "Add line",
-        "package": "Package",
-        "packageQty": "Package qty",
-        "lot": "Lot",
-        "packageType": "Package type",
-        "qtyLiters": "Liters"
+        "lineBeer": "Beer",
+        "lineCategory": "Category",
+        "linePackageType": "Package type",
+        "lineLot": "Lot no",
+        "lineQtyPackages": "Packages",
+        "lineQtyLiters": "Liters"
+      }
+    },
+    "edit": {
+      "breadcrumb": "Craft Beer Movement",
+      "titleNew": "New Craft Beer Movement",
+      "titleEdit": "Edit Craft Beer Movement",
+      "subtitle": "Select source inventory and create movement lines.",
+      "back": "Back to list",
+      "form": {
+        "docNo": "Document no",
+        "docType": "Type",
+        "movementDate": "Movement date",
+        "sourceSite": "Source site",
+        "destinationSite": "Destination site"
+      },
+      "source": {
+        "title": "Source site",
+        "subtitle": "Double-click inventory to add a movement line."
+      },
+      "destination": {
+        "title": "Destination site",
+        "subtitle": "Review line items for the destination."
+      },
+      "lines": {
+        "title": "Movement lines",
+        "hint": "Use the source inventory list to add lines.",
+        "columns": {
+          "beer": "Beer",
+          "category": "Category",
+          "packageType": "Package type",
+          "lot": "Lot no",
+          "qtyPackages": "Packages",
+          "qtyLiters": "Liters"
+        }
+      },
+      "moveDialog": {
+        "title": "Move quantity",
+        "packageQty": "Package quantity",
+        "qtyLiters": "Liters",
+        "confirm": "Add line"
       },
       "errors": {
         "docNoRequired": "Document no is required.",
         "docTypeRequired": "Movement type is required.",
         "movementDateRequired": "Movement date is required.",
         "siteRequired": "Source and destination are required.",
-        "linesRequired": "Add at least one package line.",
-        "packageRequired": "Package is required.",
-        "packageQtyRequired": "Package quantity must be greater than zero.",
-        "packageSizeRequired": "Package size is missing for liters calculation."
+        "linesRequired": "Add at least one movement line.",
+        "moveQtyRequired": "Move quantity must be greater than zero.",
+        "moveQtyExceed": "Move quantity exceeds available packages.",
+        "sourceRequired": "Select a source site first."
       },
-      "docTypeMap": {
-        "sale": "Domestic sale",
-        "tax_transfer": "Foreign transfer",
-        "transfer": "Internal transfer",
-        "waste": "Disposal"
-      },
-      "statusMap": {
-        "open": "Open",
-        "posted": "Posted",
-        "void": "Void"
+      "toast": {
+        "saved": "Movement saved."
       }
     }
   },
@@ -748,7 +776,7 @@
       "inventory": "Inventory",
       "rawMaterialReceipts": "Raw Material Receipts",
       "rawMaterialInventory": "Raw Material Inventory",
-      "beerInventory": "Beer Inventory",
+      "producedBeer": "Produced Craft Beer",
       "waste": "Waste",
       "masterMaintenance": "Master Maintenance",
       "systemMaintenance": "System Maintenance",
@@ -972,19 +1000,21 @@
     "subtitle": "Create and manage craft beer tax reports.",
     "actions": {
       "new": "Create report",
-      "createXml": "Create XML"
+      "createXml": "Create XML",
+      "downloadXml": "Download XML"
     },
     "filters": {
+      "taxType": "Tax type",
       "taxYear": "Tax year",
       "taxMonth": "Month",
       "status": "Status"
     },
-    "table": {
-      "taxYear": "Tax year",
-      "taxMonth": "Month",
-      "productionVolume": "Production volume (by type & ABV)",
+    "card": {
+      "taxType": "Tax type",
+      "period": "Period",
+      "status": "Status",
       "totalTax": "Total tax amount",
-      "files": "Report files",
+      "productionVolume": "Production volume (by type & ABV)",
       "xmlFiles": "XML files",
       "attachments": "Attachments"
     },
@@ -993,6 +1023,7 @@
       "editTitle": "Edit tax report"
     },
     "form": {
+      "taxType": "Tax type",
       "taxYear": "Tax year",
       "taxMonth": "Month",
       "status": "Status",
@@ -1001,18 +1032,54 @@
       "xmlFiles": "XML files",
       "xmlPlaceholder": "Enter file names, one per line",
       "attachments": "Attachment files",
-      "attachmentsPlaceholder": "Enter attachment file names, one per line"
+      "attachmentsHint": "Upload attachment files to list them here."
     },
-    "emptyBreakdown": "No production data found for this year.",
-    "selectTaxYear": "Select a tax year and month to generate a report.",
+    "emptyBreakdown": "No production data found for this period.",
+    "createPrompt": {
+      "title": "Create tax report",
+      "subtitle": "Select the tax type and reporting period before generating.",
+      "confirm": "Generate"
+    },
+    "templateMissing": "Template file is not available for XML generation.",
     "generating": "Generating report data…",
     "abvUnknown": "ABV n/a",
+    "taxTypeMap": {
+      "monthly": "Monthly",
+      "yearly": "Yearly"
+    },
+    "movementTypeMap": {
+      "sale": "Taxed shipment",
+      "tax_transfer": "Export (tax exempt)",
+      "return": "Return",
+      "transfer": "Internal transfer",
+      "waste": "Disposal",
+      "unknown": "Unknown"
+    },
+    "breakdown": {
+      "columns": {
+        "movementType": "Movement type",
+        "category": "Beer category",
+        "abv": "ABV (%)",
+        "volume": "Volume (L)"
+      }
+    },
+    "sections": {
+      "summary": {
+        "title": "Summary section",
+        "subtitle": "Review and edit the full movement breakdown."
+      },
+      "dispose": {
+        "title": "Dispose section",
+        "subtitle": "Review and edit disposal-only volumes."
+      }
+    },
     "statusMap": {
       "draft": "Draft",
       "submitted": "Submitted",
       "approved": "Approved"
     },
     "errors": {
+      "taxTypeRequired": "Tax type is required.",
       "taxYearRequired": "Tax year is required.",
       "taxMonthRequired": "Month is required.",
       "statusRequired": "Status is required.",

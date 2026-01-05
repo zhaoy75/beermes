@@ -21,6 +21,15 @@
             <input id="fillDate" v-model="form.fill_at" type="date" class="w-full h-[40px] border rounded px-3" />
           </div>
           <div>
+            <label class="block text-sm text-gray-600 mb-1" for="outputSite">{{ t('lot.packaging.columns.outputSite') }}</label>
+            <select id="outputSite" v-model="form.site_id" class="w-full h-[40px] border rounded px-3">
+              <option value="">{{ t('lot.packaging.sitePlaceholder') }}</option>
+              <option v-for="site in sites" :key="site.value" :value="site.value">
+                {{ site.label }}
+              </option>
+            </select>
+          </div>
+          <div>
             <label class="block text-sm text-gray-600 mb-1" for="qtyInput">{{ t('lot.packaging.columns.quantity') }}<span class="text-red-600">*</span></label>
             <input id="qtyInput" v-model.number="form.package_qty" type="number" min="0" step="1" class="w-full h-[40px] border rounded px-3" required />
           </div>
@@ -64,12 +73,18 @@ type PackageFormState = {
   id?: string
   package_id: string
   fill_at: string
+  site_id: string
   package_qty: number
   package_size_l: string
   notes: string
 }
 
-const props = defineProps<{ open: boolean, editing: boolean, loading: boolean, categories: CategoryOption[], initial?: PackageFormState | null }>()
+type SiteOption = {
+  value: string
+  label: string
+}
+
+const props = defineProps<{ open: boolean, editing: boolean, loading: boolean, categories: CategoryOption[], sites: SiteOption[], initial?: PackageFormState | null }>()
 const emit = defineEmits<{ (e: 'close'): void; (e: 'submit', payload: PackageFormState): void }>()
 
 const { t } = useI18n()
@@ -77,6 +92,7 @@ const { t } = useI18n()
 const blank = (): PackageFormState => ({
   package_id: '',
   fill_at: '',
+  site_id: '',
   package_qty: 0,
   package_size_l: '',
   notes: '',

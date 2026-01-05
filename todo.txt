@@ -423,32 +423,7 @@ Agile開発手法を採用するので、設計資料を最小限にし、開発
   🔳KickOFF MTG    12/10
   🔳一回目の質問準備　12/16
 
-I want you to modify vue page for mainteenance produced craft beer.
-table should should be modify to card view
-移動種別は下記の種類に分類される
-・課税移出
-・輸出免税
-・移入戻り
-・社内移動
-・廃棄
 
-0. The page should include two sections of a inventory table and movement table.
-
-1. section of inventory table should include a table of inventory of produced craft beer with following columns
-  - beer name
-  - beer category
-  - package type
-  - production lot no
-  - production date
-  - quantity in liters
-  - quantity in pakages
-  - site location 
-
-
-2. section of movement table should show all movenent of craft beer between warehouse, customer, customer in foreign country and disposals.
-3. The section should have a search section to filter by beer name, category, package type, production lot no and date range.
-4. The section also should include a checkbox to filter movement to demestic customer, movement to foreign movement, movment inside, disposal movement. 
-5. The section should have a button to add or edit movement between source and destination.
 
 I want to create a tax report page to create and maintenance tax report for craft beer production.
 
@@ -463,3 +438,87 @@ I want to create a tax report page to create and maintenance tax report for craf
   - the tax report xml file should be generated based on the tax report data
   - the tax report should be saved as draft status
 ・The page should have a button to create xml for tax authority
+
+I want to create an vue page to mainteenance produced craft beer.
+
+0. The page should include two sections of a inventory table and movement table.
+
+1. section of inventory table should include a table of inventory of produced craft beer with following columns
+  - beer name
+  - beer category
+  - package type
+  - production lot no
+  - production date
+  - quantity in liters
+  - quantity in pakages
+  - site location 
+
+
+2. section of movement card list should have cards to  show all movements of craft beer between warehouse, customer, customer in foreign country and disposals.
+   movement type should include
+   　・課税移出
+　   ・輸出免税
+　   ・移入戻り
+　   ・社内移動
+　   ・廃棄
+4. The movement card should show following information
+    - movement doc no
+    - source site
+    - destination site
+    - beer name
+    - beer category
+    - package type
+    - production lot no
+    - movement date
+    - quantity in liters
+    - quantity in pakages
+    - movement lines
+3. The section should have a search section to filter by beer name, category, package type, production lot no and date range.
+4. The section also should include a checkbox to filter movement type 
+5. The section should have a button to launch movement edit page to add and edit movement of craft beer
+
+
+Feature for the movement edit page  
+   ・should have two sections that top section for source site and bottom side for destination site and  
+   ・each section should have a dropdown to select site from mst_site table.
+   ・for left source site section, there should be a table to show available inventory of craft beer in the selected source site.
+   ・when i choose a beer from the available inventory table by double click, a dialog to input the move quantity should shown. 
+   ・If I do not choose a beer, a dialog to input the move information should not be shown.
+   ・after i input the move quantity and click ok button, the selected beer with move quantity should be added to the movement line table in the bottom of the page.
+     
+
+I want to modify a tax report page to create and maintenance tax report for craft beer production.
+
+・The page should include a search section to filter tax report by 
+  tax type(yearly, monthly),tax year and month and status (draft, submitted, approved)
+・The page should show all tax report in a list of cards with following information
+  - tax type
+  - tax year, month
+  - production volume in liters with type of beer and beer ABV 
+  - total tax amount
+  - tax report xml files and attachment files
+・The page should have a button to create new tax report after prompt user to select tax type(yearly, monthly) and tax year month if needed
+  - tax report creat page compose serval sections like summary and dispose section 
+  - tax report creat page should be collect tax report data on movement of craft beer of selected year and month automatically.
+  - summary section includes 
+   - tax report data includes volume of following move type group by liters with type of beer and beer ABV 
+     課税移出
+     輸出免税
+     戻入
+     社内移動
+     廃棄
+   - use can modify the tax report data in the tax report creator page if needed
+   - after use confirm the tax report data, user can click a button to create application xml file with template like R7年11月_納税申告.xtx 
+     please read the template file and fill the data into the xml file
+   - the page should show user a link to download the generated xml file  
+   - the tax report should be saved as draft status
+   - the tax report should allow user to upload attachments files
+  - dispose section includes
+     - tax report data includes volume of following move type group by liters with type of beer and beer ABV 
+     廃棄
+    - use can modify the tax report data in the tax report creator page if needed
+    - after use confirm the tax report data, user can click a button to create application xml file with template like R7年11月_納税申告.xtx 
+     please read the template file and fill the data into the xml file
+    - the page should show user a link to download the generated xml file  
+    - the tax report should be saved as draft status
+    - the tax report should allow user to upload attachments files

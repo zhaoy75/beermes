@@ -299,6 +299,7 @@ create table if not exists pkg_packages (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null,
   lot_id uuid not null references prd_lots(id),
+  site_id uuid references mst_sites(id),
   fill_at date default current_date,
   package_id uuid not null references mst_beer_package_category(id),
   package_size_l numeric,

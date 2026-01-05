@@ -144,6 +144,7 @@
               <tr>
                 <th class="px-3 py-2 text-left">{{ t('lot.packaging.columns.fillDate') }}</th>
                 <th class="px-3 py-2 text-left">{{ t('lot.packaging.columns.package') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('lot.packaging.columns.outputSite') }}</th>
                 <th class="px-3 py-2 text-right">{{ t('lot.packaging.columns.quantity') }}</th>
                 <th class="px-3 py-2 text-right">{{ t('lot.packaging.columns.unitSize') }}</th>
                 <th class="px-3 py-2 text-right">{{ t('lot.packaging.columns.totalVolume') }}</th>
@@ -158,6 +159,7 @@
                   <div class="font-medium text-gray-800">{{ pkg.package_label }}</div>
                   <div class="text-xs text-gray-500">{{ pkg.package_code }}</div>
                 </td>
+                <td class="px-3 py-2 text-gray-600">{{ siteLabel(pkg.site_id) }}</td>
                 <td class="px-3 py-2 text-right">{{ pkg.package_qty.toLocaleString() }}</td>
                 <td class="px-3 py-2 text-right">{{ formatVolumeValue(pkg.unit_volume_l) }}</td>
                 <td class="px-3 py-2 text-right font-semibold text-gray-800">{{ formatVolumeValue(pkg.total_volume_l) }}</td>
@@ -168,10 +170,10 @@
                 </td>
               </tr>
               <tr v-if="!packagesLoading && packages.length === 0">
-                <td class="px-3 py-6 text-center text-gray-500" colspan="7">{{ t('lot.packaging.noData') }}</td>
+                <td class="px-3 py-6 text-center text-gray-500" colspan="8">{{ t('lot.packaging.noData') }}</td>
               </tr>
               <tr v-if="packagesLoading">
-                <td class="px-3 py-6 text-center text-gray-500" colspan="7">{{ t('common.loading') }}</td>
+                <td class="px-3 py-6 text-center text-gray-500" colspan="8">{{ t('common.loading') }}</td>
               </tr>
             </tbody>
           </table>
@@ -304,7 +306,7 @@
     </div>
 
     <LotIngredientDialog :open="ingredientDialog.open" :editing="ingredientDialog.editing" :loading="ingredientDialog.loading" :materials="materials" :uoms="uoms" :initial="ingredientDialog.initial" @close="closeIngredientDialog" @submit="saveIngredient" />
-    <LotPackageDialog :open="packageDialog.open" :editing="packageDialog.editing" :loading="packageDialog.loading" :categories="packageCategories" :initial="packageDialog.initial" @close="closePackageDialog" @submit="savePackage" />
+    <LotPackageDialog :open="packageDialog.open" :editing="packageDialog.editing" :loading="packageDialog.loading" :categories="packageCategories" :sites="siteOptions" :initial="packageDialog.initial" @close="closePackageDialog" @submit="savePackage" />
   </AdminLayout>
 </template>
 
@@ -369,12 +371,18 @@ interface PackageCategoryOption {
   display: string
 }
 
+interface SiteOption {
+  value: string
+  label: string
+}
+
 interface PackageRow {
   id: string
   fill_at: string | null
   package_id: string
   package_code: string
   package_label: string
+  site_id: string | null
   package_qty: number
   unit_volume_l: number | null
   total_volume_l: number
@@ -384,6 +392,7 @@ interface PackageRow {
 const packageCategories = ref<PackageCategoryOption[]>([])
 const packages = ref<PackageRow[]>([])
 const packagesLoading = ref(false)
+const siteOptions = ref<SiteOption[]>([])
 const packageDialog = reactive({
   open: false,
   editing: false,
@@ -435,6 +444,17 @@ const remainingVolume = computed(() => {
   return Math.max(totalProductVolume.value - totalFilledVolume.value, 0)
 })
 
+const siteOptionMap = computed(() => {
+  const map = new Map<string, string>()
+  siteOptions.value.forEach((item) => map.set(item.value, item.label))
+  return map
+})
+
+function siteLabel(siteId?: string | null) {
+  if (!siteId) return '—'
+  return siteOptionMap.value.get(siteId) ?? '—'
+}
+
 type SectionKey = keyof typeof sectionCollapsed
 
 function toggleSection(key: SectionKey) {
@@ -485,6 +505,7 @@ async function fetchLot() {
         loadIngredients(data.recipe_id),
         loadSteps(),
         loadMaterialsAndUoms(),
+        loadSites(),
         loadYeastMovements(data.id),
         loadPackages(data.id),
       ])
@@ -512,6 +533,24 @@ async function loadMaterialsAndUoms() {
     if (uomRes.error) throw uomRes.error
     materials.value = matRes.data ?? []
     uoms.value = uomRes.data ?? []
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+async function loadSites() {
+  try {
+    const tenant = await ensureTenant()
+    const { data, error } = await supabase
+      .from('mst_sites')
+      .select('id, code, name')
+      .eq('tenant_id', tenant)
+      .order('code')
+    if (error) throw error
+    siteOptions.value = (data ?? []).map((row: any) => ({
+      value: row.id,
+      label: `${row.code} — ${row.name}`,
+    }))
   } catch (err) {
     console.error(err)
   }
@@ -622,7 +661,7 @@ async function loadPackages(targetLotId: string | undefined) {
     }
     const { data, error } = await supabase
       .from('pkg_packages')
-      .select('id, fill_at, package_id, package_qty, package_size_l, notes, created_at')
+      .select('id, fill_at, package_id, site_id, package_qty, package_size_l, notes, created_at')
       .eq('lot_id', targetLotId)
       .order('fill_at', { ascending: false })
       .order('created_at', { ascending: false })
@@ -639,6 +678,7 @@ async function loadPackages(targetLotId: string | undefined) {
         package_id: row.package_id,
         package_code: category?.code ?? '—',
         package_label: category?.name ? `${category.code} — ${category.name}` : category?.code ?? '—',
+        site_id: row.site_id ?? null,
         package_qty: qty,
         unit_volume_l: unitVolume,
         total_volume_l: totalVolume,
@@ -787,6 +827,7 @@ function openPackageAdd() {
   packageDialog.initial = {
     package_id: '',
     fill_at: new Date().toISOString().slice(0, 10),
+    site_id: '',
     package_qty: 0,
     package_size_l: '',
     notes: '',
@@ -800,6 +841,7 @@ function openPackageEdit(row: PackageRow) {
     id: row.id,
     package_id: row.package_id,
     fill_at: row.fill_at ? row.fill_at : '',
+    site_id: row.site_id ?? '',
     package_qty: row.package_qty,
     package_size_l: row.unit_volume_l != null ? String(row.unit_volume_l) : '',
     notes: row.notes ?? '',
@@ -819,6 +861,7 @@ async function savePackage(payload: any) {
       lot_id: lotId.value,
       package_id: payload.package_id,
       fill_at: payload.fill_at || null,
+      site_id: payload.site_id || null,
       package_qty: Number(payload.package_qty) || 0,
       package_size_l: payload.package_size_l !== '' ? Number(payload.package_size_l) : null,
       notes: payload.notes ? payload.notes.trim() : null,

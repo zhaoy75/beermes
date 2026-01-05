@@ -226,12 +226,14 @@
       "columns": {
         "fillDate": "Fill date",
         "package": "Package",
+        "outputSite": "Output site",
         "quantity": "Quantity",
         "unitSize": "Unit size",
         "totalVolume": "Total volume",
         "notes": "Notes",
         "sizeOverride": "Unit size (L)"
-      }
+      },
+      "sitePlaceholder": "Select a site"
     }
   },
   "packageCategory": {

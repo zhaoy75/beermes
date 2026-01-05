@@ -226,12 +226,14 @@
       "columns": {
         "fillDate": "充填日",
         "package": "パッケージ",
+        "outputSite": "出力拠点",
         "quantity": "数量",
         "unitSize": "単位あたり容量",
         "totalVolume": "総容量",
         "notes": "メモ",
         "sizeOverride": "単位容量 (L)"
-      }
+      },
+      "sitePlaceholder": "出力拠点を選択"
     }
   },
   "packageCategory": {

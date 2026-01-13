@@ -198,6 +198,7 @@ create table if not exists prd_lots (
   actual_srm numeric,
   created_at timestamptz default now(),
   notes text,
+  meta jsonb default '{}'::jsonb,
   unique (tenant_id, lot_code)
 );
 

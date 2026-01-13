@@ -4,7 +4,7 @@
 
 create or replace function create_lot_from_recipe(
   _tenant_id uuid,
-  _recipe_id uuid,
+  _recipe_id text,
   _lot_code text,
   _planned_start timestamptz default null,
   _vessel_id uuid default null,
@@ -22,6 +22,38 @@ begin
   if _lot_code is null or length(trim(_lot_code)) = 0 then
     raise exception 'Lot code must be provided';
   end if;
+
+  if _recipe_id is null or length(trim(_recipe_id)) = 0 then
+    begin
+      insert into prd_lots (
+        tenant_id,
+        lot_code,
+        recipe_id,
+        process_version,
+        vessel_id,
+        target_volume_l,
+        planned_start,
+        status,
+        notes
+      )
+      values (
+        _tenant_id,
+        _lot_code,
+        _recipe_id,
+        v_process.version,
+        _vessel_id,
+        coalesce(_target_volume_l, v_recipe.batch_size_l),
+        coalesce(_planned_start, now()),
+        'planned',
+        coalesce(_notes, v_recipe.notes)
+      )
+      returning id into v_lot_id;
+    exception when unique_violation then
+      raise exception 'Lot code % already exists for tenant %', _lot_code, _tenant_id;
+    end;
+    return v_lot_id;
+  end if;
+
 
   select *
     into v_recipe

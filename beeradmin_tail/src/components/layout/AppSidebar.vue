@@ -244,39 +244,39 @@ const menuGroups = computed(() => [
   {
     title: t('sidebar.group.main'),
     items: [
-      {
-        icon: GridIcon,
-        name: t('sidebar.items.dashboard'),
-        path: "/",
-        // subItems: [
-        //   { name: "Ecommerce", path: "/", pro: false },
-        //   { name: "DashBoard", path: "/beerdash", pro: false }
-        // ],
-      },
-      {
-        icon: GridIcon,
-        name: t('sidebar.items.calendar'),
-        path: "/calendar",
-        // subItems: [
-        //   { name: "Ecommerce", path: "/", pro: false },
-        //   { name: "DashBoard", path: "/beerdash", pro: false }
-        // ],
-      },
-      {
-        icon: CalenderIcon,
-        name: t('sidebar.items.recipemng'),
-        subItems: [
-          { name: t('sidebar.items.recipeList'), path: "/recipeList", pro: false },
-          { name: t('sidebar.items.lotYield'), path: "/lotYieldSummary", pro: false },
+      // {
+      //   icon: GridIcon,
+      //   name: t('sidebar.items.dashboard'),
+      //   path: "/",
+      //   // subItems: [
+      //   //   { name: "Ecommerce", path: "/", pro: false },
+      //   //   { name: "DashBoard", path: "/beerdash", pro: false }
+      //   // ],
+      // },
+      // {
+      //   icon: GridIcon,
+      //   name: t('sidebar.items.calendar'),
+      //   path: "/calendar",
+      //   // subItems: [
+      //   //   { name: "Ecommerce", path: "/", pro: false },
+      //   //   { name: "DashBoard", path: "/beerdash", pro: false }
+      //   // ],
+      // },
+      // {
+      //   icon: CalenderIcon,
+      //   name: t('sidebar.items.recipemng'),
+      //   subItems: [
+      //     { name: t('sidebar.items.recipeList'), path: "/recipeList", pro: false },
+      //     { name: t('sidebar.items.lotYield'), path: "/lotYieldSummary", pro: false },
 
-        ],
-      },
+      //   ],
+      // },
       {
         icon: CalenderIcon,
         name: t('sidebar.items.production'),
         subItems: [
           { name: t('sidebar.items.lotList'), path: "/lots", pro: false },
-          { name: t('sidebar.items.waste'), path: "/waste", pro: false },
+          // { name: t('sidebar.items.waste'), path: "/waste", pro: false },
         ],
       },
       {
@@ -293,21 +293,22 @@ const menuGroups = computed(() => [
           // { name: t('sidebar.items.siteMovements'), path: "/siteMovements", pro: false }
         ],
       },
-      {
-        icon: CalenderIcon,
-        name: t('sidebar.items.inventory'),
-        subItems: [
-          { name: t('sidebar.items.rawMaterialReceipts'), path: "/rawMaterialReceipts", pro: false },
-          { name: t('sidebar.items.rawMaterialInventory'), path: "/rawMaterialInventory", pro: false },
-        ],
-      },
+      // {
+      //   icon: CalenderIcon,
+      //   name: t('sidebar.items.inventory'),
+      //   subItems: [
+      //     { name: t('sidebar.items.rawMaterialReceipts'), path: "/rawMaterialReceipts", pro: false },
+      //     { name: t('sidebar.items.rawMaterialInventory'), path: "/rawMaterialInventory", pro: false },
+      //   ],
+      // },
       {
         icon: CalenderIcon,
         name: t('sidebar.items.masterMaintenance'),
         subItems: [
-          { name: t('sidebar.items.materialMaster'), path: "/MaterialMaster", pro: false },
+          // { name: t('sidebar.items.materialMaster'), path: "/MaterialMaster", pro: false },
           { name: t('sidebar.items.siteMaster'), path: "/siteMaster", pro: false },
-          { name: t('sidebar.items.tankMaintenance'), path: "/tankMaintenance", pro: false }
+          { name: t('sidebar.items.beerPackageCategory'), path: "/beerPackageCategory", pro: false },
+          // { name: t('sidebar.items.tankMaintenance'), path: "/tankMaintenance", pro: false }
         ],
       },
       {
@@ -318,11 +319,9 @@ const menuGroups = computed(() => [
           { name: t('sidebar.items.siteTypeMaster'), path: "/siteTypeMaster", pro: false },
           { name: t('sidebar.items.taxMaster'), path: "/taxMaster", pro: false },
           { name: t('sidebar.items.uomMaster'), path: "/uomMaster", pro: false },
-          { name: t('sidebar.items.beerPackageCategory'), path: "/beerPackageCategory", pro: false },
+
         ],
       },
-
-
       {
         icon: UserCircleIcon,
         name: t('sidebar.items.profile'),
@@ -352,26 +351,26 @@ const menuGroups = computed(() => [
       // },
     ],
   },
-  {
-    title: t('sidebar.group.ai'),
-    items: [
-      {
-        icon: PieChartIcon,
-        name: t('sidebar.items.beerSalesForecast'),
-        path: "/beer-sales-forecast",
-      },
-      {
-        icon: BoxCubeIcon,
-        name: t('sidebar.items.aiOrderAssistant'),
-        path: "/ai-order-assistant",
-      },
-      {
-        icon: ChatIcon,
-        name: t('sidebar.items.aiAssistant'),
-        path: "/ai-assistant",
-      },
-    ],
-  },
+  // {
+  //   title: t('sidebar.group.ai'),
+  //   items: [
+  //     {
+  //       icon: PieChartIcon,
+  //       name: t('sidebar.items.beerSalesForecast'),
+  //       path: "/beer-sales-forecast",
+  //     },
+  //     {
+  //       icon: BoxCubeIcon,
+  //       name: t('sidebar.items.aiOrderAssistant'),
+  //       path: "/ai-order-assistant",
+  //     },
+  //     {
+  //       icon: ChatIcon,
+  //       name: t('sidebar.items.aiAssistant'),
+  //       path: "/ai-assistant",
+  //     },
+  //   ],
+  // },
   // {
   //   title: "Others",
   //   items: [

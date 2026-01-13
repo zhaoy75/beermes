@@ -24,8 +24,8 @@
             <input id="lotStatus" v-model.trim="lotForm.status" type="text" class="w-full h-[40px] border rounded px-3" />
           </div>
           <div>
-            <label class="block text-sm text-gray-600 mb-1" for="lotProcessVersion">{{ t('lot.edit.processVersion') }}</label>
-            <input id="lotProcessVersion" v-model.number="lotForm.process_version" type="number" min="1" class="w-full h-[40px] border rounded px-3" />
+            <label class="block text-sm text-gray-600 mb-1" for="lotLabel">{{ t('lot.edit.label') }}</label>
+            <input id="lotLabel" v-model.trim="lotForm.label" type="text" class="w-full h-[40px] border rounded px-3" />
           </div>
           <div>
             <label class="block text-sm text-gray-600 mb-1" for="lotPlannedStart">{{ t('lot.edit.plannedStart') }}</label>
@@ -47,10 +47,6 @@
             <label class="block text-sm text-gray-600 mb-1" for="lotTargetVolume">{{ t('lot.edit.targetVolume') }}</label>
             <input id="lotTargetVolume" v-model.number="lotForm.target_volume_l" type="number" min="0" step="0.01" class="w-full h-[40px] border rounded px-3" />
           </div>
-          <div>
-            <label class="block text-sm text-gray-600 mb-1" for="lotVessel">{{ t('lot.edit.vessel') }}</label>
-            <input id="lotVessel" v-model.trim="lotForm.vessel_id" type="text" class="w-full h-[40px] border rounded px-3" />
-          </div>
           <div class="lg:col-span-3">
             <label class="block text-sm text-gray-600 mb-1" for="lotNotes">{{ t('lot.edit.notes') }}</label>
             <textarea id="lotNotes" v-model.trim="lotForm.notes" rows="3" class="w-full border rounded px-3 py-2"></textarea>
@@ -58,8 +54,42 @@
         </form>
       </section>
 
-      <!-- Ingredients -->
       <section class="bg-white rounded-xl shadow border border-gray-200 p-5">
+        <header class="flex items-center justify-between mb-4">
+          <div>
+            <h2 class="text-lg font-semibold text-gray-800">{{ t('lot.edit.actualTitle') }}</h2>
+            <p class="text-xs text-gray-500">{{ t('lot.edit.actualSubtitle') }}</p>
+          </div>
+          <button class="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50" type="button" :disabled="savingLot" @click="saveLot">
+            {{ savingLot ? t('common.saving') : t('common.save') }}
+          </button>
+        </header>
+        <form class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" @submit.prevent>
+          <div>
+            <label class="block text-sm text-gray-600 mb-1" for="lotActualProductVolume">{{ t('lot.edit.actualProductVolume') }}</label>
+            <input id="lotActualProductVolume" v-model.trim="lotForm.actual_product_volume" type="number" min="0" step="0.01" class="w-full h-[40px] border rounded px-3" />
+          </div>
+          <div>
+            <label class="block text-sm text-gray-600 mb-1" for="lotActualOg">{{ t('lot.edit.actualOg') }}</label>
+            <input id="lotActualOg" v-model.trim="lotForm.actual_og" type="number" min="0" step="0.001" class="w-full h-[40px] border rounded px-3" />
+          </div>
+          <div>
+            <label class="block text-sm text-gray-600 mb-1" for="lotActualFg">{{ t('lot.edit.actualFg') }}</label>
+            <input id="lotActualFg" v-model.trim="lotForm.actual_fg" type="number" min="0" step="0.001" class="w-full h-[40px] border rounded px-3" />
+          </div>
+          <div>
+            <label class="block text-sm text-gray-600 mb-1" for="lotActualAbv">{{ t('lot.edit.actualAbv') }}</label>
+            <input id="lotActualAbv" v-model.trim="lotForm.actual_abv" type="number" min="0" step="0.01" class="w-full h-[40px] border rounded px-3" />
+          </div>
+          <div>
+            <label class="block text-sm text-gray-600 mb-1" for="lotActualSrm">{{ t('lot.edit.actualSrm') }}</label>
+            <input id="lotActualSrm" v-model.trim="lotForm.actual_srm" type="number" min="0" step="0.1" class="w-full h-[40px] border rounded px-3" />
+          </div>
+        </form>
+      </section>
+
+      <!-- Ingredients -->
+      <section v-if="false" class="bg-white rounded-xl shadow border border-gray-200 p-5">
         <header class="flex items-center justify-between mb-4">
           <div class="flex items-center gap-3">
             <button class="px-2 py-1 text-xs rounded border border-gray-300 hover:bg-gray-100" type="button" @click="toggleSection('ingredients')">
@@ -119,6 +149,9 @@
           </div>
           <div class="flex items-center gap-2">
             <span v-if="packagesLoading" class="text-sm text-gray-500">{{ t('common.loading') }}</span>
+            <button class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-50" type="button" :disabled="packagesLoading || savingPackaging" @click="savePackagingMovement">
+              {{ savingPackaging ? t('common.saving') : t('common.save') }}
+            </button>
             <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50" type="button" :disabled="packagesLoading" @click="openPackageAdd">{{ t('lot.packaging.addButton') }}</button>
           </div>
         </header>
@@ -331,15 +364,22 @@ const tenantId = ref<string | null>(null)
 const lot = ref<any>(null)
 const loadingLot = ref(false)
 const savingLot = ref(false)
+const savingPackaging = ref(false)
 
 const lotForm = reactive({
   status: '',
+  label: '',
   process_version: null as number | null,
   planned_start: '',
   // planned_end: '',
   // actual_start: '',
   // actual_end: '',
   target_volume_l: null as number | null,
+  actual_product_volume: '',
+  actual_og: '',
+  actual_fg: '',
+  actual_abv: '',
+  actual_srm: '',
   vessel_id: '',
   notes: '',
 })
@@ -374,6 +414,7 @@ interface PackageCategoryOption {
 interface SiteOption {
   value: string
   label: string
+  code?: string
 }
 
 interface PackageRow {
@@ -434,6 +475,8 @@ const totalFilledVolume = computed(() => {
 })
 
 const totalProductVolume = computed(() => {
+  const actual = numberOrNull(lotForm.actual_product_volume)
+  if (actual != null) return actual
   const target = lotForm.target_volume_l
   if (target == null || Number.isNaN(Number(target))) return null
   return Number(target)
@@ -450,9 +493,82 @@ const siteOptionMap = computed(() => {
   return map
 })
 
+const siteCodeMap = computed(() => {
+  const map = new Map<string, string>()
+  siteOptions.value.forEach((item) => {
+    if (item.code) map.set(item.value, item.code)
+  })
+  return map
+})
+
 function siteLabel(siteId?: string | null) {
   if (!siteId) return '—'
   return siteOptionMap.value.get(siteId) ?? '—'
+}
+
+function findLitersUomId() {
+  const match = uoms.value.find((row) => row.code?.toLowerCase() === 'l')
+  return match?.id ?? uoms.value[0]?.id ?? null
+}
+
+function buildPackagingDocNo(siteId: string | null) {
+  const lotCode = lot.value?.lot_code ?? 'LOT'
+  const siteCode = siteId ? siteCodeMap.value.get(siteId) : null
+  if (siteCode) return `PR-${lotCode}-${siteCode}`
+  if (siteId) return `PR-${lotCode}-${siteId.slice(0, 6)}`
+  return `PR-${lotCode}-NO-SITE`
+}
+
+function resolveMovementAt(rows: PackageRow[]) {
+  let latest: Date | null = null
+  rows.forEach((row) => {
+    if (!row.fill_at) return
+    const parsed = new Date(row.fill_at)
+    if (Number.isNaN(parsed.getTime())) return
+    if (!latest || parsed > latest) latest = parsed
+  })
+  return (latest ?? new Date()).toISOString()
+}
+
+function resolveMetaLabel(meta: unknown) {
+  if (!meta || typeof meta !== 'object' || Array.isArray(meta)) return null
+  const label = (meta as Record<string, unknown>).label
+  if (typeof label !== 'string') return null
+  const trimmed = label.trim()
+  return trimmed.length ? trimmed : null
+}
+
+function resolveMetaNumber(meta: unknown, key: string) {
+  if (!meta || typeof meta !== 'object' || Array.isArray(meta)) return null
+  const value = (meta as Record<string, unknown>)[key]
+  if (value === null || value === undefined) return null
+  const num = Number(value)
+  return Number.isNaN(num) ? null : num
+}
+
+function numberOrNull(value: string) {
+  if (value === null || value === undefined || value === '') return null
+  const num = Number(value)
+  return Number.isNaN(num) ? null : num
+}
+
+function buildMetaWithLabel(meta: unknown, label: string, actualProductVolume: string) {
+  const base = (meta && typeof meta === 'object' && !Array.isArray(meta))
+    ? { ...(meta as Record<string, unknown>) }
+    : {}
+  const trimmed = label.trim()
+  if (trimmed) {
+    base.label = trimmed
+  } else {
+    delete base.label
+  }
+  const volume = numberOrNull(actualProductVolume)
+  if (volume == null) {
+    delete base.actual_product_volume
+  } else {
+    base.actual_product_volume = volume
+  }
+  return base
 }
 
 type SectionKey = keyof typeof sectionCollapsed
@@ -493,12 +609,19 @@ async function fetchLot() {
     lot.value = data
     if (data) {
       lotForm.status = data.status ?? ''
+      lotForm.label = resolveMetaLabel(data.meta) ?? ''
+      const actualVolume = resolveMetaNumber(data.meta, 'actual_product_volume')
+      lotForm.actual_product_volume = actualVolume != null ? String(actualVolume) : ''
       lotForm.process_version = data.process_version ?? null
       lotForm.planned_start = toInputDateTime(data.planned_start)
       // lotForm.planned_end = toInputDateTime(data.planned_end)
       // lotForm.actual_start = toInputDateTime(data.actual_start)
       // lotForm.actual_end = toInputDateTime(data.actual_end)
       lotForm.target_volume_l = data.target_volume_l ?? null
+      lotForm.actual_og = data.actual_og != null ? String(data.actual_og) : ''
+      lotForm.actual_fg = data.actual_fg != null ? String(data.actual_fg) : ''
+      lotForm.actual_abv = data.actual_abv != null ? String(data.actual_abv) : ''
+      lotForm.actual_srm = data.actual_srm != null ? String(data.actual_srm) : ''
       lotForm.vessel_id = data.vessel_id ?? ''
       lotForm.notes = data.notes ?? ''
       await Promise.all([
@@ -550,6 +673,7 @@ async function loadSites() {
     siteOptions.value = (data ?? []).map((row: any) => ({
       value: row.id,
       label: `${row.code} — ${row.name}`,
+      code: row.code,
     }))
   } catch (err) {
     console.error(err)
@@ -776,6 +900,7 @@ async function saveLot() {
   if (!lotId.value) return
   try {
     savingLot.value = true
+    const meta = buildMetaWithLabel(lot.value?.meta, lotForm.label, lotForm.actual_product_volume)
     const update: Record<string, any> = {
       status: lotForm.status || null,
       process_version: lotForm.process_version,
@@ -784,8 +909,13 @@ async function saveLot() {
       // actual_start: fromInputDateTime(lotForm.actual_start),
       // actual_end: fromInputDateTime(lotForm.actual_end),
       target_volume_l: lotForm.target_volume_l,
+      actual_og: numberOrNull(lotForm.actual_og),
+      actual_fg: numberOrNull(lotForm.actual_fg),
+      actual_abv: numberOrNull(lotForm.actual_abv),
+      actual_srm: numberOrNull(lotForm.actual_srm),
       vessel_id: lotForm.vessel_id || null,
       notes: lotForm.notes || null,
+      meta,
     }
     const { error } = await supabase
       .from('prd_lots')
@@ -891,6 +1021,93 @@ async function deletePackage(row: PackageRow) {
     await loadPackages(lotId.value)
   } catch (err) {
     console.error(err)
+  }
+}
+
+async function savePackagingMovement() {
+  if (!lotId.value || !lot.value) return
+  if (!packages.value.length) return
+  try {
+    savingPackaging.value = true
+    const tenant = await ensureTenant()
+    const litersUomId = findLitersUomId()
+    if (!litersUomId) throw new Error('Liters UOM not found')
+
+    const groups = new Map<string, PackageRow[]>()
+    packages.value.forEach((pkg) => {
+      const key = pkg.site_id ?? 'no-site'
+      if (!groups.has(key)) groups.set(key, [])
+      groups.get(key)?.push(pkg)
+    })
+
+    for (const [key, rows] of groups.entries()) {
+      const siteId = key === 'no-site' ? null : key
+      const linePayload = rows
+        .map((pkg, index) => {
+          const qty = Number(pkg.total_volume_l ?? 0)
+          if (!qty || qty <= 0) return null
+          const meta: Record<string, unknown> = {}
+          if (pkg.package_qty) meta.package_qty = pkg.package_qty
+          if (pkg.unit_volume_l != null) meta.unit_volume_l = pkg.unit_volume_l
+          return {
+            tenant_id: tenant,
+            line_no: index + 1,
+            package_id: pkg.id,
+            lot_id: lotId.value,
+            qty,
+            uom_id: litersUomId,
+            notes: pkg.notes ?? null,
+            meta: Object.keys(meta).length ? meta : null,
+          }
+        })
+        .filter((row) => row != null) as Array<Record<string, any>>
+
+      if (linePayload.length === 0) continue
+
+      const docNo = buildPackagingDocNo(siteId)
+      const movementPayload = {
+        tenant_id: tenant,
+        doc_no: docNo,
+        doc_type: 'production_receipt',
+        status: 'posted',
+        movement_at: resolveMovementAt(rows),
+        src_site_id: null,
+        dest_site_id: siteId,
+        meta: { material_type: 'beer', tax_type: '', tax_report_status: '' },
+      }
+
+      const { data: existing, error: existingError } = await supabase
+        .from('inv_movements')
+        .select('id')
+        .eq('tenant_id', tenant)
+        .eq('doc_no', docNo)
+        .maybeSingle()
+      if (existingError) throw existingError
+
+      let movementId = existing?.id ?? null
+      if (movementId) {
+        const { error } = await supabase.from('inv_movements').update(movementPayload).eq('id', movementId)
+        if (error) throw error
+        const { error: deleteError } = await supabase.from('inv_movement_lines').delete().eq('movement_id', movementId)
+        if (deleteError) throw deleteError
+      } else {
+        const { data, error } = await supabase.from('inv_movements').insert(movementPayload).select('id').single()
+        if (error || !data) throw error || new Error('Insert failed')
+        movementId = data.id
+      }
+
+      const payloadWithMovement = linePayload.map((row) => ({
+        ...row,
+        movement_id: movementId,
+      }))
+
+      const { error: lineError } = await supabase.from('inv_movement_lines').insert(payloadWithMovement)
+      if (lineError) throw lineError
+    }
+  } catch (err) {
+    console.error(err)
+  } finally {
+    savingPackaging.value = false
   }
 }
 

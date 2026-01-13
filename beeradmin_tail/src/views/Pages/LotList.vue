@@ -20,6 +20,14 @@
           <input id="lotNameFilter" v-model.trim="search.name" type="search" class="w-full h-[36px] border rounded px-3" :placeholder="t('lot.list.namePlaceholder')" />
         </div>
         <div>
+          <label class="block text-sm text-gray-600 mb-1" for="lotLabelFilter">{{ t('lot.list.labelLabel') }}</label>
+          <input id="lotLabelFilter" v-model.trim="search.label" type="search" class="w-full h-[36px] border rounded px-3" />
+        </div>
+        <div>
+          <label class="block text-sm text-gray-600 mb-1" for="abvFilter">{{ t('lot.list.abvLabel') }}</label>
+          <input id="abvFilter" v-model.trim="search.abv" type="number" step="0.01" min="0" class="w-full h-[36px] border rounded px-3" />
+        </div>
+        <div>
           <label class="block text-sm text-gray-600 mb-1" for="startFilter">{{ t('lot.list.startDate') }}</label>
           <input id="startFilter" v-model="search.start" type="date" class="w-full h-[36px] border rounded px-3" />
         </div>
@@ -53,13 +61,12 @@
           <tbody class="divide-y divide-gray-100">
             <tr v-for="lot in sortedLots" :key="lot.id" class="hover:bg-gray-50">
               <td class="px-3 py-2 text-sm text-blue-600 hover:underline cursor-pointer" @click="goEdit(lot.id)">{{ lot.lot_code }}</td>
+              <td class="px-3 py-2 text-sm">{{ lot.label || '—' }}</td>
               <td class="px-3 py-2 text-sm">{{ lot.display_name }}</td>
-              <td class="px-3 py-2 text-sm">{{ lot.process_version ?? '—' }}</td>
               <td class="px-3 py-2 text-sm">
                 <span :class="statusClass(lot.status)">{{ lot.status || '—' }}</span>
               </td>
               <td class="px-3 py-2 text-sm text-gray-600">{{ fmtDateTime(lot.created_at) }}</td>
-              <td class="px-3 py-2 text-sm text-gray-600">{{ fmtDateTime(lot.planned_start) }}</td>
               <!-- <td class="px-3 py-2 text-sm text-gray-600">{{ fmtDateTime(lot.planned_end) }}</td>
               <td class="px-3 py-2 text-sm text-gray-600">{{ fmtDateTime(lot.actual_start) }}</td>
               <td class="px-3 py-2 text-sm text-gray-600">{{ fmtDateTime(lot.actual_end) }}</td> -->
@@ -72,10 +79,10 @@
               </td>
             </tr>
             <tr v-if="!loading && sortedLots.length === 0">
-              <td class="px-3 py-5 text-center text-gray-500" colspan="7">{{ t('common.noData') }}</td>
+              <td class="px-3 py-5 text-center text-gray-500" colspan="6">{{ t('common.noData') }}</td>
             </tr>
             <tr v-if="loading">
-              <td class="px-3 py-5 text-center text-gray-500" colspan="7">{{ t('common.loading') }}</td>
+              <td class="px-3 py-5 text-center text-gray-500" colspan="6">{{ t('common.loading') }}</td>
             </tr>
           </tbody>
         </table>
@@ -109,8 +116,10 @@ interface RawLotRow {
   id: string
   tenant_id: string
   lot_code: string
+  meta?: Record<string, any> | null
   process_version: number | null
   status: string | null
+  actual_abv: number | null
   created_at: string | null
   planned_start: string | null
   // planned_end?: string | null
@@ -121,23 +130,25 @@ interface RawLotRow {
 
 interface LotRow extends RawLotRow {
   display_name: string
+  label: string
 }
 
-type SortKey = 'lot_code' | 'display_name' | 'process_version' | 'status' | 'created_at' | 'planned_start'
+type SortKey = 'lot_code' | 'display_name' | 'label' | 'status' | 'created_at'
 
 type SearchState = {
   name: string
+  label: string
+  abv: string
   start: string
   end: string
 }
 
 const columns: Array<{ key: SortKey, label: string }> = [
   { key: 'lot_code', label: 'lot.list.colLotCode' },
+  { key: 'label', label: 'lot.list.colLabel' },
   { key: 'display_name', label: 'lot.list.colName' },
-  { key: 'process_version', label: 'lot.list.colVersion' },
   { key: 'status', label: 'lot.list.colStatus' },
   { key: 'created_at', label: 'lot.list.colCreated' },
-  { key: 'planned_start', label: 'lot.list.colPlannedStart' },
   // { key: 'planned_end', label: 'lot.list.colPlannedEnd' },
   // { key: 'actual_start', label: 'lot.list.colActualStart' },
   // { key: 'actual_end', label: 'lot.list.colActualEnd' },
@@ -148,7 +159,7 @@ const loading = ref(false)
 const tenantId = ref<string | null>(null)
 const recipes = ref<Array<{ id: string, name: string, code: string, version: number }>>([])
 
-const search = reactive<SearchState>({ name: '', start: '', end: '' })
+const search = reactive<SearchState>({ name: '', label: '', abv: '', start: '', end: '' })
 const sortKey = ref<SortKey>('created_at')
 const sortDirection = ref<'asc' | 'desc'>('desc')
 
@@ -192,13 +203,17 @@ async function fetchLots() {
     const { data, error } = await query
     if (error) throw error
 
-    lots.value = (data ?? []).map((row) => ({
-      ...row,
-      display_name: row.notes?.split('\n')[0] || row.lot_code,
-      // planned_end: (row as any)?.planned_end ?? null,
-      // actual_start: (row as any)?.actual_start ?? null,
-      // actual_end: (row as any)?.actual_end ?? null,
-    }))
+    lots.value = (data ?? []).map((row) => {
+      const label = resolveMetaLabel(row.meta)
+      return {
+        ...row,
+        label: label || '',
+        display_name: row.notes?.split('\n')[0] || row.lot_code,
+        // planned_end: (row as any)?.planned_end ?? null,
+        // actual_start: (row as any)?.actual_start ?? null,
+        // actual_end: (row as any)?.actual_end ?? null,
+      }
+    })
   } catch (err) {
     console.error(err)
   } finally {
@@ -223,6 +238,8 @@ async function fetchRecipes() {
 
 function resetFilters() {
   search.name = ''
+  search.label = ''
+  search.abv = ''
   search.start = ''
   search.end = ''
   fetchLots()
@@ -230,10 +247,18 @@ function resetFilters() {
 
 const filteredLots = computed(() => {
   return lots.value.filter((lot) => {
-    const nameMatch = !search.name || lot.lot_code.toLowerCase().includes(search.name.toLowerCase()) || lot.display_name.toLowerCase().includes(search.name.toLowerCase())
+    const nameQuery = search.name.toLowerCase()
+    const labelQuery = search.label.toLowerCase()
+    const abvFilter = search.abv.trim() === '' ? null : Number(search.abv)
+    const nameMatch = !search.name
+      || lot.lot_code.toLowerCase().includes(nameQuery)
+      || lot.display_name.toLowerCase().includes(nameQuery)
+    const labelMatch = !search.label || lot.label.toLowerCase().includes(labelQuery)
+    const abvMatch = abvFilter == null
+      || (!Number.isNaN(abvFilter) && lot.actual_abv != null && Number(lot.actual_abv) === abvFilter)
     const startOk = !search.start || (!!lot.planned_start && safeTimestamp(lot.planned_start) >= safeTimestamp(search.start))
     const endOk = !search.end || (!!lot.planned_start && safeTimestamp(lot.planned_start) <= safeTimestamp(search.end, true))
-    return nameMatch && startOk && endOk
+    return nameMatch && labelMatch && abvMatch && startOk && endOk
   })
 })
 
@@ -299,6 +324,14 @@ function statusClass(status: string | null) {
   return 'px-2 py-1 rounded-full bg-blue-100 text-blue-700'
 }
 
+function resolveMetaLabel(meta: unknown) {
+  if (!meta || typeof meta !== 'object' || Array.isArray(meta)) return null
+  const label = (meta as Record<string, unknown>).label
+  if (typeof label !== 'string') return null
+  const trimmed = label.trim()
+  return trimmed.length ? trimmed : null
+}
+
 function goEdit(id: string) {
   router.push({ path: `/lots/${id}` })
 }
@@ -336,12 +369,12 @@ function closeCreate() {
   showCreate.value = false
 }
 
-async function handleCreate(payload: { recipeId: string, plannedStart: string | null, targetVolume: number | null, notes: string | null, processVersion: number | null }) {
+async function handleCreate(payload: { recipeId: string, label: string | null, plannedStart: string | null, targetVolume: number | null, notes: string | null, processVersion: number | null }) {
   try {
     loading.value = true
     const tenant = await ensureTenant()
     const lotCode = await generateLotCode()
-    const { error } = await supabase.rpc('create_lot_from_recipe', {
+    const { data, error } = await supabase.rpc('create_lot_from_recipe', {
       _tenant_id: tenant,
       _recipe_id: payload.recipeId,
       _lot_code: lotCode,
@@ -351,6 +384,13 @@ async function handleCreate(payload: { recipeId: string, plannedStart: string | 
       _notes: payload.notes,
     })
     if (error) throw error
+    if (payload.label && data) {
+      const { error: labelError } = await supabase
+        .from('prd_lots')
+        .update({ meta: { label: payload.label } })
+        .eq('id', data)
+      if (labelError) throw labelError
+    }
     showCreate.value = false
     fetchLots()
   } catch (err) {

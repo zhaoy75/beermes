@@ -520,7 +520,7 @@
       "breadcrumb": "Craft Beer Movement",
       "titleNew": "New Craft Beer Movement",
       "titleEdit": "Edit Craft Beer Movement",
-      "subtitle": "Select source inventory and create movement lines.",
+      "subtitle": "Select source inventory and move beer between sites.",
       "back": "Back to list",
       "form": {
         "docNo": "Document no",
@@ -531,15 +531,19 @@
       },
       "source": {
         "title": "Source site",
-        "subtitle": "Double-click inventory to add a movement line."
+        "subtitle": "Select a card, double-click for quantity, or use the move buttons."
       },
       "destination": {
         "title": "Destination site",
         "subtitle": "Review line items for the destination."
       },
+      "actions": {
+        "moveToDestination": "Move to destination",
+        "moveToSource": "Move to source"
+      },
       "lines": {
         "title": "Movement lines",
-        "hint": "Use the source inventory list to add lines.",
+        "hint": "Use the source inventory cards or the move button to add lines.",
         "columns": {
           "beer": "Beer",
           "category": "Category",
@@ -555,6 +559,11 @@
         "qtyLiters": "Liters",
         "confirm": "Add line"
       },
+      "manualDialog": {
+        "title": "Add movement line",
+        "packageSelect": "Select beer package",
+        "confirm": "Add line"
+      },
       "errors": {
         "docNoRequired": "Document no is required.",
         "docTypeRequired": "Movement type is required.",
@@ -563,7 +572,10 @@
         "linesRequired": "Add at least one movement line.",
         "moveQtyRequired": "Move quantity must be greater than zero.",
         "moveQtyExceed": "Move quantity exceeds available packages.",
-        "sourceRequired": "Select a source site first."
+        "sourceRequired": "Select a source site first.",
+        "selectSourceItem": "Select a source inventory card.",
+        "selectLineRequired": "Select a movement line to move back.",
+        "manualPackageRequired": "Select a beer package."
       },
       "toast": {
         "saved": "Movement saved."

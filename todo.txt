@@ -481,9 +481,11 @@ I want to create an vue page to mainteenance produced craft beer.
 Feature for the movement edit page  
    ・should have two sections that top section for source site and bottom side for destination site and  
    ・each section should have a dropdown to select site from mst_site table.
-   ・for left source site section, there should be a table to show available inventory of craft beer in the selected source site.
-   ・when i choose a beer from the available inventory table by double click, a dialog to input the move quantity should shown. 
-   ・If I do not choose a beer, a dialog to input the move information should not be shown.
+   ・between the two section, i need two buttons to move selected beer from source site to destination site and vice versa.
+   ・for source site section, there should be a list of cards to show available inventory of craft beer in the selected source site.
+    ・each card should show beer name, category, package type, production lot no, production date, quantity in liters and quantity in pakages.
+   ・when i choose a card beer from the available inventory table by double click, a dialog to input the move quantity should shown. 
+   ・when i press the move button if there are no card in source section, a dialog to input movement line should be shown to allow user to input move lines 
    ・after i input the move quantity and click ok button, the selected beer with move quantity should be added to the movement line table in the bottom of the page.
      
 

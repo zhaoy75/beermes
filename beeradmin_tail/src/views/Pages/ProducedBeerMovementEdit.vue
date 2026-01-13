@@ -57,44 +57,66 @@
           </div>
         </header>
 
-        <div class="overflow-x-auto border border-gray-200 rounded-lg">
-          <table class="min-w-full divide-y divide-gray-200 text-sm">
-            <thead class="bg-gray-50 text-xs uppercase text-gray-600">
-              <tr>
-                <th class="px-3 py-2 text-left">{{ t('producedBeer.inventory.table.beerName') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('producedBeer.inventory.table.category') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('producedBeer.inventory.table.packageType') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('producedBeer.inventory.table.lotNo') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('producedBeer.inventory.table.productionDate') }}</th>
-                <th class="px-3 py-2 text-right">{{ t('producedBeer.inventory.table.qtyLiters') }}</th>
-                <th class="px-3 py-2 text-right">{{ t('producedBeer.inventory.table.qtyPackages') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('producedBeer.inventory.table.site') }}</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-100">
-              <tr
-                v-for="row in sourceInventoryRows"
-                :key="row.id"
-                class="hover:bg-gray-50 cursor-pointer"
-                @dblclick="openMoveDialog(row)"
-              >
-                <td class="px-3 py-2">
-                  <div class="font-medium text-gray-900">{{ row.beerName || '—' }}</div>
-                </td>
-                <td class="px-3 py-2">{{ categoryLabel(row.categoryId) }}</td>
-                <td class="px-3 py-2">{{ row.packageTypeLabel || '—' }}</td>
-                <td class="px-3 py-2 font-mono text-xs text-gray-600">{{ row.lotCode || '—' }}</td>
-                <td class="px-3 py-2 text-xs text-gray-500">{{ formatDate(row.productionDate) }}</td>
-                <td class="px-3 py-2 text-right">{{ formatNumber(row.qtyLiters) }}</td>
-                <td class="px-3 py-2 text-right">{{ formatNumber(row.qtyPackages) }}</td>
-                <td class="px-3 py-2">{{ siteLabel(row.siteId) }}</td>
-              </tr>
-              <tr v-if="!inventoryLoading && sourceInventoryRows.length === 0">
-                <td colspan="8" class="px-3 py-8 text-center text-gray-500">{{ t('common.noData') }}</td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+          <article
+            v-for="row in sourceInventoryRows"
+            :key="row.id"
+            class="border rounded-lg p-3 shadow-sm cursor-pointer transition"
+            :class="selectedInventory?.id === row.id ? 'border-blue-500 ring-1 ring-blue-200 bg-blue-50' : 'border-gray-200 hover:border-gray-300'"
+            @click="selectSourceInventory(row)"
+            @dblclick="openMoveDialog(row)"
+          >
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <p class="text-xs uppercase tracking-wide text-gray-400">{{ t('producedBeer.inventory.table.beerName') }}</p>
+                <p class="font-semibold text-gray-900">{{ row.beerName || '—' }}</p>
+              </div>
+              <span class="text-xs px-2 py-1 rounded-full border text-gray-500">{{ row.packageTypeLabel || '—' }}</span>
+            </div>
+            <dl class="mt-3 space-y-1 text-xs text-gray-600">
+              <div class="flex items-center justify-between">
+                <dt>{{ t('producedBeer.inventory.table.lotNo') }}</dt>
+                <dd class="font-mono text-xs">{{ row.lotCode || '—' }}</dd>
+              </div>
+              <div class="flex items-center justify-between">
+                <dt>{{ t('producedBeer.inventory.table.category') }}</dt>
+                <dd>{{ categoryLabel(row.categoryId) }}</dd>
+              </div>
+              <div class="flex items-center justify-between">
+                <dt>{{ t('producedBeer.inventory.table.productionDate') }}</dt>
+                <dd class="text-gray-500">{{ formatDate(row.productionDate) }}</dd>
+              </div>
+              <div class="flex items-center justify-between">
+                <dt>{{ t('producedBeer.inventory.table.qtyLiters') }}</dt>
+                <dd class="font-medium text-gray-900">{{ formatNumber(row.qtyLiters) }}</dd>
+              </div>
+              <div class="flex items-center justify-between">
+                <dt>{{ t('producedBeer.inventory.table.qtyPackages') }}</dt>
+                <dd class="font-medium text-gray-900">{{ formatNumber(row.qtyPackages) }}</dd>
+              </div>
+            </dl>
+          </article>
+          <div v-if="!inventoryLoading && sourceInventoryRows.length === 0" class="col-span-full py-8 text-center text-gray-500">
+            {{ t('common.noData') }}
+          </div>
         </div>
+      </section>
+
+      <section class="flex flex-wrap items-center justify-center gap-3">
+        <button
+          class="px-4 py-2 rounded border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
+          :disabled="!movementForm.sourceSiteId"
+          @click="handleMoveToDestination"
+        >
+          {{ t('producedBeer.edit.actions.moveToDestination') }}
+        </button>
+        <button
+          class="px-4 py-2 rounded border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
+          :disabled="movementForm.lines.length === 0"
+          @click="handleMoveToSource"
+        >
+          {{ t('producedBeer.edit.actions.moveToSource') }}
+        </button>
       </section>
 
       <section class="border border-gray-200 rounded-xl shadow-sm p-4 bg-white space-y-4">
@@ -135,7 +157,13 @@
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-100">
-                <tr v-for="(line, index) in movementForm.lines" :key="line.localId">
+                <tr
+                  v-for="(line, index) in movementForm.lines"
+                  :key="line.localId"
+                  class="cursor-pointer"
+                  :class="line.localId === selectedLineId ? 'bg-blue-50' : 'hover:bg-gray-50'"
+                  @click="selectMovementLine(line)"
+                >
                   <td class="px-3 py-2 text-gray-900">{{ line.beerName || '—' }}</td>
                   <td class="px-3 py-2 text-gray-600">{{ categoryLabel(line.categoryId) }}</td>
                   <td class="px-3 py-2 text-gray-600">{{ line.packageTypeLabel || '—' }}</td>
@@ -143,7 +171,7 @@
                   <td class="px-3 py-2 text-right">{{ formatNumber(line.packageQty) }}</td>
                   <td class="px-3 py-2 text-right">{{ formatNumber(line.qtyLiters) }}</td>
                   <td class="px-3 py-2">
-                    <button class="px-2 py-1 text-xs rounded border hover:bg-gray-100" @click="removeMovementLine(index)">
+                    <button class="px-2 py-1 text-xs rounded border hover:bg-gray-100" @click.stop="removeMovementLine(index)">
                       {{ t('common.delete') }}
                     </button>
                   </td>
@@ -203,12 +231,59 @@
           </footer>
         </div>
       </div>
+
+      <div v-if="showManualDialog" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div class="w-full max-w-lg bg-white rounded-xl shadow-lg border">
+          <header class="px-4 py-3 border-b">
+            <h3 class="font-semibold">{{ t('producedBeer.edit.manualDialog.title') }}</h3>
+          </header>
+          <section class="p-4 space-y-3">
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.edit.manualDialog.packageSelect') }}</label>
+              <select v-model="manualMoveForm.packageId" class="w-full h-[40px] border rounded px-3 bg-white">
+                <option value="">{{ t('common.select') }}</option>
+                <option v-for="option in manualInventoryOptions" :key="option.value" :value="option.value">
+                  {{ option.label }}
+                </option>
+              </select>
+            </div>
+            <div v-if="manualSelectedInventory" class="rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600">
+              <p class="font-medium text-gray-900">{{ manualSelectedInventory.beerName || '—' }}</p>
+              <p>{{ categoryLabel(manualSelectedInventory.categoryId) }}</p>
+              <p>{{ manualSelectedInventory.packageTypeLabel || '—' }}</p>
+              <p class="font-mono text-xs text-gray-500">{{ manualSelectedInventory.lotCode || '—' }}</p>
+              <p class="text-xs text-gray-500">{{ formatDate(manualSelectedInventory.productionDate) }}</p>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.edit.moveDialog.packageQty') }}</label>
+              <input
+                v-model.number="manualMoveForm.packageQty"
+                type="number"
+                min="0"
+                step="1"
+                class="w-full h-[40px] border rounded px-3"
+                :max="manualSelectedInventory?.qtyPackages ?? undefined"
+              />
+              <p v-if="manualDialogError" class="text-xs text-red-600 mt-1">{{ manualDialogError }}</p>
+            </div>
+            <div class="text-xs text-gray-500">
+              {{ t('producedBeer.edit.moveDialog.qtyLiters') }}: {{ formatNumber(manualCalculatedLiters) }}
+            </div>
+          </section>
+          <footer class="px-4 py-3 border-t flex items-center justify-end gap-2">
+            <button class="px-3 py-2 rounded border hover:bg-gray-50" @click="closeManualDialog">{{ t('common.cancel') }}</button>
+            <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" @click="confirmManualMoveLine">
+              {{ t('producedBeer.edit.manualDialog.confirm') }}
+            </button>
+          </footer>
+        </div>
+      </div>
     </div>
   </AdminLayout>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '@/lib/supabase'
@@ -358,6 +433,13 @@ const showMoveDialog = ref(false)
 const selectedInventory = ref<InventoryRow | null>(null)
 const moveQuantity = ref<number | null>(null)
 const moveDialogError = ref('')
+const selectedLineId = ref<string | null>(null)
+const showManualDialog = ref(false)
+const manualMoveForm = reactive({
+  packageId: '',
+  packageQty: null as number | null,
+})
+const manualDialogError = ref('')
 
 const movementDocTypeOptions = ['sale', 'tax_transfer', 'return', 'transfer', 'waste']
 
@@ -453,6 +535,25 @@ const sourceInventoryRows = computed(() => {
 const calculatedMoveLiters = computed(() => {
   if (!selectedInventory.value || !moveQuantity.value) return null
   return selectedInventory.value.unitSizeLiters ? moveQuantity.value * selectedInventory.value.unitSizeLiters : null
+})
+
+const manualSelectedInventory = computed(() => {
+  if (!manualMoveForm.packageId) return null
+  return inventoryRows.value.find((row) => row.id === manualMoveForm.packageId) ?? null
+})
+
+const manualCalculatedLiters = computed(() => {
+  if (!manualSelectedInventory.value || !manualMoveForm.packageQty) return null
+  return manualSelectedInventory.value.unitSizeLiters
+    ? manualMoveForm.packageQty * manualSelectedInventory.value.unitSizeLiters
+    : null
+})
+
+const manualInventoryOptions = computed(() => {
+  return inventoryRows.value.map((row) => ({
+    value: row.id,
+    label: [row.beerName || '—', row.lotCode || '—', row.packageTypeLabel || '—'].join(' | '),
+  }))
 })
 
 const numberFormatter = computed(() => new Intl.NumberFormat(locale.value, { maximumFractionDigits: 2 }))
@@ -638,6 +739,48 @@ async function loadLocations(rows: PackageRow[]) {
   locationByLot.value = lotMap
 }
 
+function selectSourceInventory(row: InventoryRow) {
+  selectedInventory.value = row
+}
+
+function handleMoveToDestination() {
+  if (!movementForm.sourceSiteId) {
+    toast.error(t('producedBeer.edit.errors.sourceRequired'))
+    return
+  }
+  if (sourceInventoryRows.value.length === 0) {
+    openManualDialog()
+    return
+  }
+  if (!selectedInventory.value) {
+    toast.error(t('producedBeer.edit.errors.selectSourceItem'))
+    return
+  }
+  if (selectedInventory.value.siteId !== movementForm.sourceSiteId) {
+    toast.error(t('producedBeer.edit.errors.sourceRequired'))
+    return
+  }
+  openMoveDialog(selectedInventory.value)
+}
+
+function handleMoveToSource() {
+  if (!selectedLineId.value) {
+    toast.error(t('producedBeer.edit.errors.selectLineRequired'))
+    return
+  }
+  const index = movementForm.lines.findIndex((line) => line.localId === selectedLineId.value)
+  if (index === -1) {
+    selectedLineId.value = null
+    return
+  }
+  movementForm.lines.splice(index, 1)
+  selectedLineId.value = null
+}
+
+function selectMovementLine(line: MovementLineForm) {
+  selectedLineId.value = line.localId
+}
+
 function openMoveDialog(row: InventoryRow) {
   if (!movementForm.sourceSiteId) {
     toast.error(t('producedBeer.edit.errors.sourceRequired'))
@@ -656,6 +799,31 @@ function closeMoveDialog() {
   moveDialogError.value = ''
 }
 
+function addMovementLineFromInventory(row: InventoryRow, qty: number) {
+  const packageId = row.id
+  const existing = movementForm.lines.find((line) => line.packageId === packageId)
+  const qtyLiters = row.unitSizeLiters ? qty * row.unitSizeLiters : null
+
+  if (existing) {
+    existing.packageQty = (existing.packageQty ?? 0) + qty
+    existing.qtyLiters = (existing.qtyLiters ?? 0) + (qtyLiters ?? 0)
+  } else {
+    movementForm.lines.push({
+      localId: createLocalId(),
+      packageId,
+      packageQty: qty,
+      qtyLiters,
+      lotId: row.lotId ?? null,
+      lotCode: row.lotCode ?? null,
+      beerName: row.beerName ?? null,
+      categoryId: row.categoryId ?? null,
+      packageTypeId: row.packageTypeId ?? null,
+      packageTypeLabel: row.packageTypeLabel ?? null,
+      unitSizeLiters: row.unitSizeLiters ?? null,
+    })
+  }
+}
+
 function confirmMoveQuantity() {
   if (!selectedInventory.value) return
   if (!moveQuantity.value || moveQuantity.value <= 0) {
@@ -668,36 +836,53 @@ function confirmMoveQuantity() {
     return
   }
 
-  const packageId = selectedInventory.value.id
-  const existing = movementForm.lines.find((line) => line.packageId === packageId)
-  const qtyLiters = selectedInventory.value.unitSizeLiters
-    ? moveQuantity.value * selectedInventory.value.unitSizeLiters
-    : null
-
-  if (existing) {
-    existing.packageQty = (existing.packageQty ?? 0) + moveQuantity.value
-    existing.qtyLiters = (existing.qtyLiters ?? 0) + (qtyLiters ?? 0)
-  } else {
-    movementForm.lines.push({
-      localId: createLocalId(),
-      packageId,
-      packageQty: moveQuantity.value,
-      qtyLiters,
-      lotId: selectedInventory.value.lotId ?? null,
-      lotCode: selectedInventory.value.lotCode ?? null,
-      beerName: selectedInventory.value.beerName ?? null,
-      categoryId: selectedInventory.value.categoryId ?? null,
-      packageTypeId: selectedInventory.value.packageTypeId ?? null,
-      packageTypeLabel: selectedInventory.value.packageTypeLabel ?? null,
-      unitSizeLiters: selectedInventory.value.unitSizeLiters ?? null,
-    })
-  }
-
+  addMovementLineFromInventory(selectedInventory.value, moveQuantity.value)
   closeMoveDialog()
 }
 
+function openManualDialog() {
+  manualMoveForm.packageId = ''
+  manualMoveForm.packageQty = null
+  manualDialogError.value = ''
+  showManualDialog.value = true
+}
+
+function closeManualDialog() {
+  showManualDialog.value = false
+  manualMoveForm.packageId = ''
+  manualMoveForm.packageQty = null
+  manualDialogError.value = ''
+}
+
+function confirmManualMoveLine() {
+  if (!manualMoveForm.packageId) {
+    manualDialogError.value = t('producedBeer.edit.errors.manualPackageRequired')
+    return
+  }
+  const selected = manualSelectedInventory.value
+  if (!selected) {
+    manualDialogError.value = t('producedBeer.edit.errors.manualPackageRequired')
+    return
+  }
+  if (!manualMoveForm.packageQty || manualMoveForm.packageQty <= 0) {
+    manualDialogError.value = t('producedBeer.edit.errors.moveQtyRequired')
+    return
+  }
+  const maxQty = selected.qtyPackages ?? null
+  if (maxQty != null && manualMoveForm.packageQty > maxQty) {
+    manualDialogError.value = t('producedBeer.edit.errors.moveQtyExceed')
+    return
+  }
+
+  addMovementLineFromInventory(selected, manualMoveForm.packageQty)
+  closeManualDialog()
+}
+
 function removeMovementLine(index: number) {
-  movementForm.lines.splice(index, 1)
+  const [removed] = movementForm.lines.splice(index, 1)
+  if (removed?.localId && selectedLineId.value === removed.localId) {
+    selectedLineId.value = null
+  }
 }
 
 function validateForm() {
@@ -825,6 +1010,7 @@ async function loadMovement(movementId: string) {
       unitSizeLiters: unitSize ?? null,
     }
   })
+  selectedLineId.value = null
 }
 
 function formatInputDateTime(date: Date) {
@@ -836,6 +1022,21 @@ function formatInputDateTime(date: Date) {
   const mi = pad(date.getMinutes())
   return `${yyyy}-${mm}-${dd}T${hh}:${mi}`
 }
+
+watch(
+  () => movementForm.sourceSiteId,
+  () => {
+    selectedInventory.value = null
+    moveQuantity.value = null
+    showMoveDialog.value = false
+  }
+)
+
+watch(sourceInventoryRows, (rows) => {
+  if (selectedInventory.value && !rows.some((row) => row.id === selectedInventory.value?.id)) {
+    selectedInventory.value = null
+  }
+})
 
 onMounted(async () => {
   try {

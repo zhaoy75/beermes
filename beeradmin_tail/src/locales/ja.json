@@ -520,7 +520,7 @@
       "breadcrumb": "ビール移動",
       "titleNew": "移動登録",
       "titleEdit": "移動編集",
-      "subtitle": "移動元在庫を選択して明細を作成します。",
+      "subtitle": "移動元在庫を選択して拠点間の移動を作成します。",
       "back": "一覧へ戻る",
       "form": {
         "docNo": "伝票番号",
@@ -531,15 +531,19 @@
       },
       "source": {
         "title": "移動元",
-        "subtitle": "在庫をダブルクリックして明細に追加します。"
+        "subtitle": "カードを選択し、ダブルクリックで数量入力、または移動ボタンで追加します。"
       },
       "destination": {
         "title": "移動先",
         "subtitle": "明細の内容を確認してください。"
       },
+      "actions": {
+        "moveToDestination": "移動先へ追加",
+        "moveToSource": "移動元へ戻す"
+      },
       "lines": {
         "title": "明細",
-        "hint": "移動元の在庫一覧から明細を追加します。",
+        "hint": "移動元のカードまたは移動ボタンで明細を追加します。",
         "columns": {
           "beer": "ビール名",
           "category": "カテゴリ",
@@ -555,6 +559,11 @@
         "qtyLiters": "数量(L)",
         "confirm": "明細に追加"
       },
+      "manualDialog": {
+        "title": "明細追加",
+        "packageSelect": "ビールパッケージ選択",
+        "confirm": "明細に追加"
+      },
       "errors": {
         "docNoRequired": "伝票番号は必須です。",
         "docTypeRequired": "移動種別は必須です。",
@@ -563,7 +572,10 @@
         "linesRequired": "明細を追加してください。",
         "moveQtyRequired": "数量は1以上で入力してください。",
         "moveQtyExceed": "在庫数量を超えています。",
-        "sourceRequired": "先に移動元を選択してください。"
+        "sourceRequired": "先に移動元を選択してください。",
+        "selectSourceItem": "移動元の在庫カードを選択してください。",
+        "selectLineRequired": "戻す明細を選択してください。",
+        "manualPackageRequired": "ビールパッケージを選択してください。"
       },
       "toast": {
         "saved": "移動を保存しました。"

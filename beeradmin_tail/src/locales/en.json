@@ -492,15 +492,15 @@
         "lotNo": "Production lot no",
         "dateFrom": "Date from",
         "dateTo": "Date to",
-        "movementType": "Movement type"
-      },
-      "types": {
-        "taxed": "Taxed shipment",
-        "export": "Export (tax exempt)",
-        "returning": "Return",
-        "internal": "Internal transfer",
-        "disposal": "Disposal"
-      },
+      "movementType": "Movement type"
+    },
+    "types": {
+      "taxed": "Taxed shipment",
+      "notax": "Non-taxed shipment",
+      "returnNotax": "Return (non-taxed)",
+      "wasteNotax": "Waste (non-taxed)",
+      "transferNotax": "Internal transfer (non-taxed)"
+    },
       "docTypeMap": {
         "sale": "Taxed shipment",
         "tax_transfer": "Export (tax exempt)",
@@ -510,10 +510,12 @@
       },
       "actions": {
         "new": "New movement",
-        "edit": "Edit movement"
+        "edit": "Edit movement",
+        "exportCsv": "Export CSV"
       },
       "card": {
         "docNo": "Document no",
+        "taxType": "Tax type",
         "movementDate": "Movement date",
         "source": "Source site",
         "destination": "Destination site",
@@ -537,6 +539,7 @@
       "form": {
         "docNo": "Document no",
         "docType": "Type",
+        "movementType": "Movement type",
         "movementDate": "Movement date",
         "sourceSite": "Source site",
         "destinationSite": "Destination site"
@@ -615,6 +618,111 @@
         "en": "English",
         "ja": "Japanese"
       }
+    }
+  },
+  "changePassword": {
+    "title": "Change Password",
+    "subtitle": "Update your password to keep your account secure.",
+    "tips": {
+      "title": "Password tips",
+      "min": "Use at least {min} characters.",
+      "mix": "Mix letters, numbers, and symbols.",
+      "reuse": "Don't reuse old passwords."
+    },
+    "fields": {
+      "current": "Current password",
+      "new": "New password",
+      "confirm": "Confirm new password"
+    },
+    "placeholders": {
+      "current": "Enter your current password",
+      "new": "Create a new password",
+      "confirm": "Re-enter your new password"
+    },
+    "buttons": {
+      "update": "Update password",
+      "updating": "Updating...",
+      "cancel": "Cancel"
+    },
+    "actions": {
+      "toggleVisibility": "Toggle password visibility"
+    },
+    "errors": {
+      "currentRequired": "Current password is required.",
+      "newRequired": "New password is required.",
+      "newMin": "Use at least {min} characters.",
+      "confirmRequired": "Confirm your new password.",
+      "mismatch": "Passwords do not match.",
+      "currentIncorrect": "Current password is incorrect.",
+      "userUnknown": "Unable to determine the current user."
+    },
+    "toast": {
+      "success": "Password updated.",
+      "errorGeneric": "Unable to update password."
+    }
+  },
+  "users": {
+    "title": "User Management",
+    "subtitle": "Manage user access and keep profiles up to date.",
+    "search": {
+      "nameLabel": "Name",
+      "emailLabel": "Email",
+      "roleLabel": "Role",
+      "namePlaceholder": "Search by name",
+      "emailPlaceholder": "Search by email",
+      "roleAll": "All roles"
+    },
+    "fields": {
+      "name": "Name",
+      "email": "Email",
+      "role": "Role",
+      "status": "Status",
+      "newPassword": "New password",
+      "confirmPassword": "Confirm password"
+    },
+    "placeholders": {
+      "name": "Enter name",
+      "email": "Enter email",
+      "newPassword": "Enter new password",
+      "confirmPassword": "Re-enter new password"
+    },
+    "roles": {
+      "viewer": "Viewer",
+      "editor": "Editor",
+      "admin": "Admin"
+    },
+    "status": {
+      "valid": "Valid",
+      "invalid": "Invalid"
+    },
+    "actions": {
+      "add": "Add user",
+      "edit": "Edit",
+      "delete": "Delete",
+      "resetPassword": "Reset password",
+      "save": "Save",
+      "cancel": "Cancel",
+      "confirmDelete": "Delete user",
+      "resetConfirm": "Update password"
+    },
+    "dialogs": {
+      "addTitle": "Add user",
+      "editTitle": "Edit user",
+      "deleteTitle": "Delete user",
+      "deleteMessage": "Delete {name}? This action cannot be undone.",
+      "formSubtitle": "Update the user details below.",
+      "resetTitle": "Reset password",
+      "resetSubtitle": "Set a new password for {name}."
+    },
+    "errors": {
+      "nameRequired": "Name is required.",
+      "emailRequired": "Email is required.",
+      "passwordRequired": "New password is required.",
+      "confirmRequired": "Confirm the new password.",
+      "passwordMismatch": "Passwords do not match."
+    },
+    "cards": {
+      "empty": "No users match your filters."
     }
   },
   "errors": {
@@ -824,7 +932,10 @@
       "aiOrderAssistant": "AI Order Assistant",
       "aiAssistant": "AI Assistant",
       "beerSalesForecast": "AI Sales Forecast",
-      "profile": "User Profile"
+      "profile": "User Profile",
+      "changePassword": "Change Password",
+      "userManagement": "User Management",
+      "users": "Users"
     }
   }
   ,

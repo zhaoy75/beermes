@@ -524,3 +524,14 @@ I want to modify a tax report page to create and maintenance tax report for craf
     - the page should show user a link to download the generated xml file  
     - the tax report should be saved as draft status
     - the tax report should allow user to upload attachments files
+
+
+    I need you to create vue page to maintain users. 
+    
+    there should be a list of card shows all user
+    each card should show user name, email, role(参照、更新、管理者) and status(valid, invalid). 
+    for each card, there should be a delete and a edit button.
+    when i  click delete button, a confirm dialog should be shown to confirm the delete action.
+    when i click edit button, a dialog should be shown to edit user information including name, email, role and status.
+    there should be a search section to filter user by name, email and role
+    there should be a button to add new user

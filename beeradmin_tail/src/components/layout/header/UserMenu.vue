@@ -72,7 +72,7 @@ const router = useRouter()
 
 const menuItems = [
   { href: '/profile', icon: UserCircleIcon, text: 'Edit profile' },
-  { href: '/profile', icon: SettingsIcon, text: 'Account settings' },
+  { href: '/change-password', icon: SettingsIcon, text: 'Change password' },
   { href: '/profile', icon: InfoCircleIcon, text: 'Support' },
 ]
 

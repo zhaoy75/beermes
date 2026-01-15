@@ -158,24 +158,41 @@ interface TaxRateRecord {
   expireDate: Date | null
 }
 
+interface MovementHeader {
+  id: string
+  movement_at: string | null
+  doc_type: string
+}
+
+interface MovementLine {
+  movement_id: string
+  package_id: string | null
+  lot_id: string | null
+  qty: number | null
+  uom_id: string | null
+  meta: Record<string, any> | null
+}
+
 interface PackageRow {
   id: string
-  fill_at: string | null
+  lot_id: string | null
   package_qty: number | null
   package_size_l: number | null
-  lot: {
-    id: string
-    lot_code: string
-    recipe: {
-      id: string
-      name: string | null
-      category: string | null
-    } | null
-  } | null
   package: {
     size: number | null
     uom_id: string | null
   } | null
+}
+
+interface LotRow {
+  id: string
+  lot_code: string | null
+  recipe_id: string | null
+}
+
+interface RecipeRow {
+  id: string
+  category: string | null
 }
 
 interface CategorySummary {
@@ -361,6 +378,38 @@ function convertToLiters(size: number | null | undefined, uomCode: string | null
   }
 }
 
+function toNumber(value: any): number | null {
+  if (value == null || value === '') return null
+  const num = Number(value)
+  return Number.isFinite(num) ? num : null
+}
+
+function resolvePackageSizeLiters(row: PackageRow | undefined) {
+  if (!row) return null
+  const direct = toNumber(row.package_size_l)
+  if (direct != null && direct > 0) return direct
+  const size = toNumber(row.package?.size)
+  if (size == null) return null
+  const uomCode = row.package?.uom_id ? uomLookup.value.get(row.package.uom_id) : null
+  return convertToLiters(size, uomCode)
+}
+
+function resolveLineVolume(line: MovementLine, packageRow: PackageRow | undefined) {
+  const qty = toNumber(line.qty)
+  const uomCode = line.uom_id ? uomLookup.value.get(line.uom_id) : null
+  let volume = qty != null ? convertToLiters(qty, uomCode) : null
+
+  if (!volume || volume <= 0) {
+    const pkgQty = toNumber(line.meta?.package_qty ?? packageRow?.package_qty)
+    const unitVolume = toNumber(line.meta?.unit_volume_l) ?? resolvePackageSizeLiters(packageRow)
+    if (pkgQty != null && unitVolume != null) {
+      volume = pkgQty * unitVolume
+    }
+  }
+
+  return volume
+}
+
 function applicableTaxRate(categoryId: string | null | undefined, dateStr: string | null | undefined) {
   if (!categoryId) return 0
   const records = taxRateIndex.value[categoryId]
@@ -382,6 +431,58 @@ function applicableTaxRate(categoryId: string | null | undefined, dateStr: strin
   return records[records.length - 1]?.taxrate ?? 0
 }
 
+async function loadMovementLines(movementIds: string[]) {
+  if (movementIds.length === 0) return [] as MovementLine[]
+  const { data, error } = await supabase
+    .from('inv_movement_lines')
+    .select('movement_id, package_id, lot_id, qty, uom_id, meta')
+    .in('movement_id', movementIds)
+  if (error) throw error
+  return (data ?? []).filter((row: any) => row.package_id || row.lot_id) as MovementLine[]
+}
+
+async function loadPackages(packageIds: string[]) {
+  const map = new Map<string, PackageRow>()
+  if (packageIds.length === 0) return map
+  const tenant = await ensureTenant()
+  const { data, error } = await supabase
+    .from('pkg_packages')
+    .select('id, lot_id, package_qty, package_size_l, package:package_id ( id, size, uom_id )')
+    .eq('tenant_id', tenant)
+    .in('id', packageIds)
+  if (error) throw error
+  ;(data ?? []).forEach((row: any) => map.set(row.id, row as PackageRow))
+  return map
+}
+
+async function loadLots(lotIds: string[]) {
+  const map = new Map<string, LotRow>()
+  if (lotIds.length === 0) return map
+  const tenant = await ensureTenant()
+  const { data, error } = await supabase
+    .from('prd_lots')
+    .select('id, lot_code, recipe_id')
+    .eq('tenant_id', tenant)
+    .in('id', lotIds)
+  if (error) throw error
+  ;(data ?? []).forEach((row: any) => map.set(row.id, row as LotRow))
+  return map
+}
+
+async function loadRecipes(recipeIds: string[]) {
+  const map = new Map<string, RecipeRow>()
+  if (recipeIds.length === 0) return map
+  const tenant = await ensureTenant()
+  const { data, error } = await supabase
+    .from('rcp_recipes')
+    .select('id, category')
+    .eq('tenant_id', tenant)
+    .in('id', recipeIds)
+  if (error) throw error
+  ;(data ?? []).forEach((row: any) => map.set(row.id, row as RecipeRow))
+  return map
+}
+
 async function loadSummary() {
   try {
     loading.value = true
@@ -391,52 +492,87 @@ async function loadSummary() {
     const endDate = `${selectedYear.value + 1}-01-01`
 
     const { data, error } = await supabase
-      .from('pkg_packages')
-      .select(
-        `id, fill_at, package_qty, package_size_l,
-         lot:lot_id ( id, lot_code, recipe:rcp_recipes ( id, name, category ) ),
-         package:package_id ( size, uom_id )`
-      )
+      .from('inv_movements')
+      .select('id, movement_at, doc_type')
       .eq('tenant_id', tenant)
-      .gte('fill_at', startDate)
-      .lt('fill_at', endDate)
+      .eq('doc_type', 'production_receipt')
+      .gte('movement_at', startDate)
+      .lt('movement_at', endDate)
 
     if (error) throw error
 
-    processPackageRows((data ?? []) as PackageRow[])
+    const headers = (data ?? []) as MovementHeader[]
+    if (headers.length === 0) {
+      resetSummary()
+      return
+    }
+
+    const headerMap = new Map(headers.map((row) => [row.id, row]))
+    const movementIds = headers.map((row) => row.id)
+    const lines = await loadMovementLines(movementIds)
+
+    if (lines.length === 0) {
+      resetSummary()
+      return
+    }
+
+    const packageIds = Array.from(new Set(lines.map((line) => line.package_id).filter(Boolean))) as string[]
+    const packageMap = await loadPackages(packageIds)
+    const lotIdsFromLines = Array.from(new Set(lines.map((line) => line.lot_id).filter(Boolean))) as string[]
+    const lotIdsFromPackages = Array.from(new Set(Array.from(packageMap.values()).map((row) => row.lot_id).filter(Boolean))) as string[]
+    const lotIds = Array.from(new Set([...lotIdsFromLines, ...lotIdsFromPackages]))
+    const lotMap = await loadLots(lotIds)
+    const recipeIds = Array.from(new Set(Array.from(lotMap.values()).map((row) => row.recipe_id).filter(Boolean))) as string[]
+    const recipeMap = await loadRecipes(recipeIds)
+
+    processMovementLines(lines, headerMap, packageMap, lotMap, recipeMap)
   } catch (err) {
     console.error(err)
     errorMessage.value = err instanceof Error ? err.message : String(err)
-    categorySummaries.value = []
-    monthlySeries.value = []
-    lotBreakdown.value = []
-    updateChart()
+    resetSummary()
   } finally {
     loading.value = false
   }
 }
 
-function processPackageRows(rows: PackageRow[]) {
+function resetSummary() {
+  categorySummaries.value = []
+  monthlySeries.value = Array.from({ length: 12 }, (_, month) => ({ month, volume: 0, tax: 0 }))
+  lotBreakdown.value = []
+  updateChart()
+}
+
+function processMovementLines(
+  rows: MovementLine[],
+  headerMap: Map<string, MovementHeader>,
+  packageMap: Map<string, PackageRow>,
+  lotMap: Map<string, LotRow>,
+  recipeMap: Map<string, RecipeRow>
+) {
   const categoryTotals = new Map<string, { volume: number; tax: number }>()
   const monthlyTotals = Array.from({ length: 12 }, (_, month) => ({ month, volume: 0, tax: 0 }))
   const monthLotMap = new Map<string, MonthLotRow>()
 
   rows.forEach((row) => {
-    if (!row.fill_at || !row.lot?.id) return
-    const categoryId = row.lot.recipe?.category
+    const header = headerMap.get(row.movement_id)
+    if (!header?.movement_at) return
+    const movementAt = header.movement_at
+    const movementDate = new Date(movementAt)
+    if (Number.isNaN(movementDate.getTime())) return
+    const monthIndex = movementDate.getMonth()
+
+    const packageRow = row.package_id ? packageMap.get(row.package_id) : undefined
+    const lotId = row.lot_id ?? packageRow?.lot_id ?? null
+    if (!lotId) return
+    const lotInfo = lotMap.get(lotId)
+    const recipe = lotInfo?.recipe_id ? recipeMap.get(lotInfo.recipe_id) : undefined
+    const categoryId = recipe?.category ?? null
     if (!categoryId) return
-    const monthIndex = new Date(row.fill_at).getMonth()
 
-    const qty = Number(row.package_qty ?? 0)
-    if (Number.isNaN(qty) || qty <= 0) return
+    const volume = resolveLineVolume(row, packageRow)
+    if (volume == null || volume <= 0) return
 
-    const explicitSize = row.package_size_l != null ? Number(row.package_size_l) : null
-    const defaultSize = convertToLiters(row.package?.size ?? null, row.package?.uom_id ? uomLookup.value.get(row.package.uom_id) : null)
-    const unitSize = explicitSize ?? defaultSize ?? 0
-    if (unitSize <= 0) return
-
-    const volume = qty * unitSize
-    const taxRate = applicableTaxRate(categoryId, row.fill_at)
+    const taxRate = applicableTaxRate(categoryId, movementAt)
     const taxAmount = volume * taxRate
 
     const categoryEntry = categoryTotals.get(categoryId) || { volume: 0, tax: 0 }
@@ -447,17 +583,17 @@ function processPackageRows(rows: PackageRow[]) {
     monthlyTotals[monthIndex].volume += volume
     monthlyTotals[monthIndex].tax += taxAmount
 
-    const key = `${monthIndex}-${row.lot.id}`
+    const key = `${monthIndex}-${lotId}`
     let lotEntry = monthLotMap.get(key)
     if (!lotEntry) {
       lotEntry = {
         key,
         month: monthIndex,
-        lotId: row.lot.id,
-        lotCode: row.lot.lot_code,
+        lotId,
+        lotCode: lotInfo?.lot_code ?? lotId,
         categoryId,
         categoryName: categoryLookup.value.get(categoryId)?.name || categoryLookup.value.get(categoryId)?.code || categoryId,
-        fillDate: row.fill_at,
+        fillDate: movementAt,
         totalVolume: 0,
         totalTax: 0,
       }
@@ -465,8 +601,8 @@ function processPackageRows(rows: PackageRow[]) {
     }
     lotEntry.totalVolume += volume
     lotEntry.totalTax += taxAmount
-    if (new Date(row.fill_at) < new Date(lotEntry.fillDate)) {
-      lotEntry.fillDate = row.fill_at
+    if (movementDate < new Date(lotEntry.fillDate)) {
+      lotEntry.fillDate = movementAt
     }
   })
 

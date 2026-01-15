@@ -316,16 +316,20 @@ const menuGroups = computed(() => [
         name: t('sidebar.items.systemMaintenance'),
         subItems: [
           { name: t('sidebar.items.categoryMaster'), path: "/categoryMaster", pro: false },
-          { name: t('sidebar.items.siteTypeMaster'), path: "/siteTypeMaster", pro: false },
           { name: t('sidebar.items.taxMaster'), path: "/taxMaster", pro: false },
+          { name: t('sidebar.items.siteTypeMaster'), path: "/siteTypeMaster", pro: false },
           { name: t('sidebar.items.uomMaster'), path: "/uomMaster", pro: false },
 
         ],
       },
       {
         icon: UserCircleIcon,
-        name: t('sidebar.items.profile'),
-        path: "/profile",
+        name: t('sidebar.items.userManagement'),
+        subItems: [
+          { name: t('sidebar.items.users'), path: "/users", pro: false },
+          // { name: t('sidebar.items.profile'), path: "/profile", pro: false },
+          { name: t('sidebar.items.changePassword'), path: "/change-password", pro: false },
+        ],
       },
 
       // {

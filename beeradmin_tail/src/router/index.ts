@@ -18,7 +18,7 @@ const router = createRouter({
     {
       path: '/',
       name: '概要',
-      component: () => import('../views/pages/BeerDash.vue'),
+      component: () => import('../views/pages/LotList.vue'),
       meta: {
         title: 'eCommerce Dashboard',
         requiresAuth: true ,
@@ -257,6 +257,24 @@ const router = createRouter({
       component: () => import('../views/Others/UserProfile.vue'),
       meta: {
         title: 'Profile',
+        requiresAuth: true ,
+      },
+    },
+    {
+      path: '/users',
+      name: 'User Management',
+      component: () => import('../views/Pages/UserManagement.vue'),
+      meta: {
+        title: 'User Management',
+        requiresAuth: true ,
+      },
+    },
+    {
+      path: '/change-password',
+      name: 'Change Password',
+      component: () => import('../views/Others/ChangePassword.vue'),
+      meta: {
+        title: 'Change Password',
         requiresAuth: true ,
       },
     },

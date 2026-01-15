@@ -221,14 +221,14 @@
       "todoHint": "※ データベースを準備したら、この表と接続してください。"
     },
     "packaging": {
-      "sectionTitle": "パッケージ管理",
+      "sectionTitle": "充填管理",
       "sectionSubtitle": "このロットで充填された数量を記録します。",
-      "addButton": "パッケージを追加",
-      "addTitle": "パッケージ記録の追加",
-      "editTitle": "パッケージ記録の編集",
-      "deleteConfirm": "パッケージ {code} の記録を削除しますか？",
-      "noData": "パッケージ記録がありません。",
-      "packagePlaceholder": "パッケージを選択",
+      "addButton": "充填",
+      "addTitle": "充填記録の追加",
+      "editTitle": "充填記録の編集",
+      "deleteConfirm": "充填 {code} の記録を削除しますか？",
+      "noData": "充填記録がありません。",
+      "packagePlaceholder": "充填を選択",
       "defaultSizeHint": "既定容量: {size}",
       "noDefaultSize": "既定容量なし",
       "lUnit": "L",
@@ -237,7 +237,7 @@
       "summaryRemaining": "残量",
       "columns": {
         "fillDate": "充填日",
-        "package": "パッケージ",
+        "package": "詰口種別",
         "outputSite": "出力拠点",
         "quantity": "数量",
         "unitSize": "単位あたり容量",
@@ -249,13 +249,13 @@
     }
   },
   "packageCategory": {
-    "title": "ビールパッケージ区分",
+    "title": "詰口容器区分",
     "subtitle": "製品で使用するパッケージの容量と単位を管理します。",
     "searchPlaceholder": "コード／名称／単位で検索…",
-    "newTitle": "パッケージ区分の追加",
-    "editTitle": "パッケージ区分の編集",
-    "deleteTitle": "パッケージ区分の削除",
-    "deleteConfirm": "パッケージ {code} を削除しますか？ この操作は元に戻せません。",
+    "newTitle": "詰口容器管理の追加",
+    "editTitle": "詰口容器管理の編集",
+    "deleteTitle": "詰口容器管理の削除",
+    "deleteConfirm": "詰口容器管理 {code} を削除しますか？ この操作は元に戻せません。",
     "uomPlaceholder": "単位を選択",
     "sizeFixedLabel": "このパッケージは容量が固定",
     "columns": {
@@ -302,25 +302,25 @@
     "createdAt": "作成日時"
   },
   "category": {
-    "title": "カテゴリマスタ",
-    "subtitle": "原材料カテゴリを管理します",
-    "newTitle": "カテゴリの追加",
-    "editTitle": "カテゴリの編集",
-    "deleteTitle": "カテゴリの削除",
-    "deleteConfirm": "カテゴリ {code} を削除しますか？ この操作は元に戻せません。",
-    "searchPlaceholder": "カテゴリを検索…"
+    "title": "酒種管理",
+    "subtitle": "酒種を管理します",
+    "newTitle": "酒種の追加",
+    "editTitle": "酒種の編集",
+    "deleteTitle": "酒種の削除",
+    "deleteConfirm": "酒種 {code} を削除しますか？ この操作は元に戻せません。",
+    "searchPlaceholder": "酒種を検索…"
   },
   "tax": {
-    "title": "酒税マスタ",
-    "subtitle": "ビールカテゴリごとの酒税率を管理します",
+    "title": "酒税管理",
+    "subtitle": "酒種ごとの酒税率を管理します",
     "newTitle": "酒税率の追加",
     "editTitle": "酒税率の編集",
     "deleteTitle": "酒税率の削除",
     "deleteConfirm": "{category}（{rate}）の酒税レコードを削除しますか？",
     "searchPlaceholder": "酒税率を検索…",
-    "categoryPlaceholder": "カテゴリを選択",
-    "invalidCategory": "未定義のカテゴリです",
-    "missingCategories": "カテゴリが登録されていません。先にカテゴリを追加してください。"
+    "categoryPlaceholder": "酒種を選択",
+    "invalidCategory": "未定義の酒種です",
+    "missingCategories": "酒種が登録されていません。先に酒種を追加してください。"
   },
   "uom": {
     "title": "単位マスタ",
@@ -496,10 +496,10 @@
       },
       "types": {
         "taxed": "課税移出",
-        "export": "輸出免税",
-        "returning": "移入戻り",
-        "internal": "社内移動",
-        "disposal": "廃棄"
+        "notax": "未納税移出",
+        "returnNotax": "返品",
+        "wasteNotax": "廃棄",
+        "transferNotax": "内部移動"
       },
       "docTypeMap": {
         "sale": "課税移出",
@@ -510,10 +510,12 @@
       },
       "actions": {
         "new": "移動登録",
-        "edit": "移動編集"
+        "edit": "移動編集",
+        "exportCsv": "CSV出力"
       },
       "card": {
         "docNo": "伝票番号",
+        "taxType": "税区分",
         "movementDate": "移動日",
         "source": "移動元",
         "destination": "移動先",
@@ -537,6 +539,7 @@
       "form": {
         "docNo": "伝票番号",
         "docType": "種別",
+        "movementType": "移動種別",
         "movementDate": "移動日",
         "sourceSite": "移動元",
         "destinationSite": "移動先"
@@ -615,6 +618,111 @@
         "en": "英語",
         "ja": "日本語"
       }
+    }
+  },
+  "changePassword": {
+    "title": "パスワード変更",
+    "subtitle": "アカウントを安全に保つため、パスワードを更新します。",
+    "tips": {
+      "title": "パスワードのヒント",
+      "min": "{min}文字以上にしてください。",
+      "mix": "英字・数字・記号を組み合わせてください。",
+      "reuse": "過去のパスワードは再利用しないでください。"
+    },
+    "fields": {
+      "current": "現在のパスワード",
+      "new": "新しいパスワード",
+      "confirm": "新しいパスワード（確認）"
+    },
+    "placeholders": {
+      "current": "現在のパスワードを入力",
+      "new": "新しいパスワードを作成",
+      "confirm": "新しいパスワードを再入力"
+    },
+    "buttons": {
+      "update": "パスワードを更新",
+      "updating": "更新中...",
+      "cancel": "キャンセル"
+    },
+    "actions": {
+      "toggleVisibility": "パスワード表示切り替え"
+    },
+    "errors": {
+      "currentRequired": "現在のパスワードは必須です。",
+      "newRequired": "新しいパスワードは必須です。",
+      "newMin": "{min}文字以上で入力してください。",
+      "confirmRequired": "新しいパスワードを確認してください。",
+      "mismatch": "パスワードが一致しません。",
+      "currentIncorrect": "現在のパスワードが正しくありません。",
+      "userUnknown": "現在のユーザーを取得できません。"
+    },
+    "toast": {
+      "success": "パスワードを更新しました。",
+      "errorGeneric": "パスワードの更新に失敗しました。"
+    }
+  },
+  "users": {
+    "title": "ユーザー管理",
+    "subtitle": "ユーザーのアクセス権とプロフィールを管理します。",
+    "search": {
+      "nameLabel": "氏名",
+      "emailLabel": "メールアドレス",
+      "roleLabel": "権限",
+      "namePlaceholder": "氏名で検索",
+      "emailPlaceholder": "メールアドレスで検索",
+      "roleAll": "すべての権限"
+    },
+    "fields": {
+      "name": "氏名",
+      "email": "メールアドレス",
+      "role": "権限",
+      "status": "状態",
+      "newPassword": "新しいパスワード",
+      "confirmPassword": "新しいパスワード（確認）"
+    },
+    "placeholders": {
+      "name": "氏名を入力",
+      "email": "メールアドレスを入力",
+      "newPassword": "新しいパスワードを入力",
+      "confirmPassword": "新しいパスワードを再入力"
+    },
+    "roles": {
+      "viewer": "参照",
+      "editor": "更新",
+      "admin": "管理者"
+    },
+    "status": {
+      "valid": "有効",
+      "invalid": "無効"
+    },
+    "actions": {
+      "add": "ユーザーを追加",
+      "edit": "編集",
+      "delete": "削除",
+      "resetPassword": "パスワード再設定",
+      "save": "保存",
+      "cancel": "キャンセル",
+      "confirmDelete": "削除する",
+      "resetConfirm": "パスワードを更新"
+    },
+    "dialogs": {
+      "addTitle": "ユーザーを追加",
+      "editTitle": "ユーザーを編集",
+      "deleteTitle": "ユーザーを削除",
+      "deleteMessage": "{name} を削除しますか？この操作は元に戻せません。",
+      "formSubtitle": "ユーザー情報を更新してください。",
+      "resetTitle": "パスワード再設定",
+      "resetSubtitle": "{name} の新しいパスワードを設定してください。"
+    },
+    "errors": {
+      "nameRequired": "氏名は必須です。",
+      "emailRequired": "メールアドレスは必須です。",
+      "passwordRequired": "新しいパスワードは必須です。",
+      "confirmRequired": "新しいパスワードを確認してください。",
+      "passwordMismatch": "パスワードが一致しません。"
+    },
+    "cards": {
+      "empty": "条件に一致するユーザーがいません。"
     }
   },
   "errors": {
@@ -805,25 +913,28 @@
       "waste": "廃棄物管理",
       "masterMaintenance": "マスターメンテナンス",
       "systemMaintenance": "システムメンテナンス",
-      "categoryMaster": "カテゴリ登録",
-      "taxMaster": "酒税登録",
-      "siteTypeMaster": "サイト種別登録",
+      "categoryMaster": "酒種管理",
+      "taxMaster": "酒税管理",
+      "siteTypeMaster": "サイト種別管理",
       "catalogMaster": "酒類登録",
       "uomMaster": "単位マスタ",
       "packingMaster": "詰口登録",
       "beerMaster": "ビール銘柄登録",
       "tankMaintenance": "タンク管理",
-      "beerPackageCategory": "パッケージ区分",
+      "beerPackageCategory": "詰口容器管理",
       "materialMaster": "原材料登録",
       "vendorMaster": "仕入先登録",
       "customerMaster": "顧客登録",
       "shipDestMaster": "搬入出先登録",
-      "siteMaster": "サイト登録",
+      "siteMaster": "サイト管理",
       "calendar": "カレンダー",
       "aiOrderAssistant": "AI発注アシスタント",
       "aiAssistant": "AIアシスタント",
       "beerSalesForecast": "AI売上予測",
-      "profile": "ユーザープロファイル"
+      "profile": "ユーザープロファイル",
+      "changePassword": "パスワード変更",
+      "userManagement": "ユーザー管理",
+      "users": "ユーザー一覧"
     }
   }
   ,

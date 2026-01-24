@@ -535,3 +535,24 @@ I want to modify a tax report page to create and maintenance tax report for craf
     when i click edit button, a dialog should be shown to edit user information including name, email, role and status.
     there should be a search section to filter user by name, email and role
     there should be a button to add new user
+
+Since some lot are create by combination of other lots, i want to modify ロット作成　and ロット編集 page, 
+so i can input parent lot code and beer quantity from each parent lot. this information should be stored in meta field of prd_lots table as json format like
+{
+  "parent_lots": [
+    {
+      "lot_code": "LOT-20260101-0001",
+      "quantity_liters": 500
+    },
+    {
+      "lot_code": "LOT-20260102-0002",
+      "quantity_liters": 300
+    }
+  ]
+}
+
+I want you to modify 製品ビール管理 page.
+・I need you create two view modes (list view and card view) for the movement list table 
+・add a button to switch between list view and card view
+
+for 製品ビール管理 page, the right side section should use all browser width

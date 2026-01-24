@@ -116,16 +116,25 @@
     },
     "create": {
       "title": "ロット作成",
-      "subtitle": "ロットコードは自動採番されます。",
+      "subtitle": "ロットコードは入力可能です。空欄なら自動採番されます。",
       "recipe": "レシピ",
       "recipePlaceholder": "レシピを選択",
+      "lotCode": "ロットコード",
+      "lotCodePlaceholder": "空欄なら自動採番",
       "plannedStart": "計画開始",
       "processVersion": "工程バージョン",
       "processPlaceholder": "最新を使用",
       "label": "銘柄名",
       "targetVolume": "目標仕込み量 (L)",
       "notes": "メモ",
-      "autoCodeHint": "ロットコードは LOT-YYYYMMDD-XXXX 形式で自動生成されます。",
+      "parentLotsTitle": "親ロット",
+      "parentLotsSubtitle": "必要に応じて元のロットと数量を記録します。",
+      "parentLotsAdd": "親ロットを追加",
+      "parentLotsRemove": "削除",
+      "parentLotsEmpty": "親ロットは未登録です。",
+      "parentLotCode": "親ロットコード",
+      "parentLotQuantity": "数量 (L)",
+      "autoCodeHint": "空欄の場合は LOT-YYYYMMDD-XXXX 形式で自動生成されます。",
       "createButton": "作成"
     },
     "delete": {
@@ -178,7 +187,14 @@
       "actualAbv": "実績ABV",
       "actualSrm": "実績SRM",
       "vessel": "タンク",
-      "notes": "メモ"
+      "notes": "メモ",
+      "parentLotsTitle": "親ロット",
+      "parentLotsSubtitle": "元のロットと数量を記録します。",
+      "parentLotsAdd": "親ロットを追加",
+      "parentLotsRemove": "削除",
+      "parentLotsEmpty": "親ロットは未登録です。",
+      "parentLotCode": "親ロットコード",
+      "parentLotQuantity": "数量 (L)"
     },
     "ingredients": {
       "sectionTitle": "原材料",
@@ -485,6 +501,8 @@
     },
     "movement": {
       "subtitle": "倉庫・顧客間の移動履歴。",
+      "viewList": "リスト表示",
+      "viewCard": "カード表示",
       "filters": {
         "beerName": "ビール名",
         "category": "カテゴリ",

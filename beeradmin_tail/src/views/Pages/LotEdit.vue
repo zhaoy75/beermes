@@ -16,8 +16,8 @@
         </header>
         <form class="grid grid-cols-1 lg:grid-cols-3 gap-4" @submit.prevent>
           <div>
-            <label class="block text-sm text-gray-600 mb-1">{{ t('lot.edit.lotCode') }}</label>
-            <input class="w-full h-[40px] border rounded px-3 bg-gray-100" :value="lot.lot_code" disabled />
+            <label class="block text-sm text-gray-600 mb-1" for="lotCode">{{ t('lot.edit.lotCode') }}</label>
+            <input id="lotCode" v-model.trim="lotForm.lot_code" type="text" class="w-full h-[40px] border rounded px-3" />
           </div>
           <div>
             <label class="block text-sm text-gray-600 mb-1" for="lotStatus">{{ t('lot.edit.status') }}</label>
@@ -50,6 +50,29 @@
           <div class="lg:col-span-3">
             <label class="block text-sm text-gray-600 mb-1" for="lotNotes">{{ t('lot.edit.notes') }}</label>
             <textarea id="lotNotes" v-model.trim="lotForm.notes" rows="3" class="w-full border rounded px-3 py-2"></textarea>
+          </div>
+          <div class="lg:col-span-3 space-y-2">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm font-semibold text-gray-700">{{ t('lot.edit.parentLotsTitle') }}</p>
+                <p class="text-xs text-gray-500">{{ t('lot.edit.parentLotsSubtitle') }}</p>
+              </div>
+              <button class="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-100" type="button" @click="addParentLot">{{ t('lot.edit.parentLotsAdd') }}</button>
+            </div>
+            <div v-if="lotForm.parent_lots.length === 0" class="text-xs text-gray-500">{{ t('lot.edit.parentLotsEmpty') }}</div>
+            <div v-for="(row, index) in lotForm.parent_lots" :key="`parent-${index}`" class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div class="md:col-span-2">
+                <label class="block text-sm text-gray-600 mb-1" :for="`editParentLotCode-${index}`">{{ t('lot.edit.parentLotCode') }}</label>
+                <input :id="`editParentLotCode-${index}`" v-model.trim="row.lot_code" type="text" class="w-full h-[40px] border rounded px-3" />
+              </div>
+              <div>
+                <label class="block text-sm text-gray-600 mb-1" :for="`editParentLotQty-${index}`">{{ t('lot.edit.parentLotQuantity') }}</label>
+                <input :id="`editParentLotQty-${index}`" v-model="row.quantity_liters" type="number" min="0" step="0.01" class="w-full h-[40px] border rounded px-3" />
+              </div>
+              <div class="md:col-span-3 flex justify-end">
+                <button class="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-100" type="button" @click="removeParentLot(index)">{{ t('lot.edit.parentLotsRemove') }}</button>
+              </div>
+            </div>
           </div>
         </form>
       </section>
@@ -367,6 +390,7 @@ const savingLot = ref(false)
 const savingPackaging = ref(false)
 
 const lotForm = reactive({
+  lot_code: '',
   status: '',
   label: '',
   process_version: null as number | null,
@@ -382,7 +406,18 @@ const lotForm = reactive({
   actual_srm: '',
   vessel_id: '',
   notes: '',
+  parent_lots: [] as ParentLotFormRow[],
 })
+
+type ParentLotFormRow = {
+  lot_code: string
+  quantity_liters: string
+}
+
+type ParentLotMeta = {
+  lot_code: string
+  quantity_liters: number
+}
 
 const ingredients = ref<Array<any>>([])
 const ingredientLoading = ref(false)
@@ -546,13 +581,42 @@ function resolveMetaNumber(meta: unknown, key: string) {
   return Number.isNaN(num) ? null : num
 }
 
+function resolveParentLots(meta: unknown) {
+  if (!meta || typeof meta !== 'object' || Array.isArray(meta)) return []
+  const raw = (meta as Record<string, unknown>).parent_lots
+  if (!Array.isArray(raw)) return []
+  return raw
+    .map((row) => {
+      if (!row || typeof row !== 'object' || Array.isArray(row)) return null
+      const code = String((row as Record<string, unknown>).lot_code ?? '').trim()
+      const qty = Number((row as Record<string, unknown>).quantity_liters)
+      if (!code || Number.isNaN(qty)) return null
+      return { lot_code: code, quantity_liters: String(qty) }
+    })
+    .filter((row): row is ParentLotFormRow => row !== null)
+}
+
 function numberOrNull(value: string) {
   if (value === null || value === undefined || value === '') return null
   const num = Number(value)
   return Number.isNaN(num) ? null : num
 }
 
-function buildMetaWithLabel(meta: unknown, label: string, actualProductVolume: string) {
+function normalizeParentLots(rows: ParentLotFormRow[]) {
+  if (!rows.length) return null
+  const cleaned = rows
+    .map((row) => {
+      const code = row.lot_code.trim()
+      if (!code) return null
+      const qty = Number(row.quantity_liters)
+      if (!Number.isFinite(qty) || qty <= 0) return null
+      return { lot_code: code, quantity_liters: qty }
+    })
+    .filter((row): row is ParentLotMeta => row !== null)
+  return cleaned.length ? cleaned : null
+}
+
+function buildMetaWithLabel(meta: unknown, label: string, actualProductVolume: string, parentLots: ParentLotMeta[] | null) {
   const base = (meta && typeof meta === 'object' && !Array.isArray(meta))
     ? { ...(meta as Record<string, unknown>) }
     : {}
@@ -568,6 +632,11 @@ function buildMetaWithLabel(meta: unknown, label: string, actualProductVolume: s
   } else {
     base.actual_product_volume = volume
   }
+  if (!parentLots || parentLots.length === 0) {
+    delete base.parent_lots
+  } else {
+    base.parent_lots = parentLots
+  }
   return base
 }
 
@@ -579,6 +648,14 @@ function toggleSection(key: SectionKey) {
 
 function collapseLabel(collapsed: boolean) {
   return collapsed ? t('common.expand') : t('common.collapse')
+}
+
+function addParentLot() {
+  lotForm.parent_lots.push({ lot_code: '', quantity_liters: '' })
+}
+
+function removeParentLot(index: number) {
+  lotForm.parent_lots.splice(index, 1)
 }
 
 async function ensureTenant() {
@@ -608,10 +685,12 @@ async function fetchLot() {
     if (error) throw error
     lot.value = data
     if (data) {
+      lotForm.lot_code = data.lot_code ?? ''
       lotForm.status = data.status ?? ''
       lotForm.label = resolveMetaLabel(data.meta) ?? ''
       const actualVolume = resolveMetaNumber(data.meta, 'actual_product_volume')
       lotForm.actual_product_volume = actualVolume != null ? String(actualVolume) : ''
+      lotForm.parent_lots = resolveParentLots(data.meta)
       lotForm.process_version = data.process_version ?? null
       lotForm.planned_start = toInputDateTime(data.planned_start)
       // lotForm.planned_end = toInputDateTime(data.planned_end)
@@ -900,8 +979,11 @@ async function saveLot() {
   if (!lotId.value) return
   try {
     savingLot.value = true
-    const meta = buildMetaWithLabel(lot.value?.meta, lotForm.label, lotForm.actual_product_volume)
+    const parentLots = normalizeParentLots(lotForm.parent_lots)
+    const meta = buildMetaWithLabel(lot.value?.meta, lotForm.label, lotForm.actual_product_volume, parentLots)
+    const trimmedLotCode = lotForm.lot_code.trim()
     const update: Record<string, any> = {
+      lot_code: trimmedLotCode || lot.value?.lot_code || null,
       status: lotForm.status || null,
       process_version: lotForm.process_version,
       planned_start: fromInputDateTime(lotForm.planned_start),

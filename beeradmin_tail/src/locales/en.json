@@ -116,16 +116,25 @@
     },
     "create": {
       "title": "Create Lot",
-      "subtitle": "Optional overrides. Code is assigned automatically.",
+      "subtitle": "Optional overrides. Enter a code or leave blank to auto-generate.",
       "recipe": "Recipe",
       "recipePlaceholder": "Select a recipe",
+      "lotCode": "Lot code",
+      "lotCodePlaceholder": "Leave blank to auto-generate",
       "plannedStart": "Planned start",
       "processVersion": "Process version",
       "processPlaceholder": "Default latest",
       "label": "Label",
       "targetVolume": "Target volume (L)",
       "notes": "Lot note",
-      "autoCodeHint": "Lot code will be generated like LOT-YYYYMMDD-XXXX.",
+      "parentLotsTitle": "Parent lots",
+      "parentLotsSubtitle": "Optional. Track source lots and volumes.",
+      "parentLotsAdd": "Add parent lot",
+      "parentLotsRemove": "Remove",
+      "parentLotsEmpty": "No parent lots added.",
+      "parentLotCode": "Parent lot code",
+      "parentLotQuantity": "Quantity (L)",
+      "autoCodeHint": "If blank, a lot code will be generated like LOT-YYYYMMDD-XXXX.",
       "createButton": "Create Lot"
     },
     "delete": {
@@ -178,7 +187,14 @@
       "actualAbv": "Actual ABV",
       "actualSrm": "Actual SRM",
       "vessel": "Vessel",
-      "notes": "Notes"
+      "notes": "Notes",
+      "parentLotsTitle": "Parent lots",
+      "parentLotsSubtitle": "Track source lots and volumes for this lot.",
+      "parentLotsAdd": "Add parent lot",
+      "parentLotsRemove": "Remove",
+      "parentLotsEmpty": "No parent lots added.",
+      "parentLotCode": "Parent lot code",
+      "parentLotQuantity": "Quantity (L)"
     },
     "ingredients": {
       "sectionTitle": "Ingredients",
@@ -485,6 +501,8 @@
     },
     "movement": {
       "subtitle": "Movements between warehouses, customers, and disposals.",
+      "viewList": "List view",
+      "viewCard": "Card view",
       "filters": {
         "beerName": "Beer name",
         "category": "Category",

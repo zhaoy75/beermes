@@ -1,0 +1,306 @@
+{
+  "schema_version": "1.0",
+
+  "batch_id": "BATCH-20260123-0001",
+  "batch_code": "LAGER-20260123-A",
+  "created_at": "2026-01-23T12:00:00Z",
+
+  "links": {
+    "recipe_version_id": "RECIPEVER-000123",
+    "recipe_code": "RCP_BEER_LAGER_330",
+    "product_code": "BEER_LAGER_330",
+    "work_order_id": "WO-20260123-0042"
+  },
+
+  "plan": {
+    "scale_factor": 1.0,
+    "planned_outputs": [
+      { "material_id": "BEER_LAGER_330", "qty": 3000, "uom": "pcs" }
+    ],
+    "planned_start": "2026-01-23T13:00:00Z",
+    "planned_end": "2026-01-31T18:00:00Z"
+  },
+
+  "state": "completed",
+
+  "actuals": {
+    "batch_timing": {
+      "start_time": "2026-01-23T13:05:00Z",
+      "end_time": "2026-01-31T17:42:00Z",
+      "duration_hours": 196.6
+    },
+
+    "material_consumption": [
+      {
+        "material_id": "MALT_PILSNER",
+        "planned_qty": 200,
+        "actual_qty": 203.5,
+        "uom": "kg",
+        "variance": 3.5,
+        "lots": [
+          { "lot_id": "LOT-MALT-20260110-01", "qty": 203.5, "uom": "kg" }
+        ]
+      },
+      {
+        "material_id": "HOPS_SAAZ",
+        "planned_qty": 2.5,
+        "actual_qty": 2.45,
+        "uom": "kg",
+        "variance": -0.05,
+        "lots": [
+          { "lot_id": "LOT-HOPS-20260105-02", "qty": 2.45, "uom": "kg" }
+        ]
+      },
+      {
+        "material_id": "YEAST_LAGER",
+        "planned_qty": 5,
+        "actual_qty": 5.1,
+        "uom": "kg",
+        "variance": 0.1,
+        "lots": [
+          { "lot_id": "LOT-YEAST-20260120-01", "qty": 5.1, "uom": "kg" }
+        ]
+      }
+    ],
+
+    "step_actuals": [
+      {
+        "step_id": "S10",
+        "name": "Mashing",
+        "status": "completed",
+
+        "timing": {
+          "start_time": "2026-01-23T13:05:00Z",
+          "end_time": "2026-01-23T14:12:00Z"
+        },
+
+        "equipment_usage": [
+          {
+            "equipment_id": "EQ-MASH-01",
+            "equipment_type": "MASH_TUN",
+            "cleaned_before": true,
+            "cleaned_after": true
+          }
+        ],
+
+        "inputs_actual": [
+          { "material_id": "MALT_PILSNER", "qty": 203.5, "uom": "kg", "lot_id": "LOT-MALT-20260110-01" },
+          { "material_id": "WATER_BREWING", "qty": 805, "uom": "L" }
+        ],
+
+        "outputs_actual": [
+          {
+            "material_id": "SWEET_WORT",
+            "qty": 748,
+            "uom": "L",
+            "type": "intermediate",
+            "lot_id": "LOT-WORT-20260123-01",
+            "disposition": {
+              "type": "transfer",
+              "to": [
+                {
+                  "batch_id": "BATCH-20260123-0001",
+                  "step_id": "S20",
+                  "qty": 748,
+                  "uom": "L"
+                }
+              ]
+            }
+          },
+          {
+            "material_id": "TRUB_WASTE",
+            "qty": 35,
+            "uom": "kg",
+            "type": "waste",
+            "lot_id": "LOT-TRUB-20260123-01",
+            "disposition": {
+              "type": "dispose",
+              "reason_code": "BIO_WASTE",
+              "method": "contractor_pickup",
+              "disposed_at": "2026-01-23T15:00:00Z"
+            }
+          }
+        ],
+
+        "data_collection": {
+          "parameters": [
+            {
+              "code": "TEMP",
+              "target": 65,
+              "limits": { "min": 63, "max": 67 },
+              "samples": [
+                { "timestamp": "2026-01-23T13:30:00Z", "value": 64.3 }
+              ],
+              "within_limits": true
+            }
+          ],
+          "qc_samples": [
+            {
+              "code": "PH_CHECK",
+              "value": 5.4,
+              "limits": { "min": 5.2, "max": 5.6 },
+              "result": "pass"
+            }
+          ]
+        }
+      },
+
+      {
+        "step_id": "S30",
+        "name": "Fermentation",
+        "status": "completed",
+
+        "equipment_usage": [
+          {
+            "equipment_id": "EQ-FERM-07",
+            "equipment_type": "FERMENTER",
+            "cleaned_before": true,
+            "cleaned_after": true
+          }
+        ],
+
+        "inputs_actual": [
+          { "material_id": "HOT_WORT", "qty": 698, "uom": "L" },
+          { "material_id": "YEAST_LAGER", "qty": 5.1, "uom": "kg", "lot_id": "LOT-YEAST-20260120-01" }
+        ],
+
+        "outputs_actual": [
+          {
+            "material_id": "BEER_GREEN",
+            "qty": 682,
+            "uom": "L",
+            "type": "intermediate",
+            "lot_id": "LOT-BEERGREEN-20260130-01",
+            "disposition": {
+              "type": "transfer",
+              "to": [
+                {
+                  "batch_id": "BATCH-20260123-0001",
+                  "step_id": "S40",
+                  "qty": 682,
+                  "uom": "L"
+                }
+              ]
+            }
+          },
+          {
+            "material_id": "YEAST_HARVEST",
+            "qty": 12,
+            "uom": "kg",
+            "type": "byproduct",
+            "lot_id": "LOT-YEAST-20260130-01",
+            "disposition": {
+              "type": "split",
+              "to": [
+                {
+                  "batch_id": "BATCH-20260124-0002",
+                  "step_id": "S30",
+                  "qty": 10,
+                  "uom": "kg"
+                }
+              ],
+              "remainder": {
+                "type": "dispose",
+                "qty": 2,
+                "uom": "kg",
+                "reason_code": "OUT_OF_SPEC",
+                "method": "bio_waste_container"
+              }
+            }
+          }
+        ]
+      },
+
+      {
+        "step_id": "S40",
+        "name": "Bottling",
+        "status": "completed",
+
+        "equipment_usage": [
+          {
+            "equipment_id": "EQ-BOTTLING-02",
+            "equipment_type": "BOTTLING_LINE",
+            "cleaned_before": true,
+            "cleaned_after": true
+          }
+        ],
+
+        "inputs_actual": [
+          { "material_id": "BEER_GREEN", "qty": 682, "uom": "L" },
+          { "material_id": "BOTTLE_330", "qty": 3005, "uom": "pcs" }
+        ],
+
+        "outputs_actual": [
+          {
+            "material_id": "BEER_LAGER_330",
+            "qty": 2978,
+            "uom": "pcs",
+            "type": "primary",
+            "lot_id": "LOT-BEER-20260131-01",
+            "disposition": {
+              "type": "inventory",
+              "location": "FG_WH_01"
+            }
+          },
+          {
+            "material_id": "SCRAP_GLASS",
+            "qty": 22,
+            "uom": "pcs",
+            "type": "waste",
+            "lot_id": "LOT-SCRAPGLASS-20260131-01",
+            "disposition": {
+              "type": "dispose",
+              "reason_code": "LINE_BREAKAGE",
+              "method": "recycling_bin"
+            }
+          }
+        ],
+
+        "data_collection": {
+          "qc_samples": [
+            {
+              "code": "ABV_TEST",
+              "value": 5.1,
+              "limits": { "min": 4.8, "max": 5.2 },
+              "result": "pass"
+            },
+            {
+              "code": "FILL_VOLUME",
+              "value": 329.4,
+              "limits": { "min": 327, "max": 333 },
+              "result": "pass"
+            },
+            {
+              "code": "BOTTLE_INSPECTION_PASS_RATE",
+              "value": 99.96,
+              "limits": { "min": 99.9 },
+              "result": "pass",
+              "haccp_ccp_id": "CCP-01"
+            }
+          ]
+        }
+      }
+    ],
+
+    "product_target_actuals": [
+      { "code": "ABV", "target": 5.0, "actual": 5.1, "status": "pass" },
+      { "code": "FILL_VOLUME", "target": 330, "actual_avg": 329.4, "status": "pass" }
+    ],
+
+    "outputs_summary": [
+      {
+        "material_id": "BEER_LAGER_330",
+        "planned_qty": 3000,
+        "uom": "kg",
+        "actual_qty": 2978,
+        "scrap_qty": 22,
+        "yield_percent": 99.27
+      }
+    ]
+  },
+
+  "haccp_execution_summary": {
+    "plan_id": "HACCP_BEER_LAGER_330_V1",
+    "ccp_status": "pass"
+  }
+}

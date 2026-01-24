@@ -1,7 +1,7 @@
 <template>
   <AdminLayout>
     <PageBreadcrumb :pageTitle="pageTitle" />
-    <div class="min-h-screen bg-white text-gray-900 p-4 max-w-6xl mx-auto space-y-6">
+    <div class="min-h-screen bg-white text-gray-900 p-4 w-full space-y-6">
       <header class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 class="text-xl font-semibold">{{ t('producedBeer.title') }}</h1>
@@ -75,6 +75,24 @@
             <p class="text-sm text-gray-500">{{ t('producedBeer.movement.subtitle') }}</p>
           </div>
           <div class="flex flex-wrap items-center gap-2">
+            <div class="inline-flex rounded-lg border border-gray-300 bg-white p-0.5 mr-6">
+              <button
+                class="px-3 py-1.5 text-sm rounded-md"
+                :class="movementView === 'list' ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-50'"
+                type="button"
+                @click="movementView = 'list'"
+              >
+                {{ t('producedBeer.movement.viewList') }}
+              </button>
+              <button
+                class="px-3 py-1.5 text-sm rounded-md"
+                :class="movementView === 'card' ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-50'"
+                type="button"
+                @click="movementView = 'card'"
+              >
+                {{ t('producedBeer.movement.viewCard') }}
+              </button>
+            </div>
             <button
               class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-50 disabled:opacity-50 mr-10"
               :disabled="movementLoading || filteredMovementCards.length === 0"
@@ -148,7 +166,43 @@
           </form>
         </section>
 
-        <section class="grid gap-4">
+        <section v-if="movementView === 'list'" class="overflow-x-auto border border-gray-200 rounded-lg">
+          <table class="min-w-full divide-y divide-gray-200 text-sm">
+            <thead class="bg-gray-50 text-xs uppercase text-gray-600">
+              <tr>
+                <th class="px-3 py-2 text-left">{{ t('producedBeer.movement.card.docNo') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('producedBeer.movement.filters.movementType') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('producedBeer.movement.card.movementDate') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('producedBeer.movement.card.source') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('producedBeer.movement.card.destination') }}</th>
+                <th class="px-3 py-2 text-right">{{ t('producedBeer.movement.card.totalLiters') }}</th>
+                <th class="px-3 py-2 text-right">{{ t('producedBeer.movement.card.totalPackages') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('common.actions') }}</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              <tr v-for="card in filteredMovementCards" :key="card.id" class="hover:bg-gray-50">
+                <td class="px-3 py-2 font-semibold text-gray-900">{{ card.docNo }}</td>
+                <td class="px-3 py-2 text-gray-600">{{ movementTypeLabel(card.docType, card.taxType) }}</td>
+                <td class="px-3 py-2 text-xs text-gray-500">{{ formatDateTime(card.movementAt) }}</td>
+                <td class="px-3 py-2 text-gray-600">{{ siteLabel(card.sourceSiteId) }}</td>
+                <td class="px-3 py-2 text-gray-600">{{ siteLabel(card.destSiteId) }}</td>
+                <td class="px-3 py-2 text-right font-semibold text-gray-900">{{ formatNumber(card.totalLiters) }}</td>
+                <td class="px-3 py-2 text-right font-semibold text-gray-900">{{ formatNumber(card.totalPackages) }}</td>
+                <td class="px-3 py-2">
+                  <button class="px-2 py-1 text-xs rounded border hover:bg-gray-50" @click="openMovementEdit(card)">
+                    {{ t('producedBeer.movement.actions.edit') }}
+                  </button>
+                </td>
+              </tr>
+              <tr v-if="!movementLoading && filteredMovementCards.length === 0">
+                <td colspan="8" class="px-3 py-8 text-center text-gray-500">{{ t('common.noData') }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section v-else class="grid gap-4">
           <article
             v-for="card in filteredMovementCards"
             :key="card.id"
@@ -368,6 +422,7 @@ const siteOptions = ref<SiteOption[]>([])
 const inventoryRows = ref<InventoryRow[]>([])
 
 const movementCards = ref<MovementCard[]>([])
+const movementView = ref<'list' | 'card'>('card')
 
 const movementFilters = reactive({
   beerName: '',
@@ -854,7 +909,11 @@ async function fetchMovements() {
       cardMap.get(line.movement_id)?.lines.push(lineCard)
     })
 
-    movementCards.value = Array.from(cardMap.values())
+    movementCards.value = Array.from(cardMap.values()).sort((a, b) => {
+      const aTime = a.movementAt ? Date.parse(a.movementAt) : 0
+      const bTime = b.movementAt ? Date.parse(b.movementAt) : 0
+      return bTime - aTime
+    })
   } catch (err) {
     console.error(err)
     movementCards.value = []

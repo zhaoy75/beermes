@@ -1,0 +1,816 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/batch-execution-1.0.schema.json",
+  "title": "Batch Execution (Step-centric)",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "batch_id",
+    "links",
+    "plan",
+    "state"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string"
+    },
+    "batch_id": {
+      "type": "string"
+    },
+    "batch_code": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "links": {
+      "type": "object",
+      "required": [
+        "recipe_version_id",
+        "product_code"
+      ],
+      "properties": {
+        "recipe_version_id": {
+          "type": "string"
+        },
+        "recipe_code": {
+          "type": "string"
+        },
+        "product_code": {
+          "type": "string"
+        },
+        "work_order_id": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "plan": {
+      "type": "object",
+      "required": [
+        "scale_factor",
+        "planned_outputs"
+      ],
+      "properties": {
+        "scale_factor": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "planned_outputs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/materialQty"
+          }
+        },
+        "planned_start": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "planned_end": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "additionalProperties": true
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "created",
+        "planned",
+        "released",
+        "running",
+        "paused",
+        "completed",
+        "aborted",
+        "scrapped"
+      ]
+    },
+    "actuals": {
+      "$ref": "#/$defs/actuals"
+    },
+    "haccp_execution_summary": {
+      "$ref": "#/$defs/haccpExecutionSummary"
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "materialQty": {
+      "type": "object",
+      "required": [
+        "material_id",
+        "qty",
+        "uom"
+      ],
+      "properties": {
+        "material_id": {
+          "type": "string"
+        },
+        "qty": {
+          "type": "number",
+          "minimum": 0
+        },
+        "uom": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "lotQty": {
+      "type": "object",
+      "required": [
+        "lot_id",
+        "qty"
+      ],
+      "properties": {
+        "lot_id": {
+          "type": "string"
+        },
+        "qty": {
+          "type": "number",
+          "minimum": 0
+        },
+        "uom": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "materialConsumption": {
+      "type": "object",
+      "required": [
+        "material_id",
+        "planned_qty",
+        "actual_qty",
+        "uom"
+      ],
+      "properties": {
+        "material_id": {
+          "type": "string"
+        },
+        "planned_qty": {
+          "type": "number",
+          "minimum": 0
+        },
+        "actual_qty": {
+          "type": "number",
+          "minimum": 0
+        },
+        "uom": {
+          "type": "string"
+        },
+        "variance": {
+          "type": "number"
+        },
+        "lots": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/lotQty"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "timing": {
+      "type": "object",
+      "properties": {
+        "start_time": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "end_time": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "additionalProperties": true
+    },
+    "equipmentUsage": {
+      "type": "object",
+      "required": [
+        "equipment_id",
+        "equipment_type"
+      ],
+      "properties": {
+        "equipment_id": {
+          "type": "string"
+        },
+        "equipment_type": {
+          "type": "string"
+        },
+        "start_time": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "end_time": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "cleaned_before": {
+          "type": "boolean"
+        },
+        "cleaned_after": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": true
+    },
+    "dispositionTransferTo": {
+      "type": "object",
+      "required": [
+        "batch_id",
+        "step_id",
+        "qty",
+        "uom"
+      ],
+      "properties": {
+        "batch_id": {
+          "type": "string"
+        },
+        "step_id": {
+          "type": "string"
+        },
+        "qty": {
+          "type": "number",
+          "minimum": 0
+        },
+        "uom": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "disposeRemainder": {
+      "type": "object",
+      "required": [
+        "type",
+        "qty",
+        "uom"
+      ],
+      "properties": {
+        "type": {
+          "const": "dispose"
+        },
+        "qty": {
+          "type": "number",
+          "minimum": 0
+        },
+        "uom": {
+          "type": "string"
+        },
+        "reason_code": {
+          "type": "string"
+        },
+        "method": {
+          "type": "string"
+        },
+        "disposed_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "additionalProperties": true
+    },
+    "disposition": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "to"
+          ],
+          "properties": {
+            "type": {
+              "const": "transfer"
+            },
+            "to": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/$defs/dispositionTransferTo"
+              }
+            }
+          },
+          "additionalProperties": true
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "location"
+          ],
+          "properties": {
+            "type": {
+              "const": "inventory"
+            },
+            "location": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        },
+        {
+          "type": "object",
+          "required": [
+            "type"
+          ],
+          "properties": {
+            "type": {
+              "const": "hold"
+            },
+            "location": {
+              "type": "string"
+            },
+            "until": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          "additionalProperties": true
+        },
+        {
+          "type": "object",
+          "required": [
+            "type"
+          ],
+          "properties": {
+            "type": {
+              "const": "dispose"
+            },
+            "reason_code": {
+              "type": "string"
+            },
+            "method": {
+              "type": "string"
+            },
+            "disposed_at": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          "additionalProperties": true
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "to",
+            "remainder"
+          ],
+          "properties": {
+            "type": {
+              "const": "split"
+            },
+            "to": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/$defs/dispositionTransferTo"
+              }
+            },
+            "remainder": {
+              "$ref": "#/$defs/disposeRemainder"
+            }
+          },
+          "additionalProperties": true
+        }
+      ]
+    },
+    "ioActual": {
+      "type": "object",
+      "required": [
+        "material_id",
+        "qty",
+        "uom"
+      ],
+      "properties": {
+        "material_id": {
+          "type": "string"
+        },
+        "qty": {
+          "type": "number",
+          "minimum": 0
+        },
+        "uom": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "primary",
+            "intermediate",
+            "byproduct",
+            "waste"
+          ]
+        },
+        "lot_id": {
+          "type": "string"
+        },
+        "disposition": {
+          "$ref": "#/$defs/disposition"
+        },
+        "from_storage_unit_id": {
+          "type": "string"
+        },
+        "storage_unit_id": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "sample": {
+      "type": "object",
+      "required": [
+        "value"
+      ],
+      "properties": {
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "value": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": true
+    },
+    "parameterCollection": {
+      "type": "object",
+      "required": [
+        "code"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "uom": {
+          "type": "string"
+        },
+        "target": {
+          "type": "number"
+        },
+        "limits": {
+          "type": "object",
+          "properties": {
+            "min": {
+              "type": "number"
+            },
+            "max": {
+              "type": "number"
+            }
+          },
+          "additionalProperties": true
+        },
+        "samples": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/sample"
+          }
+        },
+        "within_limits": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": true
+    },
+    "qcSample": {
+      "type": "object",
+      "required": [
+        "code",
+        "result"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "value": {
+          "type": "number"
+        },
+        "uom": {
+          "type": "string"
+        },
+        "limits": {
+          "type": "object",
+          "properties": {
+            "min": {
+              "type": "number"
+            },
+            "max": {
+              "type": "number"
+            }
+          },
+          "additionalProperties": true
+        },
+        "result": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail",
+            "na"
+          ]
+        },
+        "haccp_ccp_id": {
+          "type": "string"
+        },
+        "haccp": {
+          "type": "object",
+          "properties": {
+            "ccp_id": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "stepDataCollection": {
+      "type": "object",
+      "properties": {
+        "parameters": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/parameterCollection"
+          }
+        },
+        "qc_samples": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/qcSample"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "storageUsage": {
+      "type": "object",
+      "required": [
+        "material_id",
+        "storage_unit_id"
+      ],
+      "properties": {
+        "material_id": {
+          "type": "string"
+        },
+        "storage_unit_id": {
+          "type": "string"
+        },
+        "storage_type": {
+          "type": "string"
+        },
+        "start_time": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "end_time": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "duration_hours": {
+          "type": "number",
+          "minimum": 0
+        },
+        "avg_temp": {
+          "type": "number"
+        },
+        "within_limits": {
+          "type": "boolean"
+        },
+        "limits": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "stepActual": {
+      "type": "object",
+      "required": [
+        "step_id",
+        "name",
+        "status"
+      ],
+      "properties": {
+        "step_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "queued",
+            "ready",
+            "running",
+            "waiting_qc",
+            "completed",
+            "failed",
+            "skipped",
+            "blocked"
+          ]
+        },
+        "timing": {
+          "$ref": "#/$defs/timing"
+        },
+        "equipment_usage": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/equipmentUsage"
+          }
+        },
+        "inputs_actual": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ioActual"
+          }
+        },
+        "outputs_actual": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ioActual"
+          }
+        },
+        "storage_usage": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/storageUsage"
+          }
+        },
+        "data_collection": {
+          "$ref": "#/$defs/stepDataCollection"
+        }
+      },
+      "additionalProperties": true
+    },
+    "productTargetActual": {
+      "type": "object",
+      "required": [
+        "code",
+        "status"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "target": {
+          "type": "number"
+        },
+        "actual": {
+          "type": "number"
+        },
+        "actual_avg": {
+          "type": "number"
+        },
+        "uom": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail",
+            "ok",
+            "na"
+          ]
+        },
+        "deviation": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": true
+    },
+    "outputsSummary": {
+      "type": "object",
+      "required": [
+        "material_id",
+        "uom"
+      ],
+      "properties": {
+        "material_id": {
+          "type": "string"
+        },
+        "planned_qty": {
+          "type": "number",
+          "minimum": 0
+        },
+        "actual_qty": {
+          "type": "number",
+          "minimum": 0
+        },
+        "scrap_qty": {
+          "type": "number",
+          "minimum": 0
+        },
+        "uom": {
+          "type": "string"
+        },
+        "yield_percent": {
+          "type": "number",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": true
+    },
+    "actuals": {
+      "type": "object",
+      "properties": {
+        "batch_timing": {
+          "$ref": "#/$defs/timing"
+        },
+        "material_consumption": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/materialConsumption"
+          }
+        },
+        "step_actuals": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/stepActual"
+          }
+        },
+        "product_target_actuals": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/productTargetActual"
+          }
+        },
+        "outputs_summary": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/outputsSummary"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "haccpExecutionSummary": {
+      "type": "object",
+      "properties": {
+        "plan_id": {
+          "type": "string"
+        },
+        "ccp_status": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail",
+            "pending",
+            "na"
+          ]
+        },
+        "ccp_records": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "ccp_id": {
+                "type": "string"
+              },
+              "step_id": {
+                "type": "string"
+              },
+              "parameter": {
+                "type": "string"
+              },
+              "critical_limit_min": {
+                "type": "number"
+              },
+              "critical_limit_max": {
+                "type": "number"
+              },
+              "actual_value": {
+                "type": "number"
+              },
+              "uom": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "pass",
+                  "fail",
+                  "pending",
+                  "na"
+                ]
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}

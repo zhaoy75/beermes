@@ -168,6 +168,16 @@ const summaryState = ref<LotRow | null>(null)
 const showCreate = ref(false)
 const toDelete = ref<LotRow | null>(null)
 
+type ParentLotInput = {
+  lot_code: string
+  quantity_liters: string
+}
+
+type ParentLotMeta = {
+  lot_code: string
+  quantity_liters: number
+}
+
 async function ensureTenant() {
   if (tenantId.value) return tenantId.value
   const { data, error } = await supabase.auth.getUser()
@@ -369,11 +379,25 @@ function closeCreate() {
   showCreate.value = false
 }
 
-async function handleCreate(payload: { recipeId: string, label: string | null, plannedStart: string | null, targetVolume: number | null, notes: string | null, processVersion: number | null }) {
+function normalizeParentLots(rows: ParentLotInput[]) {
+  if (!rows?.length) return null
+  const cleaned = rows
+    .map((row) => {
+      const code = row.lot_code?.trim()
+      if (!code) return null
+      const qty = Number(row.quantity_liters)
+      if (!Number.isFinite(qty) || qty <= 0) return null
+      return { lot_code: code, quantity_liters: qty }
+    })
+    .filter((row): row is ParentLotMeta => row !== null)
+  return cleaned.length ? cleaned : null
+}
+
+async function handleCreate(payload: { recipeId: string, lotCode: string | null, label: string | null, plannedStart: string | null, targetVolume: number | null, notes: string | null, processVersion: number | null, parentLots: ParentLotInput[] }) {
   try {
     loading.value = true
     const tenant = await ensureTenant()
-    const lotCode = await generateLotCode()
+    const lotCode = payload.lotCode?.trim() ? payload.lotCode.trim() : await generateLotCode()
     const { data, error } = await supabase.rpc('create_lot_from_recipe', {
       _tenant_id: tenant,
       _recipe_id: payload.recipeId,
@@ -384,10 +408,14 @@ async function handleCreate(payload: { recipeId: string, label: string | null, p
       _notes: payload.notes,
     })
     if (error) throw error
-    if (payload.label && data) {
+    const parentLots = normalizeParentLots(payload.parentLots)
+    const meta: Record<string, unknown> = {}
+    if (payload.label) meta.label = payload.label
+    if (parentLots) meta.parent_lots = parentLots
+    if (data && Object.keys(meta).length > 0) {
       const { error: labelError } = await supabase
         .from('prd_lots')
-        .update({ meta: { label: payload.label } })
+        .update({ meta })
         .eq('id', data)
       if (labelError) throw labelError
     }

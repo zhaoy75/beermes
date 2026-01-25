@@ -266,8 +266,8 @@ const menuGroups = computed(() => [
       //   icon: CalenderIcon,
       //   name: t('sidebar.items.recipemng'),
       //   subItems: [
-      //     { name: t('sidebar.items.recipeList'), path: "/recipeList", pro: false },
-      //     { name: t('sidebar.items.lotYield'), path: "/lotYieldSummary", pro: false },
+      //      { name: t('sidebar.items.recipeList'), path: "/recipeList", pro: false },
+      //      { name: t('sidebar.items.batchYield'), path: "/batchYieldSummary", pro: false },
 
       //   ],
       // },
@@ -275,21 +275,23 @@ const menuGroups = computed(() => [
         icon: CalenderIcon,
         name: t('sidebar.items.production'),
         subItems: [
-          { name: t('sidebar.items.lotList'), path: "/lots", pro: false },
+          { name: t('sidebar.items.recipeList'), path: "/recipeList", pro: false },
+          { name: t('sidebar.items.batchList'), path: "/batches", pro: false },
           // { name: t('sidebar.items.waste'), path: "/waste", pro: false },
         ],
       },
-      {
-        icon: CalenderIcon,
-        name: t('sidebar.items.producedBeer'),
-        path: "/producedBeer",
-      },
+      // {
+      //   icon: CalenderIcon,
+      //   name: t('sidebar.items.producedBeer'),
+      //   path: "/producedBeer",
+      // },
       {
         icon: CalenderIcon,
         name: t('sidebar.items.liquorTax'),
         subItems: [
-          { name: t('sidebar.items.taxYearSummary'), path: "/taxYearSummary", pro: false },
+          { name: t('sidebar.items.producedBeer'), path: "/producedBeer", pro: false },
           { name: t('sidebar.items.taxReport'), path: "/taxReports", pro: false },
+          { name: t('sidebar.items.taxYearSummary'), path: "/taxYearSummary", pro: false },
           // { name: t('sidebar.items.siteMovements'), path: "/siteMovements", pro: false }
         ],
       },
@@ -315,8 +317,9 @@ const menuGroups = computed(() => [
         icon: CalenderIcon,
         name: t('sidebar.items.systemMaintenance'),
         subItems: [
-          { name: t('sidebar.items.categoryMaster'), path: "/categoryMaster", pro: false },
-          { name: t('sidebar.items.taxMaster'), path: "/taxMaster", pro: false },
+          { name: t('sidebar.items.alcoholTypeMaster'), path: "/alcoholTypeMaster", pro: false },
+          { name: t('sidebar.items.alcoholTaxMaster'), path: "/alcoholTaxMaster", pro: false },
+          { name: t('sidebar.items.materialClassMaster'), path: "/materialClassMaster", pro: false },
           { name: t('sidebar.items.siteTypeMaster'), path: "/siteTypeMaster", pro: false },
           { name: t('sidebar.items.uomMaster'), path: "/uomMaster", pro: false },
 

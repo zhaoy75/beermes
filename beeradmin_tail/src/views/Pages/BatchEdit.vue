@@ -2,75 +2,75 @@
   <AdminLayout>
     <PageBreadcrumb :pageTitle="pageTitle" />
 
-    <div v-if="loadingLot" class="p-6 text-sm text-gray-500">{{ t('common.loading') }}</div>
-    <div v-else-if="!lot" class="p-6 text-sm text-red-600">{{ t('lot.edit.notFound') }}</div>
+    <div v-if="loadingBatch" class="p-6 text-sm text-gray-500">{{ t('common.loading') }}</div>
+    <div v-else-if="!batch" class="p-6 text-sm text-red-600">{{ t('batch.edit.notFound') }}</div>
     <div v-else class="space-y-6">
-      <!-- Lot Information -->
+      <!-- Batch Information -->
       <section class="bg-white rounded-xl shadow border border-gray-200 p-5">
         <header class="flex items-center justify-between mb-4">
           <div>
-            <h2 class="text-lg font-semibold text-gray-800">{{ t('lot.edit.infoTitle') }}</h2>
-            <p class="text-xs text-gray-500">{{ t('lot.edit.infoSubtitle') }}</p>
+            <h2 class="text-lg font-semibold text-gray-800">{{ t('batch.edit.infoTitle') }}</h2>
+            <p class="text-xs text-gray-500">{{ t('batch.edit.infoSubtitle') }}</p>
           </div>
-          <button class="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50" type="button" :disabled="savingLot" @click="saveLot">{{ savingLot ? t('common.saving') : t('common.save') }}</button>
+          <button class="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50" type="button" :disabled="savingBatch" @click="saveBatch">{{ savingBatch ? t('common.saving') : t('common.save') }}</button>
         </header>
         <form class="grid grid-cols-1 lg:grid-cols-3 gap-4" @submit.prevent>
           <div>
-            <label class="block text-sm text-gray-600 mb-1" for="lotCode">{{ t('lot.edit.lotCode') }}</label>
-            <input id="lotCode" v-model.trim="lotForm.lot_code" type="text" class="w-full h-[40px] border rounded px-3" />
+            <label class="block text-sm text-gray-600 mb-1" for="batchCode">{{ t('batch.edit.batchCode') }}</label>
+            <input id="batchCode" v-model.trim="batchForm.batch_code" type="text" class="w-full h-[40px] border rounded px-3" />
           </div>
           <div>
-            <label class="block text-sm text-gray-600 mb-1" for="lotStatus">{{ t('lot.edit.status') }}</label>
-            <input id="lotStatus" v-model.trim="lotForm.status" type="text" class="w-full h-[40px] border rounded px-3" />
+            <label class="block text-sm text-gray-600 mb-1" for="batchStatus">{{ t('batch.edit.status') }}</label>
+            <input id="batchStatus" v-model.trim="batchForm.status" type="text" class="w-full h-[40px] border rounded px-3" />
           </div>
           <div>
-            <label class="block text-sm text-gray-600 mb-1" for="lotLabel">{{ t('lot.edit.label') }}</label>
-            <input id="lotLabel" v-model.trim="lotForm.label" type="text" class="w-full h-[40px] border rounded px-3" />
+            <label class="block text-sm text-gray-600 mb-1" for="batchLabel">{{ t('batch.edit.label') }}</label>
+            <input id="batchLabel" v-model.trim="batchForm.label" type="text" class="w-full h-[40px] border rounded px-3" />
           </div>
           <div>
-            <label class="block text-sm text-gray-600 mb-1" for="lotPlannedStart">{{ t('lot.edit.plannedStart') }}</label>
-            <input id="lotPlannedStart" v-model="lotForm.planned_start" type="datetime-local" class="w-full h-[40px] border rounded px-3" />
+            <label class="block text-sm text-gray-600 mb-1" for="batchPlannedStart">{{ t('batch.edit.plannedStart') }}</label>
+            <input id="batchPlannedStart" v-model="batchForm.planned_start" type="datetime-local" class="w-full h-[40px] border rounded px-3" />
           </div>
           <!-- <div>
-            <label class="block text-sm text-gray-600 mb-1" for="lotPlannedEnd">{{ t('lot.edit.plannedEnd') }}</label>
-            <input id="lotPlannedEnd" v-model="lotForm.planned_end" type="datetime-local" class="w-full h-[40px] border rounded px-3" />
+            <label class="block text-sm text-gray-600 mb-1" for="batchPlannedEnd">{{ t('batch.edit.plannedEnd') }}</label>
+            <input id="batchPlannedEnd" v-model="batchForm.planned_end" type="datetime-local" class="w-full h-[40px] border rounded px-3" />
           </div>
           <div>
-            <label class="block text-sm text-gray-600 mb-1" for="lotActualStart">{{ t('lot.edit.actualStart') }}</label>
-            <input id="lotActualStart" v-model="lotForm.actual_start" type="datetime-local" class="w-full h-[40px] border rounded px-3" />
+            <label class="block text-sm text-gray-600 mb-1" for="batchActualStart">{{ t('batch.edit.actualStart') }}</label>
+            <input id="batchActualStart" v-model="batchForm.actual_start" type="datetime-local" class="w-full h-[40px] border rounded px-3" />
           </div>
           <div>
-            <label class="block text-sm text-gray-600 mb-1" for="lotActualEnd">{{ t('lot.edit.actualEnd') }}</label>
-            <input id="lotActualEnd" v-model="lotForm.actual_end" type="datetime-local" class="w-full h-[40px] border rounded px-3" />
+            <label class="block text-sm text-gray-600 mb-1" for="batchActualEnd">{{ t('batch.edit.actualEnd') }}</label>
+            <input id="batchActualEnd" v-model="batchForm.actual_end" type="datetime-local" class="w-full h-[40px] border rounded px-3" />
           </div> -->
           <div>
-            <label class="block text-sm text-gray-600 mb-1" for="lotTargetVolume">{{ t('lot.edit.targetVolume') }}</label>
-            <input id="lotTargetVolume" v-model.number="lotForm.target_volume_l" type="number" min="0" step="0.01" class="w-full h-[40px] border rounded px-3" />
+            <label class="block text-sm text-gray-600 mb-1" for="batchTargetVolume">{{ t('batch.edit.targetVolume') }}</label>
+            <input id="batchTargetVolume" v-model.number="batchForm.target_volume_l" type="number" min="0" step="0.01" class="w-full h-[40px] border rounded px-3" />
           </div>
           <div class="lg:col-span-3">
-            <label class="block text-sm text-gray-600 mb-1" for="lotNotes">{{ t('lot.edit.notes') }}</label>
-            <textarea id="lotNotes" v-model.trim="lotForm.notes" rows="3" class="w-full border rounded px-3 py-2"></textarea>
+            <label class="block text-sm text-gray-600 mb-1" for="batchNotes">{{ t('batch.edit.notes') }}</label>
+            <textarea id="batchNotes" v-model.trim="batchForm.notes" rows="3" class="w-full border rounded px-3 py-2"></textarea>
           </div>
           <div class="lg:col-span-3 space-y-2">
             <div class="flex items-center justify-between">
               <div>
-                <p class="text-sm font-semibold text-gray-700">{{ t('lot.edit.parentLotsTitle') }}</p>
-                <p class="text-xs text-gray-500">{{ t('lot.edit.parentLotsSubtitle') }}</p>
+                <p class="text-sm font-semibold text-gray-700">{{ t('batch.edit.parentBatchesTitle') }}</p>
+                <p class="text-xs text-gray-500">{{ t('batch.edit.parentBatchesSubtitle') }}</p>
               </div>
-              <button class="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-100" type="button" @click="addParentLot">{{ t('lot.edit.parentLotsAdd') }}</button>
+              <button class="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-100" type="button" @click="addParentBatch">{{ t('batch.edit.parentBatchesAdd') }}</button>
             </div>
-            <div v-if="lotForm.parent_lots.length === 0" class="text-xs text-gray-500">{{ t('lot.edit.parentLotsEmpty') }}</div>
-            <div v-for="(row, index) in lotForm.parent_lots" :key="`parent-${index}`" class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div v-if="batchForm.parent_batches.length === 0" class="text-xs text-gray-500">{{ t('batch.edit.parentBatchesEmpty') }}</div>
+            <div v-for="(row, index) in batchForm.parent_batches" :key="`parent-${index}`" class="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div class="md:col-span-2">
-                <label class="block text-sm text-gray-600 mb-1" :for="`editParentLotCode-${index}`">{{ t('lot.edit.parentLotCode') }}</label>
-                <input :id="`editParentLotCode-${index}`" v-model.trim="row.lot_code" type="text" class="w-full h-[40px] border rounded px-3" />
+                <label class="block text-sm text-gray-600 mb-1" :for="`editParentBatchCode-${index}`">{{ t('batch.edit.parentBatchCode') }}</label>
+                <input :id="`editParentBatchCode-${index}`" v-model.trim="row.batch_code" type="text" class="w-full h-[40px] border rounded px-3" />
               </div>
               <div>
-                <label class="block text-sm text-gray-600 mb-1" :for="`editParentLotQty-${index}`">{{ t('lot.edit.parentLotQuantity') }}</label>
-                <input :id="`editParentLotQty-${index}`" v-model="row.quantity_liters" type="number" min="0" step="0.01" class="w-full h-[40px] border rounded px-3" />
+                <label class="block text-sm text-gray-600 mb-1" :for="`editParentBatchQty-${index}`">{{ t('batch.edit.parentBatchQuantity') }}</label>
+                <input :id="`editParentBatchQty-${index}`" v-model="row.quantity_liters" type="number" min="0" step="0.01" class="w-full h-[40px] border rounded px-3" />
               </div>
               <div class="md:col-span-3 flex justify-end">
-                <button class="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-100" type="button" @click="removeParentLot(index)">{{ t('lot.edit.parentLotsRemove') }}</button>
+                <button class="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-100" type="button" @click="removeParentBatch(index)">{{ t('batch.edit.parentBatchesRemove') }}</button>
               </div>
             </div>
           </div>
@@ -80,33 +80,33 @@
       <section class="bg-white rounded-xl shadow border border-gray-200 p-5">
         <header class="flex items-center justify-between mb-4">
           <div>
-            <h2 class="text-lg font-semibold text-gray-800">{{ t('lot.edit.actualTitle') }}</h2>
-            <p class="text-xs text-gray-500">{{ t('lot.edit.actualSubtitle') }}</p>
+            <h2 class="text-lg font-semibold text-gray-800">{{ t('batch.edit.actualTitle') }}</h2>
+            <p class="text-xs text-gray-500">{{ t('batch.edit.actualSubtitle') }}</p>
           </div>
-          <button class="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50" type="button" :disabled="savingLot" @click="saveLot">
-            {{ savingLot ? t('common.saving') : t('common.save') }}
+          <button class="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50" type="button" :disabled="savingBatch" @click="saveBatch">
+            {{ savingBatch ? t('common.saving') : t('common.save') }}
           </button>
         </header>
         <form class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" @submit.prevent>
           <div>
-            <label class="block text-sm text-gray-600 mb-1" for="lotActualProductVolume">{{ t('lot.edit.actualProductVolume') }}</label>
-            <input id="lotActualProductVolume" v-model.trim="lotForm.actual_product_volume" type="number" min="0" step="0.01" class="w-full h-[40px] border rounded px-3" />
+            <label class="block text-sm text-gray-600 mb-1" for="batchActualProductVolume">{{ t('batch.edit.actualProductVolume') }}</label>
+            <input id="batchActualProductVolume" v-model.trim="batchForm.actual_product_volume" type="number" min="0" step="0.01" class="w-full h-[40px] border rounded px-3" />
           </div>
           <div>
-            <label class="block text-sm text-gray-600 mb-1" for="lotActualOg">{{ t('lot.edit.actualOg') }}</label>
-            <input id="lotActualOg" v-model.trim="lotForm.actual_og" type="number" min="0" step="0.001" class="w-full h-[40px] border rounded px-3" />
+            <label class="block text-sm text-gray-600 mb-1" for="batchActualOg">{{ t('batch.edit.actualOg') }}</label>
+            <input id="batchActualOg" v-model.trim="batchForm.actual_og" type="number" min="0" step="0.001" class="w-full h-[40px] border rounded px-3" />
           </div>
           <div>
-            <label class="block text-sm text-gray-600 mb-1" for="lotActualFg">{{ t('lot.edit.actualFg') }}</label>
-            <input id="lotActualFg" v-model.trim="lotForm.actual_fg" type="number" min="0" step="0.001" class="w-full h-[40px] border rounded px-3" />
+            <label class="block text-sm text-gray-600 mb-1" for="batchActualFg">{{ t('batch.edit.actualFg') }}</label>
+            <input id="batchActualFg" v-model.trim="batchForm.actual_fg" type="number" min="0" step="0.001" class="w-full h-[40px] border rounded px-3" />
           </div>
           <div>
-            <label class="block text-sm text-gray-600 mb-1" for="lotActualAbv">{{ t('lot.edit.actualAbv') }}</label>
-            <input id="lotActualAbv" v-model.trim="lotForm.actual_abv" type="number" min="0" step="0.01" class="w-full h-[40px] border rounded px-3" />
+            <label class="block text-sm text-gray-600 mb-1" for="batchActualAbv">{{ t('batch.edit.actualAbv') }}</label>
+            <input id="batchActualAbv" v-model.trim="batchForm.actual_abv" type="number" min="0" step="0.01" class="w-full h-[40px] border rounded px-3" />
           </div>
           <div>
-            <label class="block text-sm text-gray-600 mb-1" for="lotActualSrm">{{ t('lot.edit.actualSrm') }}</label>
-            <input id="lotActualSrm" v-model.trim="lotForm.actual_srm" type="number" min="0" step="0.1" class="w-full h-[40px] border rounded px-3" />
+            <label class="block text-sm text-gray-600 mb-1" for="batchActualSrm">{{ t('batch.edit.actualSrm') }}</label>
+            <input id="batchActualSrm" v-model.trim="batchForm.actual_srm" type="number" min="0" step="0.1" class="w-full h-[40px] border rounded px-3" />
           </div>
         </form>
       </section>
@@ -119,22 +119,22 @@
               {{ collapseLabel(sectionCollapsed.ingredients) }}
             </button>
             <div>
-              <h2 class="text-lg font-semibold text-gray-800">{{ t('lot.ingredients.sectionTitle') }}</h2>
-              <p class="text-xs text-gray-500">{{ t('lot.ingredients.sectionSubtitle') }}</p>
+              <h2 class="text-lg font-semibold text-gray-800">{{ t('batch.ingredients.sectionTitle') }}</h2>
+              <p class="text-xs text-gray-500">{{ t('batch.ingredients.sectionSubtitle') }}</p>
             </div>
           </div>
-          <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50" type="button" :disabled="ingredientLoading || !lot?.recipe_id" @click="openIngredientAdd">{{ t('common.add') }}</button>
+          <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50" type="button" :disabled="ingredientLoading || !batch?.recipe_id" @click="openIngredientAdd">{{ t('common.add') }}</button>
         </header>
         <div v-if="ingredientLoading && !sectionCollapsed.ingredients" class="text-sm text-gray-500">{{ t('common.loading') }}</div>
         <div v-show="!sectionCollapsed.ingredients" v-else class="overflow-x-auto">
           <table class="min-w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
             <thead class="bg-gray-50 text-gray-600 uppercase text-xs">
               <tr>
-                <th class="px-3 py-2 text-left">{{ t('lot.ingredients.material') }}</th>
-                <th class="px-3 py-2 text-right">{{ t('lot.ingredients.amount') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('lot.ingredients.uom') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('lot.ingredients.stage') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('lot.ingredients.notes') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('batch.ingredients.material') }}</th>
+                <th class="px-3 py-2 text-right">{{ t('batch.ingredients.amount') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('batch.ingredients.uom') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('batch.ingredients.stage') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('batch.ingredients.notes') }}</th>
                 <th class="px-3 py-2 text-left">{{ t('common.actions') }}</th>
               </tr>
             </thead>
@@ -166,8 +166,8 @@
               {{ collapseLabel(sectionCollapsed.packaging) }}
             </button>
             <div>
-              <h2 class="text-lg font-semibold text-gray-800">{{ t('lot.packaging.sectionTitle') }}</h2>
-              <p class="text-xs text-gray-500">{{ t('lot.packaging.sectionSubtitle') }}</p>
+              <h2 class="text-lg font-semibold text-gray-800">{{ t('batch.packaging.sectionTitle') }}</h2>
+              <p class="text-xs text-gray-500">{{ t('batch.packaging.sectionSubtitle') }}</p>
             </div>
           </div>
           <div class="flex items-center gap-2">
@@ -175,21 +175,21 @@
             <button class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-50" type="button" :disabled="packagesLoading || savingPackaging" @click="savePackagingMovement">
               {{ savingPackaging ? t('common.saving') : t('common.save') }}
             </button>
-            <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50" type="button" :disabled="packagesLoading" @click="openPackageAdd">{{ t('lot.packaging.addButton') }}</button>
+            <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50" type="button" :disabled="packagesLoading" @click="openPackageAdd">{{ t('batch.packaging.addButton') }}</button>
           </div>
         </header>
 
         <div v-show="!sectionCollapsed.packaging" class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
           <div class="border border-dashed border-gray-300 rounded-lg p-3 bg-gray-50">
-            <p class="text-xs uppercase text-gray-500">{{ t('lot.packaging.summaryTotalProduct') }}</p>
+            <p class="text-xs uppercase text-gray-500">{{ t('batch.packaging.summaryTotalProduct') }}</p>
             <p class="text-lg font-semibold text-gray-800">{{ formatVolumeValue(totalProductVolume) }}</p>
           </div>
           <div class="border border-dashed border-gray-300 rounded-lg p-3 bg-gray-50">
-            <p class="text-xs uppercase text-gray-500">{{ t('lot.packaging.summaryFilled') }}</p>
+            <p class="text-xs uppercase text-gray-500">{{ t('batch.packaging.summaryFilled') }}</p>
             <p class="text-lg font-semibold text-gray-800">{{ formatVolumeValue(totalFilledVolume) }}</p>
           </div>
           <div class="border border-dashed border-gray-300 rounded-lg p-3 bg-gray-50">
-            <p class="text-xs uppercase text-gray-500">{{ t('lot.packaging.summaryRemaining') }}</p>
+            <p class="text-xs uppercase text-gray-500">{{ t('batch.packaging.summaryRemaining') }}</p>
             <p class="text-lg font-semibold text-gray-800">{{ formatVolumeValue(remainingVolume) }}</p>
           </div>
         </div>
@@ -198,13 +198,13 @@
           <table class="min-w-full text-sm divide-y divide-gray-200">
             <thead class="bg-gray-50 text-gray-600 uppercase text-xs">
               <tr>
-                <th class="px-3 py-2 text-left">{{ t('lot.packaging.columns.fillDate') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('lot.packaging.columns.package') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('lot.packaging.columns.outputSite') }}</th>
-                <th class="px-3 py-2 text-right">{{ t('lot.packaging.columns.quantity') }}</th>
-                <th class="px-3 py-2 text-right">{{ t('lot.packaging.columns.unitSize') }}</th>
-                <th class="px-3 py-2 text-right">{{ t('lot.packaging.columns.totalVolume') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('lot.packaging.columns.notes') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('batch.packaging.columns.fillDate') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('batch.packaging.columns.package') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('batch.packaging.columns.outputSite') }}</th>
+                <th class="px-3 py-2 text-right">{{ t('batch.packaging.columns.quantity') }}</th>
+                <th class="px-3 py-2 text-right">{{ t('batch.packaging.columns.unitSize') }}</th>
+                <th class="px-3 py-2 text-right">{{ t('batch.packaging.columns.totalVolume') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('batch.packaging.columns.notes') }}</th>
                 <th class="px-3 py-2 text-left">{{ t('common.actions') }}</th>
               </tr>
             </thead>
@@ -226,7 +226,7 @@
                 </td>
               </tr>
               <tr v-if="!packagesLoading && packages.length === 0">
-                <td class="px-3 py-6 text-center text-gray-500" colspan="8">{{ t('lot.packaging.noData') }}</td>
+                <td class="px-3 py-6 text-center text-gray-500" colspan="8">{{ t('batch.packaging.noData') }}</td>
               </tr>
               <tr v-if="packagesLoading">
                 <td class="px-3 py-6 text-center text-gray-500" colspan="8">{{ t('common.loading') }}</td>
@@ -244,8 +244,8 @@
               {{ collapseLabel(sectionCollapsed.yeast) }}
             </button>
             <div>
-              <h2 class="text-lg font-semibold text-gray-800">{{ t('lot.yeast.sectionTitle') }}</h2>
-              <p class="text-xs text-gray-500">{{ t('lot.yeast.sectionSubtitle') }}</p>
+              <h2 class="text-lg font-semibold text-gray-800">{{ t('batch.yeast.sectionTitle') }}</h2>
+              <p class="text-xs text-gray-500">{{ t('batch.yeast.sectionSubtitle') }}</p>
             </div>
           </div>
           <div class="text-sm text-gray-500" v-if="yeastLoading">{{ t('common.loading') }}</div>
@@ -253,15 +253,15 @@
 
         <div v-show="!sectionCollapsed.yeast" class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
           <div class="border border-dashed border-gray-300 rounded-lg p-3 bg-gray-50">
-            <p class="text-xs uppercase text-gray-500">{{ t('lot.yeast.totalPulled') }}</p>
+            <p class="text-xs uppercase text-gray-500">{{ t('batch.yeast.totalPulled') }}</p>
             <p class="text-lg font-semibold text-gray-800">{{ formatQuantity(yeastTotals.totalPulled) }}</p>
           </div>
           <div class="border border-dashed border-gray-300 rounded-lg p-3 bg-gray-50">
-            <p class="text-xs uppercase text-gray-500">{{ t('lot.yeast.totalReturned') }}</p>
+            <p class="text-xs uppercase text-gray-500">{{ t('batch.yeast.totalReturned') }}</p>
             <p class="text-lg font-semibold text-gray-800">{{ formatQuantity(yeastTotals.totalReturned) }}</p>
           </div>
           <div class="border border-dashed border-gray-300 rounded-lg p-3 bg-gray-50">
-            <p class="text-xs uppercase text-gray-500">{{ t('lot.yeast.totalDumped') }}</p>
+            <p class="text-xs uppercase text-gray-500">{{ t('batch.yeast.totalDumped') }}</p>
             <p class="text-lg font-semibold text-gray-800">{{ formatQuantity(yeastTotals.totalDumped) }}</p>
           </div>
         </div>
@@ -270,22 +270,22 @@
           <table class="min-w-full text-sm divide-y divide-gray-200">
             <thead class="bg-gray-50 text-gray-600 uppercase text-xs">
               <tr>
-                <th class="px-3 py-2 text-left">{{ t('lot.yeast.colTimestamp') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('lot.yeast.colSourceLot') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('lot.yeast.colTankFrom') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('lot.yeast.colTankTo') }}</th>
-                <th class="px-3 py-2 text-right">{{ t('lot.yeast.colVolumePulled') }}</th>
-                <th class="px-3 py-2 text-right">{{ t('lot.yeast.colVolumeReturned') }}</th>
-                <th class="px-3 py-2 text-right">{{ t('lot.yeast.colVolumeDumped') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('lot.yeast.colNotes') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('batch.yeast.colTimestamp') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('batch.yeast.colSourceBatch') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('batch.yeast.colTankFrom') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('batch.yeast.colTankTo') }}</th>
+                <th class="px-3 py-2 text-right">{{ t('batch.yeast.colVolumePulled') }}</th>
+                <th class="px-3 py-2 text-right">{{ t('batch.yeast.colVolumeReturned') }}</th>
+                <th class="px-3 py-2 text-right">{{ t('batch.yeast.colVolumeDumped') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('batch.yeast.colNotes') }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
               <tr v-for="movement in yeastMovements" :key="movement.id" class="hover:bg-gray-50">
                 <td class="px-3 py-2 text-gray-600">{{ fmtDateTime(movement.recorded_at) }}</td>
                 <td class="px-3 py-2">
-                  <div class="font-medium text-gray-800">{{ movement.source_lot_code || '—' }}</div>
-                  <div v-if="movement.source_lot_id" class="text-xs text-gray-500">{{ movement.source_lot_id }}</div>
+                  <div class="font-medium text-gray-800">{{ movement.source_batch_code || '—' }}</div>
+                  <div v-if="movement.source_batch_id" class="text-xs text-gray-500">{{ movement.source_batch_id }}</div>
                 </td>
                 <td class="px-3 py-2 text-gray-600">{{ movement.from_tank || '—' }}</td>
                 <td class="px-3 py-2 text-gray-600">{{ movement.to_tank || '—' }}</td>
@@ -295,7 +295,7 @@
                 <td class="px-3 py-2 text-gray-600 whitespace-pre-wrap">{{ movement.notes || '—' }}</td>
               </tr>
               <tr v-if="!yeastLoading && yeastMovements.length === 0">
-                <td class="px-3 py-6 text-center text-gray-500" colspan="8">{{ t('lot.yeast.noData') }}</td>
+                <td class="px-3 py-6 text-center text-gray-500" colspan="8">{{ t('batch.yeast.noData') }}</td>
               </tr>
               <tr v-if="yeastLoading">
                 <td class="px-3 py-6 text-center text-gray-500" colspan="8">{{ t('common.loading') }}</td>
@@ -304,7 +304,7 @@
           </table>
         </div>
 
-        <p class="mt-3 text-xs text-gray-400">{{ t('lot.yeast.todoHint') }}</p>
+        <p class="mt-3 text-xs text-gray-400">{{ t('batch.yeast.todoHint') }}</p>
       </section>
 
       <!-- Steps -->
@@ -315,8 +315,8 @@
               {{ collapseLabel(sectionCollapsed.steps) }}
             </button>
             <div>
-              <h2 class="text-lg font-semibold text-gray-800">{{ t('lot.steps.sectionTitle') }}</h2>
-              <p class="text-xs text-gray-500">{{ t('lot.steps.sectionSubtitle') }}</p>
+              <h2 class="text-lg font-semibold text-gray-800">{{ t('batch.steps.sectionTitle') }}</h2>
+              <p class="text-xs text-gray-500">{{ t('batch.steps.sectionSubtitle') }}</p>
             </div>
           </div>
         </header>
@@ -326,11 +326,11 @@
             <thead class="bg-gray-50 text-gray-600 uppercase text-xs">
               <tr>
                 <th class="px-3 py-2 text-left">#</th>
-                <th class="px-3 py-2 text-left">{{ t('lot.steps.step') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('lot.steps.status') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('lot.steps.planned') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('lot.steps.actualParams') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('lot.steps.notes') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('batch.steps.step') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('batch.steps.status') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('batch.steps.planned') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('batch.steps.actualParams') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('batch.steps.notes') }}</th>
                 <th class="px-3 py-2 text-left">{{ t('common.actions') }}</th>
               </tr>
             </thead>
@@ -361,8 +361,8 @@
       </section>
     </div>
 
-    <LotIngredientDialog :open="ingredientDialog.open" :editing="ingredientDialog.editing" :loading="ingredientDialog.loading" :materials="materials" :uoms="uoms" :initial="ingredientDialog.initial" @close="closeIngredientDialog" @submit="saveIngredient" />
-    <LotPackageDialog :open="packageDialog.open" :editing="packageDialog.editing" :loading="packageDialog.loading" :categories="packageCategories" :sites="siteOptions" :initial="packageDialog.initial" @close="closePackageDialog" @submit="savePackage" />
+    <BatchIngredientDialog :open="ingredientDialog.open" :editing="ingredientDialog.editing" :loading="ingredientDialog.loading" :materials="materials" :uoms="uoms" :initial="ingredientDialog.initial" @close="closeIngredientDialog" @submit="saveIngredient" />
+    <BatchPackageDialog :open="packageDialog.open" :editing="packageDialog.editing" :loading="packageDialog.loading" :categories="packageCategories" :sites="siteOptions" :initial="packageDialog.initial" @close="closePackageDialog" @submit="savePackage" />
   </AdminLayout>
 </template>
 
@@ -373,24 +373,24 @@ import { useRoute } from 'vue-router'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { supabase } from '@/lib/supabase'
-import LotIngredientDialog from '@/views/Pages/components/LotIngredientDialog.vue'
-import LotPackageDialog from '@/views/Pages/components/LotPackageDialog.vue'
+import BatchIngredientDialog from '@/views/Pages/components/BatchIngredientDialog.vue'
+import BatchPackageDialog from '@/views/Pages/components/BatchPackageDialog.vue'
 
 const route = useRoute()
 const { t } = useI18n()
 
-const lotId = computed(() => route.params.lotId as string | undefined)
+const batchId = computed(() => route.params.batchId as string | undefined)
 
-const pageTitle = computed(() => t('lot.edit.title'))
+const pageTitle = computed(() => t('batch.edit.title'))
 
 const tenantId = ref<string | null>(null)
-const lot = ref<any>(null)
-const loadingLot = ref(false)
-const savingLot = ref(false)
+const batch = ref<any>(null)
+const loadingBatch = ref(false)
+const savingBatch = ref(false)
 const savingPackaging = ref(false)
 
-const lotForm = reactive({
-  lot_code: '',
+const batchForm = reactive({
+  batch_code: '',
   status: '',
   label: '',
   process_version: null as number | null,
@@ -406,16 +406,16 @@ const lotForm = reactive({
   actual_srm: '',
   vessel_id: '',
   notes: '',
-  parent_lots: [] as ParentLotFormRow[],
+  parent_batches: [] as ParentBatchFormRow[],
 })
 
-type ParentLotFormRow = {
-  lot_code: string
+type ParentBatchFormRow = {
+  batch_code: string
   quantity_liters: string
 }
 
-type ParentLotMeta = {
-  lot_code: string
+type ParentBatchMeta = {
+  batch_code: string
   quantity_liters: number
 }
 
@@ -454,6 +454,7 @@ interface SiteOption {
 
 interface PackageRow {
   id: string
+  movement_id: string
   fill_at: string | null
   package_id: string
   package_code: string
@@ -482,8 +483,8 @@ const stepsLoading = ref(false)
 interface YeastMovementRow {
   id: string
   recorded_at: string | null
-  source_lot_id: string | null
-  source_lot_code: string | null
+  source_batch_id: string | null
+  source_batch_code: string | null
   from_tank: string | null
   to_tank: string | null
   volume_in: number | null
@@ -510,9 +511,9 @@ const totalFilledVolume = computed(() => {
 })
 
 const totalProductVolume = computed(() => {
-  const actual = numberOrNull(lotForm.actual_product_volume)
+  const actual = numberOrNull(batchForm.actual_product_volume)
   if (actual != null) return actual
-  const target = lotForm.target_volume_l
+  const target = batchForm.target_volume_l
   if (target == null || Number.isNaN(Number(target))) return null
   return Number(target)
 })
@@ -536,6 +537,14 @@ const siteCodeMap = computed(() => {
   return map
 })
 
+const uomLookup = computed(() => {
+  const map = new Map<string, string>()
+  uoms.value.forEach((row) => {
+    if (row.id) map.set(row.id, row.code ?? '')
+  })
+  return map
+})
+
 function siteLabel(siteId?: string | null) {
   if (!siteId) return '—'
   return siteOptionMap.value.get(siteId) ?? '—'
@@ -547,22 +556,87 @@ function findLitersUomId() {
 }
 
 function buildPackagingDocNo(siteId: string | null) {
-  const lotCode = lot.value?.lot_code ?? 'LOT'
+  const batchCode = batch.value?.batch_code ?? 'BATCH'
   const siteCode = siteId ? siteCodeMap.value.get(siteId) : null
-  if (siteCode) return `PR-${lotCode}-${siteCode}`
-  if (siteId) return `PR-${lotCode}-${siteId.slice(0, 6)}`
-  return `PR-${lotCode}-NO-SITE`
+  if (siteCode) return `PR-${batchCode}-${siteCode}`
+  if (siteId) return `PR-${batchCode}-${siteId.slice(0, 6)}`
+  return `PR-${batchCode}-NO-SITE`
 }
 
-function resolveMovementAt(rows: PackageRow[]) {
-  let latest: Date | null = null
-  rows.forEach((row) => {
-    if (!row.fill_at) return
-    const parsed = new Date(row.fill_at)
-    if (Number.isNaN(parsed.getTime())) return
-    if (!latest || parsed > latest) latest = parsed
-  })
-  return (latest ?? new Date()).toISOString()
+function resolveMovementAt(existingAt: string | null, fillAt: string | null) {
+  if (fillAt) {
+    const parsed = new Date(fillAt)
+    if (!Number.isNaN(parsed.getTime())) {
+      if (existingAt) {
+        const existing = new Date(existingAt)
+        if (!Number.isNaN(existing.getTime()) && existing > parsed) return existingAt
+      }
+      return parsed.toISOString()
+    }
+  }
+  return existingAt ?? new Date().toISOString()
+}
+
+async function ensurePackagingMovement(siteId: string | null, fillAt: string | null) {
+  const tenant = await ensureTenant()
+  const docNo = buildPackagingDocNo(siteId)
+  const { data: existing, error } = await supabase
+    .from('inv_movements')
+    .select('id, movement_at, dest_site_id')
+    .eq('tenant_id', tenant)
+    .eq('doc_no', docNo)
+    .maybeSingle()
+  if (error) throw error
+
+  const movementAt = resolveMovementAt(existing?.movement_at ?? null, fillAt)
+  const payload = {
+    tenant_id: tenant,
+    doc_no: docNo,
+    doc_type: 'production_receipt',
+    status: 'posted',
+    movement_at: movementAt,
+    src_site_id: null,
+    dest_site_id: siteId,
+    meta: { material_type: 'beer', tax_type: '', tax_report_status: '' },
+  }
+
+  if (existing?.id) {
+    const shouldUpdate = existing.dest_site_id !== siteId || existing.movement_at !== movementAt
+    if (shouldUpdate) {
+      const { error: updateError } = await supabase.from('inv_movements').update(payload).eq('id', existing.id)
+      if (updateError) throw updateError
+    }
+    return { id: existing.id, movement_at: movementAt }
+  }
+
+  const { data, error: insertError } = await supabase.from('inv_movements').insert(payload).select('id, movement_at').single()
+  if (insertError || !data) throw insertError || new Error('Insert failed')
+  return { id: data.id, movement_at: data.movement_at ?? movementAt }
+}
+
+async function nextPackagingLineNo(movementId: string) {
+  const { data, error } = await supabase
+    .from('inv_movement_lines')
+    .select('line_no')
+    .eq('movement_id', movementId)
+    .order('line_no', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (error) throw error
+  return (data?.line_no ?? 0) + 1
+}
+
+async function cleanupEmptyMovement(movementId: string) {
+  const { data, error } = await supabase
+    .from('inv_movement_lines')
+    .select('id')
+    .eq('movement_id', movementId)
+    .limit(1)
+  if (error) throw error
+  if (!data || data.length === 0) {
+    const { error: deleteError } = await supabase.from('inv_movements').delete().eq('id', movementId)
+    if (deleteError) throw deleteError
+  }
 }
 
 function resolveMetaLabel(meta: unknown) {
@@ -581,19 +655,19 @@ function resolveMetaNumber(meta: unknown, key: string) {
   return Number.isNaN(num) ? null : num
 }
 
-function resolveParentLots(meta: unknown) {
+function resolveParentBatches(meta: unknown) {
   if (!meta || typeof meta !== 'object' || Array.isArray(meta)) return []
-  const raw = (meta as Record<string, unknown>).parent_lots
+  const raw = (meta as Record<string, unknown>).parent_batches
   if (!Array.isArray(raw)) return []
   return raw
     .map((row) => {
       if (!row || typeof row !== 'object' || Array.isArray(row)) return null
-      const code = String((row as Record<string, unknown>).lot_code ?? '').trim()
+      const code = String((row as Record<string, unknown>).batch_code ?? '').trim()
       const qty = Number((row as Record<string, unknown>).quantity_liters)
       if (!code || Number.isNaN(qty)) return null
-      return { lot_code: code, quantity_liters: String(qty) }
+      return { batch_code: code, quantity_liters: String(qty) }
     })
-    .filter((row): row is ParentLotFormRow => row !== null)
+    .filter((row): row is ParentBatchFormRow => row !== null)
 }
 
 function numberOrNull(value: string) {
@@ -602,21 +676,27 @@ function numberOrNull(value: string) {
   return Number.isNaN(num) ? null : num
 }
 
-function normalizeParentLots(rows: ParentLotFormRow[]) {
+function toNumber(value: any): number | null {
+  if (value === null || value === undefined || value === '') return null
+  const num = Number(value)
+  return Number.isFinite(num) ? num : null
+}
+
+function normalizeParentBatches(rows: ParentBatchFormRow[]) {
   if (!rows.length) return null
   const cleaned = rows
     .map((row) => {
-      const code = row.lot_code.trim()
+      const code = row.batch_code.trim()
       if (!code) return null
       const qty = Number(row.quantity_liters)
       if (!Number.isFinite(qty) || qty <= 0) return null
-      return { lot_code: code, quantity_liters: qty }
+      return { batch_code: code, quantity_liters: qty }
     })
-    .filter((row): row is ParentLotMeta => row !== null)
+    .filter((row): row is ParentBatchMeta => row !== null)
   return cleaned.length ? cleaned : null
 }
 
-function buildMetaWithLabel(meta: unknown, label: string, actualProductVolume: string, parentLots: ParentLotMeta[] | null) {
+function buildMetaWithLabel(meta: unknown, label: string, actualProductVolume: string, parentBatches: ParentBatchMeta[] | null) {
   const base = (meta && typeof meta === 'object' && !Array.isArray(meta))
     ? { ...(meta as Record<string, unknown>) }
     : {}
@@ -632,10 +712,10 @@ function buildMetaWithLabel(meta: unknown, label: string, actualProductVolume: s
   } else {
     base.actual_product_volume = volume
   }
-  if (!parentLots || parentLots.length === 0) {
-    delete base.parent_lots
+  if (!parentBatches || parentBatches.length === 0) {
+    delete base.parent_batches
   } else {
-    base.parent_lots = parentLots
+    base.parent_batches = parentBatches
   }
   return base
 }
@@ -650,12 +730,12 @@ function collapseLabel(collapsed: boolean) {
   return collapsed ? t('common.expand') : t('common.collapse')
 }
 
-function addParentLot() {
-  lotForm.parent_lots.push({ lot_code: '', quantity_liters: '' })
+function addParentBatch() {
+  batchForm.parent_batches.push({ batch_code: '', quantity_liters: '' })
 }
 
-function removeParentLot(index: number) {
-  lotForm.parent_lots.splice(index, 1)
+function removeParentBatch(index: number) {
+  batchForm.parent_batches.splice(index, 1)
 }
 
 async function ensureTenant() {
@@ -668,41 +748,41 @@ async function ensureTenant() {
   return id
 }
 
-watch(lotId, (val) => {
-  if (val) fetchLot()
+watch(batchId, (val) => {
+  if (val) fetchBatch()
 }, { immediate: true })
 
-async function fetchLot() {
-  if (!lotId.value) return
+async function fetchBatch() {
+  if (!batchId.value) return
   try {
-    loadingLot.value = true
+    loadingBatch.value = true
     await ensureTenant()
     const { data, error } = await supabase
-      .from('prd_lots')
+      .from('mes_batches')
       .select('*')
-      .eq('id', lotId.value)
+      .eq('id', batchId.value)
       .maybeSingle()
     if (error) throw error
-    lot.value = data
+    batch.value = data
     if (data) {
-      lotForm.lot_code = data.lot_code ?? ''
-      lotForm.status = data.status ?? ''
-      lotForm.label = resolveMetaLabel(data.meta) ?? ''
+      batchForm.batch_code = data.batch_code ?? ''
+      batchForm.status = data.status ?? ''
+      batchForm.label = resolveMetaLabel(data.meta) ?? ''
       const actualVolume = resolveMetaNumber(data.meta, 'actual_product_volume')
-      lotForm.actual_product_volume = actualVolume != null ? String(actualVolume) : ''
-      lotForm.parent_lots = resolveParentLots(data.meta)
-      lotForm.process_version = data.process_version ?? null
-      lotForm.planned_start = toInputDateTime(data.planned_start)
-      // lotForm.planned_end = toInputDateTime(data.planned_end)
-      // lotForm.actual_start = toInputDateTime(data.actual_start)
-      // lotForm.actual_end = toInputDateTime(data.actual_end)
-      lotForm.target_volume_l = data.target_volume_l ?? null
-      lotForm.actual_og = data.actual_og != null ? String(data.actual_og) : ''
-      lotForm.actual_fg = data.actual_fg != null ? String(data.actual_fg) : ''
-      lotForm.actual_abv = data.actual_abv != null ? String(data.actual_abv) : ''
-      lotForm.actual_srm = data.actual_srm != null ? String(data.actual_srm) : ''
-      lotForm.vessel_id = data.vessel_id ?? ''
-      lotForm.notes = data.notes ?? ''
+      batchForm.actual_product_volume = actualVolume != null ? String(actualVolume) : ''
+      batchForm.parent_batches = resolveParentBatches(data.meta)
+      batchForm.process_version = data.process_version ?? null
+      batchForm.planned_start = toInputDateTime(data.planned_start)
+      // batchForm.planned_end = toInputDateTime(data.planned_end)
+      // batchForm.actual_start = toInputDateTime(data.actual_start)
+      // batchForm.actual_end = toInputDateTime(data.actual_end)
+      batchForm.target_volume_l = data.target_volume_l ?? null
+      batchForm.actual_og = data.actual_og != null ? String(data.actual_og) : ''
+      batchForm.actual_fg = data.actual_fg != null ? String(data.actual_fg) : ''
+      batchForm.actual_abv = data.actual_abv != null ? String(data.actual_abv) : ''
+      batchForm.actual_srm = data.actual_srm != null ? String(data.actual_srm) : ''
+      batchForm.vessel_id = data.vessel_id ?? ''
+      batchForm.notes = data.notes ?? ''
       await Promise.all([
         loadIngredients(data.recipe_id),
         loadSteps(),
@@ -720,7 +800,7 @@ async function fetchLot() {
   } catch (err) {
     console.error(err)
   } finally {
-    loadingLot.value = false
+    loadingBatch.value = false
   }
 }
 
@@ -765,7 +845,7 @@ async function loadIngredients(recipeId: string | undefined) {
   try {
     ingredientLoading.value = true
     const { data, error } = await supabase
-      .from('rcp_ingredients')
+      .from('mes_ingredients')
       .select('id, material_id, amount, uom_id, usage_stage, notes, material:mst_materials(name, code), uom:mst_uom(code)')
       .eq('recipe_id', recipeId)
       .order('usage_stage', { ascending: true })
@@ -789,13 +869,13 @@ async function loadIngredients(recipeId: string | undefined) {
 
 async function loadSteps() {
   steps.value = []
-  if (!lotId.value) return
+  if (!batchId.value) return
   try {
     stepsLoading.value = true
     const { data, error } = await supabase
-      .from('prd_lot_steps')
+      .from('mes_batch_steps')
       .select('id, step_no, step, status, planned_params, actual_params, notes')
-      .eq('lot_id', lotId.value)
+      .eq('batch_id', batchId.value)
       .order('step_no', { ascending: true })
     if (error) throw error
     steps.value = (data ?? []).map((row) => ({
@@ -815,9 +895,9 @@ async function loadSteps() {
   }
 }
 
-async function loadYeastMovements(targetLotId: string | undefined) {
+async function loadYeastMovements(targetBatchId: string | undefined) {
   yeastMovements.value = []
-  if (!targetLotId) return
+  if (!targetBatchId) return
   try {
     yeastLoading.value = true
     // TODO: Replace with Supabase query once yeast starter movements are stored server-side.
@@ -854,39 +934,58 @@ async function fetchPackageCategories() {
   }
 }
 
-async function loadPackages(targetLotId: string | undefined) {
+async function loadPackages(targetBatchId: string | undefined) {
   packages.value = []
-  if (!targetLotId) return
+  if (!targetBatchId) return
   try {
     packagesLoading.value = true
     if (!packageCategories.value.length) {
       await fetchPackageCategories()
     }
+    const tenant = await ensureTenant()
     const { data, error } = await supabase
-      .from('pkg_packages')
-      .select('id, fill_at, package_id, site_id, package_qty, package_size_l, notes, created_at')
-      .eq('lot_id', targetLotId)
-      .order('fill_at', { ascending: false })
-      .order('created_at', { ascending: false })
+      .from('inv_movement_lines')
+      .select('id, movement_id, package_id, batch_id, qty, uom_id, notes, meta, movement:movement_id ( movement_at, status, dest_site_id, doc_type )')
+      .eq('tenant_id', tenant)
+      .eq('batch_id', targetBatchId)
+      .not('package_id', 'is', null)
+      .order('movement_id', { ascending: false })
     if (error) throw error
 
-    packages.value = (data ?? []).map((row: any) => {
+    const lines = (data ?? []).filter(
+      (row: any) => row.movement?.doc_type === 'production_receipt' && row.movement?.status !== 'void'
+    )
+
+    packages.value = lines.map((row: any) => {
       const category = packageCategories.value.find((c) => c.id === row.package_id)
-      const unitVolume = row.package_size_l != null ? Number(row.package_size_l) : category?.default_volume_l ?? null
-      const qty = Number(row.package_qty ?? 0)
-      const totalVolume = (unitVolume ?? 0) * qty
+      const meta = row.meta ?? {}
+      const unitVolume = toNumber(meta.unit_volume_l) ?? category?.default_volume_l ?? null
+      const qtyLiters = row.qty != null ? convertToLiters(Number(row.qty), row.uom_id ? uomLookup.value.get(row.uom_id) : null) : null
+      const qtyFromMeta = toNumber(meta.package_qty)
+      const derivedQty = qtyFromMeta != null
+        ? qtyFromMeta
+        : unitVolume && qtyLiters != null
+          ? qtyLiters / unitVolume
+          : 0
+      const totalVolume = qtyLiters != null ? qtyLiters : (unitVolume ?? 0) * derivedQty
       return {
         id: row.id,
-        fill_at: row.fill_at ?? null,
+        movement_id: row.movement_id,
+        fill_at: meta.fill_at ?? row.movement?.movement_at ?? null,
         package_id: row.package_id,
         package_code: category?.code ?? '—',
         package_label: category?.name ? `${category.code} — ${category.name}` : category?.code ?? '—',
-        site_id: row.site_id ?? null,
-        package_qty: qty,
+        site_id: row.movement?.dest_site_id ?? null,
+        package_qty: derivedQty,
         unit_volume_l: unitVolume,
         total_volume_l: totalVolume,
         notes: row.notes ?? null,
       }
+    })
+    packages.value.sort((a, b) => {
+      const aTime = a.fill_at ? Date.parse(a.fill_at) : 0
+      const bTime = b.fill_at ? Date.parse(b.fill_at) : 0
+      return bTime - aTime
     })
   } catch (err) {
     console.error(err)
@@ -926,12 +1025,12 @@ function closeIngredientDialog() {
 }
 
 async function saveIngredient(payload: any) {
-  if (!lot.value?.recipe_id) return
+  if (!batch.value?.recipe_id) return
   try {
     ingredientDialog.loading = true
     if (ingredientDialog.editing && payload.id) {
       const { error } = await supabase
-        .from('rcp_ingredients')
+        .from('mes_ingredients')
         .update({
           amount: payload.amount,
           uom_id: payload.uom_id,
@@ -943,10 +1042,10 @@ async function saveIngredient(payload: any) {
     } else {
       const tenant = await ensureTenant()
       const { error } = await supabase
-        .from('rcp_ingredients')
+        .from('mes_ingredients')
         .insert({
           tenant_id: tenant,
-          recipe_id: lot.value.recipe_id,
+          recipe_id: batch.value.recipe_id,
           material_id: payload.material_id,
           amount: payload.amount,
           uom_id: payload.uom_id,
@@ -956,7 +1055,7 @@ async function saveIngredient(payload: any) {
       if (error) throw error
     }
     closeIngredientDialog()
-    await loadIngredients(lot.value.recipe_id)
+    await loadIngredients(batch.value.recipe_id)
   } catch (err) {
     console.error(err)
   } finally {
@@ -965,50 +1064,50 @@ async function saveIngredient(payload: any) {
 }
 
 async function deleteIngredient(row: any) {
-  if (!window.confirm(t('lot.ingredients.deleteConfirm', { name: row.material_label }))) return
+  if (!window.confirm(t('batch.ingredients.deleteConfirm', { name: row.material_label }))) return
   try {
-    const { error } = await supabase.from('rcp_ingredients').delete().eq('id', row.id)
+    const { error } = await supabase.from('mes_ingredients').delete().eq('id', row.id)
     if (error) throw error
-    await loadIngredients(lot.value?.recipe_id)
+    await loadIngredients(batch.value?.recipe_id)
   } catch (err) {
     console.error(err)
   }
 }
 
-async function saveLot() {
-  if (!lotId.value) return
+async function saveBatch() {
+  if (!batchId.value) return
   try {
-    savingLot.value = true
-    const parentLots = normalizeParentLots(lotForm.parent_lots)
-    const meta = buildMetaWithLabel(lot.value?.meta, lotForm.label, lotForm.actual_product_volume, parentLots)
-    const trimmedLotCode = lotForm.lot_code.trim()
+    savingBatch.value = true
+    const parentBatches = normalizeParentBatches(batchForm.parent_batches)
+    const meta = buildMetaWithLabel(batch.value?.meta, batchForm.label, batchForm.actual_product_volume, parentBatches)
+    const trimmedBatchCode = batchForm.batch_code.trim()
     const update: Record<string, any> = {
-      lot_code: trimmedLotCode || lot.value?.lot_code || null,
-      status: lotForm.status || null,
-      process_version: lotForm.process_version,
-      planned_start: fromInputDateTime(lotForm.planned_start),
-      // planned_end: fromInputDateTime(lotForm.planned_end),
-      // actual_start: fromInputDateTime(lotForm.actual_start),
-      // actual_end: fromInputDateTime(lotForm.actual_end),
-      target_volume_l: lotForm.target_volume_l,
-      actual_og: numberOrNull(lotForm.actual_og),
-      actual_fg: numberOrNull(lotForm.actual_fg),
-      actual_abv: numberOrNull(lotForm.actual_abv),
-      actual_srm: numberOrNull(lotForm.actual_srm),
-      vessel_id: lotForm.vessel_id || null,
-      notes: lotForm.notes || null,
+      batch_code: trimmedBatchCode || batch.value?.batch_code || null,
+      status: batchForm.status || null,
+      process_version: batchForm.process_version,
+      planned_start: fromInputDateTime(batchForm.planned_start),
+      // planned_end: fromInputDateTime(batchForm.planned_end),
+      // actual_start: fromInputDateTime(batchForm.actual_start),
+      // actual_end: fromInputDateTime(batchForm.actual_end),
+      target_volume_l: batchForm.target_volume_l,
+      actual_og: numberOrNull(batchForm.actual_og),
+      actual_fg: numberOrNull(batchForm.actual_fg),
+      actual_abv: numberOrNull(batchForm.actual_abv),
+      actual_srm: numberOrNull(batchForm.actual_srm),
+      vessel_id: batchForm.vessel_id || null,
+      notes: batchForm.notes || null,
       meta,
     }
     const { error } = await supabase
-      .from('prd_lots')
+      .from('mes_batches')
       .update(update)
-      .eq('id', lotId.value)
+      .eq('id', batchId.value)
     if (error) throw error
-    await fetchLot()
+    await fetchBatch()
   } catch (err) {
     console.error(err)
   } finally {
-    savingLot.value = false
+    savingBatch.value = false
   }
 }
 
@@ -1017,7 +1116,7 @@ async function saveStep(step: any) {
     step.saving = true
     const parsedActual = parseJsonSafe(step.edit.actual_params)
     const { error } = await supabase
-      .from('prd_lot_steps')
+      .from('mes_batch_steps')
       .update({
         status: step.edit.status || null,
         actual_params: parsedActual,
@@ -1066,28 +1165,54 @@ function closePackageDialog() {
 }
 
 async function savePackage(payload: any) {
-  if (!lotId.value) return
+  if (!batchId.value) return
   try {
     packageDialog.loading = true
-    const body = {
-      lot_id: lotId.value,
+    const tenant = await ensureTenant()
+    const litersUomId = findLitersUomId()
+    if (!litersUomId) throw new Error('Liters UOM not found')
+
+    const category = packageCategories.value.find((row) => row.id === payload.package_id)
+    const unitVolume = payload.package_size_l !== '' ? Number(payload.package_size_l) : category?.default_volume_l ?? null
+    const packageQty = Number(payload.package_qty) || 0
+    const qtyLiters = unitVolume != null ? packageQty * unitVolume : 0
+    const meta: Record<string, unknown> = {}
+    if (payload.fill_at) meta.fill_at = payload.fill_at
+    if (!Number.isNaN(packageQty)) meta.package_qty = packageQty
+    if (unitVolume != null && !Number.isNaN(unitVolume)) meta.unit_volume_l = unitVolume
+
+    const movement = await ensurePackagingMovement(payload.site_id || null, payload.fill_at || null)
+    const linePayload = {
+      tenant_id: tenant,
+      movement_id: movement.id,
       package_id: payload.package_id,
-      fill_at: payload.fill_at || null,
-      site_id: payload.site_id || null,
-      package_qty: Number(payload.package_qty) || 0,
-      package_size_l: payload.package_size_l !== '' ? Number(payload.package_size_l) : null,
+      batch_id: batchId.value,
+      qty: qtyLiters,
+      uom_id: litersUomId,
       notes: payload.notes ? payload.notes.trim() : null,
+      meta: Object.keys(meta).length ? meta : null,
     }
 
     if (packageDialog.editing && payload.id) {
-      const { error } = await supabase.from('pkg_packages').update(body).eq('id', payload.id)
-      if (error) throw error
+      const existing = packages.value.find((row) => row.id === payload.id)
+      if (existing && existing.movement_id !== movement.id) {
+        const { error } = await supabase.from('inv_movement_lines').delete().eq('id', payload.id)
+        if (error) throw error
+        const lineNo = await nextPackagingLineNo(movement.id)
+        const { error: insertError } = await supabase.from('inv_movement_lines').insert({ ...linePayload, line_no: lineNo })
+        if (insertError) throw insertError
+        await cleanupEmptyMovement(existing.movement_id)
+      } else {
+        const { error } = await supabase.from('inv_movement_lines').update(linePayload).eq('id', payload.id)
+        if (error) throw error
+      }
     } else {
-      const { error } = await supabase.from('pkg_packages').insert(body)
+      const lineNo = await nextPackagingLineNo(movement.id)
+      const { error } = await supabase.from('inv_movement_lines').insert({ ...linePayload, line_no: lineNo })
       if (error) throw error
     }
     closePackageDialog()
-    await loadPackages(lotId.value)
+    await loadPackages(batchId.value)
   } catch (err) {
     console.error(err)
   } finally {
@@ -1096,95 +1221,22 @@ async function savePackage(payload: any) {
 }
 
 async function deletePackage(row: PackageRow) {
-  if (!window.confirm(t('lot.packaging.deleteConfirm', { code: row.package_code }))) return
+  if (!window.confirm(t('batch.packaging.deleteConfirm', { code: row.package_code }))) return
   try {
-    const { error } = await supabase.from('pkg_packages').delete().eq('id', row.id)
+    const { error } = await supabase.from('inv_movement_lines').delete().eq('id', row.id)
     if (error) throw error
-    await loadPackages(lotId.value)
+    await cleanupEmptyMovement(row.movement_id)
+    await loadPackages(batchId.value)
   } catch (err) {
     console.error(err)
   }
 }
 
 async function savePackagingMovement() {
-  if (!lotId.value || !lot.value) return
-  if (!packages.value.length) return
   try {
     savingPackaging.value = true
-    const tenant = await ensureTenant()
-    const litersUomId = findLitersUomId()
-    if (!litersUomId) throw new Error('Liters UOM not found')
-
-    const groups = new Map<string, PackageRow[]>()
-    packages.value.forEach((pkg) => {
-      const key = pkg.site_id ?? 'no-site'
-      if (!groups.has(key)) groups.set(key, [])
-      groups.get(key)?.push(pkg)
-    })
-
-    for (const [key, rows] of groups.entries()) {
-      const siteId = key === 'no-site' ? null : key
-      const linePayload = rows
-        .map((pkg, index) => {
-          const qty = Number(pkg.total_volume_l ?? 0)
-          if (!qty || qty <= 0) return null
-          const meta: Record<string, unknown> = {}
-          if (pkg.package_qty) meta.package_qty = pkg.package_qty
-          if (pkg.unit_volume_l != null) meta.unit_volume_l = pkg.unit_volume_l
-          return {
-            tenant_id: tenant,
-            line_no: index + 1,
-            package_id: pkg.id,
-            lot_id: lotId.value,
-            qty,
-            uom_id: litersUomId,
-            notes: pkg.notes ?? null,
-            meta: Object.keys(meta).length ? meta : null,
-          }
-        })
-        .filter((row) => row != null) as Array<Record<string, any>>
-
-      if (linePayload.length === 0) continue
-
-      const docNo = buildPackagingDocNo(siteId)
-      const movementPayload = {
-        tenant_id: tenant,
-        doc_no: docNo,
-        doc_type: 'production_receipt',
-        status: 'posted',
-        movement_at: resolveMovementAt(rows),
-        src_site_id: null,
-        dest_site_id: siteId,
-        meta: { material_type: 'beer', tax_type: '', tax_report_status: '' },
-      }
-
-      const { data: existing, error: existingError } = await supabase
-        .from('inv_movements')
-        .select('id')
-        .eq('tenant_id', tenant)
-        .eq('doc_no', docNo)
-        .maybeSingle()
-      if (existingError) throw existingError
-
-      let movementId = existing?.id ?? null
-      if (movementId) {
-        const { error } = await supabase.from('inv_movements').update(movementPayload).eq('id', movementId)
-        if (error) throw error
-        const { error: deleteError } = await supabase.from('inv_movement_lines').delete().eq('movement_id', movementId)
-        if (deleteError) throw deleteError
-      } else {
-        const { data, error } = await supabase.from('inv_movements').insert(movementPayload).select('id').single()
-        if (error || !data) throw error || new Error('Insert failed')
-        movementId = data.id
-      }
-
-      const payloadWithMovement = linePayload.map((row) => ({
-        ...row,
-        movement_id: movementId,
-      }))
-
-      const { error: lineError } = await supabase.from('inv_movement_lines').insert(payloadWithMovement)
-      if (lineError) throw lineError
+    if (batchId.value) {
+      await loadPackages(batchId.value)
     }
   } catch (err) {
     console.error(err)

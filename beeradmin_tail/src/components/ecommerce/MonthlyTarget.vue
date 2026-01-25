@@ -158,7 +158,7 @@ const chartOptions = {
       enabled: true,
     },
   },
-  plotOptions: {
+  pbatchOptions: {
     radialBar: {
       startAngle: -90,
       endAngle: 90,

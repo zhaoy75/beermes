@@ -26,7 +26,7 @@ const chartOptions = ref({
       show: false,
     },
   },
-  plotOptions: {
+  pbatchOptions: {
     bar: {
       horizontal: false,
       columnWidth: '39%',

@@ -143,8 +143,8 @@ create table if not exists public.inv_movement_lines (
   movement_id uuid not null references public.inv_movements(id) on delete cascade,
   line_no int not null,
   material_id uuid,                               -- FK to mst_materials (if defined)
-  package_id uuid,                                -- FK to pkg_packages (if defined)
-  lot_id uuid,                                    -- FK to prd_lots (if defined)
+  package_id uuid,                                -- FK to mst_beer_package_category (if defined)
+  batch_id uuid,                                    -- FK to mes_batches (if defined)
   qty numeric not null check (qty > 0),
   uom_id uuid not null,                           -- FK to mst_uom
   notes text,
@@ -162,8 +162,8 @@ create index if not exists idx_inv_mov_lines_material
 create index if not exists idx_inv_mov_lines_package
   on public.inv_movement_lines (package_id);
 
-create index if not exists idx_inv_mov_lines_lot
-  on public.inv_movement_lines (lot_id);
+create index if not exists idx_inv_mov_lines_batch
+  on public.inv_movement_lines (batch_id);
 
 -- Tenant consistency: line must match header tenant
 create or replace function public.trg_inv_lines_same_tenant()

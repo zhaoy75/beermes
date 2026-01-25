@@ -118,14 +118,14 @@
       },
       "additionalProperties": true
     },
-    "lotQty": {
+    "batchQty": {
       "type": "object",
       "required": [
-        "lot_id",
+        "batch_id",
         "qty"
       ],
       "properties": {
-        "lot_id": {
+        "batch_id": {
           "type": "string"
         },
         "qty": {
@@ -164,10 +164,10 @@
         "variance": {
           "type": "number"
         },
-        "lots": {
+        "batches": {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/lotQty"
+            "$ref": "#/$defs/batchQty"
           }
         }
       },
@@ -405,7 +405,7 @@
             "waste"
           ]
         },
-        "lot_id": {
+        "batch_id": {
           "type": "string"
         },
         "disposition": {

@@ -86,8 +86,8 @@
             </div>
             <dl class="mt-3 space-y-1 text-xs text-gray-600">
               <div class="flex items-center justify-between">
-                <dt>{{ t('producedBeer.inventory.table.lotNo') }}</dt>
-                <dd class="font-mono text-xs">{{ row.lotCode || '—' }}</dd>
+                <dt>{{ t('producedBeer.inventory.table.batchNo') }}</dt>
+                <dd class="font-mono text-xs">{{ row.batchCode || '—' }}</dd>
               </div>
               <div class="flex items-center justify-between">
                 <dt>{{ t('producedBeer.inventory.table.category') }}</dt>
@@ -172,7 +172,7 @@
                   <th class="px-3 py-2 text-left">{{ t('producedBeer.edit.lines.columns.beer') }}</th>
                   <th class="px-3 py-2 text-left">{{ t('producedBeer.edit.lines.columns.category') }}</th>
                   <th class="px-3 py-2 text-left">{{ t('producedBeer.edit.lines.columns.packageType') }}</th>
-                  <th class="px-3 py-2 text-left">{{ t('producedBeer.edit.lines.columns.lot') }}</th>
+                  <th class="px-3 py-2 text-left">{{ t('producedBeer.edit.lines.columns.batch') }}</th>
                   <th class="px-3 py-2 text-right">{{ t('producedBeer.edit.lines.columns.qtyPackages') }}</th>
                   <th class="px-3 py-2 text-right">{{ t('producedBeer.edit.lines.columns.qtyLiters') }}</th>
                   <th class="px-3 py-2 text-left">{{ t('common.actions') }}</th>
@@ -189,7 +189,7 @@
                   <td class="px-3 py-2 text-gray-900">{{ line.beerName || '—' }}</td>
                   <td class="px-3 py-2 text-gray-600">{{ categoryLabel(line.categoryId) }}</td>
                   <td class="px-3 py-2 text-gray-600">{{ line.packageTypeLabel || '—' }}</td>
-                  <td class="px-3 py-2 font-mono text-xs text-gray-500">{{ line.lotCode || '—' }}</td>
+                  <td class="px-3 py-2 font-mono text-xs text-gray-500">{{ line.batchCode || '—' }}</td>
                   <td class="px-3 py-2 text-right">{{ formatNumber(line.packageQty) }}</td>
                   <td class="px-3 py-2 text-right">{{ formatNumber(line.qtyLiters) }}</td>
                   <td class="px-3 py-2">
@@ -227,7 +227,7 @@
             <div class="text-sm text-gray-600">
               <p class="font-medium text-gray-900">{{ selectedInventory?.beerName || '—' }}</p>
               <p>{{ selectedInventory?.packageTypeLabel || '—' }}</p>
-              <p class="text-xs text-gray-500">{{ selectedInventory?.lotCode || '—' }}</p>
+              <p class="text-xs text-gray-500">{{ selectedInventory?.batchCode || '—' }}</p>
             </div>
             <div>
               <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.edit.moveDialog.packageQty') }}</label>
@@ -273,7 +273,7 @@
               <p class="font-medium text-gray-900">{{ manualSelectedInventory.beerName || '—' }}</p>
               <p>{{ categoryLabel(manualSelectedInventory.categoryId) }}</p>
               <p>{{ manualSelectedInventory.packageTypeLabel || '—' }}</p>
-              <p class="font-mono text-xs text-gray-500">{{ manualSelectedInventory.lotCode || '—' }}</p>
+              <p class="font-mono text-xs text-gray-500">{{ manualSelectedInventory.batchCode || '—' }}</p>
               <p class="text-xs text-gray-500">{{ formatDate(manualSelectedInventory.productionDate) }}</p>
             </div>
             <div>
@@ -341,27 +341,6 @@ interface PackageCategoryRow {
   uom_id: string | null
 }
 
-interface PackageRow {
-  id: string
-  lot_id: string | null
-  fill_at: string | null
-  package_id: string | null
-  package_size_l: number | null
-  package_qty: number | null
-  lot?: {
-    id: string
-    lot_code: string
-    meta?: Record<string, any> | null
-  } | null
-  package?: {
-    id: string
-    package_code: string
-    package_name: string | null
-    size: number | null
-    uom_id: string | null
-  } | null
-}
-
 interface InventoryRow {
   id: string
   packageId: string | null
@@ -369,13 +348,13 @@ interface InventoryRow {
   categoryId: string | null
   packageTypeLabel: string | null
   packageTypeId: string | null
-  lotCode: string | null
+  batchCode: string | null
   productionDate: string | null
   qtyPackages: number | null
   qtyLiters: number | null
   siteId: string | null
   unitSizeLiters: number | null
-  lotId: string | null
+  batchId: string | null
 }
 
 interface MovementHeader {
@@ -394,7 +373,7 @@ interface MovementLineRow {
   id: string
   movement_id: string
   package_id: string | null
-  lot_id: string | null
+  batch_id: string | null
   qty: number | null
   uom_id: string | null
   meta?: Record<string, any> | null
@@ -402,8 +381,8 @@ interface MovementLineRow {
 
 interface PackageInfo {
   id: string
-  lotId: string | null
-  lotCode: string | null
+  batchId: string | null
+  batchCode: string | null
   beerName: string | null
   packageTypeId: string | null
   packageTypeLabel: string | null
@@ -417,8 +396,8 @@ interface MovementLineForm {
   packageId: string
   packageQty: number | null
   qtyLiters: number | null
-  lotId: string | null
-  lotCode: string | null
+  batchId: string | null
+  batchCode: string | null
   beerName: string | null
   categoryId: string | null
   packageTypeId: string | null
@@ -549,7 +528,7 @@ const manualCalculatedLiters = computed(() => {
 const manualInventoryOptions = computed(() => {
   return inventoryRows.value.map((row) => ({
     value: row.id,
-    label: [row.beerName || '—', row.lotCode || '—', row.packageTypeLabel || '—'].join(' | '),
+    label: [row.beerName || '—', row.batchCode || '—', row.packageTypeLabel || '—'].join(' | '),
   }))
 })
 
@@ -575,7 +554,7 @@ function categoryLabel(categoryId: string | null | undefined) {
   return category?.name || category?.code || categoryId
 }
 
-function resolveLotLabel(meta: Record<string, any> | null | undefined) {
+function resolveBatchLabel(meta: Record<string, any> | null | undefined) {
   const label = meta?.label
   if (typeof label !== 'string') return null
   const trimmed = label.trim()
@@ -660,15 +639,6 @@ function convertToLiters(size: number | null, uomCode: string | null | undefined
   }
 }
 
-function resolvePackageSizeLiters(row: PackageRow): number | null {
-  const direct = toNumber(row.package_size_l)
-  if (direct != null && direct > 0) return direct
-  const size = toNumber(row.package?.size)
-  if (size == null) return null
-  const uomCode = row.package?.uom_id ? uomMap.value.get(row.package.uom_id) : null
-  return convertToLiters(size, uomCode)
-}
-
 async function ensureTenant() {
   if (tenantId.value) return tenantId.value
   const { data, error } = await supabase.auth.getUser()
@@ -740,10 +710,10 @@ async function loadInventoryFromMovements() {
     const { data, error } = await supabase
       .from('inv_movement_lines')
       .select(
-        'id, movement_id, package_id, lot_id, qty, uom_id, meta, movement:movement_id ( movement_at, status, src_site_id, dest_site_id, doc_type )'
+        'id, movement_id, package_id, batch_id, qty, uom_id, meta, movement:movement_id ( movement_at, status, src_site_id, dest_site_id, doc_type )'
       )
       .eq('tenant_id', tenant)
-      .or('package_id.not.is.null,lot_id.not.is.null')
+      .or('package_id.not.is.null,batch_id.not.is.null')
       .order('movement_id', { ascending: true })
     if (error) throw error
 
@@ -754,21 +724,21 @@ async function loadInventoryFromMovements() {
     }
 
     const packageIds = Array.from(new Set(lines.map((row: any) => row.package_id).filter(Boolean)))
-    const lotIds = Array.from(new Set(lines.map((row: any) => row.lot_id).filter(Boolean)))
+    const batchIds = Array.from(new Set(lines.map((row: any) => row.batch_id).filter(Boolean)))
 
     const packageInfoMap = await loadPackageInfo(packageIds)
-    const lotInfoMap = await loadLotInfo(lotIds, packageInfoMap)
+    const batchInfoMap = await loadBatchInfo(batchIds)
 
     type InventoryAccumulator = {
       key: string
       siteId: string
       packageId: string | null
-      lotId: string | null
+      batchId: string | null
       beerName: string | null
       categoryId: string | null
       packageTypeLabel: string | null
       packageTypeId: string | null
-      lotCode: string | null
+      batchCode: string | null
       productionDate: string | null
       qtyPackages: number
       qtyLiters: number
@@ -780,7 +750,7 @@ async function loadInventoryFromMovements() {
     const applyDelta = (siteId: string | null, delta: number, row: any) => {
       if (!siteId) return
       const pkgInfo = row.package_id ? packageInfoMap.get(row.package_id) : undefined
-      const lotInfo = row.lot_id ? lotInfoMap.get(row.lot_id) : undefined
+      const batchInfo = row.batch_id ? batchInfoMap.get(row.batch_id) : undefined
       const unitSizeLiters = pkgInfo?.unitSizeLiters ?? null
       const qtyLiters = toNumber(row.qty) ?? 0
       const packageQty = toNumber(row.meta?.package_qty)
@@ -788,18 +758,18 @@ async function loadInventoryFromMovements() {
         ? packageQty
         : (unitSizeLiters && qtyLiters ? qtyLiters / unitSizeLiters : 0)
 
-      const key = `${siteId}__${row.package_id ?? ''}__${row.lot_id ?? ''}`
+      const key = `${siteId}__${row.package_id ?? ''}__${row.batch_id ?? ''}`
       if (!accum.has(key)) {
         accum.set(key, {
           key,
           siteId,
           packageId: row.package_id ?? null,
-          lotId: row.lot_id ?? pkgInfo?.lotId ?? null,
-          beerName: pkgInfo?.beerName ?? lotInfo?.beerName ?? null,
+          batchId: row.batch_id ?? pkgInfo?.batchId ?? null,
+          beerName: pkgInfo?.beerName ?? batchInfo?.beerName ?? null,
           categoryId: null,
           packageTypeLabel: pkgInfo?.packageTypeLabel ?? null,
           packageTypeId: pkgInfo?.packageTypeId ?? null,
-          lotCode: pkgInfo?.lotCode ?? lotInfo?.lotCode ?? null,
+          batchCode: pkgInfo?.batchCode ?? batchInfo?.batchCode ?? null,
           productionDate: pkgInfo?.productionDate ?? row.movement?.movement_at ?? null,
           qtyPackages: 0,
           qtyLiters: 0,
@@ -829,13 +799,13 @@ async function loadInventoryFromMovements() {
         categoryId: row.categoryId,
         packageTypeLabel: row.packageTypeLabel,
         packageTypeId: row.packageTypeId,
-        lotCode: row.lotCode,
+        batchCode: row.batchCode,
         productionDate: row.productionDate,
         qtyPackages: row.qtyPackages > 0 ? row.qtyPackages : null,
         qtyLiters: row.qtyLiters > 0 ? row.qtyLiters : null,
         siteId: row.siteId,
         unitSizeLiters: row.unitSizeLiters,
-        lotId: row.lotId,
+        batchId: row.batchId,
       }))
   } catch (err) {
     console.error(err)
@@ -848,68 +818,43 @@ async function loadInventoryFromMovements() {
 async function loadPackageInfo(packageIds: string[]) {
   const infoMap = new Map<string, PackageInfo>()
   if (packageIds.length === 0) return infoMap
-
-  const tenant = await ensureTenant()
-  const { data, error } = await supabase
-    .from('pkg_packages')
-    .select(
-      'id, lot_id, fill_at, package_id, package_size_l, package_qty, lot:lot_id ( id, lot_code, meta ), package:package_id ( id, package_code, package_name, size, uom_id )'
-    )
-    .eq('tenant_id', tenant)
-    .in('id', packageIds)
-  if (error) throw error
-
-  ;(data ?? []).forEach((row: any) => {
-    const packageRow = row as PackageRow
-    const unitSizeLiters = resolvePackageSizeLiters(packageRow)
-    const lotLabel = resolveLotLabel(packageRow.lot?.meta)
-    infoMap.set(packageRow.id, {
-      id: packageRow.id,
-      lotId: packageRow.lot_id ?? packageRow.lot?.id ?? null,
-      lotCode: packageRow.lot?.lot_code ?? null,
-      beerName: lotLabel ?? null,
-      packageTypeId: packageRow.package_id ?? packageRow.package?.id ?? null,
-      packageTypeLabel:
-        packageRow.package?.package_name ||
-        packageRow.package?.package_code ||
-        (packageRow.package_id ? packageCategoryMap.value.get(packageRow.package_id)?.label : null) ||
-        null,
+  const uniqueIds = Array.from(new Set(packageIds))
+  uniqueIds.forEach((id) => {
+    const category = packageCategoryMap.value.get(id)
+    const uomCode = category?.uomId ? uomMap.value.get(category.uomId) : null
+    const unitSizeLiters = category?.size != null ? convertToLiters(category.size, uomCode) : null
+    infoMap.set(id, {
+      id,
+      batchId: null,
+      batchCode: null,
+      beerName: null,
+      packageTypeId: id,
+      packageTypeLabel: category?.label ?? null,
       unitSizeLiters,
-      productionDate: packageRow.fill_at ?? null,
+      productionDate: null,
     })
   })
-
   return infoMap
 }
 
-async function loadLotInfo(lotIds: string[], packageInfoMap: Map<string, PackageInfo>) {
-  const infoMap = new Map<string, { lotCode: string | null; beerName: string | null }>()
-  if (lotIds.length === 0) return infoMap
+async function loadBatchInfo(batchIds: string[]) {
+  const infoMap = new Map<string, { batchCode: string | null; beerName: string | null }>()
+  if (batchIds.length === 0) return infoMap
 
   const tenant = await ensureTenant()
   const { data, error } = await supabase
-    .from('prd_lots')
-    .select('id, lot_code, meta')
+    .from('mes_batches')
+    .select('id, batch_code, meta')
     .eq('tenant_id', tenant)
-    .in('id', lotIds)
+    .in('id', batchIds)
   if (error) throw error
 
   ;(data ?? []).forEach((row: any) => {
     infoMap.set(row.id, {
-      lotCode: row.lot_code ?? null,
-      beerName: resolveLotLabel(row.meta) ?? null,
+      batchCode: row.batch_code ?? null,
+      beerName: resolveBatchLabel(row.meta) ?? null,
     })
   })
-
-  packageInfoMap.forEach((info) => {
-    if (info.lotId && !infoMap.has(info.lotId)) {
-      infoMap.set(info.lotId, {
-        lotCode: info.lotCode,
-        beerName: info.beerName,
-      })
-    }
-  })
-
   return infoMap
 }
 
@@ -991,8 +936,8 @@ function addMovementLineFromInventory(row: InventoryRow, qty: number) {
       packageId,
       packageQty: qty,
       qtyLiters,
-      lotId: row.lotId ?? null,
-      lotCode: row.lotCode ?? null,
+      batchId: row.batchId ?? null,
+      batchCode: row.batchCode ?? null,
       beerName: row.beerName ?? null,
       categoryId: row.categoryId ?? null,
       packageTypeId: row.packageTypeId ?? null,
@@ -1110,7 +1055,7 @@ async function saveMovement() {
       movement_id: movementId,
       line_no: index + 1,
       package_id: line.packageId || null,
-      lot_id: line.lotId ?? null,
+      batch_id: line.batchId ?? null,
       qty: line.qtyLiters ?? 0,
       uom_id: findLitersUomId(),
       meta: line.packageQty ? { package_qty: line.packageQty } : null,
@@ -1170,20 +1115,20 @@ async function loadMovement(movementId: string) {
 
   const { data: lines, error: lineError } = await supabase
     .from('inv_movement_lines')
-    .select('id, movement_id, package_id, lot_id, qty, uom_id, meta')
+    .select('id, movement_id, package_id, batch_id, qty, uom_id, meta')
     .eq('movement_id', movementId)
     .order('line_no', { ascending: true })
   if (lineError) throw lineError
 
   const lineList = lines ?? []
   const packageIds = lineList.map((row: any) => row.package_id).filter(Boolean) as string[]
-  const lotIds = lineList.map((row: any) => row.lot_id).filter(Boolean) as string[]
+  const batchIds = lineList.map((row: any) => row.batch_id).filter(Boolean) as string[]
   const packageInfoMap = await loadPackageInfo(packageIds)
-  const lotInfoMap = await loadLotInfo(lotIds, packageInfoMap)
+  const batchInfoMap = await loadBatchInfo(batchIds)
 
   movementForm.lines = lineList.map((row: any) => {
     const pkgInfo = row.package_id ? packageInfoMap.get(row.package_id) : undefined
-    const lotInfo = row.lot_id ? lotInfoMap.get(row.lot_id) : undefined
+    const batchInfo = row.batch_id ? batchInfoMap.get(row.batch_id) : undefined
     const unitSize = pkgInfo?.unitSizeLiters ?? null
     const qtyLiters = toNumber(row.qty)
     const packageQty = toNumber(row.meta?.package_qty) ?? (unitSize && qtyLiters ? qtyLiters / unitSize : null)
@@ -1193,9 +1138,9 @@ async function loadMovement(movementId: string) {
       packageId: row.package_id ?? '',
       packageQty,
       qtyLiters: qtyLiters ?? (packageQty && unitSize ? packageQty * unitSize : null),
-      lotId: row.lot_id ?? pkgInfo?.lotId ?? null,
-      lotCode: pkgInfo?.lotCode ?? lotInfo?.lotCode ?? null,
-      beerName: pkgInfo?.beerName ?? lotInfo?.beerName ?? null,
+      batchId: row.batch_id ?? pkgInfo?.batchId ?? null,
+      batchCode: pkgInfo?.batchCode ?? batchInfo?.batchCode ?? null,
+      beerName: pkgInfo?.beerName ?? batchInfo?.beerName ?? null,
       categoryId: null,
       packageTypeId: pkgInfo?.packageTypeId ?? null,
       packageTypeLabel: pkgInfo?.packageTypeLabel ?? null,

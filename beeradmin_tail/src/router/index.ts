@@ -18,7 +18,7 @@ const router = createRouter({
     {
       path: '/',
       name: '概要',
-      component: () => import('../views/pages/LotList.vue'),
+      component: () => import('../views/pages/BatchList.vue'),
       meta: {
         title: 'eCommerce Dashboard',
         requiresAuth: true ,
@@ -35,29 +35,29 @@ const router = createRouter({
     },
     {
       path: '/recipeList',
-      name: 'レシピ一覧',
+      name: 'レシピ管理',
       component: () => import('../views/Pages/RecipeList.vue'),
       meta: {
-        title: 'レシピ一覧',
+        title: 'レシピ管理',
         requiresAuth: true ,
       },
     },
 
     {
-      path: '/lots',
-      name: 'lots',
-      component: () => import('../views/Pages/LotList.vue'),
+      path: '/batches',
+      name: 'batches',
+      component: () => import('../views/Pages/BatchList.vue'),
       meta: {
-        title: 'Lot Management',
+        title: 'Batch Management',
         requiresAuth: true ,
       },
     },
     {
-      path: '/lots/:lotId',
-      name: 'lotEdit',
-      component: () => import('../views/Pages/LotEdit.vue'),
+      path: '/batches/:batchId',
+      name: 'batchEdit',
+      component: () => import('../views/Pages/BatchEdit.vue'),
       meta: {
-        title: 'Lot Edit',
+        title: 'Batch Edit',
         requiresAuth: true ,
       },
     },
@@ -107,11 +107,29 @@ const router = createRouter({
       },
     },
     {
-      path: '/taxMaster',
-      name: '酒税',
-      component: () => import('../views/pages/TaxMaster.vue'),
+      path: '/alcoholTypeMaster',
+      name: 'alcoholTypeMaster',
+      component: () => import('../views/Pages/AlcoholTypeMaster.vue'),
       meta: {
-        title: 'Tax Maintenance',
+        title: 'Alcohol Type Master',
+        requiresAuth: true ,
+      },
+    },
+    {
+      path: '/alcoholTaxMaster',
+      name: 'alcoholTaxMaster',
+      component: () => import('../views/Pages/AlcoholTaxMaster.vue'),
+      meta: {
+        title: 'Alcohol Tax Master',
+        requiresAuth: true ,
+      },
+    },
+    {
+      path: '/materialClassMaster',
+      name: 'materialClassMaster',
+      component: () => import('../views/Pages/MaterialClassMaster.vue'),
+      meta: {
+        title: 'Material Class Master',
         requiresAuth: true ,
       },
     },
@@ -197,15 +215,6 @@ const router = createRouter({
       },
     },
     {
-      path: '/categoryMaster',
-      name: 'カテゴリマスタ',
-      component: () => import('../views/pages/CategoryMaster.vue'),
-      meta: {
-        title: 'Category Master',
-        requiresAuth: true ,
-      },
-    },
-    {
       path: '/siteTypeMaster',
       name: 'サイト種別マスタ',
       component: () => import('../views/Pages/SiteTypeMaster.vue'),
@@ -224,11 +233,11 @@ const router = createRouter({
       },
     },
     {
-      path: '/lotYieldSummary',
-      name: 'LotYieldSummary',
-      component: () => import('../views/Pages/LotYieldSummary.vue'),
+      path: '/batchYieldSummary',
+      name: 'BatchYieldSummary',
+      component: () => import('../views/Pages/BatchYieldSummary.vue'),
       meta: {
-        title: 'Lot Yield Summary',
+        title: 'Batch Yield Summary',
         requiresAuth: true ,
       },
     },

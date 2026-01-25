@@ -2,48 +2,48 @@
   <div v-if="open" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
     <div class="w-full max-w-xl bg-white rounded-xl shadow-lg border border-gray-200">
       <header class="px-4 py-3 border-b flex items-center justify-between">
-        <h3 class="text-lg font-semibold text-gray-800">{{ editing ? t('lot.packaging.editTitle') : t('lot.packaging.addTitle') }}</h3>
+        <h3 class="text-lg font-semibold text-gray-800">{{ editing ? t('batch.packaging.editTitle') : t('batch.packaging.addTitle') }}</h3>
         <button class="text-sm px-2 py-1 rounded border hover:bg-gray-100" type="button" @click="emit('close')">{{ t('common.cancel') }}</button>
       </header>
       <form class="p-4 space-y-4" @submit.prevent="submitForm">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label class="block text-sm text-gray-600 mb-1" for="packageSelect">{{ t('lot.packaging.columns.package') }}<span class="text-red-600">*</span></label>
+            <label class="block text-sm text-gray-600 mb-1" for="packageSelect">{{ t('batch.packaging.columns.package') }}<span class="text-red-600">*</span></label>
             <select id="packageSelect" v-model="form.package_id" class="w-full h-[40px] border rounded px-3" required @change="onPackageChange">
-              <option value="" disabled>{{ t('lot.packaging.packagePlaceholder') }}</option>
+              <option value="" disabled>{{ t('batch.packaging.packagePlaceholder') }}</option>
               <option v-for="pkg in categories" :key="pkg.id" :value="pkg.id">
                 {{ pkg.display }}
               </option>
             </select>
           </div>
           <div>
-            <label class="block text-sm text-gray-600 mb-1" for="fillDate">{{ t('lot.packaging.columns.fillDate') }}</label>
+            <label class="block text-sm text-gray-600 mb-1" for="fillDate">{{ t('batch.packaging.columns.fillDate') }}</label>
             <input id="fillDate" v-model="form.fill_at" type="date" class="w-full h-[40px] border rounded px-3" />
           </div>
           <div>
-            <label class="block text-sm text-gray-600 mb-1" for="outputSite">{{ t('lot.packaging.columns.outputSite') }}</label>
+            <label class="block text-sm text-gray-600 mb-1" for="outputSite">{{ t('batch.packaging.columns.outputSite') }}</label>
             <select id="outputSite" v-model="form.site_id" class="w-full h-[40px] border rounded px-3">
-              <option value="">{{ t('lot.packaging.sitePlaceholder') }}</option>
+              <option value="">{{ t('batch.packaging.sitePlaceholder') }}</option>
               <option v-for="site in sites" :key="site.value" :value="site.value">
                 {{ site.label }}
               </option>
             </select>
           </div>
           <div>
-            <label class="block text-sm text-gray-600 mb-1" for="qtyInput">{{ t('lot.packaging.columns.quantity') }}<span class="text-red-600">*</span></label>
+            <label class="block text-sm text-gray-600 mb-1" for="qtyInput">{{ t('batch.packaging.columns.quantity') }}<span class="text-red-600">*</span></label>
             <input id="qtyInput" v-model.number="form.package_qty" type="number" min="0" step="1" class="w-full h-[40px] border rounded px-3" required />
           </div>
           <div>
-            <label class="block text-sm text-gray-600 mb-1" for="sizeInput">{{ t('lot.packaging.columns.sizeOverride') }}</label>
+            <label class="block text-sm text-gray-600 mb-1" for="sizeInput">{{ t('batch.packaging.columns.sizeOverride') }}</label>
             <div class="flex items-center gap-2">
               <input id="sizeInput" v-model="form.package_size_l" type="number" step="0.001" min="0" class="flex-1 h-[40px] border rounded px-3" />
-              <span class="text-sm text-gray-500">{{ t('lot.packaging.lUnit') }}</span>
+              <span class="text-sm text-gray-500">{{ t('batch.packaging.lUnit') }}</span>
             </div>
-            <p v-if="form.package_id" class="mt-1 text-xs text-gray-500">{{ t('lot.packaging.defaultSizeHint', { size: defaultSizeLabel }) }}</p>
+            <p v-if="form.package_id" class="mt-1 text-xs text-gray-500">{{ t('batch.packaging.defaultSizeHint', { size: defaultSizeLabel }) }}</p>
           </div>
         </div>
         <div>
-          <label class="block text-sm text-gray-600 mb-1" for="notesInput">{{ t('lot.packaging.columns.notes') }}</label>
+          <label class="block text-sm text-gray-600 mb-1" for="notesInput">{{ t('batch.packaging.columns.notes') }}</label>
           <textarea id="notesInput" v-model.trim="form.notes" rows="3" class="w-full border rounded px-3 py-2"></textarea>
         </div>
       </form>
@@ -102,7 +102,7 @@ const form = reactive<PackageFormState>(blank())
 
 const defaultSizeLabel = computed(() => {
   const current = props.categories.find((c) => c.id === form.package_id)
-  if (!current?.default_volume_l) return t('lot.packaging.noDefaultSize')
+  if (!current?.default_volume_l) return t('batch.packaging.noDefaultSize')
   return `${current.default_volume_l.toLocaleString(undefined, { maximumFractionDigits: 2 })} L`
 })
 

@@ -25,84 +25,19 @@
     "select": "選択"
   },
   "batch": {
-    "statusMap": {
-      "Not started": "未開始",
-      "In progress": "進行中",
-      "Complete": "完了",
-      "Done": "完了",
-      "Empty": "未入力"
-    },
     "list": {
-      "title": "バッチ一覧",
+      "title": "バッチ管理",
       "searchTitle": "ロット検索",
-      "reset": "リセット",
-      "status": "ステータス",
-      "all": "すべて",
-      "startDate": "開始日",
-      "endDate": "終了日",
-      "keyword": "キーワード（Lot ID / ビール名）",
-      "keywordPh": "例: 2025-IPA / Galaxy",
-      "showing": "{total}件中{count}件を表示",
-      "lotId": "ロットID",
-      "beerName": "ビール名",
-      "brewDate": "仕込み日",
-      "finish": "終了",
-      "style": "スタイル",
-      "batchL": "仕込み量 (L)",
-      "view": "表示",
-      "edit": "編集",
-      "noMatch": "検索条件に一致するロットはありません。",
-      "deleteConfirm": "ロット {id} を削除しますか？ この操作は元に戻せません。"
-    },
-    "edit": {
-      "title": "バッチ情報編集",
-      "lotSummary": "ロット概要",
-      "lotId": "ロットID",
-      "lotIdPh": "2025-IPA-001",
-      "beerName": "ビール名",
-      "beerNamePh": "Galaxy IPA",
-      "style": "スタイル",
-      "stylePh": "IPA / Stout / Lager",
-      "batchSize": "仕込み量 (L)",
-      "batchSizePh": "20",
-      "targetOG": "目標 OG",
-      "targetOGPh": "1.060",
-      "targetFG": "目標 FG",
-      "targetFGPh": "1.012",
-      "brewDate": "仕込み日",
-      "lotNotes": "メモ",
-      "lotNotesPh": "ホップ、酵母、目標など",
-      "estAbv": "推定 ABV:",
-      "attenuation": "減衰率:",
-      "sections": {
-        "start": "開始",
-        "end": "終了",
-        "notes": "メモ"
-      },
-      "actions": {
-        "save": "保存",
-        "export": "JSON エクスポート",
-        "import": "インポート",
-        "reset": "リセット",
-        "invalidJson": "JSON ファイルが不正です",
-        "confirmReset": "すべてのデータをリセットしますか？"
-      }
-    }
-  },
-  "lot": {
-    "list": {
-      "title": "ロット管理",
-      "searchTitle": "ロット検索",
-      "newLot": "ロット作成",
+      "newBatch": "ロット作成",
       "nameLabel": "ロット名／メモ",
-      "namePlaceholder": "LOT-20240601-0001",
+      "namePlaceholder": "BATCH-20240601-0001",
       "labelLabel": "銘柄名",
       "abvLabel": "実績ABV",
       "startDate": "開始日",
       "endDate": "終了日",
       "showing": "{total}件中{count}件を表示",
       "tableTitle": "ロット一覧",
-      "colLotCode": "ロットコード",
+      "colBatchCode": "ロットコード",
       "colName": "名称",
       "colLabel": "銘柄名",
       "colVersion": "工程版",
@@ -119,22 +54,22 @@
       "subtitle": "ロットコードは入力可能です。空欄なら自動採番されます。",
       "recipe": "レシピ",
       "recipePlaceholder": "レシピを選択",
-      "lotCode": "ロットコード",
-      "lotCodePlaceholder": "空欄なら自動採番",
+      "batchCode": "ロットコード",
+      "batchCodePlaceholder": "空欄なら自動採番",
       "plannedStart": "計画開始",
       "processVersion": "工程バージョン",
       "processPlaceholder": "最新を使用",
       "label": "銘柄名",
       "targetVolume": "目標仕込み量 (L)",
       "notes": "メモ",
-      "parentLotsTitle": "親ロット",
-      "parentLotsSubtitle": "必要に応じて元のロットと数量を記録します。",
-      "parentLotsAdd": "親ロットを追加",
-      "parentLotsRemove": "削除",
-      "parentLotsEmpty": "親ロットは未登録です。",
-      "parentLotCode": "親ロットコード",
-      "parentLotQuantity": "数量 (L)",
-      "autoCodeHint": "空欄の場合は LOT-YYYYMMDD-XXXX 形式で自動生成されます。",
+      "parentBatchesTitle": "親ロット",
+      "parentBatchesSubtitle": "必要に応じて元のロットと数量を記録します。",
+      "parentBatchesAdd": "親ロットを追加",
+      "parentBatchesRemove": "削除",
+      "parentBatchesEmpty": "親ロットは未登録です。",
+      "parentBatchCode": "親ロットコード",
+      "parentBatchQuantity": "数量 (L)",
+      "autoCodeHint": "空欄の場合は BATCH-YYYYMMDD-XXXX 形式で自動生成されます。",
       "createButton": "作成"
     },
     "delete": {
@@ -172,7 +107,7 @@
       "infoSubtitle": "スケジュールやステータス、メモを更新します。",
       "actualTitle": "実績値",
       "actualSubtitle": "実績OG/FG/ABV/SRMと製品量を記録します。",
-      "lotCode": "ロットコード",
+      "batchCode": "ロットコード",
       "status": "ステータス",
       "label": "銘柄名",
       "processVersion": "工程バージョン",
@@ -188,13 +123,13 @@
       "actualSrm": "実績SRM",
       "vessel": "タンク",
       "notes": "メモ",
-      "parentLotsTitle": "親ロット",
-      "parentLotsSubtitle": "元のロットと数量を記録します。",
-      "parentLotsAdd": "親ロットを追加",
-      "parentLotsRemove": "削除",
-      "parentLotsEmpty": "親ロットは未登録です。",
-      "parentLotCode": "親ロットコード",
-      "parentLotQuantity": "数量 (L)"
+      "parentBatchesTitle": "親ロット",
+      "parentBatchesSubtitle": "元のロットと数量を記録します。",
+      "parentBatchesAdd": "親ロットを追加",
+      "parentBatchesRemove": "削除",
+      "parentBatchesEmpty": "親ロットは未登録です。",
+      "parentBatchCode": "親ロットコード",
+      "parentBatchQuantity": "数量 (L)"
     },
     "ingredients": {
       "sectionTitle": "原材料",
@@ -226,7 +161,7 @@
       "totalReturned": "タンクへ戻し",
       "totalDumped": "廃棄量",
       "colTimestamp": "記録日時",
-      "colSourceLot": "供給ロット",
+      "colSourceBatch": "供給ロット",
       "colTankFrom": "Fromタンク",
       "colTankTo": "Toタンク",
       "colVolumePulled": "採取量",
@@ -289,12 +224,12 @@
       "searchTitle": "廃棄データ検索",
       "startDate": "開始日",
       "endDate": "終了日",
-      "lotCode": "ロットコード",
-      "lotPlaceholder": "LOT-20240601-0001",
+      "batchCode": "ロットコード",
+      "batchPlaceholder": "BATCH-20240601-0001",
       "showing": "{total}件中{count}件を表示",
       "tableTitle": "廃棄一覧",
       "colCreated": "記録日時",
-      "colLot": "ロット",
+      "colBatch": "ロット",
       "colMaterial": "原材料",
       "colQty": "数量",
       "colReason": "理由"
@@ -317,26 +252,109 @@
     "active": "有効",
     "createdAt": "作成日時"
   },
-  "category": {
-    "title": "酒種管理",
-    "subtitle": "酒種を管理します",
-    "newTitle": "酒種の追加",
-    "editTitle": "酒種の編集",
-    "deleteTitle": "酒種の削除",
-    "deleteConfirm": "酒種 {code} を削除しますか？ この操作は元に戻せません。",
-    "searchPlaceholder": "酒種を検索…"
+  "alcoholType": {
+    "title": "酒類種別管理",
+    "subtitle": "酒類種別を管理します。",
+    "newTitle": "酒類種別の追加",
+    "editTitle": "酒類種別の編集",
+    "deleteTitle": "酒類種別の削除",
+    "deleteConfirm": "酒類種別 {name} を削除しますか？この操作は元に戻せません。",
+    "filters": {
+      "name": "名称",
+      "taxCategoryCode": "税区分コード",
+      "namePlaceholder": "名称で絞り込み",
+      "taxCategoryPlaceholder": "税区分コードで絞り込み"
+    },
+    "table": {
+      "name": "名称",
+      "taxCategoryCode": "税区分コード",
+      "description": "説明",
+      "createdAt": "作成日時"
+    },
+    "form": {
+      "name": "名称",
+      "taxCategoryCode": "税区分コード",
+      "description": "説明"
+    },
+    "errors": {
+      "nameRequired": "名称は必須です。",
+      "adminOnlySystem": "システムスコープは管理者のみ編集できます。"
+    }
   },
-  "tax": {
+  "alcoholTax": {
     "title": "酒税管理",
-    "subtitle": "酒種ごとの酒税率を管理します",
-    "newTitle": "酒税率の追加",
-    "editTitle": "酒税率の編集",
-    "deleteTitle": "酒税率の削除",
-    "deleteConfirm": "{category}（{rate}）の酒税レコードを削除しますか？",
-    "searchPlaceholder": "酒税率を検索…",
-    "categoryPlaceholder": "酒種を選択",
-    "invalidCategory": "未定義の酒種です",
-    "missingCategories": "酒種が登録されていません。先に酒種を追加してください。"
+    "subtitle": "酒税の税率を管理します。",
+    "newTitle": "酒税の追加",
+    "editTitle": "酒税の編集",
+    "deleteTitle": "酒税の削除",
+    "deleteConfirm": "酒税 {name} を削除しますか？この操作は元に戻せません。",
+    "filters": {
+      "name": "名称",
+      "taxCategoryCode": "税区分コード",
+      "namePlaceholder": "名称で絞り込み",
+      "taxCategoryPlaceholder": "税区分コードで絞り込み"
+    },
+    "table": {
+      "name": "名称",
+      "taxCategoryCode": "税区分コード",
+      "taxRate": "税率",
+      "startDate": "適用開始日",
+      "expirationDate": "適用終了日"
+    },
+    "form": {
+      "name": "名称",
+      "taxCategoryCode": "税区分コード",
+      "taxRate": "税率",
+      "startDate": "適用開始日",
+      "expirationDate": "適用終了日"
+    },
+    "errors": {
+      "nameRequired": "名称は必須です。",
+      "taxCategoryCodeInvalid": "税区分コードは数値で入力してください。",
+      "taxRateInvalid": "税率は数値で入力してください。",
+      "startDateInvalid": "適用開始日は必須です。",
+      "expirationDateInvalid": "適用終了日が不正です。",
+      "adminOnlySystem": "システムスコープは管理者のみ編集できます。"
+    }
+  },
+  "materialClass": {
+    "title": "原材料区分管理",
+    "subtitle": "原材料区分の定義を管理します。",
+    "newTitle": "原材料区分の追加",
+    "editTitle": "原材料区分の編集",
+    "deleteTitle": "原材料区分の削除",
+    "deleteConfirm": "原材料区分 {name} を削除しますか？この操作は元に戻せません。",
+    "filters": {
+      "category": "カテゴリ"
+    },
+    "table": {
+      "name": "名称",
+      "label": "表示名",
+      "category": "カテゴリ",
+      "alcoholTaxRequired": "酒税管理",
+      "manufacturingRequired": "製造申請",
+      "movingControlRequired": "移動管理",
+      "shipmentControlRequired": "出荷管理",
+      "description": "説明",
+      "createdAt": "作成日時"
+    },
+    "form": {
+      "name": "名称",
+      "label": "表示名",
+      "category": "カテゴリ",
+      "alcoholTaxRequired": "酒税管理",
+      "manufacturingRequired": "製造申請",
+      "movingControlRequired": "移動管理",
+      "shipmentControlRequired": "出荷管理",
+      "description": "説明"
+    },
+    "errors": {
+      "nameRequired": "名称は必須です。",
+      "labelRequired": "表示名は必須です。",
+      "categoryRequired": "カテゴリは必須です。",
+      "flagInvalid": "フラグは true/false を指定してください。",
+      "adminOnlySystem": "システムスコープは管理者のみ編集できます。"
+    }
   },
   "uom": {
     "title": "単位マスタ",
@@ -480,7 +498,7 @@
     }
   },
   "producedBeer": {
-    "title": "製品ビール管理",
+    "title": "移動記録",
     "subtitle": "製品ビールの在庫と移動を管理します。",
     "sections": {
       "inventory": "在庫",
@@ -492,7 +510,7 @@
         "beerName": "ビール名",
         "category": "カテゴリ",
         "packageType": "パッケージ種別",
-        "lotNo": "製造ロット",
+        "batchNo": "製造ロット",
         "productionDate": "製造日",
         "qtyLiters": "数量(L)",
         "qtyPackages": "数量(本/箱)",
@@ -507,7 +525,7 @@
         "beerName": "ビール名",
         "category": "カテゴリ",
         "packageType": "パッケージ種別",
-        "lotNo": "製造ロット",
+        "batchNo": "製造ロット",
         "dateFrom": "開始日",
         "dateTo": "終了日",
         "movementType": "移動種別"
@@ -543,7 +561,7 @@
         "lineBeer": "ビール名",
         "lineCategory": "カテゴリ",
         "linePackageType": "パッケージ種別",
-        "lineLot": "ロット",
+        "lineBatch": "ロット",
         "lineQtyPackages": "数量(本/箱)",
         "lineQtyLiters": "数量(L)"
       }
@@ -581,7 +599,7 @@
           "beer": "ビール名",
           "category": "カテゴリ",
           "packageType": "パッケージ種別",
-          "lot": "ロット",
+          "batch": "ロット",
           "qtyPackages": "数量(本/箱)",
           "qtyLiters": "数量(L)"
         }
@@ -749,8 +767,7 @@
     "mustBeNumber": "{field} は数値である必要があります",
     "rateMin": "{field} は 0 以上である必要があります",
     "expireAfter": "適用終了日は適用開始日より後である必要があります"
-  }
-  ,
+  },
   "dashboard": {
     "title": "概要",
     "kpis": {
@@ -781,8 +798,7 @@
       "volumeDataset": "量 (L)",
       "revenueDataset": "売上 (¥)"
     }
-  }
-  ,
+  },
   "forecast": {
     "title": "AI売上予測",
     "subtitle": "AIを使って今後12か月のビール売上を予測し、生産計画に活用します。",
@@ -825,8 +841,7 @@
         }
       }
     }
-  }
-  ,
+  },
   "assistant": {
     "title": "AIアシスタント",
     "subtitle": "醸造・在庫・計画に関する質問を入力すると、AIが最新情報をもとに回答します。",
@@ -840,8 +855,7 @@
     "waiting": "AIアシスタントの回答を待っています…",
     "errorGeneric": "AIの応答を取得できませんでした。もう一度お試しください。",
     "fallbackAnswer": "まだ確かな情報がありませんが、学習を続けています！"
-  }
-  ,
+  },
   "orderAssistant": {
     "title": "AI発注アシスタント",
     "subtitle": "在庫不足の材料をAIが検出し、仕入先への発注案を自動作成します。",
@@ -900,19 +914,20 @@
         "waiting": "調整中"
       }
     }
-  }
-  ,
+  },
   "sidebar": {
-    "group": { "main": "メニュー", "ai": "AIオートメーション" },
+    "group": {
+      "main": "メニュー",
+      "ai": "AIオートメーション"
+    },
     "items": {
       "dashboard": "概要",
-      "production": "生産管理",
+      "production": "製造管理",
       "batchList": "バッチ管理",
-      "lotList": "ロット管理",
       "batchEdit": "バッチ情報更新",
-      "liquorTax": "酒税計算",
+      "liquorTax": "税務管理",
       "taxYearSummary": "年間課税概要",
-      "taxReport": "税務申告書",
+      "taxReport": "酒税申告",
       "packing": "充填管理",
       "taxCalc": "課税計算",
       "unpaidMove": "未納税搬入出",
@@ -920,19 +935,20 @@
       "exportDutyFree": "輸出免税帳",
       "siteMovements": "サイト間移動",
       "recipe": "レシピ管理",
-      "lotYield": "エキス収率",
+      "batchYield": "エキス収率",
       "recipemng": "レシピ管理",
       "recipeRegister": "レシピ登録",
-      "recipeList": "レシピ一覧",
+      "recipeList": "レシピ管理",
       "inventory": "在庫管理",
       "rawMaterialReceipts": "原材料受入",
       "rawMaterialInventory": "原材料在庫",
-      "producedBeer": "製品ビール管理",
+      "producedBeer": "移動記録",
       "waste": "廃棄物管理",
       "masterMaintenance": "マスターメンテナンス",
       "systemMaintenance": "システムメンテナンス",
-      "categoryMaster": "酒種管理",
-      "taxMaster": "酒税管理",
+      "alcoholTypeMaster": "酒類種別管理",
+      "alcoholTaxMaster": "酒税管理",
+      "materialClassMaster": "原材料区分管理",
       "siteTypeMaster": "サイト種別管理",
       "catalogMaster": "酒類登録",
       "uomMaster": "単位マスタ",
@@ -954,29 +970,36 @@
       "userManagement": "ユーザー管理",
       "users": "ユーザー一覧"
     }
-  }
-  ,
+  },
   "siteType": {
-    "title": "サイト種別",
-    "subtitle": "テナントごとのサイト種別マスタを管理します。",
-    "newTitle": "サイト種別を追加",
-    "editTitle": "サイト種別を編集",
+    "title": "サイト種別管理",
+    "subtitle": "在庫管理用のサイト種別を管理します。",
+    "newTitle": "サイト種別の追加",
+    "editTitle": "サイト種別の編集",
     "deleteTitle": "サイト種別の削除",
-    "deleteConfirm": "サイト種別 {code} を削除しますか？この操作は元に戻せません。",
-    "table": {
-      "code": "コード",
+    "deleteConfirm": "サイト種別 {name} を削除しますか？この操作は元に戻せません。",
+    "filters": {
       "name": "名称",
-      "nameJa": "日本語名称",
-      "active": "有効",
+      "inventoryCount": "在庫カウント",
+      "namePlaceholder": "名称で絞り込み"
+    },
+    "table": {
+      "name": "名称",
+      "inventoryCount": "在庫カウント",
+      "description": "説明",
       "createdAt": "作成日時"
     },
     "form": {
-      "codeRequired": "コードは必須です。",
+      "name": "名称",
+      "inventoryCount": "在庫カウント",
+      "description": "説明"
+    },
+    "errors": {
       "nameRequired": "名称は必須です。",
-      "jaLabel": "日本語名称 (flags.ja)"
+      "inventoryCountInvalid": "在庫カウントは true/false を指定してください。",
+      "adminOnlySystem": "システムスコープは管理者のみ編集できます。"
     }
-  }
-  ,
+  },
   "site": {
     "title": "サイト",
     "subtitle": "醸造所・倉庫・顧客などの拠点情報を管理します。",
@@ -1009,8 +1032,7 @@
       "invalidAddress": "住所は正しいJSON形式で入力してください。",
       "invalidContact": "連絡先は正しいJSON形式で入力してください。"
     }
-  }
-  ,
+  },
   "siteMovement": {
     "title": "サイト間移動",
     "subtitle": "拠点間の在庫移動を記録・管理します。",
@@ -1070,9 +1092,8 @@
       "production_issue": "仕込払出",
       "production_receipt": "仕込受入"
     }
-  }
-  ,
-  "lotYield": {
+  },
+  "batchYield": {
     "title": "エキス収率サマリー",
     "subtitle": "完了したロットから仕込室収率（エキス）を分析します。",
     "filters": {
@@ -1085,13 +1106,13 @@
     "summary": {
       "style": "スタイル",
       "recipe": "レシピ",
-      "lotCount": "ロット数",
+      "batchCount": "ロット数",
       "targetVolume": "目標量 (L)",
       "actualVolume": "充填量 (L)",
       "yield": "収率 (%)"
     },
-    "lots": {
-      "lotCode": "ロット",
+    "batches": {
+      "batchCode": "ロット",
       "planned": "開始予定日",
       "target": "目標量 (L)",
       "actual": "充填量 (L)",
@@ -1100,8 +1121,7 @@
     },
     "noData": "条件に合致する完了ロットはありません。",
     "yieldLabel": "収率"
-  }
-  ,
+  },
   "calendar": {
     "title": "カレンダー",
     "subtitle": "イベントを追加・編集して、スケジュール管理をしよう",
@@ -1125,8 +1145,7 @@
       "update": "更新",
       "loadBrew": "醸造工程の予定を読み込み"
     }
-  }
-  ,
+  },
   "taxYearSummary": {
     "title": "年間課税概要",
     "subtitle": "カテゴリ別の年間生産量と酒税額を確認します。",
@@ -1140,18 +1159,17 @@
     "monthlyChartTitle": "月別生産量と酒税額",
     "volumeSeries": "生産量 (L)",
     "taxSeries": "酒税額 (¥)",
-    "lotsSectionTitle": "月別ロット明細",
+    "batchesSectionTitle": "月別ロット明細",
     "monthTotal": "小計",
-    "lot": "ロット",
+    "batch": "ロット",
     "fillDate": "充填日",
     "volumeShort": "生産量",
     "taxShort": "酒税",
     "loading": "読み込み中…"
-  }
-  ,
+  },
   "taxReport": {
-    "title": "税務申告書",
-    "subtitle": "クラフトビールの税務申告書を作成・管理します。",
+    "title": "酒税申告",
+    "subtitle": "クラフトビールの酒税申告を作成・管理します。",
     "actions": {
       "new": "申告書作成",
       "createXml": "XML生成",
@@ -1239,8 +1257,7 @@
       "statusRequired": "ステータスは必須です。",
       "breakdownRequired": "生産量の集計が必要です。"
     }
-  }
-  ,
+  },
   "recipe": {
     "statusMap": {
       "draft": "下書き",
@@ -1248,7 +1265,7 @@
       "retired": "廃止"
     },
     "list": {
-      "title": "レシピ一覧",
+      "title": "レシピ管理",
       "searchTitle": "検索",
       "reset": "リセット",
       "status": "ステータス",

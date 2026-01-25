@@ -37,8 +37,8 @@
         "actual_qty": 203.5,
         "uom": "kg",
         "variance": 3.5,
-        "lots": [
-          { "lot_id": "LOT-MALT-20260110-01", "qty": 203.5, "uom": "kg" }
+        "batches": [
+          { "batch_id": "BATCH-MALT-20260110-01", "qty": 203.5, "uom": "kg" }
         ]
       },
       {
@@ -47,8 +47,8 @@
         "actual_qty": 2.45,
         "uom": "kg",
         "variance": -0.05,
-        "lots": [
-          { "lot_id": "LOT-HOPS-20260105-02", "qty": 2.45, "uom": "kg" }
+        "batches": [
+          { "batch_id": "BATCH-HOPS-20260105-02", "qty": 2.45, "uom": "kg" }
         ]
       },
       {
@@ -57,8 +57,8 @@
         "actual_qty": 5.1,
         "uom": "kg",
         "variance": 0.1,
-        "lots": [
-          { "lot_id": "LOT-YEAST-20260120-01", "qty": 5.1, "uom": "kg" }
+        "batches": [
+          { "batch_id": "BATCH-YEAST-20260120-01", "qty": 5.1, "uom": "kg" }
         ]
       }
     ],
@@ -84,7 +84,7 @@
         ],
 
         "inputs_actual": [
-          { "material_id": "MALT_PILSNER", "qty": 203.5, "uom": "kg", "lot_id": "LOT-MALT-20260110-01" },
+          { "material_id": "MALT_PILSNER", "qty": 203.5, "uom": "kg", "batch_id": "BATCH-MALT-20260110-01" },
           { "material_id": "WATER_BREWING", "qty": 805, "uom": "L" }
         ],
 
@@ -94,7 +94,7 @@
             "qty": 748,
             "uom": "L",
             "type": "intermediate",
-            "lot_id": "LOT-WORT-20260123-01",
+            "batch_id": "BATCH-WORT-20260123-01",
             "disposition": {
               "type": "transfer",
               "to": [
@@ -112,7 +112,7 @@
             "qty": 35,
             "uom": "kg",
             "type": "waste",
-            "lot_id": "LOT-TRUB-20260123-01",
+            "batch_id": "BATCH-TRUB-20260123-01",
             "disposition": {
               "type": "dispose",
               "reason_code": "BIO_WASTE",
@@ -161,7 +161,7 @@
 
         "inputs_actual": [
           { "material_id": "HOT_WORT", "qty": 698, "uom": "L" },
-          { "material_id": "YEAST_LAGER", "qty": 5.1, "uom": "kg", "lot_id": "LOT-YEAST-20260120-01" }
+          { "material_id": "YEAST_LAGER", "qty": 5.1, "uom": "kg", "batch_id": "BATCH-YEAST-20260120-01" }
         ],
 
         "outputs_actual": [
@@ -170,7 +170,7 @@
             "qty": 682,
             "uom": "L",
             "type": "intermediate",
-            "lot_id": "LOT-BEERGREEN-20260130-01",
+            "batch_id": "BATCH-BEERGREEN-20260130-01",
             "disposition": {
               "type": "transfer",
               "to": [
@@ -188,7 +188,7 @@
             "qty": 12,
             "uom": "kg",
             "type": "byproduct",
-            "lot_id": "LOT-YEAST-20260130-01",
+            "batch_id": "BATCH-YEAST-20260130-01",
             "disposition": {
               "type": "split",
               "to": [
@@ -236,7 +236,7 @@
             "qty": 2978,
             "uom": "pcs",
             "type": "primary",
-            "lot_id": "LOT-BEER-20260131-01",
+            "batch_id": "BATCH-BEER-20260131-01",
             "disposition": {
               "type": "inventory",
               "location": "FG_WH_01"
@@ -247,7 +247,7 @@
             "qty": 22,
             "uom": "pcs",
             "type": "waste",
-            "lot_id": "LOT-SCRAPGLASS-20260131-01",
+            "batch_id": "BATCH-SCRAPGLASS-20260131-01",
             "disposition": {
               "type": "dispose",
               "reason_code": "LINE_BREAKAGE",

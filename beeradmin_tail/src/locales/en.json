@@ -25,84 +25,19 @@
     "select": "Select"
   },
   "batch": {
-    "statusMap": {
-      "Not started": "Not started",
-      "In progress": "In progress",
-      "Complete": "Complete",
-      "Done": "Done",
-      "Empty": "Empty"
-    },
     "list": {
-      "title": "Batch List",
-      "searchTitle": "Search Lots",
-      "reset": "Reset",
-      "status": "Status",
-      "all": "All",
-      "startDate": "Start date",
-      "endDate": "End date",
-      "keyword": "Keyword (Lot ID / Beer name)",
-      "keywordPh": "e.g., 2025-IPA / Galaxy",
-      "showing": "Showing {count} / {total} lots",
-      "lotId": "Lot ID",
-      "beerName": "Beer name",
-      "brewDate": "Brew date",
-      "finish": "Finish",
-      "style": "Style",
-      "batchL": "Batch (L)",
-      "view": "View",
-      "edit": "Edit",
-      "noMatch": "No lots match the search condition.",
-      "deleteConfirm": "Delete lot {id}? This cannot be undone."
-    },
-    "edit": {
-      "title": "Batch Editor",
-      "lotSummary": "Lot Summary",
-      "lotId": "Lot ID",
-      "lotIdPh": "2025-IPA-001",
-      "beerName": "Beer Name",
-      "beerNamePh": "Galaxy IPA",
-      "style": "Style",
-      "stylePh": "IPA / Stout / Lager",
-      "batchSize": "Batch Size (L)",
-      "batchSizePh": "20",
-      "targetOG": "Target OG",
-      "targetOGPh": "1.060",
-      "targetFG": "Target FG",
-      "targetFGPh": "1.012",
-      "brewDate": "Brew Date",
-      "lotNotes": "Lot Notes",
-      "lotNotesPh": "hops, yeast, targets...",
-      "estAbv": "Est. ABV:",
-      "attenuation": "Attenuation:",
-      "sections": {
-        "start": "Start",
-        "end": "End",
-        "notes": "Notes"
-      },
-      "actions": {
-        "save": "Save",
-        "export": "Export JSON",
-        "import": "Import",
-        "reset": "Reset",
-        "invalidJson": "Invalid JSON file",
-        "confirmReset": "Reset all data?"
-      }
-    }
-  },
-  "lot": {
-    "list": {
-      "title": "Production Lots",
-      "searchTitle": "Search Lots",
-      "newLot": "Create Lot",
-      "nameLabel": "Lot name/notes",
-      "namePlaceholder": "LOT-20240601-0001",
+      "title": "Production Batches",
+      "searchTitle": "Search Batches",
+      "newBatch": "Create Batch",
+      "nameLabel": "Batch name/notes",
+      "namePlaceholder": "BATCH-20240601-0001",
       "labelLabel": "Label",
       "abvLabel": "Actual ABV",
       "startDate": "Start date",
       "endDate": "End date",
-      "showing": "Showing {count} / {total} lots",
-      "tableTitle": "Lot Table",
-      "colLotCode": "Lot code",
+      "showing": "Showing {count} / {total} batches",
+      "tableTitle": "Batch Table",
+      "colBatchCode": "Batch code",
       "colName": "Name",
       "colLabel": "Label",
       "colVersion": "Process ver",
@@ -115,36 +50,36 @@
       "summary": "Summary"
     },
     "create": {
-      "title": "Create Lot",
+      "title": "Create Batch",
       "subtitle": "Optional overrides. Enter a code or leave blank to auto-generate.",
       "recipe": "Recipe",
       "recipePlaceholder": "Select a recipe",
-      "lotCode": "Lot code",
-      "lotCodePlaceholder": "Leave blank to auto-generate",
+      "batchCode": "Batch code",
+      "batchCodePlaceholder": "Leave blank to auto-generate",
       "plannedStart": "Planned start",
       "processVersion": "Process version",
       "processPlaceholder": "Default latest",
       "label": "Label",
       "targetVolume": "Target volume (L)",
-      "notes": "Lot note",
-      "parentLotsTitle": "Parent lots",
-      "parentLotsSubtitle": "Optional. Track source lots and volumes.",
-      "parentLotsAdd": "Add parent lot",
-      "parentLotsRemove": "Remove",
-      "parentLotsEmpty": "No parent lots added.",
-      "parentLotCode": "Parent lot code",
-      "parentLotQuantity": "Quantity (L)",
-      "autoCodeHint": "If blank, a lot code will be generated like LOT-YYYYMMDD-XXXX.",
-      "createButton": "Create Lot"
+      "notes": "Batch note",
+      "parentBatchesTitle": "Parent batches",
+      "parentBatchesSubtitle": "Optional. Track source batches and volumes.",
+      "parentBatchesAdd": "Add parent batch",
+      "parentBatchesRemove": "Remove",
+      "parentBatchesEmpty": "No parent batches added.",
+      "parentBatchCode": "Parent batch code",
+      "parentBatchQuantity": "Quantity (L)",
+      "autoCodeHint": "If blank, a batch code will be generated like BATCH-YYYYMMDD-XXXX.",
+      "createButton": "Create Batch"
     },
     "delete": {
-      "title": "Delete Lot",
-      "confirm": "Delete lot {code}? This action cannot be undone.",
+      "title": "Delete Batch",
+      "confirm": "Delete batch {code}? This action cannot be undone.",
       "warning": "Associated step records will also be removed."
     },
     "summary": {
-      "title": "Lot {code} Summary",
-      "subtitle": "Snapshot of lot plan and execution",
+      "title": "Batch {code} Summary",
+      "subtitle": "Snapshot of batch plan and execution",
       "overview": "Overview",
       "status": "Status",
       "recipe": "Recipe",
@@ -166,13 +101,13 @@
       "noSteps": "No steps recorded."
     },
     "edit": {
-      "title": "Lot Editor",
-      "notFound": "Lot not found or you do not have access.",
-      "infoTitle": "Lot Information",
-      "infoSubtitle": "Update scheduling, status, and notes for this lot.",
+      "title": "Batch Editor",
+      "notFound": "Batch not found or you do not have access.",
+      "infoTitle": "Batch Information",
+      "infoSubtitle": "Update scheduling, status, and notes for this batch.",
       "actualTitle": "Actual Results",
       "actualSubtitle": "Record actual gravity, ABV, SRM, and product volume.",
-      "lotCode": "Lot code",
+      "batchCode": "Batch code",
       "status": "Status",
       "label": "Label",
       "processVersion": "Process version",
@@ -188,17 +123,17 @@
       "actualSrm": "Actual SRM",
       "vessel": "Vessel",
       "notes": "Notes",
-      "parentLotsTitle": "Parent lots",
-      "parentLotsSubtitle": "Track source lots and volumes for this lot.",
-      "parentLotsAdd": "Add parent lot",
-      "parentLotsRemove": "Remove",
-      "parentLotsEmpty": "No parent lots added.",
-      "parentLotCode": "Parent lot code",
-      "parentLotQuantity": "Quantity (L)"
+      "parentBatchesTitle": "Parent batches",
+      "parentBatchesSubtitle": "Track source batches and volumes for this batch.",
+      "parentBatchesAdd": "Add parent batch",
+      "parentBatchesRemove": "Remove",
+      "parentBatchesEmpty": "No parent batches added.",
+      "parentBatchCode": "Parent batch code",
+      "parentBatchQuantity": "Quantity (L)"
     },
     "ingredients": {
       "sectionTitle": "Ingredients",
-      "sectionSubtitle": "Manage the recipe ingredients used for this lot.",
+      "sectionSubtitle": "Manage the recipe ingredients used for this batch.",
       "material": "Material",
       "amount": "Amount",
       "uom": "UOM",
@@ -221,12 +156,12 @@
     },
     "yeast": {
       "sectionTitle": "Yeast Starter Maintenance",
-      "sectionSubtitle": "Log transfers between lots and tanks to keep your yeast program on track.",
+      "sectionSubtitle": "Log transfers between batches and tanks to keep your yeast program on track.",
       "totalPulled": "Pulled from tank",
       "totalReturned": "Returned to tank",
       "totalDumped": "Discarded",
       "colTimestamp": "Recorded",
-      "colSourceLot": "Source lot",
+      "colSourceBatch": "Source batch",
       "colTankFrom": "From tank",
       "colTankTo": "To tank",
       "colVolumePulled": "Pulled",
@@ -238,7 +173,7 @@
     },
     "packaging": {
       "sectionTitle": "Packaging",
-      "sectionSubtitle": "Track packaged quantities for this lot.",
+      "sectionSubtitle": "Track packaged quantities for this batch.",
       "addButton": "Add Package",
       "addTitle": "Add Package Entry",
       "editTitle": "Edit Package Entry",
@@ -289,12 +224,12 @@
       "searchTitle": "Filter Waste",
       "startDate": "From date",
       "endDate": "To date",
-      "lotCode": "Lot code",
-      "lotPlaceholder": "LOT-20240601-0001",
+      "batchCode": "Batch code",
+      "batchPlaceholder": "BATCH-20240601-0001",
       "showing": "Showing {count} / {total} records",
       "tableTitle": "Waste Records",
       "colCreated": "Recorded",
-      "colLot": "Lot",
+      "colBatch": "Batch",
       "colMaterial": "Material",
       "colQty": "Quantity",
       "colReason": "Reason"
@@ -317,26 +252,109 @@
     "active": "active",
     "createdAt": "created at"
   },
-  "category": {
-    "title": "Category Maintenance",
-    "subtitle": "Manage material categories shared across brewing operations",
-    "newTitle": "New Category",
-    "editTitle": "Edit Category",
-    "deleteTitle": "Delete Category",
-    "deleteConfirm": "Delete category {code}? This cannot be undone.",
-    "searchPlaceholder": "Search categories…"
+  "alcoholType": {
+    "title": "Alcohol Type Master",
+    "subtitle": "Maintain alcohol types for tax reporting.",
+    "newTitle": "New Alcohol Type",
+    "editTitle": "Edit Alcohol Type",
+    "deleteTitle": "Delete Alcohol Type",
+    "deleteConfirm": "Delete alcohol type {name}? This cannot be undone.",
+    "filters": {
+      "name": "Name",
+      "taxCategoryCode": "Tax category code",
+      "namePlaceholder": "Filter by name",
+      "taxCategoryPlaceholder": "Filter by tax category code"
+    },
+    "table": {
+      "name": "Name",
+      "taxCategoryCode": "Tax category code",
+      "description": "Description",
+      "createdAt": "Created"
+    },
+    "form": {
+      "name": "Name",
+      "taxCategoryCode": "Tax category code",
+      "description": "Description"
+    },
+    "errors": {
+      "nameRequired": "Name is required.",
+      "adminOnlySystem": "Only admins can edit system scope records."
+    }
   },
-  "tax": {
-    "title": "Beer Tax Maintenance",
-    "subtitle": "Manage tax rates applied to beer categories",
-    "newTitle": "New Tax Rate",
-    "editTitle": "Edit Tax Rate",
-    "deleteTitle": "Delete Tax Rate",
-    "deleteConfirm": "Delete tax entry for {category} ({rate})?",
-    "searchPlaceholder": "Search tax rules…",
-    "categoryPlaceholder": "Select a category",
-    "invalidCategory": "Unknown category",
-    "missingCategories": "No categories available. Add one in Category Master first."
+  "alcoholTax": {
+    "title": "Alcohol Tax Master",
+    "subtitle": "Maintain alcohol tax rates for reporting.",
+    "newTitle": "New Alcohol Tax",
+    "editTitle": "Edit Alcohol Tax",
+    "deleteTitle": "Delete Alcohol Tax",
+    "deleteConfirm": "Delete alcohol tax {name}? This cannot be undone.",
+    "filters": {
+      "name": "Name",
+      "taxCategoryCode": "Tax category code",
+      "namePlaceholder": "Filter by name",
+      "taxCategoryPlaceholder": "Filter by tax category code"
+    },
+    "table": {
+      "name": "Name",
+      "taxCategoryCode": "Tax category code",
+      "taxRate": "Tax rate",
+      "startDate": "Start date",
+      "expirationDate": "Expiration date"
+    },
+    "form": {
+      "name": "Name",
+      "taxCategoryCode": "Tax category code",
+      "taxRate": "Tax rate",
+      "startDate": "Start date",
+      "expirationDate": "Expiration date"
+    },
+    "errors": {
+      "nameRequired": "Name is required.",
+      "taxCategoryCodeInvalid": "Tax category code must be a number.",
+      "taxRateInvalid": "Tax rate must be a number.",
+      "startDateInvalid": "Start date is required.",
+      "expirationDateInvalid": "Expiration date must be a valid date.",
+      "adminOnlySystem": "Only admins can edit system scope records."
+    }
+  },
+  "materialClass": {
+    "title": "Material Class Master",
+    "subtitle": "Maintain material class definitions used in production workflows.",
+    "newTitle": "New Material Class",
+    "editTitle": "Edit Material Class",
+    "deleteTitle": "Delete Material Class",
+    "deleteConfirm": "Delete material class {name}? This cannot be undone.",
+    "filters": {
+      "category": "Category"
+    },
+    "table": {
+      "name": "Name",
+      "label": "Label",
+      "category": "Category",
+      "alcoholTaxRequired": "Alcohol tax required",
+      "manufacturingRequired": "Manufacturing application required",
+      "movingControlRequired": "Moving control required",
+      "shipmentControlRequired": "Shipment control required",
+      "description": "Description",
+      "createdAt": "Created"
+    },
+    "form": {
+      "name": "Name",
+      "label": "Label",
+      "category": "Category",
+      "alcoholTaxRequired": "Alcohol tax required",
+      "manufacturingRequired": "Manufacturing application required",
+      "movingControlRequired": "Moving control required",
+      "shipmentControlRequired": "Shipment control required",
+      "description": "Description"
+    },
+    "errors": {
+      "nameRequired": "Name is required.",
+      "labelRequired": "Label is required.",
+      "categoryRequired": "Category is required.",
+      "flagInvalid": "Flag must be true or false.",
+      "adminOnlySystem": "Only admins can edit system scope records."
+    }
   },
   "uom": {
     "title": "Unit of Measure Maintenance",
@@ -487,12 +505,12 @@
       "movements": "Movements"
     },
     "inventory": {
-      "subtitle": "Inventory of produced craft beer by lot and package.",
+      "subtitle": "Inventory of produced craft beer by batch and package.",
       "table": {
         "beerName": "Beer name",
         "category": "Category",
         "packageType": "Package type",
-        "lotNo": "Production lot no",
+        "batchNo": "Production batch no",
         "productionDate": "Production date",
         "qtyLiters": "Quantity (L)",
         "qtyPackages": "Quantity (packages)",
@@ -507,18 +525,18 @@
         "beerName": "Beer name",
         "category": "Category",
         "packageType": "Package type",
-        "lotNo": "Production lot no",
+        "batchNo": "Production batch no",
         "dateFrom": "Date from",
         "dateTo": "Date to",
-      "movementType": "Movement type"
-    },
-    "types": {
-      "taxed": "Taxed shipment",
-      "notax": "Non-taxed shipment",
-      "returnNotax": "Return (non-taxed)",
-      "wasteNotax": "Waste (non-taxed)",
-      "transferNotax": "Internal transfer (non-taxed)"
-    },
+        "movementType": "Movement type"
+      },
+      "types": {
+        "taxed": "Taxed shipment",
+        "notax": "Non-taxed shipment",
+        "returnNotax": "Return (non-taxed)",
+        "wasteNotax": "Waste (non-taxed)",
+        "transferNotax": "Internal transfer (non-taxed)"
+      },
       "docTypeMap": {
         "sale": "Taxed shipment",
         "tax_transfer": "Export (tax exempt)",
@@ -543,7 +561,7 @@
         "lineBeer": "Beer",
         "lineCategory": "Category",
         "linePackageType": "Package type",
-        "lineLot": "Lot no",
+        "lineBatch": "Batch no",
         "lineQtyPackages": "Packages",
         "lineQtyLiters": "Liters"
       }
@@ -581,7 +599,7 @@
           "beer": "Beer",
           "category": "Category",
           "packageType": "Package type",
-          "lot": "Lot no",
+          "batch": "Batch no",
           "qtyPackages": "Packages",
           "qtyLiters": "Liters"
         }
@@ -749,21 +767,20 @@
     "mustBeNumber": "{field} must be a number",
     "rateMin": "{field} must be >= 0",
     "expireAfter": "expire_date must be after effect_date"
-  }
-  ,
+  },
   "dashboard": {
     "title": "Dashboard",
     "kpis": {
-      "inProgress": "In‑progress lots",
-      "completed30d": "Lots completed (30d)",
+      "inProgress": "In‑progress batches",
+      "completed30d": "Batches completed (30d)",
       "volume30d": "Volume brewed (30d)",
       "revenue30d": "Revenue (30d)"
     },
     "lists": {
-      "inProgressTitle": "In‑progress Lots",
+      "inProgressTitle": "In‑progress Batches",
       "brewedMeta": "Brewed {date} · {style} · {liters} L",
       "inProgressBadge": "In progress",
-      "none": "No in‑progress lots."
+      "none": "No in‑progress batches."
     },
     "todos": {
       "title": "To‑do",
@@ -781,8 +798,7 @@
       "volumeDataset": "Volume (L)",
       "revenueDataset": "Revenue (¥)"
     }
-  }
-  ,
+  },
   "forecast": {
     "title": "AI Sales Forecast",
     "subtitle": "Use AI to predict the next 12 months of beer sales and plan production with confidence.",
@@ -825,12 +841,11 @@
         }
       }
     }
-  }
-  ,
+  },
   "assistant": {
     "title": "AI Assistant",
     "subtitle": "Ask operational questions and get AI powered answers using recent brewery context.",
-    "seedMessage": "Hi! I'm your brewery co-pilot. Ask me anything about production, inventory, or planning.",
+    "seedMessage": "Hi! I'm your brewery co-pibatch. Ask me anything about production, inventory, or planning.",
     "emptyState": "No questions yet. Ask something below to start the conversation.",
     "promptLabel": "Ask a question",
     "promptPlaceholder": "e.g., How many 330ml bottles can we package with current inventory?",
@@ -841,8 +856,7 @@
     "errorGeneric": "Unable to fetch the AI response. Please try again.",
     "fallbackAnswer": "I'm not sure about that yet, but I'm learning every day!",
     "subtitleTips": "Provide as much context as possible for better answers."
-  }
-  ,
+  },
   "orderAssistant": {
     "title": "AI Order Assistant",
     "subtitle": "Let AI draft purchase orders based on low inventory signals and send them with one click.",
@@ -901,15 +915,16 @@
         "waiting": "Waiting"
       }
     }
-  }
-  ,
+  },
   "sidebar": {
-    "group": { "main": "Menu", "ai": "AI Automation" },
+    "group": {
+      "main": "Menu",
+      "ai": "AI Automation"
+    },
     "items": {
       "dashboard": "Dashboard",
       "production": "Production",
       "batchList": "Batch List",
-      "lotList": "Lot List",
       "batchEdit": "Batch Edit",
       "liquorTax": "Liquor Tax",
       "taxYearSummary": "Tax Year Summary",
@@ -924,7 +939,7 @@
       "recipemng": "Recipe Management",
       "recipeRegister": "Recipe Register",
       "recipeList": "Recipe List",
-      "lotYield": "Extract Yield",
+      "batchYield": "Extract Yield",
       "inventory": "Inventory",
       "rawMaterialReceipts": "Raw Material Receipts",
       "rawMaterialInventory": "Raw Material Inventory",
@@ -932,8 +947,9 @@
       "waste": "Waste",
       "masterMaintenance": "Master Maintenance",
       "systemMaintenance": "System Maintenance",
-      "categoryMaster": "Category Master",
-      "taxMaster": "Tax Master",
+      "alcoholTypeMaster": "Alcohol Type Master",
+      "alcoholTaxMaster": "Alcohol Tax Master",
+      "materialClassMaster": "Material Class Master",
       "siteTypeMaster": "Site Type Master",
       "catalogMaster": "Catalog Master",
       "uomMaster": "UOM Master",
@@ -955,29 +971,36 @@
       "userManagement": "User Management",
       "users": "Users"
     }
-  }
-  ,
+  },
   "siteType": {
-    "title": "Site Types",
-    "subtitle": "Maintain site type classifications for tenants.",
+    "title": "Site Type Master",
+    "subtitle": "Maintain site types for inventory control.",
     "newTitle": "New Site Type",
     "editTitle": "Edit Site Type",
     "deleteTitle": "Delete Site Type",
-    "deleteConfirm": "Delete site type {code}? This cannot be undone.",
-    "table": {
-      "code": "Code",
+    "deleteConfirm": "Delete site type {name}? This cannot be undone.",
+    "filters": {
       "name": "Name",
-      "nameJa": "Japanese Name",
-      "active": "Active",
+      "inventoryCount": "Inventory count",
+      "namePlaceholder": "Filter by name"
+    },
+    "table": {
+      "name": "Name",
+      "inventoryCount": "Inventory count",
+      "description": "Description",
       "createdAt": "Created"
     },
     "form": {
-      "codeRequired": "Code is required.",
+      "name": "Name",
+      "inventoryCount": "Inventory count",
+      "description": "Description"
+    },
+    "errors": {
       "nameRequired": "Name is required.",
-      "jaLabel": "Japanese name (flags.ja)"
+      "inventoryCountInvalid": "Inventory count must be true or false.",
+      "adminOnlySystem": "Only admins can edit system scope records."
     }
-  }
-  ,
+  },
   "site": {
     "title": "Sites",
     "subtitle": "Manage breweries, warehouses, customers, and other locations.",
@@ -1010,8 +1033,7 @@
       "invalidAddress": "Address must be valid JSON.",
       "invalidContact": "Contact must be valid JSON."
     }
-  }
-  ,
+  },
   "siteMovement": {
     "title": "Site Movements",
     "subtitle": "Record and track inventory transfers between sites.",
@@ -1071,38 +1093,36 @@
       "production_issue": "Production issue",
       "production_receipt": "Production receipt"
     }
-  }
-  ,
-  "lotYield": {
+  },
+  "batchYield": {
     "title": "Extract Yield Summary",
-    "subtitle": "Analyse finished lots to understand brewhouse extract efficiency.",
+    "subtitle": "Analyse finished batches to understand brewhouse extract efficiency.",
     "filters": {
       "style": "Style",
       "recipe": "Recipe",
-      "status": "Lot status",
+      "status": "Batch status",
       "dateFrom": "From",
       "dateTo": "To"
     },
     "summary": {
       "style": "Style",
       "recipe": "Recipe",
-      "lotCount": "Lots",
+      "batchCount": "Batches",
       "targetVolume": "Target volume (L)",
       "actualVolume": "Packaged volume (L)",
       "yield": "Extract yield (%)"
     },
-    "lots": {
-      "lotCode": "Lot",
+    "batches": {
+      "batchCode": "Batch",
       "planned": "Planned start",
       "target": "Target volume (L)",
       "actual": "Packaged volume (L)",
       "yield": "Yield (%)",
       "status": "Status"
     },
-    "noData": "No finished lots match the filters.",
+    "noData": "No finished batches match the filters.",
     "yieldLabel": "Yield"
-  }
-  ,
+  },
   "calendar": {
     "title": "Calendar",
     "subtitle": "Plan your next big moment: schedule or edit an event to stay on track",
@@ -1126,8 +1146,7 @@
       "update": "Update Changes",
       "loadBrew": "Load Brew Events"
     }
-  }
- ,
+  },
   "taxYearSummary": {
     "title": "Tax Year Summary",
     "subtitle": "Review annual production volumes and tax amounts by category.",
@@ -1141,15 +1160,14 @@
     "monthlyChartTitle": "Monthly production and tax",
     "volumeSeries": "Production volume (L)",
     "taxSeries": "Tax amount (¥)",
-    "lotsSectionTitle": "Lots by month",
+    "batchesSectionTitle": "Batches by month",
     "monthTotal": "Subtotal",
-    "lot": "Lot",
+    "batch": "Batch",
     "fillDate": "Fill date",
     "volumeShort": "Volume",
     "taxShort": "Tax",
     "loading": "Loading…"
-  }
-  ,
+  },
   "taxReport": {
     "title": "Tax Report",
     "subtitle": "Create and manage craft beer tax reports.",
@@ -1240,8 +1258,7 @@
       "statusRequired": "Status is required.",
       "breakdownRequired": "Production data is required."
     }
-  }
-  ,
+  },
   "recipe": {
     "statusMap": {
       "draft": "draft",

@@ -609,7 +609,7 @@ async function fetchCategories() {
 async function fetchRecipes() {
   loading.value = true
   const { data, error } = await supabase
-    .from('rcp_recipes')
+    .from('mes_recipes')
     .select('id, code, name, style, version, status, notes, created_at, category')
     .order('created_at', { ascending: false, nullsFirst: false })
   loading.value = false
@@ -641,14 +641,14 @@ async function saveRecipe() {
   let response
   if (editing.value && form.id) {
     response = await supabase
-      .from('rcp_recipes')
+      .from('mes_recipes')
       .update(payload)
       .eq('id', form.id)
       .select('id, code, name, style, version, status, notes, created_at, category')
       .single()
   } else {
     response = await supabase
-      .from('rcp_recipes')
+      .from('mes_recipes')
       .insert({ ...payload })
       .select('id, code, name, style, version, status, notes, created_at, category')
       .single()
@@ -675,7 +675,7 @@ async function saveRecipe() {
 
 async function deleteRecipe() {
   if (!toDelete.value) return
-  const { error } = await supabase.from('rcp_recipes').delete().eq('id', toDelete.value.id)
+  const { error } = await supabase.from('mes_recipes').delete().eq('id', toDelete.value.id)
   if (error) {
     toast.error('Delete error: ' + error.message)
     return
@@ -769,14 +769,14 @@ async function executeCopy() {
 
   try {
     const { data: original, error: loadError } = await supabase
-      .from('rcp_recipes')
+      .from('mes_recipes')
       .select('id, code, name, style, version, status, notes, batch_size_l, target_og, target_fg, target_abv, target_ibu, target_srm, category')
       .eq('id', copyTarget.value.id)
       .single()
     if (loadError || !original) throw loadError ?? new Error('Missing recipe')
 
     const { data: inserted, error: insertError } = await supabase
-      .from('rcp_recipes')
+      .from('mes_recipes')
       .insert({
         code: trimmedCode,
         name: trimmedName,
@@ -797,7 +797,7 @@ async function executeCopy() {
     if (insertError || !inserted) throw insertError ?? new Error('Insert failed')
 
     const { data: ingredientRows, error: ingredientLoadError } = await supabase
-      .from('rcp_ingredients')
+      .from('mes_ingredients')
       .select('material_id, amount, uom_id, usage_stage, notes')
       .eq('recipe_id', copyTarget.value.id)
     if (ingredientLoadError) throw ingredientLoadError
@@ -812,14 +812,14 @@ async function executeCopy() {
         notes: item.notes,
       }))
       const { error: ingredientInsertError } = await supabase
-        .from('rcp_ingredients')
+        .from('mes_ingredients')
         .insert(ingredientPayload)
       if (ingredientInsertError) throw ingredientInsertError
     }
 
     const { data: processRows, error: processLoadError } = await supabase
-      .from('prc_processes')
-      .select('id, name, version, is_active, notes, prc_steps(id, step_no, step, target_params, qa_checks, notes)')
+      .from('mes_recipe_processes')
+      .select('id, name, version, is_active, notes, mes_recipe_steps(id, step_no, step, target_params, qa_checks, notes)')
       .eq('recipe_id', copyTarget.value.id)
     if (processLoadError) throw processLoadError
 
@@ -840,14 +840,14 @@ async function executeCopy() {
         version: number
         is_active: boolean
         notes: string | null
-        prc_steps?: StepRecord[]
+        mes_recipe_steps?: StepRecord[]
       }
 
       const processesToClone = processRows as ProcessRecord[]
 
       for (const process of processesToClone) {
         const { data: createdProcess, error: processInsertError } = await supabase
-          .from('prc_processes')
+          .from('mes_recipe_processes')
           .insert({
             recipe_id: inserted.id,
             name: process.name,
@@ -859,7 +859,7 @@ async function executeCopy() {
           .single()
         if (processInsertError || !createdProcess) throw processInsertError ?? new Error('Process copy failed')
 
-        const steps = process.prc_steps ?? []
+        const steps = process.mes_recipe_steps ?? []
         if (steps.length > 0) {
           const stepPayload = steps.map((step) => ({
             process_id: createdProcess.id,
@@ -870,7 +870,7 @@ async function executeCopy() {
             notes: step.notes,
           }))
           const { error: stepsInsertError } = await supabase
-            .from('prc_steps')
+            .from('mes_recipe_steps')
             .insert(stepPayload)
           if (stepsInsertError) throw stepsInsertError
         }

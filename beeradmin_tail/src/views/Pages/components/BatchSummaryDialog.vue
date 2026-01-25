@@ -3,66 +3,66 @@
     <div class="w-full max-w-3xl bg-white rounded-xl shadow-lg border border-gray-200">
       <header class="flex items-center justify-between px-4 py-3 border-b">
         <div>
-          <h3 class="text-lg font-semibold text-gray-800">{{ t('lot.summary.title', { code: lot.lot_code }) }}</h3>
-          <p class="text-xs text-gray-500">{{ t('lot.summary.subtitle') }}</p>
+          <h3 class="text-lg font-semibold text-gray-800">{{ t('batch.summary.title', { code: batch.batch_code }) }}</h3>
+          <p class="text-xs text-gray-500">{{ t('batch.summary.subtitle') }}</p>
         </div>
         <button class="text-sm px-2 py-1 rounded border hover:bg-gray-100" type="button" @click="emit('close')">{{ t('common.close') }}</button>
       </header>
 
       <section class="max-h-[75vh] overflow-y-auto divide-y divide-gray-100">
         <div class="px-4 py-4">
-          <h4 class="text-sm font-semibold uppercase text-gray-500 mb-2">{{ t('lot.summary.overview') }}</h4>
+          <h4 class="text-sm font-semibold uppercase text-gray-500 mb-2">{{ t('batch.summary.overview') }}</h4>
           <div v-if="loading" class="text-sm text-gray-500">{{ t('common.loading') }}</div>
           <dl v-else class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-sm">
             <div>
-              <dt class="font-medium text-gray-600">{{ t('lot.summary.status') }}</dt>
+              <dt class="font-medium text-gray-600">{{ t('batch.summary.status') }}</dt>
               <dd class="text-gray-800">{{ detail?.status ?? '—' }}</dd>
             </div>
             <div>
-              <dt class="font-medium text-gray-600">{{ t('lot.summary.recipe') }}</dt>
+              <dt class="font-medium text-gray-600">{{ t('batch.summary.recipe') }}</dt>
               <dd class="text-gray-800">{{ detail?.recipe?.name ?? '—' }} <span v-if="detail?.recipe?.code" class="text-xs text-gray-500">({{ detail?.recipe?.code }})</span></dd>
             </div>
             <div>
-              <dt class="font-medium text-gray-600">{{ t('lot.summary.plannedStart') }}</dt>
+              <dt class="font-medium text-gray-600">{{ t('batch.summary.plannedStart') }}</dt>
               <dd class="text-gray-800">{{ fmt(detail?.planned_start) }}</dd>
             </div>
             <!-- <div>
-              <dt class="font-medium text-gray-600">{{ t('lot.summary.plannedEnd') }}</dt>
+              <dt class="font-medium text-gray-600">{{ t('batch.summary.plannedEnd') }}</dt>
               <dd class="text-gray-800">{{ fmt(detail?.planned_end) }}</dd>
             </div>
             <div>
-              <dt class="font-medium text-gray-600">{{ t('lot.summary.actualStart') }}</dt>
+              <dt class="font-medium text-gray-600">{{ t('batch.summary.actualStart') }}</dt>
               <dd class="text-gray-800">{{ fmt(detail?.actual_start) }}</dd>
             </div>
             <div>
-              <dt class="font-medium text-gray-600">{{ t('lot.summary.actualEnd') }}</dt>
+              <dt class="font-medium text-gray-600">{{ t('batch.summary.actualEnd') }}</dt>
               <dd class="text-gray-800">{{ fmt(detail?.actual_end) }}</dd>
             </div> -->
             <div>
-              <dt class="font-medium text-gray-600">{{ t('lot.summary.targetVolume') }}</dt>
+              <dt class="font-medium text-gray-600">{{ t('batch.summary.targetVolume') }}</dt>
               <dd class="text-gray-800">{{ detail?.target_volume_l ?? '—' }}</dd>
             </div>
             <div>
-              <dt class="font-medium text-gray-600">{{ t('lot.summary.processVersion') }}</dt>
+              <dt class="font-medium text-gray-600">{{ t('batch.summary.processVersion') }}</dt>
               <dd class="text-gray-800">{{ detail?.process_version ?? '—' }}</dd>
             </div>
             <div class="md:col-span-2">
-              <dt class="font-medium text-gray-600">{{ t('lot.summary.notes') }}</dt>
+              <dt class="font-medium text-gray-600">{{ t('batch.summary.notes') }}</dt>
               <dd class="text-gray-800 whitespace-pre-line">{{ detail?.notes || '—' }}</dd>
             </div>
           </dl>
         </div>
 
         <div class="px-4 py-4">
-          <h4 class="text-sm font-semibold uppercase text-gray-500 mb-2">{{ t('lot.summary.ingredients') }}</h4>
+          <h4 class="text-sm font-semibold uppercase text-gray-500 mb-2">{{ t('batch.summary.ingredients') }}</h4>
           <div v-if="loadingIngredients" class="text-sm text-gray-500">{{ t('common.loading') }}</div>
           <table v-else class="min-w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
             <thead class="bg-gray-50 text-gray-600 uppercase text-xs">
               <tr>
-                <th class="px-3 py-2 text-left">{{ t('lot.summary.ingredient') }}</th>
-                <th class="px-3 py-2 text-right">{{ t('lot.summary.amount') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('lot.summary.usageStage') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('lot.summary.notes') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('batch.summary.ingredient') }}</th>
+                <th class="px-3 py-2 text-right">{{ t('batch.summary.amount') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('batch.summary.usageStage') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('batch.summary.notes') }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
@@ -73,23 +73,23 @@
                 <td class="px-3 py-2">{{ item.notes || '—' }}</td>
               </tr>
               <tr v-if="ingredients.length === 0">
-                <td class="px-3 py-4 text-center text-gray-500" colspan="4">{{ t('lot.summary.noIngredients') }}</td>
+                <td class="px-3 py-4 text-center text-gray-500" colspan="4">{{ t('batch.summary.noIngredients') }}</td>
               </tr>
             </tbody>
           </table>
         </div>
 
         <div class="px-4 py-4">
-          <h4 class="text-sm font-semibold uppercase text-gray-500 mb-2">{{ t('lot.summary.steps') }}</h4>
+          <h4 class="text-sm font-semibold uppercase text-gray-500 mb-2">{{ t('batch.summary.steps') }}</h4>
           <div v-if="loadingSteps" class="text-sm text-gray-500">{{ t('common.loading') }}</div>
           <table v-else class="min-w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
             <thead class="bg-gray-50 text-gray-600 uppercase text-xs">
               <tr>
                 <th class="px-3 py-2 text-left">#</th>
-                <th class="px-3 py-2 text-left">{{ t('lot.summary.step') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('lot.summary.status') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('lot.summary.qa') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('lot.summary.notes') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('batch.summary.step') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('batch.summary.status') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('batch.summary.qa') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('batch.summary.notes') }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
@@ -101,7 +101,7 @@
                 <td class="px-3 py-2 whitespace-pre-line">{{ step.notes || '—' }}</td>
               </tr>
               <tr v-if="steps.length === 0">
-                <td class="px-3 py-4 text-center text-gray-500" colspan="5">{{ t('lot.summary.noSteps') }}</td>
+                <td class="px-3 py-4 text-center text-gray-500" colspan="5">{{ t('batch.summary.noSteps') }}</td>
               </tr>
             </tbody>
           </table>
@@ -116,12 +116,12 @@ import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { supabase } from '@/lib/supabase'
 
-interface LotSummaryLot {
+interface BatchSummaryBatch {
   id: string
-  lot_code: string
+  batch_code: string
 }
 
-const props = defineProps<{ open: boolean, lot: LotSummaryLot }>()
+const props = defineProps<{ open: boolean, batch: BatchSummaryBatch }>()
 const emit = defineEmits(['close'])
 
 const { t } = useI18n()
@@ -140,24 +140,24 @@ watch(() => props.open, (val) => {
   }
 })
 
-watch(() => props.lot?.id, () => {
+watch(() => props.batch?.id, () => {
   if (props.open) {
     loadSummary()
   }
 })
 
 async function loadSummary() {
-  if (!props.lot?.id) return
+  if (!props.batch?.id) return
   try {
     loading.value = true
     const { data, error } = await supabase
-      .from('prd_lots')
-      .select('*, recipe:rcp_recipes(name, code, version)')
-      .eq('id', props.lot.id)
+      .from('mes_batches')
+      .select('*, recipe:mes_recipes(name, code, version)')
+      .eq('id', props.batch.id)
       .maybeSingle()
     if (error) throw error
     detail.value = data
-    await Promise.all([loadIngredients(data?.recipe_id), loadSteps(props.lot.id)])
+    await Promise.all([loadIngredients(data?.recipe_id), loadSteps(props.batch.id)])
   } catch (err) {
     console.error(err)
   } finally {
@@ -171,7 +171,7 @@ async function loadIngredients(recipeId: string | undefined) {
   try {
     loadingIngredients.value = true
     const { data, error } = await supabase
-      .from('rcp_ingredients')
+      .from('mes_ingredients')
       .select('id, amount, usage_stage, notes, material:mst_materials(name, code), uom:mst_uom(code)')
       .eq('recipe_id', recipeId)
       .order('usage_stage', { ascending: true })
@@ -191,14 +191,14 @@ async function loadIngredients(recipeId: string | undefined) {
   }
 }
 
-async function loadSteps(lotId: string) {
+async function loadSteps(batchId: string) {
   steps.value = []
   try {
     loadingSteps.value = true
     const { data, error } = await supabase
-      .from('prd_lot_steps')
+      .from('mes_batch_steps')
       .select('id, step_no, step, status, planned_params, qa_checks, actual_params, notes')
-      .eq('lot_id', lotId)
+      .eq('batch_id', batchId)
       .order('step_no', { ascending: true })
     if (error) throw error
     steps.value = (data ?? []).map((row) => ({

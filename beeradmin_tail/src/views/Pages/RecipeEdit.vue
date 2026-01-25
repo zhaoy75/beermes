@@ -710,7 +710,7 @@ type ProcessRecord = {
   version: number
   is_active: boolean
   notes: string | null
-  prc_steps?: StepRecord[]
+  mes_recipe_steps?: StepRecord[]
 }
 
 const recipe = ref<RecipeDetail | null>(null)
@@ -998,13 +998,13 @@ async function versionUp() {
 
   try {
     const { error: updateError } = await supabase
-      .from('rcp_recipes')
+      .from('mes_recipes')
       .update(basePayload)
       .eq('id', recipeId.value)
     if (updateError) throw updateError
 
     const { data: versionRows, error: versionError } = await supabase
-      .from('rcp_recipes')
+      .from('mes_recipes')
       .select('version')
       .eq('code', trimmedCode)
       .order('version', { ascending: false })
@@ -1021,14 +1021,14 @@ async function versionUp() {
     }
 
     const { data: inserted, error: insertError } = await supabase
-      .from('rcp_recipes')
+      .from('mes_recipes')
       .insert(newRecipePayload)
       .select('id, code, name, style, version, status, batch_size_l, target_og, target_fg, target_abv, target_ibu, target_srm, notes, created_at, category')
       .single()
     if (insertError || !inserted) throw insertError ?? new Error('Insert failed')
 
     const { data: ingredientRows, error: ingredientError } = await supabase
-      .from('rcp_ingredients')
+      .from('mes_ingredients')
       .select('material_id, amount, uom_id, usage_stage, notes')
       .eq('recipe_id', recipeId.value)
     if (ingredientError) throw ingredientError
@@ -1043,14 +1043,14 @@ async function versionUp() {
         notes: item.notes,
       }))
       const { error: ingredientInsertError } = await supabase
-        .from('rcp_ingredients')
+        .from('mes_ingredients')
         .insert(ingredientPayload)
       if (ingredientInsertError) throw ingredientInsertError
     }
 
     const { data: processRows, error: processError } = await supabase
-      .from('prc_processes')
-      .select('id, name, version, is_active, notes, prc_steps(id, step_no, step, target_params, qa_checks, notes)')
+      .from('mes_recipe_processes')
+      .select('id, name, version, is_active, notes, mes_recipe_steps(id, step_no, step, target_params, qa_checks, notes)')
       .eq('recipe_id', recipeId.value)
     if (processError) throw processError
 
@@ -1071,7 +1071,7 @@ async function versionUp() {
         version: number
         is_active: boolean
         notes: string | null
-        prc_steps?: StepRecord[]
+        mes_recipe_steps?: StepRecord[]
       }
 
       const parseObject = (value: unknown) => {
@@ -1104,7 +1104,7 @@ async function versionUp() {
 
       for (const process of processRows as ProcessRecord[]) {
         const { data: createdProcess, error: processInsertError } = await supabase
-          .from('prc_processes')
+          .from('mes_recipe_processes')
           .insert({
             recipe_id: inserted.id,
             name: process.name,
@@ -1116,7 +1116,7 @@ async function versionUp() {
           .single()
         if (processInsertError || !createdProcess) throw processInsertError ?? new Error('Process copy failed')
 
-        const steps = process.prc_steps ?? []
+        const steps = process.mes_recipe_steps ?? []
         if (steps.length > 0) {
           const stepPayload = steps.map((step) => ({
             process_id: createdProcess.id,
@@ -1127,7 +1127,7 @@ async function versionUp() {
             notes: step.notes,
           }))
           const { error: stepInsertError } = await supabase
-            .from('prc_steps')
+            .from('mes_recipe_steps')
             .insert(stepPayload)
           if (stepInsertError) throw stepInsertError
         }
@@ -1153,7 +1153,7 @@ async function loadRecipe() {
   }
   loadingRecipe.value = true
   const { data, error } = await supabase
-    .from('rcp_recipes')
+    .from('mes_recipes')
     .select('id, code, name, style, version, status, batch_size_l, target_og, target_fg, target_abv, target_ibu, target_srm, notes, created_at, category')
     .eq('id', recipeId.value)
     .single()
@@ -1221,7 +1221,7 @@ async function loadIngredients() {
   if (!recipeId.value) return
   ingredientsLoading.value = true
   const { data, error } = await supabase
-    .from('rcp_ingredients')
+    .from('mes_ingredients')
     .select('id, recipe_id, material_id, amount, uom_id, usage_stage, notes, material:material_id(id, code, name, category), uom:uom_id(id, code, name)')
     .eq('recipe_id', recipeId.value)
     .order('usage_stage', { ascending: true, nullsLast: true })
@@ -1290,14 +1290,14 @@ async function saveIngredient() {
   let response
   if (editingIngredient.value && ingredientForm.id) {
     response = await supabase
-      .from('rcp_ingredients')
+      .from('mes_ingredients')
       .update(payload)
       .eq('id', ingredientForm.id)
       .select('id')
       .single()
   } else {
     response = await supabase
-      .from('rcp_ingredients')
+      .from('mes_ingredients')
       .insert(payload)
       .select('id')
       .single()
@@ -1315,7 +1315,7 @@ async function saveIngredient() {
 
 async function deleteIngredient(row: IngredientRow) {
   if (!confirm(t('recipe.edit.deleteIngredientConfirm', { name: materialLabel(row) }))) return
-  const { error } = await supabase.from('rcp_ingredients').delete().eq('id', row.id)
+  const { error } = await supabase.from('mes_ingredients').delete().eq('id', row.id)
   if (error) {
     toast.error('Failed to delete ingredient: ' + error.message)
     return
@@ -1327,11 +1327,11 @@ async function loadProcesses() {
   if (!recipeId.value) return
   processesLoading.value = true
   const { data, error } = await supabase
-    .from('prc_processes')
-    .select('id, recipe_id, name, version, is_active, notes, prc_steps(id, process_id, step_no, step, target_params, qa_checks, notes)')
+    .from('mes_recipe_processes')
+    .select('id, recipe_id, name, version, is_active, notes, mes_recipe_steps(id, process_id, step_no, step, target_params, qa_checks, notes)')
     .eq('recipe_id', recipeId.value)
     .order('version', { ascending: false })
-    .order('step_no', { foreignTable: 'prc_steps', ascending: true })
+    .order('step_no', { foreignTable: 'mes_recipe_steps', ascending: true })
   processesLoading.value = false
   if (error) {
     toast.error('Failed to load processes: ' + error.message)
@@ -1346,7 +1346,7 @@ async function loadProcesses() {
     version: item.version,
     is_active: item.is_active,
     notes: item.notes,
-    steps: (item.prc_steps ?? []).map((step) => ({
+    steps: (item.mes_recipe_steps ?? []).map((step) => ({
       id: step.id,
       process_id: step.process_id,
       step_no: step.step_no,
@@ -1414,14 +1414,14 @@ async function saveProcess() {
   let response
   if (editingProcess.value && processForm.id) {
     response = await supabase
-      .from('prc_processes')
+      .from('mes_recipe_processes')
       .update(payload)
       .eq('id', processForm.id)
       .select('id')
       .single()
   } else {
     response = await supabase
-      .from('prc_processes')
+      .from('mes_recipe_processes')
       .insert(payload)
       .select('id')
       .single()
@@ -1439,7 +1439,7 @@ async function saveProcess() {
 
 async function deleteProcess(process: ProcessRow) {
   if (!confirm(t('recipe.edit.deleteProcessConfirm', { name: process.name, version: process.version }))) return
-  const { error } = await supabase.from('prc_processes').delete().eq('id', process.id)
+  const { error } = await supabase.from('mes_recipe_processes').delete().eq('id', process.id)
   if (error) {
     toast.error('Failed to delete process: ' + error.message)
     return
@@ -1534,7 +1534,7 @@ async function saveRecipeInfo() {
 
   savingRecipe.value = true
   const { data, error } = await supabase
-    .from('rcp_recipes')
+    .from('mes_recipes')
     .update(payload)
     .eq('id', recipeId.value)
     .select('id, code, name, style, version, status, batch_size_l, target_og, target_fg, target_abv, target_ibu, target_srm, notes, created_at, category')
@@ -1610,14 +1610,14 @@ async function saveStep() {
   let response
   if (editingStep.value && stepForm.id) {
     response = await supabase
-      .from('prc_steps')
+      .from('mes_recipe_steps')
       .update(payload)
       .eq('id', stepForm.id)
       .select('id')
       .single()
   } else {
     response = await supabase
-      .from('prc_steps')
+      .from('mes_recipe_steps')
       .insert(payload)
       .select('id')
       .single()
@@ -1635,7 +1635,7 @@ async function saveStep() {
 
 async function deleteStep(process: ProcessRow, step: StepRow) {
   if (!confirm(t('recipe.edit.deleteStepConfirm', { step: formatStepType(step.step), number: step.step_no }))) return
-  const { error } = await supabase.from('prc_steps').delete().eq('id', step.id)
+  const { error } = await supabase.from('mes_recipe_steps').delete().eq('id', step.id)
   if (error) {
     toast.error('Failed to delete step: ' + error.message)
     return

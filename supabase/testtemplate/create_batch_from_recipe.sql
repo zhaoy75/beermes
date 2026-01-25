@@ -1,11 +1,11 @@
--- Procedure: create a production lot from an existing recipe + process definition.
--- Usage: call create_lot_from_recipe(<tenant_id>, <recipe_id>, <lot_code>, ...);
--- Copies the latest (or specified) process steps into prd_lot_steps so the lot can be executed.
+-- Procedure: create a production batch from an existing recipe + process definition.
+-- Usage: call create_batch_from_recipe(<tenant_id>, <recipe_id>, <batch_code>, ...);
+-- Copies the latest (or specified) process steps into mes_batch_steps so the batch can be executed.
 
-create or replace function create_lot_from_recipe(
+create or replace function create_batch_from_recipe(
   _tenant_id uuid,
   _recipe_id text,
-  _lot_code text,
+  _batch_code text,
   _planned_start timestamptz default null,
   _vessel_id uuid default null,
   _target_volume_l numeric default null,
@@ -15,19 +15,19 @@ create or replace function create_lot_from_recipe(
 language plpgsql
 as $$
 declare
-  v_recipe rcp_recipes%rowtype;
-  v_process prc_processes%rowtype;
-  v_lot_id uuid;
+  v_recipe mes_recipes%rowtype;
+  v_process mes_recipe_processes%rowtype;
+  v_batch_id uuid;
 begin
-  if _lot_code is null or length(trim(_lot_code)) = 0 then
-    raise exception 'Lot code must be provided';
+  if _batch_code is null or length(trim(_batch_code)) = 0 then
+    raise exception 'Batch code must be provided';
   end if;
 
   if _recipe_id is null or length(trim(_recipe_id)) = 0 then
     begin
-      insert into prd_lots (
+      insert into mes_batches (
         tenant_id,
-        lot_code,
+        batch_code,
         recipe_id,
         process_version,
         vessel_id,
@@ -38,7 +38,7 @@ begin
       )
       values (
         _tenant_id,
-        _lot_code,
+        _batch_code,
         _recipe_id,
         v_process.version,
         _vessel_id,
@@ -47,17 +47,17 @@ begin
         'planned',
         coalesce(_notes, v_recipe.notes)
       )
-      returning id into v_lot_id;
+      returning id into v_batch_id;
     exception when unique_violation then
-      raise exception 'Lot code % already exists for tenant %', _lot_code, _tenant_id;
+      raise exception 'Batch code % already exists for tenant %', _batch_code, _tenant_id;
     end;
-    return v_lot_id;
+    return v_batch_id;
   end if;
 
 
   select *
     into v_recipe
-  from rcp_recipes
+  from mes_recipes
   where id = _recipe_id
     and tenant_id = _tenant_id;
 
@@ -68,7 +68,7 @@ begin
   if _process_version is not null then
     select *
       into v_process
-    from prc_processes
+    from mes_recipe_processes
     where tenant_id = _tenant_id
       and recipe_id = _recipe_id
       and version = _process_version
@@ -77,7 +77,7 @@ begin
   else
     select *
       into v_process
-    from prc_processes
+    from mes_recipe_processes
     where tenant_id = _tenant_id
       and recipe_id = _recipe_id
     order by is_active desc, version desc
@@ -89,9 +89,9 @@ begin
   end if;
 
   begin
-    insert into prd_lots (
+    insert into mes_batches (
       tenant_id,
-      lot_code,
+      batch_code,
       recipe_id,
       process_version,
       vessel_id,
@@ -102,7 +102,7 @@ begin
     )
     values (
       _tenant_id,
-      _lot_code,
+      _batch_code,
       _recipe_id,
       v_process.version,
       _vessel_id,
@@ -111,18 +111,18 @@ begin
       'planned',
       coalesce(_notes, v_recipe.notes)
     )
-    returning id into v_lot_id;
+    returning id into v_batch_id;
   exception when unique_violation then
-    raise exception 'Lot code % already exists for tenant %', _lot_code, _tenant_id;
+    raise exception 'Batch code % already exists for tenant %', _batch_code, _tenant_id;
   end;
 
-  delete from prd_lot_steps
-  where lot_id = v_lot_id
+  delete from mes_batch_steps
+  where batch_id = v_batch_id
     and tenant_id = _tenant_id;
 
-  insert into prd_lot_steps (
+  insert into mes_batch_steps (
     tenant_id,
-    lot_id,
+    batch_id,
     step_no,
     step,
     planned_params,
@@ -130,7 +130,7 @@ begin
   )
   select
     _tenant_id,
-    v_lot_id,
+    v_batch_id,
     ps.step_no,
     ps.step,
     coalesce(ps.target_params, '{}'::jsonb) ||
@@ -140,11 +140,11 @@ begin
         else '{}'::jsonb
       end,
     ps.notes
-  from prc_steps ps
+  from mes_recipe_steps ps
   where ps.process_id = v_process.id
     and ps.tenant_id = _tenant_id
   order by ps.step_no;
 
-  return v_lot_id;
+  return v_batch_id;
 end;
 $$;

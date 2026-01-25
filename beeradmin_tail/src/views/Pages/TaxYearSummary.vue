@@ -70,13 +70,13 @@
 
       <section class="bg-white border border-gray-200 rounded-xl shadow-sm p-4">
         <header class="flex items-center justify-between mb-4">
-          <h2 class="text-base font-semibold text-gray-900">{{ t('taxYearSummary.lotsSectionTitle') }}</h2>
+          <h2 class="text-base font-semibold text-gray-900">{{ t('taxYearSummary.batchesSectionTitle') }}</h2>
         </header>
-        <div v-if="lotBreakdown.length === 0" class="text-sm text-gray-500">
+        <div v-if="batchBreakdown.length === 0" class="text-sm text-gray-500">
           {{ loading ? t('taxYearSummary.loading') : t('taxYearSummary.noData') }}
         </div>
         <div v-else class="space-y-4">
-          <article v-for="month in lotBreakdown" :key="month.month" class="border border-gray-200 rounded-lg">
+          <article v-for="month in batchBreakdown" :key="month.month" class="border border-gray-200 rounded-lg">
             <header class="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50">
               <div class="text-sm font-semibold text-gray-800">{{ month.label }}</div>
               <div class="flex items-center gap-4 text-sm text-gray-600">
@@ -88,7 +88,7 @@
               <table class="min-w-full text-sm">
                 <thead class="bg-gray-50 text-gray-600 uppercase text-xs">
                   <tr>
-                    <th class="px-3 py-2 text-left">{{ t('taxYearSummary.lot') }}</th>
+                    <th class="px-3 py-2 text-left">{{ t('taxYearSummary.batch') }}</th>
                     <th class="px-3 py-2 text-left">{{ t('taxYearSummary.category') }}</th>
                     <th class="px-3 py-2 text-left">{{ t('taxYearSummary.fillDate') }}</th>
                     <th class="px-3 py-2 text-right">{{ t('taxYearSummary.volumeShort') }}</th>
@@ -96,8 +96,8 @@
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
-                  <tr v-for="row in month.lots" :key="row.key" class="hover:bg-gray-50">
-                    <td class="px-3 py-2 font-mono text-xs text-gray-700">{{ row.lotCode }}</td>
+                  <tr v-for="row in month.batches" :key="row.key" class="hover:bg-gray-50">
+                    <td class="px-3 py-2 font-mono text-xs text-gray-700">{{ row.batchCode }}</td>
                     <td class="px-3 py-2 text-gray-700">{{ row.categoryName }}</td>
                     <td class="px-3 py-2 text-gray-600">{{ formatDate(row.fillDate) }}</td>
                     <td class="px-3 py-2 text-right font-semibold text-gray-800">{{ formatVolume(row.totalVolume) }}</td>
@@ -167,26 +167,20 @@ interface MovementHeader {
 interface MovementLine {
   movement_id: string
   package_id: string | null
-  lot_id: string | null
+  batch_id: string | null
   qty: number | null
   uom_id: string | null
   meta: Record<string, any> | null
 }
 
-interface PackageRow {
+interface PackageCategoryInfo {
   id: string
-  lot_id: string | null
-  package_qty: number | null
-  package_size_l: number | null
-  package: {
-    size: number | null
-    uom_id: string | null
-  } | null
+  unit_size_l: number | null
 }
 
-interface LotRow {
+interface BatchRow {
   id: string
-  lot_code: string | null
+  batch_code: string | null
   recipe_id: string | null
 }
 
@@ -202,11 +196,11 @@ interface CategorySummary {
   totalTax: number
 }
 
-interface MonthLotRow {
+interface MonthBatchRow {
   key: string
   month: number
-  lotId: string
-  lotCode: string
+  batchId: string
+  batchCode: string
   categoryId: string
   categoryName: string
   fillDate: string
@@ -219,14 +213,14 @@ interface MonthGroup {
   label: string
   subtotalVolume: number
   subtotalTax: number
-  lots: MonthLotRow[]
+  batches: MonthBatchRow[]
 }
 
 const categories = ref<CategoryRecord[]>([])
 const uoms = ref<Array<{ id: string; code: string }>>([])
 const categorySummaries = ref<CategorySummary[]>([])
 const monthlySeries = ref<Array<{ month: number; volume: number; tax: number }>>([])
-const lotBreakdown = ref<MonthGroup[]>([])
+const batchBreakdown = ref<MonthGroup[]>([])
 
 const chartCanvas = ref<HTMLCanvasElement | null>(null)
 let chartInstance: Chart | null = null
@@ -384,23 +378,17 @@ function toNumber(value: any): number | null {
   return Number.isFinite(num) ? num : null
 }
 
-function resolvePackageSizeLiters(row: PackageRow | undefined) {
-  if (!row) return null
-  const direct = toNumber(row.package_size_l)
-  if (direct != null && direct > 0) return direct
-  const size = toNumber(row.package?.size)
-  if (size == null) return null
-  const uomCode = row.package?.uom_id ? uomLookup.value.get(row.package.uom_id) : null
-  return convertToLiters(size, uomCode)
+function resolvePackageSizeLiters(row: PackageCategoryInfo | undefined) {
+  return row?.unit_size_l ?? null
 }
 
-function resolveLineVolume(line: MovementLine, packageRow: PackageRow | undefined) {
+function resolveLineVolume(line: MovementLine, packageRow: PackageCategoryInfo | undefined) {
   const qty = toNumber(line.qty)
   const uomCode = line.uom_id ? uomLookup.value.get(line.uom_id) : null
   let volume = qty != null ? convertToLiters(qty, uomCode) : null
 
   if (!volume || volume <= 0) {
-    const pkgQty = toNumber(line.meta?.package_qty ?? packageRow?.package_qty)
+    const pkgQty = toNumber(line.meta?.package_qty)
     const unitVolume = toNumber(line.meta?.unit_volume_l) ?? resolvePackageSizeLiters(packageRow)
     if (pkgQty != null && unitVolume != null) {
       volume = pkgQty * unitVolume
@@ -435,37 +423,41 @@ async function loadMovementLines(movementIds: string[]) {
   if (movementIds.length === 0) return [] as MovementLine[]
   const { data, error } = await supabase
     .from('inv_movement_lines')
-    .select('movement_id, package_id, lot_id, qty, uom_id, meta')
+    .select('movement_id, package_id, batch_id, qty, uom_id, meta')
     .in('movement_id', movementIds)
   if (error) throw error
-  return (data ?? []).filter((row: any) => row.package_id || row.lot_id) as MovementLine[]
+  return (data ?? []).filter((row: any) => row.package_id || row.batch_id) as MovementLine[]
 }
 
-async function loadPackages(packageIds: string[]) {
-  const map = new Map<string, PackageRow>()
+async function loadPackageCategories(packageIds: string[]) {
+  const map = new Map<string, PackageCategoryInfo>()
   if (packageIds.length === 0) return map
   const tenant = await ensureTenant()
   const { data, error } = await supabase
-    .from('pkg_packages')
-    .select('id, lot_id, package_qty, package_size_l, package:package_id ( id, size, uom_id )')
+    .from('mst_beer_package_category')
+    .select('id, size, uom_id')
     .eq('tenant_id', tenant)
     .in('id', packageIds)
   if (error) throw error
-  ;(data ?? []).forEach((row: any) => map.set(row.id, row as PackageRow))
+  ;(data ?? []).forEach((row: any) => {
+    const uomCode = row.uom_id ? uomLookup.value.get(row.uom_id) : null
+    const unitSize = convertToLiters(row.size, uomCode)
+    map.set(row.id, { id: row.id, unit_size_l: unitSize })
+  })
   return map
 }
 
-async function loadLots(lotIds: string[]) {
-  const map = new Map<string, LotRow>()
-  if (lotIds.length === 0) return map
+async function loadBatches(batchIds: string[]) {
+  const map = new Map<string, BatchRow>()
+  if (batchIds.length === 0) return map
   const tenant = await ensureTenant()
   const { data, error } = await supabase
-    .from('prd_lots')
-    .select('id, lot_code, recipe_id')
+    .from('mes_batches')
+    .select('id, batch_code, recipe_id')
     .eq('tenant_id', tenant)
-    .in('id', lotIds)
+    .in('id', batchIds)
   if (error) throw error
-  ;(data ?? []).forEach((row: any) => map.set(row.id, row as LotRow))
+  ;(data ?? []).forEach((row: any) => map.set(row.id, row as BatchRow))
   return map
 }
 
@@ -474,7 +466,7 @@ async function loadRecipes(recipeIds: string[]) {
   if (recipeIds.length === 0) return map
   const tenant = await ensureTenant()
   const { data, error } = await supabase
-    .from('rcp_recipes')
+    .from('mes_recipes')
     .select('id, category')
     .eq('tenant_id', tenant)
     .in('id', recipeIds)
@@ -517,15 +509,13 @@ async function loadSummary() {
     }
 
     const packageIds = Array.from(new Set(lines.map((line) => line.package_id).filter(Boolean))) as string[]
-    const packageMap = await loadPackages(packageIds)
-    const lotIdsFromLines = Array.from(new Set(lines.map((line) => line.lot_id).filter(Boolean))) as string[]
-    const lotIdsFromPackages = Array.from(new Set(Array.from(packageMap.values()).map((row) => row.lot_id).filter(Boolean))) as string[]
-    const lotIds = Array.from(new Set([...lotIdsFromLines, ...lotIdsFromPackages]))
-    const lotMap = await loadLots(lotIds)
-    const recipeIds = Array.from(new Set(Array.from(lotMap.values()).map((row) => row.recipe_id).filter(Boolean))) as string[]
+    const packageMap = await loadPackageCategories(packageIds)
+    const batchIds = Array.from(new Set(lines.map((line) => line.batch_id).filter(Boolean)))
+    const batchMap = await loadBatches(batchIds)
+    const recipeIds = Array.from(new Set(Array.from(batchMap.values()).map((row) => row.recipe_id).filter(Boolean))) as string[]
     const recipeMap = await loadRecipes(recipeIds)
 
-    processMovementLines(lines, headerMap, packageMap, lotMap, recipeMap)
+    processMovementLines(lines, headerMap, packageMap, batchMap, recipeMap)
   } catch (err) {
     console.error(err)
     errorMessage.value = err instanceof Error ? err.message : String(err)
@@ -538,20 +528,20 @@ async function loadSummary() {
 function resetSummary() {
   categorySummaries.value = []
   monthlySeries.value = Array.from({ length: 12 }, (_, month) => ({ month, volume: 0, tax: 0 }))
-  lotBreakdown.value = []
+  batchBreakdown.value = []
   updateChart()
 }
 
 function processMovementLines(
   rows: MovementLine[],
   headerMap: Map<string, MovementHeader>,
-  packageMap: Map<string, PackageRow>,
-  lotMap: Map<string, LotRow>,
+  packageMap: Map<string, PackageCategoryInfo>,
+  batchMap: Map<string, BatchRow>,
   recipeMap: Map<string, RecipeRow>
 ) {
   const categoryTotals = new Map<string, { volume: number; tax: number }>()
   const monthlyTotals = Array.from({ length: 12 }, (_, month) => ({ month, volume: 0, tax: 0 }))
-  const monthLotMap = new Map<string, MonthLotRow>()
+  const monthBatchMap = new Map<string, MonthBatchRow>()
 
   rows.forEach((row) => {
     const header = headerMap.get(row.movement_id)
@@ -562,10 +552,10 @@ function processMovementLines(
     const monthIndex = movementDate.getMonth()
 
     const packageRow = row.package_id ? packageMap.get(row.package_id) : undefined
-    const lotId = row.lot_id ?? packageRow?.lot_id ?? null
-    if (!lotId) return
-    const lotInfo = lotMap.get(lotId)
-    const recipe = lotInfo?.recipe_id ? recipeMap.get(lotInfo.recipe_id) : undefined
+    const batchId = row.batch_id ?? null
+    if (!batchId) return
+    const batchInfo = batchMap.get(batchId)
+    const recipe = batchInfo?.recipe_id ? recipeMap.get(batchInfo.recipe_id) : undefined
     const categoryId = recipe?.category ?? null
     if (!categoryId) return
 
@@ -583,26 +573,26 @@ function processMovementLines(
     monthlyTotals[monthIndex].volume += volume
     monthlyTotals[monthIndex].tax += taxAmount
 
-    const key = `${monthIndex}-${lotId}`
-    let lotEntry = monthLotMap.get(key)
-    if (!lotEntry) {
-      lotEntry = {
+    const key = `${monthIndex}-${batchId}`
+    let batchEntry = monthBatchMap.get(key)
+    if (!batchEntry) {
+      batchEntry = {
         key,
         month: monthIndex,
-        lotId,
-        lotCode: lotInfo?.lot_code ?? lotId,
+        batchId,
+        batchCode: batchInfo?.batch_code ?? batchId,
         categoryId,
         categoryName: categoryLookup.value.get(categoryId)?.name || categoryLookup.value.get(categoryId)?.code || categoryId,
         fillDate: movementAt,
         totalVolume: 0,
         totalTax: 0,
       }
-      monthLotMap.set(key, lotEntry)
+      monthBatchMap.set(key, batchEntry)
     }
-    lotEntry.totalVolume += volume
-    lotEntry.totalTax += taxAmount
-    if (movementDate < new Date(lotEntry.fillDate)) {
-      lotEntry.fillDate = movementAt
+    batchEntry.totalVolume += volume
+    batchEntry.totalTax += taxAmount
+    if (movementDate < new Date(batchEntry.fillDate)) {
+      batchEntry.fillDate = movementAt
     }
   })
 
@@ -620,20 +610,20 @@ function processMovementLines(
 
   const groups: MonthGroup[] = []
   for (let month = 0; month < 12; month += 1) {
-    const lots = Array.from(monthLotMap.values()).filter((row) => row.month === month)
-    if (lots.length === 0) continue
-    lots.sort((a, b) => new Date(a.fillDate).getTime() - new Date(b.fillDate).getTime() || a.lotCode.localeCompare(b.lotCode))
-    const subtotalVolume = lots.reduce((sum, row) => sum + row.totalVolume, 0)
-    const subtotalTax = lots.reduce((sum, row) => sum + row.totalTax, 0)
+    const batches = Array.from(monthBatchMap.values()).filter((row) => row.month === month)
+    if (batches.length === 0) continue
+    batches.sort((a, b) => new Date(a.fillDate).getTime() - new Date(b.fillDate).getTime() || a.batchCode.localeCompare(b.batchCode))
+    const subtotalVolume = batches.reduce((sum, row) => sum + row.totalVolume, 0)
+    const subtotalTax = batches.reduce((sum, row) => sum + row.totalTax, 0)
     groups.push({
       month,
       label: monthLabel(month),
       subtotalVolume,
       subtotalTax,
-      lots,
+      batches,
     })
   }
-  lotBreakdown.value = groups
+  batchBreakdown.value = groups
   updateChart()
 }
 
@@ -712,7 +702,7 @@ function updateChart() {
 }
 
 watch(locale, () => {
-  lotBreakdown.value = lotBreakdown.value.map((group) => ({
+  batchBreakdown.value = batchBreakdown.value.map((group) => ({
     ...group,
     label: monthLabel(group.month),
   }))

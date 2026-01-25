@@ -115,7 +115,7 @@ create table if not exists public.mst_category (
 -- =========================================
 -- Recipe & Process
 -- =========================================
-CREATE TABLE public.rcp_recipes (
+CREATE TABLE public.mes_recipes (
 	id uuid DEFAULT gen_random_uuid() NOT NULL,
 	tenant_id uuid DEFAULT ((auth.jwt() -> 'app_metadata'::text) ->> 'tenant_id'::text)::uuid NOT NULL,
 	code text NOT NULL,
@@ -137,17 +137,17 @@ CREATE TABLE public.rcp_recipes (
 	CONSTRAINT rcp_recipes_pkey PRIMARY KEY (id),
 	CONSTRAINT rcp_recipes_tenant_id_code_version_key UNIQUE (tenant_id, code, version)
 );
-ALTER TABLE public.rcp_recipes ADD CONSTRAINT rcp_recipes_category_fkey FOREIGN KEY (category) REFERENCES public.mst_category(id);
+ALTER TABLE public.mes_recipes ADD CONSTRAINT rcp_recipes_category_fkey FOREIGN KEY (category) REFERENCES public.mst_category(id);
 
 
--- public.rcp_recipes foreign keys
+-- public.mes_recipes foreign keys
 
-ALTER TABLE public.rcp_recipes ADD CONSTRAINT rcp_recipes_category_fkey FOREIGN KEY (category) REFERENCES public.mst_category(id);
+ALTER TABLE public.mes_recipes ADD CONSTRAINT rcp_recipes_category_fkey FOREIGN KEY (category) REFERENCES public.mst_category(id);
 
-create table if not exists rcp_ingredients (
+create table if not exists mes_ingredients (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null,
-  recipe_id uuid not null references rcp_recipes(id) on delete cascade,
+  recipe_id uuid not null references mes_recipes(id) on delete cascade,
   material_id uuid not null references mst_materials(id),
   amount numeric,
   uom_id uuid not null references mst_uom(id),
@@ -155,10 +155,10 @@ create table if not exists rcp_ingredients (
   notes text
 );
 
-create table if not exists prc_processes (
+create table if not exists mes_recipe_processes (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null,
-  recipe_id uuid not null references rcp_recipes(id) on delete cascade,
+  recipe_id uuid not null references mes_recipes(id) on delete cascade,
   name text not null,
   version int not null default 1,
   is_active boolean default true,
@@ -167,10 +167,10 @@ create table if not exists prc_processes (
   unique (tenant_id, recipe_id, name, version)
 );
 
-create table if not exists prc_steps (
+create table if not exists mes_recipe_steps (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null,
-  process_id uuid not null references prc_processes(id) on delete cascade,
+  process_id uuid not null references mes_recipe_processes(id) on delete cascade,
   step_no int not null,
   step prc_step_type not null,
   target_params jsonb default '{}'::jsonb,
@@ -180,13 +180,13 @@ create table if not exists prc_steps (
 );
 
 -- =========================================
--- Production Lots & Executed Steps
+-- Production Batches & Executed Steps
 -- =========================================
-create table if not exists prd_lots (
+create table if not exists mes_batches (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null,
-  lot_code text not null,
-  recipe_id uuid not null references rcp_recipes(id),
+  batch_code text not null,
+  recipe_id uuid not null references mes_recipes(id),
   process_version int not null,
   vessel_id uuid,
   target_volume_l numeric,
@@ -199,20 +199,20 @@ create table if not exists prd_lots (
   created_at timestamptz default now(),
   notes text,
   meta jsonb default '{}'::jsonb,
-  unique (tenant_id, lot_code)
+  unique (tenant_id, batch_code)
 );
 
-create table if not exists prd_lot_steps (
+create table if not exists mes_batch_steps (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null,
-  lot_id uuid not null references prd_lots(id) on delete cascade,
+  batch_id uuid not null references mes_batches(id) on delete cascade,
   step_no int not null,
   step prc_step_type not null,
   planned_params jsonb default '{}'::jsonb,
   actual_params jsonb default '{}'::jsonb,
   status text default 'open',
   notes text,
-  unique (tenant_id, lot_id, step_no)
+  unique (tenant_id, batch_id, step_no)
 );
 
 
@@ -234,8 +234,8 @@ create table if not exists inv_inventory (
 create table if not exists wst_waste (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null,
-  lot_id uuid references prd_lots(id),
-  step_id uuid references prd_lot_steps(id),
+  batch_id uuid references mes_batches(id),
+  step_id uuid references mes_batch_steps(id),
   material_id uuid references mst_materials(id),
   qty numeric,
   uom_id uuid references mst_uom(id),
@@ -289,25 +289,11 @@ create table if not exists ord_order_lines (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null,
   order_id uuid not null references ord_orders(id) on delete cascade,
-  recipe_id uuid not null references rcp_recipes(id),
+  recipe_id uuid not null references mes_recipes(id),
   qty numeric not null,
   uom_id uuid not null references mst_uom(id),
   package_size_l numeric,
   created_at timestamptz default now()
-);
-
-create table if not exists pkg_packages (
-  id uuid primary key default gen_random_uuid(),
-  tenant_id uuid not null,
-  lot_id uuid not null references prd_lots(id),
-  site_id uuid references mst_sites(id),
-  fill_at date default current_date,
-  package_id uuid not null references mst_beer_package_category(id),
-  package_size_l numeric,
-  package_qty int not null,
-  notes text,
-  created_at timestamptz default now(),
-  unique (tenant_id, lot_id, fill_at, package_id)
 );
 
 -- =========================================
@@ -316,7 +302,7 @@ create table if not exists pkg_packages (
 create table if not exists haccp_plans (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null,
-  recipe_id uuid not null references rcp_recipes(id),
+  recipe_id uuid not null references mes_recipes(id),
   name text not null,
   version int not null default 1,
   scope text,
@@ -332,7 +318,7 @@ create table if not exists haccp_hazards (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null,
   plan_id uuid not null references haccp_plans(id) on delete cascade,
-  prc_step_id uuid not null references prc_steps(id),
+  prc_step_id uuid not null references mes_recipe_steps(id),
   name text not null,
   htype haccp_hazard_type not null,
   description text,
@@ -345,7 +331,7 @@ create table if not exists haccp_ccp_points (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null,
   plan_id uuid not null references haccp_plans(id) on delete cascade,
-  prc_step_id uuid not null references prc_steps(id),
+  prc_step_id uuid not null references mes_recipe_steps(id),
   name text not null,
   monitoring_method text,
   frequency text,
@@ -379,8 +365,8 @@ create table if not exists haccp_ccp_measure_maps (
 create table if not exists qc_measurements (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null,
-  lot_id uuid not null references prd_lots(id),
-  step_id uuid references prd_lot_steps(id),
+  batch_id uuid not null references mes_batches(id),
+  step_id uuid references mes_batch_steps(id),
   mtype text not null,
   value numeric,
   unit text,
@@ -406,22 +392,22 @@ alter table mst_beer_package_category
 alter table mst_category
   alter column tenant_id set default (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid;
 
-alter table rcp_recipes
+alter table mes_recipes
   alter column tenant_id set default (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid;
 
-alter table rcp_ingredients
+alter table mes_ingredients
   alter column tenant_id set default (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid;
 
-alter table prc_processes
+alter table mes_recipe_processes
   alter column tenant_id set default (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid;
 
-alter table prc_steps
+alter table mes_recipe_steps
   alter column tenant_id set default (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid;
 
-alter table prd_lots
+alter table mes_batches
   alter column tenant_id set default (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid;
 
-alter table prd_lot_steps
+alter table mes_batch_steps
   alter column tenant_id set default (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid;
 
 
@@ -441,9 +427,6 @@ alter table ord_orders
   alter column tenant_id set default (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid;
 
 alter table ord_order_lines
-  alter column tenant_id set default (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid;
-
-alter table pkg_packages
   alter column tenant_id set default (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid;
 
 alter table haccp_plans
@@ -484,50 +467,50 @@ create index if not exists idx_mst_beer_package_category_tenant_code
 
 -- Recipes & Process
 create index if not exists idx_rcp_recipes_tenant_code_version
-  on rcp_recipes (tenant_id, code, version);
+  on mes_recipes (tenant_id, code, version);
 create index if not exists idx_rcp_recipes_tenant_style
-  on rcp_recipes (tenant_id, style);
+  on mes_recipes (tenant_id, style);
 create index if not exists idx_rcp_recipes_created_at
-  on rcp_recipes (created_at);
+  on mes_recipes (created_at);
 
 create index if not exists idx_rcp_ingredients_recipe
-  on rcp_ingredients (recipe_id);
+  on mes_ingredients (recipe_id);
 create index if not exists idx_rcp_ingredients_tenant_recipe
-  on rcp_ingredients (tenant_id, recipe_id);
+  on mes_ingredients (tenant_id, recipe_id);
 create index if not exists idx_rcp_ingredients_material
-  on rcp_ingredients (material_id);
+  on mes_ingredients (material_id);
 create index if not exists idx_rcp_ingredients_uom
-  on rcp_ingredients (uom_id);
+  on mes_ingredients (uom_id);
 
 create index if not exists idx_prc_processes_tenant_recipe_active
-  on prc_processes (tenant_id, recipe_id, is_active, version desc);
+  on mes_recipe_processes (tenant_id, recipe_id, is_active, version desc);
 create index if not exists idx_prc_steps_process_stepno
-  on prc_steps (process_id, step_no);
+  on mes_recipe_steps (process_id, step_no);
 create index if not exists idx_prc_steps_tenant_process
-  on prc_steps (tenant_id, process_id);
+  on mes_recipe_steps (tenant_id, process_id);
 create index if not exists idx_prc_steps_target_params_gin
-  on prc_steps using gin (target_params);
+  on mes_recipe_steps using gin (target_params);
 create index if not exists idx_prc_steps_qa_checks_gin
-  on prc_steps using gin (qa_checks);
+  on mes_recipe_steps using gin (qa_checks);
 
 -- Production
-create index if not exists idx_prd_lots_tenant_lot_code
-  on prd_lots (tenant_id, lot_code);
-create index if not exists idx_prd_lots_tenant_recipe_status
-  on prd_lots (tenant_id, recipe_id, status);
-create index if not exists idx_prd_lots_planned_start
-  on prd_lots (planned_start);
-create index if not exists idx_prd_lots_created_at
-  on prd_lots (created_at);
+create index if not exists idx_mes_batches_tenant_batch_code
+  on mes_batches (tenant_id, batch_code);
+create index if not exists idx_mes_batches_tenant_recipe_status
+  on mes_batches (tenant_id, recipe_id, status);
+create index if not exists idx_mes_batches_planned_start
+  on mes_batches (planned_start);
+create index if not exists idx_mes_batches_created_at
+  on mes_batches (created_at);
 
-create index if not exists idx_prd_lot_steps_lot_stepno
-  on prd_lot_steps (lot_id, step_no);
-create index if not exists idx_prd_lot_steps_tenant_lot
-  on prd_lot_steps (tenant_id, lot_id);
-create index if not exists idx_prd_lot_steps_planned_params_gin
-  on prd_lot_steps using gin (planned_params);
-create index if not exists idx_prd_lot_steps_actual_params_gin
-  on prd_lot_steps using gin (actual_params);
+create index if not exists idx_mes_batch_steps_batch_stepno
+  on mes_batch_steps (batch_id, step_no);
+create index if not exists idx_mes_batch_steps_tenant_batch
+  on mes_batch_steps (tenant_id, batch_id);
+create index if not exists idx_mes_batch_steps_planned_params_gin
+  on mes_batch_steps using gin (planned_params);
+create index if not exists idx_mes_batch_steps_actual_params_gin
+  on mes_batch_steps using gin (actual_params);
 
 -- Inventory
 
@@ -539,8 +522,8 @@ create index if not exists idx_inv_inventory_batch_code
   on inv_inventory (batch_code);
 
 -- Waste & Tax
-create index if not exists idx_wst_waste_tenant_lot
-  on wst_waste (tenant_id, lot_id);
+create index if not exists idx_wst_waste_tenant_batch
+  on wst_waste (tenant_id, batch_id);
 create index if not exists idx_wst_waste_material
   on wst_waste (material_id);
 create index if not exists idx_wst_waste_created_at
@@ -568,13 +551,6 @@ create index if not exists idx_ord_order_lines_recipe
 create index if not exists idx_ord_order_lines_uom
   on ord_order_lines (uom_id);
 
-create index if not exists idx_pkg_packages_tenant_lot
-  on pkg_packages (tenant_id, lot_id);
-create index if not exists idx_pkg_packages_package
-  on pkg_packages (package_id);
-create index if not exists idx_pkg_packages_created_at
-  on pkg_packages (created_at);
-
 -- HACCP
 create index if not exists idx_haccp_plans_tenant_recipe_version
   on haccp_plans (tenant_id, recipe_id, version);
@@ -594,8 +570,8 @@ create index if not exists idx_haccp_ccp_measure_maps_ccp
   on haccp_ccp_measure_maps (ccp_id);
 
 -- QC
-create index if not exists idx_qc_measurements_lot_time
-  on qc_measurements (lot_id, taken_at);
+create index if not exists idx_qc_measurements_batch_time
+  on qc_measurements (batch_id, taken_at);
 create index if not exists idx_qc_measurements_tenant_type_time
   on qc_measurements (tenant_id, mtype, taken_at);
 create index if not exists idx_qc_measurements_step
@@ -612,19 +588,18 @@ alter table mst_uom         enable row level security;
 alter table mst_materials   enable row level security;
 alter table mst_beer_package_category enable row level security;
 alter table mst_category    enable row level security;
-alter table rcp_recipes     enable row level security;
-alter table rcp_ingredients enable row level security;
-alter table prc_processes   enable row level security;
-alter table prc_steps       enable row level security;
-alter table prd_lots        enable row level security;
-alter table prd_lot_steps   enable row level security;
+alter table mes_recipes     enable row level security;
+alter table mes_ingredients enable row level security;
+alter table mes_recipe_processes   enable row level security;
+alter table mes_recipe_steps       enable row level security;
+alter table mes_batches        enable row level security;
+alter table mes_batch_steps   enable row level security;
 alter table inv_inventory   enable row level security;
 alter table wst_waste       enable row level security;
 alter table tax_beer        enable row level security;
 alter table tax_reports     enable row level security;
 alter table ord_orders      enable row level security;
 alter table ord_order_lines enable row level security;
-alter table pkg_packages    enable row level security;
 alter table haccp_plans                 enable row level security;
 alter table haccp_hazards               enable row level security;
 alter table haccp_ccp_points            enable row level security;
@@ -663,45 +638,45 @@ create policy "mst_category_tenant_all"
   with check (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid);
   
 -- Recipe/Process
-drop policy if exists "rcp_recipes_tenant_all" on rcp_recipes;
+drop policy if exists "rcp_recipes_tenant_all" on mes_recipes;
 create policy "rcp_recipes_tenant_all"
-  on rcp_recipes
+  on mes_recipes
   for all
   using (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid)
   with check (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid);
 
-drop policy if exists "rcp_ingredients_tenant_all" on rcp_ingredients;
+drop policy if exists "rcp_ingredients_tenant_all" on mes_ingredients;
 create policy "rcp_ingredients_tenant_all"
-  on rcp_ingredients
+  on mes_ingredients
   for all
   using (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid)
   with check (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid);
 
-drop policy if exists "prc_processes_tenant_all" on prc_processes;
+drop policy if exists "prc_processes_tenant_all" on mes_recipe_processes;
 create policy "prc_processes_tenant_all"
-  on prc_processes
+  on mes_recipe_processes
   for all
   using (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid)
   with check (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid);
 
-drop policy if exists "prc_steps_tenant_all" on prc_steps;
+drop policy if exists "prc_steps_tenant_all" on mes_recipe_steps;
 create policy "prc_steps_tenant_all"
-  on prc_steps
+  on mes_recipe_steps
   for all
   using (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid)
   with check (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid);
 
 -- Production
-drop policy if exists "prd_lots_tenant_all" on prd_lots;
-create policy "prd_lots_tenant_all"
-  on prd_lots
+drop policy if exists "mes_batches_tenant_all" on mes_batches;
+create policy "mes_batches_tenant_all"
+  on mes_batches
   for all
   using (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid)
   with check (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid);
 
-drop policy if exists "prd_lot_steps_tenant_all" on prd_lot_steps;
-create policy "prd_lot_steps_tenant_all"
-  on prd_lot_steps
+drop policy if exists "mes_batch_steps_tenant_all" on mes_batch_steps;
+create policy "mes_batch_steps_tenant_all"
+  on mes_batch_steps
   for all
   using (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid)
   with check (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid);
@@ -748,13 +723,6 @@ create policy "ord_orders_tenant_all"
 drop policy if exists "ord_order_lines_tenant_all" on ord_order_lines;
 create policy "ord_order_lines_tenant_all"
   on ord_order_lines
-  for all
-  using (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid)
-  with check (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid);
-
-drop policy if exists "pkg_packages_tenant_all" on pkg_packages;
-create policy "pkg_packages_tenant_all"
-  on pkg_packages
   for all
   using (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid)
   with check (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid);

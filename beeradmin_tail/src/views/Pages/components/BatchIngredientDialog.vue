@@ -2,14 +2,14 @@
   <div v-if="open" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
     <div class="w-full max-w-lg bg-white rounded-xl shadow-lg border border-gray-200">
       <header class="px-4 py-3 border-b flex items-center justify-between">
-        <h3 class="text-lg font-semibold text-gray-800">{{ editing ? t('lot.ingredients.editTitle') : t('lot.ingredients.addTitle') }}</h3>
+        <h3 class="text-lg font-semibold text-gray-800">{{ editing ? t('batch.ingredients.editTitle') : t('batch.ingredients.addTitle') }}</h3>
         <button class="text-sm px-2 py-1 rounded border hover:bg-gray-100" type="button" @click="emit('close')">{{ t('common.cancel') }}</button>
       </header>
       <form class="p-4 space-y-4" @submit.prevent="submitForm">
         <div>
-          <label class="block text-sm text-gray-600 mb-1" for="ingredientMaterial">{{ t('lot.ingredients.material') }}<span class="text-red-600">*</span></label>
+          <label class="block text-sm text-gray-600 mb-1" for="ingredientMaterial">{{ t('batch.ingredients.material') }}<span class="text-red-600">*</span></label>
           <select id="ingredientMaterial" v-model="form.material_id" class="w-full h-[40px] border rounded px-3" :disabled="editing" required>
-            <option value="" disabled>{{ t('lot.ingredients.materialPlaceholder') }}</option>
+            <option value="" disabled>{{ t('batch.ingredients.materialPlaceholder') }}</option>
             <option v-for="mat in materials" :key="mat.id" :value="mat.id">
               {{ mat.name }} ({{ mat.code }})
             </option>
@@ -17,23 +17,23 @@
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label class="block text-sm text-gray-600 mb-1" for="ingredientAmount">{{ t('lot.ingredients.amount') }}</label>
+            <label class="block text-sm text-gray-600 mb-1" for="ingredientAmount">{{ t('batch.ingredients.amount') }}</label>
             <input id="ingredientAmount" v-model.number="form.amount" type="number" step="0.001" min="0" class="w-full h-[40px] border rounded px-3" />
           </div>
           <div>
-            <label class="block text-sm text-gray-600 mb-1" for="ingredientUom">{{ t('lot.ingredients.uom') }}<span class="text-red-600">*</span></label>
+            <label class="block text-sm text-gray-600 mb-1" for="ingredientUom">{{ t('batch.ingredients.uom') }}<span class="text-red-600">*</span></label>
             <select id="ingredientUom" v-model="form.uom_id" class="w-full h-[40px] border rounded px-3" required>
-              <option value="" disabled>{{ t('lot.ingredients.uomPlaceholder') }}</option>
+              <option value="" disabled>{{ t('batch.ingredients.uomPlaceholder') }}</option>
               <option v-for="uom in uoms" :key="uom.id" :value="uom.id">{{ uom.code }}</option>
             </select>
           </div>
         </div>
         <div>
-          <label class="block text-sm text-gray-600 mb-1" for="ingredientStage">{{ t('lot.ingredients.stage') }}</label>
+          <label class="block text-sm text-gray-600 mb-1" for="ingredientStage">{{ t('batch.ingredients.stage') }}</label>
           <input id="ingredientStage" v-model.trim="form.usage_stage" type="text" class="w-full h-[40px] border rounded px-3" />
         </div>
         <div>
-          <label class="block text-sm text-gray-600 mb-1" for="ingredientNotes">{{ t('lot.ingredients.notes') }}</label>
+          <label class="block text-sm text-gray-600 mb-1" for="ingredientNotes">{{ t('batch.ingredients.notes') }}</label>
           <textarea id="ingredientNotes" v-model.trim="form.notes" rows="3" class="w-full border rounded px-3 py-2"></textarea>
         </div>
       </form>

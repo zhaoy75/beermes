@@ -229,7 +229,7 @@ const router = useRouter()
 const isOpen = ref(false)
 const selectedEvent = ref(null)
 const eventTitle = ref('')
-const ACTIVE_LOT_STATUSES = ['planned', 'in_progress']
+const ACTIVE_BATCH_STATUSES = ['planned', 'in_progress']
 const STATUS_COLOR_MAP = {
   planned: 'Primary',
   in_progress: 'Success',
@@ -237,15 +237,15 @@ const STATUS_COLOR_MAP = {
   cancelled: 'Danger',
 }
 
-const DEFAULT_LOT_COLOR = 'Primary'
+const DEFAULT_BATCH_COLOR = 'Primary'
 
 const eventStartDate = ref('')
 const eventEndDate = ref('')
-const eventLevel = ref(DEFAULT_LOT_COLOR)
+const eventLevel = ref(DEFAULT_BATCH_COLOR)
 const events = ref([])
 
 const tenantId = ref(null)
-const loadingLots = ref(false)
+const loadingBatches = ref(false)
 
 const calendarsEvents = reactive({ Danger: 'danger', Success: 'success', Primary: 'primary', Warning: 'warning' })
 
@@ -282,63 +282,63 @@ function addDaysToIsoDate(dateStr, days) {
   return `${year}-${month}-${day}`
 }
 
-function mapLotToEvent(lot) {
-  const startDate = extractIsoDate(lot.planned_start)
+function mapBatchToEvent(batch) {
+  const startDate = extractIsoDate(batch.planned_start)
   if (!startDate) return null
   const endDate = addDaysToIsoDate(startDate, 7)
-  const status = lot.status || ''
-  const calendarKey = STATUS_COLOR_MAP[status] || DEFAULT_LOT_COLOR
+  const status = batch.status || ''
+  const calendarKey = STATUS_COLOR_MAP[status] || DEFAULT_BATCH_COLOR
   return {
-    id: `lot-${lot.id}`,
-    title: status ? `${lot.lot_code} (${status})` : lot.lot_code,
+    id: `batch-${batch.id}`,
+    title: status ? `${batch.batch_code} (${status})` : batch.batch_code,
     start: startDate,
     end: endDate ?? startDate,
     allDay: true,
     extendedProps: {
       calendar: calendarKey,
-      source: 'lot',
+      source: 'batch',
       status,
-      lotId: lot.id,
+      batchId: batch.id,
     },
   }
 }
 
-function applyLotEvents(lotEvents) {
-  const manualEvents = events.value.filter((event) => event?.extendedProps?.source !== 'lot')
-  events.value = [...lotEvents, ...manualEvents]
+function applyBatchEvents(batchEvents) {
+  const manualEvents = events.value.filter((event) => event?.extendedProps?.source !== 'batch')
+  events.value = [...batchEvents, ...manualEvents]
 }
 
-async function loadLotEvents() {
+async function loadBatchEvents() {
   try {
-    loadingLots.value = true
+    loadingBatches.value = true
     const tenant = await ensureTenant()
     const query = supabase
-      .from('prd_lots')
-      .select('id, lot_code, status, planned_start')
+      .from('mes_batches')
+      .select('id, batch_code, status, planned_start')
       .eq('tenant_id', tenant)
       .not('planned_start', 'is', null)
 
-    if (ACTIVE_LOT_STATUSES.length > 0) {
-      query.in('status', ACTIVE_LOT_STATUSES)
+    if (ACTIVE_BATCH_STATUSES.length > 0) {
+      query.in('status', ACTIVE_BATCH_STATUSES)
     }
 
     const { data, error } = await query
     if (error) throw error
 
-    const lotEvents = (data ?? [])
-      .map((lot) => mapLotToEvent(lot))
+    const batchEvents = (data ?? [])
+      .map((batch) => mapBatchToEvent(batch))
       .filter((event) => event !== null)
 
-    applyLotEvents(lotEvents)
+    applyBatchEvents(batchEvents)
   } catch (error) {
-    console.error('Failed to load lot events', error)
+    console.error('Failed to load batch events', error)
   } finally {
-    loadingLots.value = false
+    loadingBatches.value = false
   }
 }
 
 onMounted(() => {
-  loadLotEvents()
+  loadBatchEvents()
 })
 
 const openModal = () => {
@@ -354,7 +354,7 @@ const resetModalFields = () => {
   eventTitle.value = ''
   eventStartDate.value = ''
   eventEndDate.value = ''
-  eventLevel.value = DEFAULT_LOT_COLOR
+  eventLevel.value = DEFAULT_BATCH_COLOR
   selectedEvent.value = null
 }
 
@@ -362,26 +362,26 @@ const handleDateSelect = (selectInfo) => {
   resetModalFields()
   eventStartDate.value = selectInfo.startStr
   eventEndDate.value = selectInfo.endStr || selectInfo.startStr
-  eventLevel.value = DEFAULT_LOT_COLOR
+  eventLevel.value = DEFAULT_BATCH_COLOR
   openModal()
 }
 
 const handleEventClick = (clickInfo) => {
   const event = clickInfo.event
-  if (event.extendedProps?.source === 'lot' && event.extendedProps?.lotId) {
-    router.push(`/lots/${event.extendedProps.lotId}`)
+  if (event.extendedProps?.source === 'batch' && event.extendedProps?.batchId) {
+    router.push(`/batches/${event.extendedProps.batchId}`)
     return
   }
   selectedEvent.value = event
   eventTitle.value = event.title
   eventStartDate.value = event.startStr || ''
   eventEndDate.value = event.endStr || event.startStr || ''
-  eventLevel.value = event.extendedProps?.calendar || DEFAULT_LOT_COLOR
+  eventLevel.value = event.extendedProps?.calendar || DEFAULT_BATCH_COLOR
   openModal()
 }
 
 const handleAddOrUpdateEvent = () => {
-  const calendarKey = eventLevel.value || DEFAULT_LOT_COLOR
+  const calendarKey = eventLevel.value || DEFAULT_BATCH_COLOR
   if (selectedEvent.value) {
     // Update existing event
     events.value = events.value.map((event) =>
@@ -420,7 +420,7 @@ const handleDeleteEvent = () => {
 }
 
 const renderEventContent = (eventInfo) => {
-  const colorKey = (eventInfo.event.extendedProps?.calendar || DEFAULT_LOT_COLOR).toLowerCase()
+  const colorKey = (eventInfo.event.extendedProps?.calendar || DEFAULT_BATCH_COLOR).toLowerCase()
   const colorClass = `fc-bg-${colorKey}`
   return {
     html: `

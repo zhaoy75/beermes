@@ -63,7 +63,7 @@ erDiagram
     string material_id PK
     string name
     string material_type
-    bool lot_tracked
+    bool batch_tracked
   }
 
   MATERIAL_SPEC {

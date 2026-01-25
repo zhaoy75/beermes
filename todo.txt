@@ -90,7 +90,7 @@ create an recipt list page,
     -発注書の作成
     -発注の実行
   Out: 発注書
-LOT管理
+バッチ管理
 　STEPs
 　　原材料リスト
 　　生産物リスト
@@ -135,7 +135,7 @@ create an recipe list mainteenance page
 
 recipe list mainteenance page 
 
-- recipe list table following columns, all information is from rcp_recipes 
+- recipe list table following columns, all information is from mes_recipes 
 　recipe id name and version, and status, and created_at.
 - all data should be list in a table 
 - table should be sortable by each column
@@ -148,39 +148,39 @@ create a recipe edit page, The requirement are as below:
 
 1. there should be 3 sections in the page
 2. recipe information section, field in rcp_recipe should be editable
-2. ingredients section, ingredient crud mainteenace, data is stored in rcp_ingredients
+2. ingredients section, ingredient crud mainteenace, data is stored in mes_ingredients
 3. process section 
-   process information is stored in rcp_processes
-   each process has multiple steps, step information is stored in rcp_steps
+   process information is stored in mes_recipe_processes
+   each process has multiple steps, step information is stored in mes_recipe_steps
 
 
-create an lots list mainteenance page
+create an batches list mainteenance page
 
-lots list mainteenance page
+batches list mainteenance page
 
-- process lot list table following columns, all information is from prc_lots
-　lot id, name, version, status, created_at, planned_start_date, planned_end_date, actual_start_date, actual_end_date
+- process batch list table following columns, all information is from prc_batches
+　batch id, name, version, status, created_at, planned_start_date, planned_end_date, actual_start_date, actual_end_date
 - all data should be list in a table
 - table should be sortable by each column
 - crud is needed
-  create will auto generate lot name with prefix LOT-YYYYMMDD-XXXX
-  create will call supabase funtion create_lot_from_recipe
+  create will auto generate batch name with prefix BATCH-YYYYMMDD-XXXX
+  create will call supabase funtion create_batch_from_recipe
 - search section (name, start date, end date) is needed
-- click lot name in table will go to lot edit page
-- there should be an summary button to show lot summary report in a dialog
-  report will show lot information, ingredient used, step completed, qc data
+- click batch name in table will go to batch edit page
+- there should be an summary button to show batch summary report in a dialog
+  report will show batch information, ingredient used, step completed, qc data
 
-create a lot edit page, The requirement are as below:
+create a batch edit page, The requirement are as below:
 
 1. there should be 3 sections in the page
-2. lot information section, field in prd_lots should be editable
-3. ingredients section, ingredient crud mainteenace, data is stored in rcp_ingredients
-4. process information is stored in prd_lots
-   each process has multiple steps, step information is stored in prd_lots_steps
+2. batch information section, field in mes_batches should be editable
+3. ingredients section, ingredient crud mainteenace, data is stored in mes_ingredients
+4. process information is stored in mes_batches
+   each process has multiple steps, step information is stored in prd_batches_steps
    
 create a waste management to show list of waste. 
 CUD is not needed.search section is needed to filter by date 
-range and lot no. Data is from prd_wastes table.
+range and batch no. Data is from prd_wastes table.
 
 
 create an vue page mainteenance for mst_beer_package_category, table definition should be reference to ddl.sql
@@ -191,14 +191,14 @@ I want to create 年間課税概要（Tax Year Summary) page to shows there sect
   - total production volume (in liters) by category
   - total tax amount by category 
   - a bar chart showing monthly production volumes and tax amounts for the year 
-・production volume and tax amount by lots with subtotals by months
+・production volume and tax amount by batches with subtotals by months
 
 I want to create non tax beer transfer page to show a table of non tax beer transfer records -data is yet to be define so, just create ui
 -table should be sortable by each column
 -search section is needed to filter by date range and transfer source and destination
 -crud is needed
 
-In the calendar.vue, if a lot related event is clicked please jump to lotedit.vue with lot id.
+In the calendar.vue, if a batch related event is clicked please jump to BatchEdit.vue with batch id.
 
 create an vue page to maintain mst_site_type table. table definition should be reference to ddl_move.sql
 -create, update, delete is needed
@@ -225,11 +225,11 @@ create an vue page to manage move between site. table definition should be refer
 -when create a movement document, user need to add line items, line item should select material from mst_material
 -and input quantity, uom will auto filled based on material selection 
 
-create an vue page to show summary of finished lots to caculate 仕込室収率(%) called エキス. The link to this page should be under recipe mmn menu.
-- you can filter by style, recipe, lot status and date range
-- the 仕込室収率(%) will be caculate based on the data get from selected finished lots
-- lots should be group by style and recipe
-- lots summary information should be listed in table 
+create an vue page to show summary of finished batches to caculate 仕込室収率(%) called エキス. The link to this page should be under recipe mmn menu.
+- you can filter by style, recipe, batch status and date range
+- the 仕込室収率(%) will be caculate based on the data get from selected finished batches
+- batches should be group by style and recipe
+- batches summary information should be listed in table 
 
 create an vue page for tank maintennace under system maintennace menu. 
 -I want use mst_materials to management tanks in beer production. The category　field is equipment. 
@@ -447,7 +447,7 @@ I want to create an vue page to mainteenance produced craft beer.
   - beer name
   - beer category
   - package type
-  - production lot no
+  - production batch no
   - production date
   - quantity in liters
   - quantity in pakages
@@ -468,12 +468,12 @@ I want to create an vue page to mainteenance produced craft beer.
     - beer name
     - beer category
     - package type
-    - production lot no
+    - production batch no
     - movement date
     - quantity in liters
     - quantity in pakages
     - movement lines
-3. The section should have a search section to filter by beer name, category, package type, production lot no and date range.
+3. The section should have a search section to filter by beer name, category, package type, production batch no and date range.
 4. The section also should include a checkbox to filter movement type 
 5. The section should have a button to launch movement edit page to add and edit movement of craft beer
 
@@ -483,7 +483,7 @@ Feature for the movement edit page
    ・each section should have a dropdown to select site from mst_site table.
    ・between the two section, i need two buttons to move selected beer from source site to destination site and vice versa.
    ・for source site section, there should be a list of cards to show available inventory of craft beer in the selected source site.
-    ・each card should show beer name, category, package type, production lot no, production date, quantity in liters and quantity in pakages.
+    ・each card should show beer name, category, package type, production batch no, production date, quantity in liters and quantity in pakages.
    ・when i choose a card beer from the available inventory table by double click, a dialog to input the move quantity should shown. 
    ・when i press the move button if there are no card in source section, a dialog to input movement line should be shown to allow user to input move lines 
    ・after i input the move quantity and click ok button, the selected beer with move quantity should be added to the movement line table in the bottom of the page.
@@ -536,16 +536,16 @@ I want to modify a tax report page to create and maintenance tax report for craf
     there should be a search section to filter user by name, email and role
     there should be a button to add new user
 
-Since some lot are create by combination of other lots, i want to modify ロット作成　and ロット編集 page, 
-so i can input parent lot code and beer quantity from each parent lot. this information should be stored in meta field of prd_lots table as json format like
+Since some batch are create by combination of other batches, i want to modify ロット作成　and ロット編集 page, 
+so i can input parent batch code and beer quantity from each parent batch. this information should be stored in meta field of mes_batches table as json format like
 {
-  "parent_lots": [
+  "parent_batches": [
     {
-      "lot_code": "LOT-20260101-0001",
+      "batch_code": "BATCH-20260101-0001",
       "quantity_liters": 500
     },
     {
-      "lot_code": "LOT-20260102-0002",
+      "batch_code": "BATCH-20260102-0002",
       "quantity_liters": 300
     }
   ]

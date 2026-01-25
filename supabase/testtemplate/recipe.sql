@@ -19,7 +19,7 @@ begin
     raise exception 'Tenant % not found', tenant_name;
   end if;
 
-  insert into rcp_recipes (
+  insert into mes_recipes (
     tenant_id,
     code,
     name,
@@ -66,7 +66,7 @@ begin
   -- Ensure the recipe_id is populated even when the row already existed.
   if v_recipe_id is null then
     select id into v_recipe_id
-    from rcp_recipes
+    from mes_recipes
     where tenant_id = v_tenant_id
       and code = 'BASIC-PALE'
       and version = 1;
@@ -77,10 +77,10 @@ begin
   end if;
 
   -- Replace ingredients for this recipe with the template set.
-  delete from rcp_ingredients
+  delete from mes_ingredients
   where recipe_id = v_recipe_id;
 
-  insert into rcp_ingredients (
+  insert into mes_ingredients (
     tenant_id,
     recipe_id,
     material_id,
@@ -111,7 +111,7 @@ begin
 
   get diagnostics v_ingredient_rows = ROW_COUNT;
 
-  insert into prc_processes (
+  insert into mes_recipe_processes (
     tenant_id,
     recipe_id,
     name,
@@ -135,7 +135,7 @@ begin
 
   if v_process_id is null then
     select id into v_process_id
-    from prc_processes
+    from mes_recipe_processes
     where tenant_id = v_tenant_id
       and recipe_id = v_recipe_id
       and name = 'Standard Pale Ale Process'
@@ -146,10 +146,10 @@ begin
     raise exception 'Failed to resolve process_id for tenant %', tenant_name;
   end if;
 
-  delete from prc_steps
+  delete from mes_recipe_steps
   where process_id = v_process_id;
 
-  insert into prc_steps (
+  insert into mes_recipe_steps (
     tenant_id,
     process_id,
     step_no,

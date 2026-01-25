@@ -19,7 +19,7 @@
 
       <!-- Main grid -->
       <section class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-        <!-- In-progress lots -->
+        <!-- In-progress batches -->
         <div class="flex h-full flex-col rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4">
             <div>
@@ -31,27 +31,27 @@
           </div>
           <ul class="flex-1 divide-y divide-slate-100">
             <li
-              v-for="lot in inProgressLots"
-              :key="lot.lotId"
+              v-for="batch in inProgressBatches"
+              :key="batch.batchId"
               class="group flex items-start justify-between gap-3 px-5 py-4 transition hover:bg-slate-50/70"
             >
               <div class="space-y-1">
                 <div class="text-sm font-semibold text-slate-800">
-                  {{ lot.lotId }}
-                  <span class="text-slate-500">• {{ lot.beerName }}</span>
+                  {{ batch.batchId }}
+                  <span class="text-slate-500">• {{ batch.beerName }}</span>
                 </div>
                 <div class="text-xs text-slate-500">{{
                   $t('dashboard.lists.brewedMeta', {
-                    date: fmtDate(lot.brewDate),
-                    style: lot.style,
-                    liters: lot.batchSize,
+                    date: fmtDate(batch.brewDate),
+                    style: batch.style,
+                    liters: batch.batchSize,
                   })
                 }}</div>
               </div>
               <span class="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-amber-700">{{
                 $t('dashboard.lists.inProgressBadge') }}</span>
             </li>
-            <li v-if="inProgressLots.length === 0" class="px-5 py-10 text-center text-sm text-slate-500">{{ $t('dashboard.lists.none') }}</li>
+            <li v-if="inProgressBatches.length === 0" class="px-5 py-10 text-center text-sm text-slate-500">{{ $t('dashboard.lists.none') }}</li>
           </ul>
         </div>
 
@@ -141,17 +141,17 @@ import { Chart, registerables } from 'chart.js'
 Chart.register(...registerables)
 
 /***** Props *****/
-// lots: array of { lotId, beerName, status, brewDate(YYYY-MM-DD), finishDate, style, batchSize(Number) }
+// batches: array of { batchId, beerName, status, brewDate(YYYY-MM-DD), finishDate, style, batchSize(Number) }
 // sales: array of { date(YYYY-MM-DD), revenue(Number) }
 const props = defineProps({
-  lots: {
+  batches: {
     type: Array,
     default: () => [
-      { lotId:'2025-IPA-001', beerName:'Galaxy IPA', status:'In progress', brewDate:'2025-08-20', finishDate:'', style:'IPA', batchSize:20 },
-      { lotId:'2025-STO-002', beerName:'Night Stout', status:'Complete', brewDate:'2025-06-02', finishDate:'2025-06-28', style:'Stout', batchSize:25 },
-      { lotId:'2025-LGR-003', beerName:'Kölsch Breeze', status:'Complete', brewDate:'2025-05-10', finishDate:'2025-05-30', style:'Kölsch', batchSize:18 },
-      { lotId:'2025-PLS-004', beerName:'Pils Nova', status:'Complete', brewDate:'2025-07-01', finishDate:'2025-07-25', style:'Pilsner', batchSize:30 },
-      { lotId:'2025-IPA-005', beerName:'Galaxy IPA', status:'Complete', brewDate:'2025-08-01', finishDate:'2025-08-25', style:'IPA', batchSize:22 }
+      { batchId:'2025-IPA-001', beerName:'Galaxy IPA', status:'In progress', brewDate:'2025-08-20', finishDate:'', style:'IPA', batchSize:20 },
+      { batchId:'2025-STO-002', beerName:'Night Stout', status:'Complete', brewDate:'2025-06-02', finishDate:'2025-06-28', style:'Stout', batchSize:25 },
+      { batchId:'2025-LGR-003', beerName:'Kölsch Breeze', status:'Complete', brewDate:'2025-05-10', finishDate:'2025-05-30', style:'Kölsch', batchSize:18 },
+      { batchId:'2025-PLS-004', beerName:'Pils Nova', status:'Complete', brewDate:'2025-07-01', finishDate:'2025-07-25', style:'Pilsner', batchSize:30 },
+      { batchId:'2025-IPA-005', beerName:'Galaxy IPA', status:'Complete', brewDate:'2025-08-01', finishDate:'2025-08-25', style:'IPA', batchSize:22 }
     ]
   },
   sales: {
@@ -190,11 +190,11 @@ const removeTodo = (id) => {
   if(i>-1) todos.splice(i,1)
 }
 
-/***** Derived: lots *****/
-const inProgressLots = computed(() => props.lots.filter(l => l.status === 'In progress'))
-const inProgressCount = computed(() => inProgressLots.value.length)
+/***** Derived: batches *****/
+const inProgressBatches = computed(() => props.batches.filter(l => l.status === 'In progress'))
+const inProgressCount = computed(() => inProgressBatches.value.length)
 
-const completedLots = computed(() => props.lots.filter(l => l.status === 'Complete'))
+const completedBatches = computed(() => props.batches.filter(l => l.status === 'Complete'))
 
 function monthKey(d){ const dt = new Date(d+'T00:00:00'); return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}` }
 function lastNMonthKeys(n){
@@ -203,11 +203,11 @@ function lastNMonthKeys(n){
   return arr
 }
 
-// Volume per month from completed lots (by finishDate)
+// Volume per month from completed batches (by finishDate)
 const volumeMonthly = computed(()=>{
   const labels = lastNMonthKeys(12)
   const map = Object.fromEntries(labels.map(k=>[k,0]))
-  for(const l of completedLots.value){ if(l.finishDate){ const k = monthKey(l.finishDate); if(k in map) map[k]+= Number(l.batchSize||0) }}
+  for(const l of completedBatches.value){ if(l.finishDate){ const k = monthKey(l.finishDate); if(k in map) map[k]+= Number(l.batchSize||0) }}
   return { labels, data: labels.map(k=>map[k]) }
 })
 
@@ -220,13 +220,13 @@ const revenueMonthly = computed(()=>{
 })
 
 // 30-day KPIs
-const volume30d = computed(()=> completedLots.value
+const volume30d = computed(()=> completedBatches.value
   .filter(l => l.finishDate && (Date.now() - new Date(l.finishDate+'T00:00:00')) <= 30*24*3600*1000)
   .reduce((a,b)=> a + Number(b.batchSize||0), 0))
 const revenue30d = computed(()=> props.sales
   .filter(s => (Date.now() - new Date(s.date+'T00:00:00')) <= 30*24*3600*1000)
   .reduce((a,b)=> a + Number(b.revenue||0), 0))
-const completed30d = computed(()=> completedLots.value
+const completed30d = computed(()=> completedBatches.value
   .filter(l => l.finishDate && (Date.now() - new Date(l.finishDate+'T00:00:00')) <= 30*24*3600*1000).length)
 
 const kpiCards = computed(() => [

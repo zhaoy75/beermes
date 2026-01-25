@@ -4,8 +4,8 @@
     <div class="min-h-screen bg-white text-gray-900 p-4 max-w-6xl mx-auto">
       <header class="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 class="text-xl font-semibold">{{ t('siteType.title') }}</h1>
-          <p class="text-sm text-gray-500">{{ t('siteType.subtitle') }}</p>
+          <h1 class="text-xl font-semibold">{{ t('alcoholTax.title') }}</h1>
+          <p class="text-sm text-gray-500">{{ t('alcoholTax.subtitle') }}</p>
         </div>
         <div class="flex flex-wrap items-center gap-2">
           <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" @click="openCreate">
@@ -23,21 +23,22 @@
 
       <section class="mb-4 grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
-          <label class="block text-sm text-gray-600 mb-1">{{ t('siteType.filters.name') }}</label>
+          <label class="block text-sm text-gray-600 mb-1">{{ t('alcoholTax.filters.name') }}</label>
           <input
             v-model.trim="filters.name"
             type="search"
-            :placeholder="t('siteType.filters.namePlaceholder')"
+            :placeholder="t('alcoholTax.filters.namePlaceholder')"
             class="w-full h-[40px] border rounded px-3 text-sm"
           />
         </div>
         <div>
-          <label class="block text-sm text-gray-600 mb-1">{{ t('siteType.filters.inventoryCount') }}</label>
-          <select v-model="filters.inventoryCount" class="w-full h-[40px] border rounded px-3 text-sm bg-white">
-            <option value="">{{ t('common.all') }}</option>
-            <option value="true">{{ t('common.yes') }}</option>
-            <option value="false">{{ t('common.no') }}</option>
-          </select>
+          <label class="block text-sm text-gray-600 mb-1">{{ t('alcoholTax.filters.taxCategoryCode') }}</label>
+          <input
+            v-model.trim="filters.taxCategoryCode"
+            type="search"
+            :placeholder="t('alcoholTax.filters.taxCategoryPlaceholder')"
+            class="w-full h-[40px] border rounded px-3 text-sm"
+          />
         </div>
       </section>
 
@@ -46,16 +47,19 @@
           <thead class="bg-gray-50">
             <tr>
               <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
-                {{ t('siteType.table.name') }}
+                {{ t('alcoholTax.table.name') }}
               </th>
               <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
-                {{ t('siteType.table.inventoryCount') }}
+                {{ t('alcoholTax.table.taxCategoryCode') }}
+              </th>
+              <th class="px-3 py-2 text-right text-xs font-medium text-gray-600">
+                {{ t('alcoholTax.table.taxRate') }}
               </th>
               <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
-                {{ t('siteType.table.description') }}
+                {{ t('alcoholTax.table.startDate') }}
               </th>
               <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
-                {{ t('siteType.table.createdAt') }}
+                {{ t('alcoholTax.table.expirationDate') }}
               </th>
               <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('common.actions') }}</th>
             </tr>
@@ -63,11 +67,10 @@
           <tbody class="divide-y divide-gray-100">
             <tr v-for="row in filteredRows" :key="row.def_id" class="hover:bg-gray-50">
               <td class="px-3 py-2">{{ row.spec?.name || row.def_key }}</td>
-              <td class="px-3 py-2 text-sm text-gray-700">
-                {{ row.spec?.inventory_count_flg === true ? t('common.yes') : row.spec?.inventory_count_flg === false ? t('common.no') : '—' }}
-              </td>
-              <td class="px-3 py-2 text-sm text-gray-600 whitespace-pre-wrap">{{ row.spec?.description || '—' }}</td>
-              <td class="px-3 py-2 text-xs text-gray-500">{{ formatTimestamp(row.created_at) }}</td>
+              <td class="px-3 py-2 font-mono text-xs text-gray-700">{{ row.spec?.tax_category_code ?? '—' }}</td>
+              <td class="px-3 py-2 text-right font-mono text-xs text-gray-700">{{ formatRate(row.spec?.tax_rate) }}</td>
+              <td class="px-3 py-2 text-xs text-gray-600">{{ formatDate(row.spec?.start_date) }}</td>
+              <td class="px-3 py-2 text-xs text-gray-600">{{ formatDate(row.spec?.expiration_date) }}</td>
               <td class="px-3 py-2 space-x-2">
                 <button
                   class="px-2 py-1 text-sm rounded border hover:bg-gray-100 disabled:opacity-50"
@@ -86,7 +89,7 @@
               </td>
             </tr>
             <tr v-if="!loading && filteredRows.length === 0">
-              <td colspan="5" class="px-3 py-8 text-center text-gray-500">{{ t('common.noData') }}</td>
+              <td colspan="6" class="px-3 py-8 text-center text-gray-500">{{ t('common.noData') }}</td>
             </tr>
           </tbody>
         </table>
@@ -96,9 +99,7 @@
         <div v-for="row in filteredRows" :key="row.def_id" class="border border-gray-200 rounded-xl shadow-sm p-4">
           <div class="flex items-start justify-between gap-3">
             <div>
-              <p class="text-xs uppercase tracking-wide text-gray-400">
-                {{ row.spec?.inventory_count_flg === true ? t('common.yes') : row.spec?.inventory_count_flg === false ? t('common.no') : '—' }}
-              </p>
+              <p class="text-xs uppercase tracking-wide text-gray-400">{{ row.spec?.tax_category_code ?? '—' }}</p>
               <h2 class="text-lg font-semibold text-gray-900">{{ row.spec?.name || row.def_key }}</h2>
             </div>
             <button
@@ -110,13 +111,17 @@
             </button>
           </div>
           <dl class="text-sm text-gray-600 space-y-1 mt-2">
-            <div>
-              <dt class="font-medium">{{ t('siteType.table.description') }}</dt>
-              <dd class="text-sm text-gray-600">{{ row.spec?.description || '—' }}</dd>
+            <div class="flex justify-between">
+              <dt class="font-medium">{{ t('alcoholTax.table.taxRate') }}</dt>
+              <dd class="font-mono">{{ formatRate(row.spec?.tax_rate) }}</dd>
             </div>
             <div class="flex justify-between">
-              <dt class="font-medium">{{ t('siteType.table.createdAt') }}</dt>
-              <dd class="text-xs text-gray-500">{{ formatTimestamp(row.created_at) }}</dd>
+              <dt class="font-medium">{{ t('alcoholTax.table.startDate') }}</dt>
+              <dd>{{ formatDate(row.spec?.start_date) }}</dd>
+            </div>
+            <div class="flex justify-between">
+              <dt class="font-medium">{{ t('alcoholTax.table.expirationDate') }}</dt>
+              <dd>{{ formatDate(row.spec?.expiration_date) }}</dd>
             </div>
           </dl>
           <div class="mt-3 flex gap-2">
@@ -144,26 +149,46 @@
       <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
         <div class="w-full max-w-xl bg-white rounded-xl shadow-lg border">
           <div class="px-4 py-3 border-b">
-            <h3 class="font-semibold">{{ editing ? t('siteType.editTitle') : t('siteType.newTitle') }}</h3>
+            <h3 class="font-semibold">{{ editing ? t('alcoholTax.editTitle') : t('alcoholTax.newTitle') }}</h3>
           </div>
           <div class="p-4 space-y-4">
-            <div class="grid grid-cols-1 gap-4">
-              <div>
-                <label class="block text-sm text-gray-600 mb-1">{{ t('siteType.form.name') }}<span class="text-red-600">*</span></label>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="md:col-span-2">
+                <label class="block text-sm text-gray-600 mb-1">{{ t('alcoholTax.form.name') }}<span class="text-red-600">*</span></label>
                 <input v-model.trim="form.name" class="w-full h-[40px] border rounded px-3" />
                 <p v-if="errors.name" class="mt-1 text-xs text-red-600">{{ errors.name }}</p>
               </div>
               <div>
-                <label class="block text-sm text-gray-600 mb-1">{{ t('siteType.form.inventoryCount') }}<span class="text-red-600">*</span></label>
-                <select v-model="form.inventory_count_flg" class="w-full h-[40px] border rounded px-3 bg-white">
-                  <option value="true">{{ t('common.yes') }}</option>
-                  <option value="false">{{ t('common.no') }}</option>
-                </select>
-                <p v-if="errors.inventory_count_flg" class="mt-1 text-xs text-red-600">{{ errors.inventory_count_flg }}</p>
+                <label class="block text-sm text-gray-600 mb-1">{{ t('alcoholTax.form.taxCategoryCode') }}<span class="text-red-600">*</span></label>
+                <input
+                  v-model.trim="form.tax_category_code"
+                  type="number"
+                  step="1"
+                  inputmode="numeric"
+                  class="w-full h-[40px] border rounded px-3 font-mono text-sm"
+                />
+                <p v-if="errors.tax_category_code" class="mt-1 text-xs text-red-600">{{ errors.tax_category_code }}</p>
               </div>
               <div>
-                <label class="block text-sm text-gray-600 mb-1">{{ t('siteType.form.description') }}</label>
-                <textarea v-model.trim="form.description" class="w-full min-h-[100px] border rounded px-3 py-2 text-sm" />
+                <label class="block text-sm text-gray-600 mb-1">{{ t('alcoholTax.form.taxRate') }}<span class="text-red-600">*</span></label>
+                <input
+                  v-model.trim="form.tax_rate"
+                  type="number"
+                  step="0.01"
+                  inputmode="decimal"
+                  class="w-full h-[40px] border rounded px-3 font-mono text-sm"
+                />
+                <p v-if="errors.tax_rate" class="mt-1 text-xs text-red-600">{{ errors.tax_rate }}</p>
+              </div>
+              <div>
+                <label class="block text-sm text-gray-600 mb-1">{{ t('alcoholTax.form.startDate') }}<span class="text-red-600">*</span></label>
+                <input v-model.trim="form.start_date" type="date" class="w-full h-[40px] border rounded px-3" />
+                <p v-if="errors.start_date" class="mt-1 text-xs text-red-600">{{ errors.start_date }}</p>
+              </div>
+              <div>
+                <label class="block text-sm text-gray-600 mb-1">{{ t('alcoholTax.form.expirationDate') }}</label>
+                <input v-model.trim="form.expiration_date" type="date" class="w-full h-[40px] border rounded px-3" />
+                <p v-if="errors.expiration_date" class="mt-1 text-xs text-red-600">{{ errors.expiration_date }}</p>
               </div>
             </div>
           </div>
@@ -183,10 +208,10 @@
       <div v-if="showDelete" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
         <div class="w-full max-w-md bg-white rounded-xl shadow-lg border">
           <div class="px-4 py-3 border-b">
-            <h3 class="font-semibold">{{ t('siteType.deleteTitle') }}</h3>
+            <h3 class="font-semibold">{{ t('alcoholTax.deleteTitle') }}</h3>
           </div>
           <div class="p-4 text-sm">
-            {{ t('siteType.deleteConfirm', { name: toDelete?.spec?.name ?? toDelete?.def_key ?? '' }) }}
+            {{ t('alcoholTax.deleteConfirm', { name: toDelete?.spec?.name ?? toDelete?.def_key ?? '' }) }}
           </div>
           <div class="px-4 py-3 border-t flex items-center justify-end gap-2">
             <button class="px-3 py-2 rounded border hover:bg-gray-50" @click="showDelete = false">{{ t('common.cancel') }}</button>
@@ -215,11 +240,13 @@ import 'vue3-toastify/dist/index.css'
 
 type RegistrySpec = {
   name?: string | null
-  inventory_count_flg?: boolean | null
-  description?: string | null
+  tax_category_code?: number | string | null
+  tax_rate?: number | string | null
+  start_date?: string | null
+  expiration_date?: string | null
 }
 
-type SiteTypeRow = {
+type AlcoholTaxRow = {
   def_id: string
   def_key: string
   scope: string
@@ -229,57 +256,66 @@ type SiteTypeRow = {
 }
 
 const TABLE = 'registry_def'
-const KIND = 'site_type'
+const KIND = 'alcohol_tax'
 
 const { t } = useI18n()
-const pageTitle = computed(() => t('siteType.title'))
+const pageTitle = computed(() => t('alcoholTax.title'))
 
-const rows = ref<SiteTypeRow[]>([])
+const rows = ref<AlcoholTaxRow[]>([])
 const loading = ref(false)
 const saving = ref(false)
 const showModal = ref(false)
 const showDelete = ref(false)
 const editing = ref(false)
-const selected = ref<SiteTypeRow | null>(null)
-const toDelete = ref<SiteTypeRow | null>(null)
+const selected = ref<AlcoholTaxRow | null>(null)
+const toDelete = ref<AlcoholTaxRow | null>(null)
 const tenantId = ref<string | null>(null)
 const isAdmin = ref(false)
 
 const filters = reactive({
   name: '',
-  inventoryCount: '',
+  taxCategoryCode: '',
 })
 
 const form = reactive({
   name: '',
-  inventory_count_flg: 'false',
-  description: '',
+  tax_category_code: '',
+  tax_rate: '',
+  start_date: '',
+  expiration_date: '',
 })
 
 const errors = reactive({
   name: '',
-  inventory_count_flg: '',
+  tax_category_code: '',
+  tax_rate: '',
+  start_date: '',
+  expiration_date: '',
 })
 
 const filteredRows = computed(() => {
   const nameFilter = filters.name.trim().toLowerCase()
-  const countFilter = filters.inventoryCount.trim().toLowerCase()
+  const taxFilter = filters.taxCategoryCode.trim().toLowerCase()
 
   return rows.value.filter((row) => {
     const name = String(row.spec?.name ?? row.def_key ?? '').toLowerCase()
-    const inventoryValue = row.spec?.inventory_count_flg
-    const inventoryText = inventoryValue === true ? 'true' : inventoryValue === false ? 'false' : ''
+    const taxCode = String(row.spec?.tax_category_code ?? '').toLowerCase()
     const matchName = !nameFilter || name.includes(nameFilter)
-    const matchInventory = !countFilter || inventoryText === countFilter
-    return matchName && matchInventory
+    const matchTax = !taxFilter || taxCode.includes(taxFilter)
+    return matchName && matchTax
   })
 })
 
-function formatTimestamp(value: string | null | undefined) {
+function formatDate(value: string | null | undefined) {
   if (!value) return '—'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-  return date.toLocaleString()
+  return value
+}
+
+function formatRate(value: number | string | null | undefined) {
+  if (value === null || value === undefined || value === '') return '—'
+  const num = Number(value)
+  if (Number.isNaN(num)) return String(value)
+  return num.toFixed(2)
 }
 
 function normalizeKey(value: string) {
@@ -290,10 +326,10 @@ function normalizeKey(value: string) {
     .replace(/_+/g, '_')
     .replace(/^_+|_+$/g, '')
   if (!cleaned) {
-    return `site_type_${Date.now()}`
+    return `alcohol_tax_${Date.now()}`
   }
   const trimmed = cleaned.slice(0, 64)
-  return /^[a-z0-9]/.test(trimmed) ? trimmed : `s_${trimmed}`.slice(0, 64)
+  return /^[a-z0-9]/.test(trimmed) ? trimmed : `a_${trimmed}`.slice(0, 64)
 }
 
 async function ensureTenant() {
@@ -309,7 +345,7 @@ async function ensureTenant() {
   return id
 }
 
-function canEdit(row: SiteTypeRow) {
+function canEdit(row: AlcoholTaxRow) {
   if (row.scope === 'system') return isAdmin.value
   return true
 }
@@ -323,7 +359,7 @@ async function fetchRows() {
       .eq('kind', KIND)
       .order('created_at', { ascending: false })
     if (error) throw error
-    rows.value = (data ?? []) as SiteTypeRow[]
+    rows.value = (data ?? []) as AlcoholTaxRow[]
   } catch (err) {
     console.error(err)
     toast.error(err instanceof Error ? err.message : String(err))
@@ -335,29 +371,36 @@ async function fetchRows() {
 
 function resetErrors() {
   errors.name = ''
-  errors.inventory_count_flg = ''
+  errors.tax_category_code = ''
+  errors.tax_rate = ''
+  errors.start_date = ''
+  errors.expiration_date = ''
 }
 
 function openCreate() {
   editing.value = false
   selected.value = null
   form.name = ''
-  form.inventory_count_flg = 'false'
-  form.description = ''
+  form.tax_category_code = ''
+  form.tax_rate = ''
+  form.start_date = ''
+  form.expiration_date = ''
   resetErrors()
   showModal.value = true
 }
 
-function openEdit(row: SiteTypeRow) {
+function openEdit(row: AlcoholTaxRow) {
   if (!canEdit(row)) {
-    toast.error(t('siteType.errors.adminOnlySystem'))
+    toast.error(t('alcoholTax.errors.adminOnlySystem'))
     return
   }
   editing.value = true
   selected.value = row
   form.name = String(row.spec?.name ?? '')
-  form.inventory_count_flg = row.spec?.inventory_count_flg === true ? 'true' : 'false'
-  form.description = String(row.spec?.description ?? '')
+  form.tax_category_code = row.spec?.tax_category_code != null ? String(row.spec?.tax_category_code) : ''
+  form.tax_rate = row.spec?.tax_rate != null ? String(row.spec?.tax_rate) : ''
+  form.start_date = row.spec?.start_date ?? ''
+  form.expiration_date = row.spec?.expiration_date ?? ''
   resetErrors()
   showModal.value = true
 }
@@ -366,39 +409,63 @@ function closeModal() {
   showModal.value = false
 }
 
-function confirmDelete(row: SiteTypeRow) {
+function confirmDelete(row: AlcoholTaxRow) {
   if (!canEdit(row)) {
-    toast.error(t('siteType.errors.adminOnlySystem'))
+    toast.error(t('alcoholTax.errors.adminOnlySystem'))
     return
   }
   toDelete.value = row
   showDelete.value = true
 }
 
-function parseBoolean(value: string) {
-  if (value === 'true') return true
-  if (value === 'false') return false
-  return null
+function parseNumber(value: unknown) {
+  const num = Number(String(value ?? '').trim())
+  return Number.isFinite(num) ? num : null
+}
+
+function isValidDate(value: string) {
+  if (!value) return false
+  const parsed = Date.parse(value)
+  return !Number.isNaN(parsed)
 }
 
 function buildSpec(): RegistrySpec {
   return {
     name: form.name.trim() || null,
-    inventory_count_flg: parseBoolean(form.inventory_count_flg),
-    description: form.description.trim() || null,
+    tax_category_code: parseNumber(form.tax_category_code),
+    tax_rate: parseNumber(form.tax_rate),
+    start_date: form.start_date || null,
+    expiration_date: form.expiration_date || null,
   }
 }
 
 async function saveRecord() {
   resetErrors()
-  if (!form.name.trim()) {
-    errors.name = t('siteType.errors.nameRequired')
+  const nameValue = String(form.name ?? '').trim()
+  const taxCodeValue = String(form.tax_category_code ?? '').trim()
+  const taxRateValue = String(form.tax_rate ?? '').trim()
+  const startDateValue = String(form.start_date ?? '').trim()
+  const expirationDateValue = String(form.expiration_date ?? '').trim()
+
+  if (!nameValue) {
+    errors.name = t('alcoholTax.errors.nameRequired')
   }
-  if (parseBoolean(form.inventory_count_flg) === null) {
-    errors.inventory_count_flg = t('siteType.errors.inventoryCountInvalid')
+  if (!taxCodeValue || parseNumber(taxCodeValue) === null) {
+    errors.tax_category_code = t('alcoholTax.errors.taxCategoryCodeInvalid')
+  }
+  if (!taxRateValue || parseNumber(taxRateValue) === null) {
+    errors.tax_rate = t('alcoholTax.errors.taxRateInvalid')
+  }
+  if (!startDateValue || !isValidDate(startDateValue)) {
+    errors.start_date = t('alcoholTax.errors.startDateInvalid')
+  }
+  if (expirationDateValue && !isValidDate(expirationDateValue)) {
+    errors.expiration_date = t('alcoholTax.errors.expirationDateInvalid')
   }
 
-  if (errors.name || errors.inventory_count_flg) return
+  if (errors.name || errors.tax_category_code || errors.tax_rate || errors.start_date || errors.expiration_date) {
+    return
+  }
 
   try {
     saving.value = true
@@ -406,7 +473,7 @@ async function saveRecord() {
 
     if (editing.value && selected.value) {
       if (selected.value.scope === 'system' && !isAdmin.value) {
-        toast.error(t('siteType.errors.adminOnlySystem'))
+        toast.error(t('alcoholTax.errors.adminOnlySystem'))
         return
       }
       const { error } = await supabase
@@ -416,7 +483,7 @@ async function saveRecord() {
       if (error) throw error
     } else {
       const tenant = await ensureTenant()
-      const defKey = normalizeKey(form.name)
+      const defKey = normalizeKey(`${form.name}-${form.start_date}`)
       const payload = {
         kind: KIND,
         def_key: defKey,

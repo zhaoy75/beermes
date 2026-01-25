@@ -19,8 +19,8 @@
           <input id="toDate" v-model="search.end" type="date" class="w-full h-[36px] border rounded px-3" />
         </div>
         <div>
-          <label class="block text-sm text-gray-600 mb-1" for="lotFilter">{{ t('waste.list.lotCode') }}</label>
-          <input id="lotFilter" v-model.trim="search.lot" type="search" class="w-full h-[36px] border rounded px-3" :placeholder="t('waste.list.lotPlaceholder')" />
+          <label class="block text-sm text-gray-600 mb-1" for="batchFilter">{{ t('waste.list.batchCode') }}</label>
+          <input id="batchFilter" v-model.trim="search.batch" type="search" class="w-full h-[36px] border rounded px-3" :placeholder="t('waste.list.batchPlaceholder')" />
         </div>
         <div class="flex items-end">
           <button class="text-sm px-3 py-2 rounded border border-gray-300 hover:bg-gray-100" type="button" @click="resetFilters">{{ t('common.reset') }}</button>
@@ -42,9 +42,9 @@
                 </button>
               </th>
               <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                <button class="inline-flex items-center gap-1" type="button" @click="setSort('lot_code')">
-                  <span>{{ t('waste.list.colLot') }}</span>
-                  <span class="text-[10px] text-gray-400">{{ sortGlyph('lot_code') }}</span>
+                <button class="inline-flex items-center gap-1" type="button" @click="setSort('batch_code')">
+                  <span>{{ t('waste.list.colBatch') }}</span>
+                  <span class="text-[10px] text-gray-400">{{ sortGlyph('batch_code') }}</span>
                 </button>
               </th>
               <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">
@@ -64,7 +64,7 @@
           <tbody class="divide-y divide-gray-100">
             <tr v-for="row in sortedWaste" :key="row.id" class="hover:bg-gray-50">
               <td class="px-3 py-2 text-sm text-gray-600">{{ fmtDateTime(row.created_at) }}</td>
-              <td class="px-3 py-2 text-sm">{{ row.lot_code || '—' }}</td>
+              <td class="px-3 py-2 text-sm">{{ row.batch_code || '—' }}</td>
               <td class="px-3 py-2 text-sm">
                 <div>{{ row.material_name || '—' }}</div>
                 <div v-if="row.material_code" class="text-xs text-gray-500">{{ row.material_code }}</div>
@@ -100,24 +100,24 @@ interface WasteRow {
   created_at: string | null
   qty: number | null
   reason: string | null
-  lot_code: string | null
+  batch_code: string | null
   material_name: string | null
   material_code: string | null
   uom_code: string | null
 }
 
-type SortKey = 'created_at' | 'lot_code' | 'qty'
+type SortKey = 'created_at' | 'batch_code' | 'qty'
 
 type SearchState = {
   start: string
   end: string
-  lot: string
+  batch: string
 }
 
 const waste = ref<WasteRow[]>([])
 const loading = ref(false)
 const tenantId = ref<string | null>(null)
-const search = reactive<SearchState>({ start: '', end: '', lot: '' })
+const search = reactive<SearchState>({ start: '', end: '', batch: '' })
 const sortKey = ref<SortKey>('created_at')
 const sortDirection = ref<'asc' | 'desc'>('desc')
 
@@ -137,7 +137,7 @@ async function fetchWaste() {
     const tenant = await ensureTenant()
     const query = supabase
       .from('wst_waste')
-      .select('id, qty, reason, created_at, lot:prd_lots(lot_code), material:mst_materials(name, code), uom:mst_uom(code)')
+      .select('id, qty, reason, created_at, batch:mes_batches(batch_code), material:mst_materials(name, code), uom:mst_uom(code)')
       .eq('tenant_id', tenant)
       .order('created_at', { ascending: false })
 
@@ -156,7 +156,7 @@ async function fetchWaste() {
       created_at: row.created_at,
       qty: row.qty ?? null,
       reason: row.reason ?? null,
-      lot_code: (row as any)?.lot?.lot_code ?? null,
+      batch_code: (row as any)?.batch?.batch_code ?? null,
       material_name: (row as any)?.material?.name ?? null,
       material_code: (row as any)?.material?.code ?? null,
       uom_code: (row as any)?.uom?.code ?? null,
@@ -171,15 +171,15 @@ async function fetchWaste() {
 function resetFilters() {
   search.start = ''
   search.end = ''
-  search.lot = ''
+  search.batch = ''
   fetchWaste()
 }
 
 const filteredWaste = computed(() => {
   return waste.value.filter((row) => {
-    if (search.lot) {
-      const lc = row.lot_code?.toLowerCase() ?? ''
-      if (!lc.includes(search.lot.toLowerCase())) return false
+    if (search.batch) {
+      const lc = row.batch_code?.toLowerCase() ?? ''
+      if (!lc.includes(search.batch.toLowerCase())) return false
     }
     return true
   })

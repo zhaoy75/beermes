@@ -7,8 +7,6 @@ create or replace function create_batch_from_recipe(
   _recipe_id text,
   _batch_code text,
   _planned_start timestamptz default null,
-  _vessel_id uuid default null,
-  _target_volume_l numeric default null,
   _process_version int default null,
   _notes text default null
 ) returns uuid
@@ -18,20 +16,25 @@ declare
   v_recipe mes_recipes%rowtype;
   v_process mes_recipe_processes%rowtype;
   v_batch_id uuid;
+  v_recipe_id uuid;
 begin
   if _batch_code is null or length(trim(_batch_code)) = 0 then
     raise exception 'Batch code must be provided';
   end if;
 
-  if _recipe_id is null or length(trim(_recipe_id)) = 0 then
+  begin
+    v_recipe_id := nullif(trim(_recipe_id), '')::uuid;
+  exception when invalid_text_representation then
+    raise exception 'Recipe id % is not a valid uuid', _recipe_id;
+  end;
+
+  if v_recipe_id is null then
     begin
       insert into mes_batches (
         tenant_id,
         batch_code,
         recipe_id,
         process_version,
-        vessel_id,
-        target_volume_l,
         planned_start,
         status,
         notes
@@ -39,13 +42,11 @@ begin
       values (
         _tenant_id,
         _batch_code,
-        _recipe_id,
-        v_process.version,
-        _vessel_id,
-        coalesce(_target_volume_l, v_recipe.batch_size_l),
+        v_recipe_id,
+        _process_version,
         coalesce(_planned_start, now()),
         'planned',
-        coalesce(_notes, v_recipe.notes)
+        _notes
       )
       returning id into v_batch_id;
     exception when unique_violation then
@@ -58,11 +59,11 @@ begin
   select *
     into v_recipe
   from mes_recipes
-  where id = _recipe_id
+  where id = v_recipe_id
     and tenant_id = _tenant_id;
 
   if not found then
-    raise exception 'Recipe % not found for tenant %', _recipe_id, _tenant_id;
+    raise exception 'Recipe % not found for tenant %', v_recipe_id, _tenant_id;
   end if;
 
   if _process_version is not null then
@@ -70,7 +71,7 @@ begin
       into v_process
     from mes_recipe_processes
     where tenant_id = _tenant_id
-      and recipe_id = _recipe_id
+      and recipe_id = v_recipe_id
       and version = _process_version
     order by is_active desc
     limit 1;
@@ -79,7 +80,7 @@ begin
       into v_process
     from mes_recipe_processes
     where tenant_id = _tenant_id
-      and recipe_id = _recipe_id
+      and recipe_id = v_recipe_id
     order by is_active desc, version desc
     limit 1;
   end if;
@@ -94,8 +95,6 @@ begin
       batch_code,
       recipe_id,
       process_version,
-      vessel_id,
-      target_volume_l,
       planned_start,
       status,
       notes
@@ -103,10 +102,8 @@ begin
     values (
       _tenant_id,
       _batch_code,
-      _recipe_id,
+      v_recipe_id,
       v_process.version,
-      _vessel_id,
-      coalesce(_target_volume_l, v_recipe.batch_size_l),
       coalesce(_planned_start, now()),
       'planned',
       coalesce(_notes, v_recipe.notes)

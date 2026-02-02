@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<DATA id="DATA" xmlns="http://xml.e-tax.nta.go.jp/XSD/shuzei" xmlns:gen="http://xml.e-tax.nta.go.jp/XSD/general" xmlns:kyo="http://xml.e-tax.nta.go.jp/XSD/kyotsu" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><PLI0420 VR="19.0.0" id="PLI0420"><CATALOG id="CATALOG"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:description id="REPORT"><SEND_DATA/><IT_SEC><rdf:description about="#IT"/></IT_SEC><FORM_SEC><rdf:Seq><rdf:li><rdf:description about="#LIY300-1"/></rdf:li><rdf:li><rdf:description about="#LIY350-1"/></rdf:li></rdf:Seq></FORM_SEC><TENPU_SEC/><XBRL_SEC/><XBRL2_1_SEC/><SOFUSHO_SEC/><ATTACH_SEC/><CSV_SEC/></rdf:description></rdf:RDF></CATALOG><CONTENTS id="CONTENTS"><IT VR="1.5" id="IT"><ZEIMUSHO ID="ZEIMUSHO"><gen:zeimusho_CD>09101</gen:zeimusho_CD><gen:zeimusho_NM>高松</gen:zeimusho_NM></ZEIMUSHO><NOZEISHA_ID ID="NOZEISHA_ID">2205022930310033</NOZEISHA_ID><NOZEISHA_BANGO ID="NOZEISHA_BANGO"><gen:hojinbango>1470001018266</gen:hojinbango></NOZEISHA_BANGO><NOZEISHA_NM_KN ID="NOZEISHA_NM_KN">カ）セトウチ</NOZEISHA_NM_KN><NOZEISHA_NM ID="NOZEISHA_NM">株式会社瀬戸内</NOZEISHA_NM><NOZEISHA_ZIP ID="NOZEISHA_ZIP"><gen:zip1>760</gen:zip1><gen:zip2>0068</gen:zip2></NOZEISHA_ZIP><NOZEISHA_ADR_KN ID="NOZEISHA_ADR_KN">カガワケンタカマツシマツシマチョウ</NOZEISHA_ADR_KN><NOZEISHA_ADR ID="NOZEISHA_ADR">香川県高松市松島町3丁目5番1号</NOZEISHA_ADR><NOZEISHA_TEL ID="NOZEISHA_TEL"><gen:tel1>087</gen:tel1><gen:tel2>805</gen:tel2><gen:tel3>3875</gen:tel3></NOZEISHA_TEL><KANPU_KINYUKIKAN ID="KANPU_KINYUKIKAN"><gen:kinyukikan_NM kinyukikan_KB="1">百十四</gen:kinyukikan_NM><gen:shiten_NM shiten_KB="2">東</gen:shiten_NM><gen:yokin>1</gen:yokin><gen:koza>1247892</gen:koza></KANPU_KINYUKIKAN><DAIHYO_NM_KN ID="DAIHYO_NM_KN">ミヤマエ　ヒロユキ</DAIHYO_NM_KN><DAIHYO_NM ID="DAIHYO_NM">宮前　博行</DAIHYO_NM><DAIHYO_ZIP ID="DAIHYO_ZIP"><gen:zip1>761</gen:zip1><gen:zip2>8075</gen:zip2></DAIHYO_ZIP><DAIHYO_ADR ID="DAIHYO_ADR">香川県高松市多肥下町５９５番地１</DAIHYO_ADR><DAIHYO_TEL ID="DAIHYO_TEL"><gen:tel1>080</gen:tel1><gen:tel2>4440</gen:tel2><gen:tel3>6810</gen:tel3></DAIHYO_TEL><TETSUZUKI ID="TETSUZUKI"><procedure_CD>PLI0420</procedure_CD><procedure_NM>酒類等の製造方法の申告</procedure_NM></TETSUZUKI></IT><LIY300 VR="4.0" id="LIY300-1" page="1" sakuseiDay="2026-01-16" sakuseiNM="株式会社瀬戸内" softNM="ntaclient"><CDA00000><CDA00020 IDREF="ZEIMUSHO"/><CDA00030><CDA00040 IDREF="NOZEISHA_ZIP"/><CDA00050 IDREF="NOZEISHA_ADR"/><CDA00060 IDREF="NOZEISHA_TEL"/><CDA00070><CDA00075 IDREF="NOZEISHA_NM_KN"/><CDA00080 IDREF="NOZEISHA_NM"/><CDA00085 IDREF="DAIHYO_NM_KN"/><CDA00090 IDREF="DAIHYO_NM"/></CDA00070></CDA00030></CDA00000><CDB00000><CDB00010><kubun_CD>1</kubun_CD></CDB00010><CDB00020>ビール</CDB00020><CDB00025>ビール</CDB00025><CDB00030><CDB00040>香川県高松市松島町3丁目5-1</CDB00040></CDB00030><CDB00060><gen:era>5</gen:era><gen:yy>8</gen:yy><gen:mm>1</gen:mm><gen:dd>16</gen:dd></CDB00060><CDB00065><gen:era>5</gen:era><gen:yy>8</gen:yy><gen:mm>2</gen:mm><gen:dd>16</gen:dd></CDB00065><CDB00080>名称未設定</CDB00080><CDB00090>１：麦芽粉砕←大麦麦芽、オーツ麦
+
+２：糖化←水
+
+３：ろ過
+
+４：煮沸←ホップ、ぶどう糖
+
+５：冷却・移送
+
+６：主発酵←酵母
+　　　　　→残しビールの回収または廃棄
+　　7～10日間
+
+７：後発酵←ホップ
+　　2～3週間
+　　　　
+
+８：熟成・調整←CO2(カーボネーション)
+　　3日間
+
+９：充填（充填資材(缶・樽)）
+
+１０：保管
+
+１１：出荷
+</CDB00090></CDB00000></LIY300><LIY350 VR="2.0" id="LIY350-1" page="1" sakuseiDay="2026-01-16" sakuseiNM="株式会社瀬戸内" softNM="ntaclient"><FHA00000><FHA00005>オーツ麦
+</FHA00005><FHA00010>ぶどう糖</FHA00010></FHA00000><FHB00000><FHB00010>B0322</FHB00010><FHB00020>1</FHB00020><FHB00030><FHB00040>443</FHB00040><FHB00065>22.5kg
+</FHB00065><FHB00070>60kg
+</FHB00070><FHB00080>15</FHB00080><FHB00090>2000</FHB00090><FHB00100>1000</FHB00100></FHB00030><FHB00110>1300</FHB00110><FHB00120>22.5</FHB00120><FHB00130>1000</FHB00130><FHB00140>1000</FHB00140><FHB00150>見込み
+アルコール度数
+10.0％
+見込ガス圧
+210kPa
+</FHB00150></FHB00000></LIY350></CONTENTS></PLI0420><dsig:Signature Id="_220502293031003320260116173232203" xmlns:dsig="http://www.w3.org/2000/09/xmldsig#">
+<dsig:SignedInfo>
+<dsig:CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+<dsig:SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"/>
+<dsig:Reference URI="#PLI0420">
+<dsig:Transforms>
+<dsig:Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+</dsig:Transforms>
+<dsig:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>
+<dsig:DigestValue>L3G8fzGr0mbm3VoG59mwsFL2K8vJlo/89ADp66gRmDM=</dsig:DigestValue>
+</dsig:Reference>
+</dsig:SignedInfo>
+<dsig:SignatureValue>1FYjor1HnI0SlJUrLbPB9SOOqR/LLcVGHQGwHpmNLetfnjgJ78qtjBrVm2Gzr4Wl
+weVBObObE10h+SFSmS4YO+0X/33mJGq2SJB0hU9xOvkkuZwT/+0gkFACLppTvRhP
+W6BkE3zYaQABtM/cWSzg8L9TGCamNlcycwnxzCn0jNF3Qc6N0ioy7en7b1GtxbYD
+SSgNvzaZi+s1u8KXSdGlgwWNhKp+bNzvNGgeEPh18pItx94jYC+cThekxD8FlKLf
+8ex928RAioequwYpekGSXxW+6VZeHbV+kc00dwnwMVHgRrDrIfMI6bv2Ii69SIbo
+hDfh/x5jnbOF1wCUuAELBA==</dsig:SignatureValue>
+<dsig:KeyInfo>
+<dsig:X509Data>
+<dsig:X509Certificate>MIIGnjCCBYagAwIBAgIHBzHq8qWOAzANBgkqhkiG9w0BAQsFADB7MQswCQYDVQQG
+EwJKUDEcMBoGA1UECgwTSmFwYW5lc2UgR292ZXJubWVudDEcMBoGA1UECwwTTWlu
+aXN0cnkgb2YgSnVzdGljZTEwMC4GA1UEAwwnUmVnaXN0cmFyIG9mIFRva3lvIExl
+Z2FsIEFmZmFpcnMgQnVyZWF1MB4XDTI1MDQwMjAyMTk1NFoXDTI3MDcwMjE0NTk1
+OVowQzELMAkGA1UEBhMCSlAxHDAaBgNVBAoME01PSiBOby40NzAwMDEwMTgyNjYx
+FjAUBgNVBAMMDTA0MDIwMTAwMDAwMDIwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAw
+ggEKAoIBAQDbxT+C4w1gfYTKT0puJXvp+la/g5xvFf3SjCvgiI1GIK3ltSvEU9gw
+n9rBlICf3RWYoc+ZujMxVHL0dIk0BqYQufTnPJJu1zO4O7qD3+Eec5/26J6mr/yd
+itSRXjZFDJxMHRQ4G1rSvp7JjRxaSc35td2khTALkAf+t2UnFWRYzweVLVSg+cz0
+fj7qtlc4UoozoOczJG8CGgQsY6RY4pWyoiVMI8cOxPZ4MGsta8Ma8t+wHbne6Ro8
+WrP7cq39VFwoFbucYZibQL3Wss04/x5uLIvzrj+f0cjRl6V4PE1oxGsr6M4N5Rhk
+NtZZdpKes4K91dGyIa/nwHgjQSSaTx4ZAgMBAAGjggNdMIIDWTCBqwYDVR0jBIGj
+MIGggBQAnIhe9Qs6+EuHnc2uVgqkC4RhuqF/pH0wezELMAkGA1UEBhMCSlAxHDAa
+BgNVBAoME0phcGFuZXNlIEdvdmVybm1lbnQxHDAaBgNVBAsME01pbmlzdHJ5IG9m
+IEp1c3RpY2UxMDAuBgNVBAMMJ1JlZ2lzdHJhciBvZiBUb2t5byBMZWdhbCBBZmZh
+aXJzIEJ1cmVhdYIHBy8ZLD8sATAdBgNVHQ4EFgQUxTcOQR0HFp8u0PTGFVXfEbRD
+QawwgbsGA1UdIASBszCBsDCBrQYJKoMIho9MAQMDMIGfMIGcBggrBgEFBQcCAjCB
+jzAaGhNNaW5pc3RyeSBvZiBKdXN0aWNlMAMCAQEacVRoaXMgY2VydGlmaWNhdGUg
+d2FzIGlzc3VlZCBpbiBhY2NvcmRhbmNlIHdpdGggdGhlIENvbW1lcmNpYWwgUmVn
+aXN0cmF0aW9uIEFjdCBhbmQgdGhlIG90aGVyIHJlbGF0ZWQgcmVndWxhdGlvbnMu
+ME4GCCsGAQUFBwEBBEIwQDA+BggrBgEFBQcwAYYyaHR0cDovL2NyY2EubW9qLmdv
+LmpwL2Jpbi9kY3djZ2kvRENfSFVTUi9jZXJ0L2NlcnQwgasGCSqDCIaPTAEBAQSB
+nTCBmjCBlwYJKoMIho9MAQMEMIGJMIGGBggrBgEFBQcCAjB6MBAMCeazleWLmeec
+gTADAgEBDGbjgZPjga7oqLzmmI7mm7jjga/jgIHllYbmpa3nmbvoqJjms5XjgZ3j
+ga7ku5bplqLkv4Lms5Xku6TnrYnjgavln7rjgaXjgY3nmbrooYzjgZXjgozjgZ/j
+goLjga7jgafjgZnjgIIwJwYJKoMIho9MAQECBBoMGOadseS6rOazleWLmeWxgOeZ
+u+iomOWumDCBpAYJKoMIho9MAQEDBIGWMIGToBcMFeagquW8j+S8muekvueArOaI
+uOWGhaEOEww0NzAwMDEwMTgyNjaiMgww6aaZ5bed55yM6auY5p2+5biC5p2+5bO2
+55S65LiJ5LiB55uu77yV55Wq77yR5Y+3ow4MDOWuruWJjeWNmuihjKQRDA/ku6Po
+oajlj5bnt6DlvbmmEQwP6auY5p2+5rOV5YuZ5bGAMA0GCSqGSIb3DQEBCwUAA4IB
+AQCdTaly/jfr9VDyukjY4X57zqLbiu5rK9/RaW0ZbY4V0YMZaytbrjOK7SN9S8gv
+IPM7Nu2mHClgnHMPwS3oUockKiGEphBUn6yZW4pqPbczF7XCkVCsmsgXec/Oq5Nr
+YLkdvNKUhu5bPMtMk2XfwO4UPIIG3In3xbxjRC25+8+aj+NPHD6K/RuCFqomeVkP
+AX4ccILnikDrk2OBw5oMt/i1TqwCMcXTrpKFmnawOsLQ745tFNBaLVREbXf/giNq
+iyRITt4+2pq++Qn6HmTe7Slhi0uhqMtoVf4xmS+duhTrf6uU55TPAjEXA1CI1y7r
+fKlVzZ0troyddNbn2fjnYhLj</dsig:X509Certificate>
+</dsig:X509Data>
+</dsig:KeyInfo>
+</dsig:Signature></DATA>

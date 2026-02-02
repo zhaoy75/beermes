@@ -270,6 +270,34 @@ function convertToLiters(size: number | null | undefined, uomCode: string | null
   }
 }
 
+function toNumber(value: any): number | null {
+  if (value === null || value === undefined || value === '') return null
+  const num = Number(value)
+  return Number.isFinite(num) ? num : null
+}
+
+function parseKpi(value: any) {
+  if (!value) return []
+  if (Array.isArray(value)) return value
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value)
+      return Array.isArray(parsed) ? parsed : []
+    } catch {
+      return []
+    }
+  }
+  return []
+}
+
+function kpiValue(kpi: any, id: string, key: 'planed' | 'actual') {
+  const rows = parseKpi(kpi)
+  const row = rows.find((item: any) => item && item.id === id)
+  if (!row) return null
+  const raw = key === 'planed' ? (row.planed ?? row.planned) : row.actual
+  return toNumber(raw)
+}
+
 async function fetchBatches() {
   try {
     loading.value = true
@@ -279,7 +307,7 @@ async function fetchBatches() {
 
     const batchQuery = supabase
       .from('mes_batches')
-      .select('id, batch_code, status, planned_start, target_volume_l, recipe:mes_recipes(id, name, code, style)')
+      .select('id, batch_code, status, planned_start, kpi, recipe:mes_recipes(id, name, code, style)')
       .eq('tenant_id', tenant)
 
     if (filters.dateFrom) batchQuery.gte('planned_start', `${filters.dateFrom}`)
@@ -336,7 +364,9 @@ async function fetchBatches() {
           })
         }
         const actualVolume = packageVolumes.get(row.id) ?? 0
-        const targetVolume = row.target_volume_l ?? 0
+        const targetVolume = kpiValue(row.kpi, 'volume', 'planed')
+          ?? kpiValue(row.kpi, 'volume_l', 'planed')
+          ?? 0
         const yieldPercent = targetVolume > 0 && actualVolume > 0 ? (actualVolume / targetVolume) * 100 : null
         const status = row.status ?? ''
         const statusLower = status.toLowerCase()

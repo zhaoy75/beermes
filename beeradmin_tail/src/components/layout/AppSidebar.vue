@@ -145,8 +145,41 @@
                     "
                   >
                     <ul class="mt-2 space-y-1 ml-9">
-                      <li v-for="subItem in item.subItems" :key="subItem.name">
+                      <li v-for="(subItem, subIndex) in item.subItems" :key="subItem.name">
+                        <button
+                          v-if="subItem.subItems"
+                          type="button"
+                          @click="toggleSubmenuChild(groupIndex, index, subIndex)"
+                          :class="[
+                            'menu-dropdown-item w-full text-left flex items-center',
+                            {
+                              'menu-dropdown-item-active': isSubmenuChildOpen(
+                                groupIndex,
+                                index,
+                                subIndex
+                              ),
+                              'menu-dropdown-item-inactive': !isSubmenuChildOpen(
+                                groupIndex,
+                                index,
+                                subIndex
+                              ),
+                            },
+                          ]"
+                        >
+                          {{ subItem.name }}
+                          <ChevronDownIcon
+                            class="ml-auto w-4 h-4 transition-transform duration-200"
+                            :class="{
+                              'rotate-180 text-brand-500': isSubmenuChildOpen(
+                                groupIndex,
+                                index,
+                                subIndex
+                              ),
+                            }"
+                          />
+                        </button>
                         <router-link
+                          v-else-if="subItem.path"
                           :to="subItem.path"
                           :class="[
                             'menu-dropdown-item',
@@ -196,6 +229,41 @@
                             </span>
                           </span>
                         </router-link>
+                        <transition
+                          @enter="startTransition"
+                          @after-enter="endTransition"
+                          @before-leave="startTransition"
+                          @after-leave="endTransition"
+                        >
+                          <div
+                            v-if="subItem.subItems"
+                            v-show="
+                              isSubmenuChildOpen(groupIndex, index, subIndex) &&
+                              (isExpanded || isHovered || isMobileOpen)
+                            "
+                          >
+                            <ul class="mt-1 space-y-1 ml-4">
+                              <li v-for="child in subItem.subItems" :key="child.name">
+                                <router-link
+                                  :to="child.path"
+                                  :class="[
+                                    'menu-dropdown-item',
+                                    {
+                                      'menu-dropdown-item-active': isActive(
+                                        child.path
+                                      ),
+                                      'menu-dropdown-item-inactive': !isActive(
+                                        child.path
+                                      ),
+                                    },
+                                  ]"
+                                >
+                                  {{ child.name }}
+                                </router-link>
+                              </li>
+                            </ul>
+                          </div>
+                        </transition>
                       </li>
                     </ul>
                   </div>
@@ -237,6 +305,8 @@ import path from "path";
 
 const route = useRoute();
 const { t } = useI18n()
+
+const openSubmenuChild = ref(null);
 
 const { isExpanded, isMobileOpen, isHovered, openSubmenu } = useSidebar();
 
@@ -320,8 +390,16 @@ const menuGroups = computed(() => [
           { name: t('sidebar.items.alcoholTypeMaster'), path: "/alcoholTypeMaster", pro: false },
           { name: t('sidebar.items.alcoholTaxMaster'), path: "/alcoholTaxMaster", pro: false },
           { name: t('sidebar.items.materialClassMaster'), path: "/materialClassMaster", pro: false },
+          { name: t('sidebar.items.materialTypeMaster'), path: "/materialTypeMaster", pro: false },
           { name: t('sidebar.items.siteTypeMaster'), path: "/siteTypeMaster", pro: false },
-          { name: t('sidebar.items.uomMaster'), path: "/uomMaster", pro: false },
+          {
+            name: t('sidebar.items.systemRelated'),
+            subItems: [
+              { name: t('sidebar.items.attrDefMaster'), path: "/attrDefMaster", pro: false },
+              { name: t('sidebar.items.attrSetMaster'), path: "/attrSetMaster", pro: false },
+              { name: t('sidebar.items.uomMaster'), path: "/uomMaster", pro: false },
+            ],
+          },
 
         ],
       },
@@ -421,11 +499,24 @@ const toggleSubmenu = (groupIndex, itemIndex) => {
   openSubmenu.value = openSubmenu.value === key ? null : key;
 };
 
+const toggleSubmenuChild = (groupIndex, itemIndex, subIndex) => {
+  const key = `${groupIndex}-${itemIndex}-${subIndex}`;
+  openSubmenuChild.value = openSubmenuChild.value === key ? null : key;
+};
+
+const isSubItemActive = (subItem) => {
+  if (subItem?.path) return isActive(subItem.path);
+  if (subItem?.subItems) {
+    return subItem.subItems.some((child) => child.path && isActive(child.path));
+  }
+  return false;
+};
+
 const isAnySubmenuRouteActive = computed(() => {
   return menuGroups.value.some((group) =>
     group.items.some(
       (item) =>
-        item.subItems && item.subItems.some((subItem) => isActive(subItem.path))
+        item.subItems && item.subItems.some((subItem) => isSubItemActive(subItem))
     )
   );
 });
@@ -436,8 +527,18 @@ const isSubmenuOpen = (groupIndex, itemIndex) => {
     openSubmenu.value === key ||
     (isAnySubmenuRouteActive.value &&
       menuGroups.value[groupIndex].items[itemIndex].subItems?.some((subItem) =>
-        isActive(subItem.path)
+        isSubItemActive(subItem)
       ))
+  );
+};
+
+const isSubmenuChildOpen = (groupIndex, itemIndex, subIndex) => {
+  const key = `${groupIndex}-${itemIndex}-${subIndex}`;
+  const subItem = menuGroups.value[groupIndex].items[itemIndex].subItems?.[subIndex];
+  if (!subItem?.subItems) return false;
+  return (
+    openSubmenuChild.value === key ||
+    subItem.subItems.some((child) => child.path && isActive(child.path))
   );
 };
 

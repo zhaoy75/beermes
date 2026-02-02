@@ -1,0 +1,10 @@
+Please create an vue page maintain material type tree and attribute for each material type.
+・material type and parent relationship should be reference to type_def table.
+・material type attribute should be reference to attr_def, attr_set, attr_set_rule tables.
+・the page should show material type tree on the left side
+・when i select a material type node in the tree, the right side should show the material type attribute in a table
+・the page should have a button to add new material type under the selected node
+・the page should have a button to edit the selected material type
+・the page should have a button to delete the selected material type
+・the page should have a button to manage the attribute of the selected material type
+- for 原材料種別管理 page, when i click 属性を管理 button, the system should read data from attr_set 

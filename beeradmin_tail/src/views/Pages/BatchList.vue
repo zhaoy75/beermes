@@ -24,8 +24,15 @@
           <input id="batchLabelFilter" v-model.trim="search.label" type="search" class="w-full h-[36px] border rounded px-3" />
         </div>
         <div>
-          <label class="block text-sm text-gray-600 mb-1" for="abvFilter">{{ t('batch.list.abvLabel') }}</label>
-          <input id="abvFilter" v-model.trim="search.abv" type="number" step="0.01" min="0" class="w-full h-[36px] border rounded px-3" />
+          <label class="block text-sm text-gray-600 mb-1" for="batchStatusFilter">{{ t('batch.list.colStatus') }}</label>
+          <select id="batchStatusFilter" v-model="search.status" class="w-full h-[36px] border rounded px-3 bg-white" :disabled="batchStatusLoading">
+            <option value="">{{ t('common.select') }}</option>
+            <option v-for="option in batchStatusOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+          </select>
+        </div>
+        <div v-for="field in kpiSearchFields" :key="field.id">
+          <label class="block text-sm text-gray-600 mb-1" :for="`kpi-search-${field.id}`">{{ field.name }}</label>
+          <input :id="`kpi-search-${field.id}`" v-model.trim="search.kpi[field.id]" type="search" class="w-full h-[36px] border rounded px-3" />
         </div>
         <div>
           <label class="block text-sm text-gray-600 mb-1" for="startFilter">{{ t('batch.list.startDate') }}</label>
@@ -40,6 +47,11 @@
         </div>
       </form>
       <p class="mt-2 text-sm text-gray-500">{{ t('batch.list.showing', { count: filteredBatches.length, total: batches.length }) }}</p>
+      <div v-if="searchConditions.length" class="mt-2 flex flex-wrap gap-2 text-xs text-gray-600">
+        <span v-for="cond in searchConditions" :key="cond.key" class="px-2 py-1 rounded-full bg-gray-100">
+          {{ cond.label }}: {{ cond.value }}
+        </span>
+      </div>
     </section>
 
     <section aria-labelledby="batchTableHeading">
@@ -64,7 +76,7 @@
               <td class="px-3 py-2 text-sm">{{ batch.label || '—' }}</td>
               <td class="px-3 py-2 text-sm">{{ batch.display_name }}</td>
               <td class="px-3 py-2 text-sm">
-                <span :class="statusClass(batch.status)">{{ batch.status || '—' }}</span>
+                <span :class="statusClass(batch.status)">{{ statusLabel(batch.status) }}</span>
               </td>
               <td class="px-3 py-2 text-sm text-gray-600">{{ fmtDateTime(batch.created_at) }}</td>
               <!-- <td class="px-3 py-2 text-sm text-gray-600">{{ fmtDateTime(batch.planned_end) }}</td>
@@ -107,7 +119,7 @@ import BatchSummaryDialog from '@/views/Pages/components/BatchSummaryDialog.vue'
 import BatchCreateDialog from '@/views/Pages/components/BatchCreateDialog.vue'
 import ConfirmDeleteDialog from '@/views/Pages/components/BatchDeleteDialog.vue'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const router = useRouter()
 
 const pageTitle = computed(() => t('batch.list.title'))
@@ -116,10 +128,11 @@ interface RawBatchRow {
   id: string
   tenant_id: string
   batch_code: string
+  batch_label?: string | null
   meta?: Record<string, any> | null
   process_version: number | null
   status: string | null
-  actual_abv: number | null
+  kpi?: any
   created_at: string | null
   planned_start: string | null
   // planned_end?: string | null
@@ -138,9 +151,18 @@ type SortKey = 'batch_code' | 'display_name' | 'label' | 'status' | 'created_at'
 type SearchState = {
   name: string
   label: string
-  abv: string
+  status: string
   start: string
   end: string
+  kpi: Record<string, string>
+}
+
+type KpiMeta = {
+  id: string
+  name: string
+  uom?: string
+  datasource?: string | null
+  search_key_flg?: boolean
 }
 
 const columns: Array<{ key: SortKey, label: string }> = [
@@ -159,7 +181,14 @@ const loading = ref(false)
 const tenantId = ref<string | null>(null)
 const recipes = ref<Array<{ id: string, name: string, code: string, version: number }>>([])
 
-const search = reactive<SearchState>({ name: '', label: '', abv: '', start: '', end: '' })
+const search = reactive<SearchState>({
+  name: '',
+  label: '',
+  status: '',
+  start: defaultStartDate(),
+  end: '',
+  kpi: {},
+})
 const sortKey = ref<SortKey>('created_at')
 const sortDirection = ref<'asc' | 'desc'>('desc')
 
@@ -168,15 +197,57 @@ const summaryState = ref<BatchRow | null>(null)
 const showCreate = ref(false)
 const toDelete = ref<BatchRow | null>(null)
 
-type ParentBatchInput = {
-  batch_code: string
-  quantity_liters: string
-}
+const kpiMeta = ref<KpiMeta[]>([])
+const kpiMetaLoading = ref(false)
+const batchStatusRows = ref<Array<{ status_code: string, label_ja: string | null, label_en: string | null, sort_order: number | null }>>([])
+const batchStatusLoading = ref(false)
 
-type ParentBatchMeta = {
-  batch_code: string
-  quantity_liters: number
-}
+const fallbackKpiMeta: KpiMeta[] = [
+  { id: 'tax_category_code', name: '製品種類', uom: '', datasource: 'registry_def', search_key_flg: true },
+  { id: 'volume', name: '生産量', uom: 'l' },
+  { id: 'abv', name: 'ABV', uom: '' },
+  { id: 'og', name: 'OG', uom: '' },
+  { id: 'fg', name: 'FG', uom: '' },
+  { id: 'srm', name: 'SRM', uom: '' },
+  { id: 'ibu', name: 'IBU', uom: '' },
+]
+
+const kpiSearchFields = computed(() => {
+  const metaList = kpiMeta.value.length ? kpiMeta.value : fallbackKpiMeta
+  return metaList.filter((item) => item.search_key_flg)
+})
+
+const batchStatusOptions = computed(() => {
+  const lang = String(locale.value ?? '').toLowerCase()
+  const useJa = lang.startsWith('ja')
+  return batchStatusRows.value
+    .slice()
+    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+    .map((row) => {
+      const label = useJa ? row.label_ja : row.label_en
+      const fallback = row.label_en ?? row.label_ja ?? row.status_code
+      return { value: row.status_code, label: String(label ?? fallback ?? row.status_code).trim() || row.status_code }
+    })
+})
+
+const searchConditions = computed(() => {
+  const conditions: Array<{ key: string; label: string; value: string }> = []
+  if (search.name) conditions.push({ key: 'name', label: t('batch.list.nameLabel'), value: search.name })
+  if (search.label) conditions.push({ key: 'label', label: t('batch.list.labelLabel'), value: search.label })
+  if (search.status) {
+    const match = batchStatusOptions.value.find((option) => option.value === search.status)
+    conditions.push({ key: 'status', label: t('batch.list.colStatus'), value: match?.label ?? search.status })
+  }
+  if (search.start) conditions.push({ key: 'start', label: t('batch.list.startDate'), value: search.start })
+  if (search.end) conditions.push({ key: 'end', label: t('batch.list.endDate'), value: search.end })
+  kpiSearchFields.value.forEach((field) => {
+    const value = search.kpi[field.id]
+    if (value) {
+      conditions.push({ key: `kpi-${field.id}`, label: field.name, value })
+    }
+  })
+  return conditions
+})
 
 async function ensureTenant() {
   if (tenantId.value) return tenantId.value
@@ -188,6 +259,72 @@ async function ensureTenant() {
   }
   tenantId.value = id
   return id
+}
+
+function normalizeKpiMeta(list: unknown): KpiMeta[] {
+  if (!Array.isArray(list)) return []
+  return list
+    .map((item) => {
+      if (!item || typeof item !== 'object' || Array.isArray(item)) return null
+      const id = String((item as Record<string, unknown>).id ?? '').trim()
+      if (!id) return null
+      const name = String((item as Record<string, unknown>).name ?? id).trim()
+      const uom = String((item as Record<string, unknown>).uom ?? '').trim()
+      const datasource = (item as Record<string, unknown>).datasource
+      const searchKey = (item as Record<string, unknown>).search_key_flg
+      return {
+        id,
+        name: name || id,
+        uom,
+        datasource: datasource != null ? String(datasource) : null,
+        search_key_flg: Boolean(searchKey),
+      }
+    })
+    .filter((row): row is KpiMeta => row !== null)
+}
+
+async function loadKpiMeta() {
+  if (kpiMeta.value.length || kpiMetaLoading.value) return
+  try {
+    kpiMetaLoading.value = true
+    const { data, error } = await supabase
+      .from('registry_def')
+      .select('def_id, scope, spec')
+      .eq('kind', 'kpi_definition')
+      .eq('def_key', 'beer_production_kpi')
+    if (error) throw error
+    const selected = (data ?? []).find((row: any) => row.scope === 'tenant')
+      ?? (data ?? [])[0]
+    kpiMeta.value = normalizeKpiMeta((selected?.spec as any)?.kpi_meta)
+  } catch (err) {
+    console.warn('Failed to load KPI meta', err)
+    kpiMeta.value = []
+  } finally {
+    kpiMetaLoading.value = false
+  }
+}
+
+async function loadBatchStatusOptions() {
+  if (batchStatusLoading.value) return
+  try {
+    batchStatusLoading.value = true
+    const { data, error } = await supabase
+      .from('v_batch_status')
+      .select('status_code, label_ja, label_en, sort_order')
+      .order('sort_order')
+    if (error) throw error
+    batchStatusRows.value = (data ?? []).map((row: any) => ({
+      status_code: String(row.status_code ?? '').trim(),
+      label_ja: row.label_ja ?? null,
+      label_en: row.label_en ?? null,
+      sort_order: typeof row.sort_order === 'number' ? row.sort_order : Number(row.sort_order ?? 0),
+    })).filter((row: any) => row.status_code)
+  } catch (err) {
+    console.warn('Failed to load batch statuses', err)
+    batchStatusRows.value = []
+  } finally {
+    batchStatusLoading.value = false
+  }
 }
 
 async function fetchBatches() {
@@ -209,12 +346,15 @@ async function fetchBatches() {
     if (search.name) {
       query.ilike('batch_code', `%${search.name}%`)
     }
+    if (search.status) {
+      query.eq('status', search.status)
+    }
 
     const { data, error } = await query
     if (error) throw error
 
     batches.value = (data ?? []).map((row) => {
-      const label = resolveMetaLabel(row.meta)
+      const label = row.batch_label ?? resolveMetaLabel(row.meta)
       return {
         ...row,
         label: label || '',
@@ -249,9 +389,12 @@ async function fetchRecipes() {
 function resetFilters() {
   search.name = ''
   search.label = ''
-  search.abv = ''
-  search.start = ''
+  search.status = ''
+  search.start = defaultStartDate()
   search.end = ''
+  kpiSearchFields.value.forEach((field) => {
+    search.kpi[field.id] = ''
+  })
   fetchBatches()
 }
 
@@ -259,16 +402,20 @@ const filteredBatches = computed(() => {
   return batches.value.filter((batch) => {
     const nameQuery = search.name.toLowerCase()
     const labelQuery = search.label.toLowerCase()
-    const abvFilter = search.abv.trim() === '' ? null : Number(search.abv)
     const nameMatch = !search.name
       || batch.batch_code.toLowerCase().includes(nameQuery)
       || batch.display_name.toLowerCase().includes(nameQuery)
     const labelMatch = !search.label || batch.label.toLowerCase().includes(labelQuery)
-    const abvMatch = abvFilter == null
-      || (!Number.isNaN(abvFilter) && batch.actual_abv != null && Number(batch.actual_abv) === abvFilter)
+    const statusMatch = !search.status || String(batch.status ?? '') === search.status
     const startOk = !search.start || (!!batch.planned_start && safeTimestamp(batch.planned_start) >= safeTimestamp(search.start))
     const endOk = !search.end || (!!batch.planned_start && safeTimestamp(batch.planned_start) <= safeTimestamp(search.end, true))
-    return nameMatch && labelMatch && abvMatch && startOk && endOk
+    const kpiMatch = kpiSearchFields.value.every((field) => {
+      const query = (search.kpi[field.id] ?? '').trim()
+      if (!query) return true
+      const raw = resolveKpiValue(batch.kpi, field.id)
+      return matchKpiValue(raw, query)
+    })
+    return nameMatch && labelMatch && statusMatch && startOk && endOk && kpiMatch
   })
 })
 
@@ -326,6 +473,15 @@ function safeTimestamp(value: string, endOfDay = false) {
   }
 }
 
+function defaultStartDate() {
+  const d = new Date()
+  d.setMonth(d.getMonth() - 2)
+  const yyyy = d.getFullYear()
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
+}
+
 function statusClass(status: string | null) {
   if (!status) return 'px-2 py-1 rounded-full bg-gray-100 text-gray-600'
   const lower = status.toLowerCase()
@@ -334,12 +490,51 @@ function statusClass(status: string | null) {
   return 'px-2 py-1 rounded-full bg-blue-100 text-blue-700'
 }
 
+function statusLabel(status: string | null | undefined) {
+  if (!status) return '—'
+  const match = batchStatusOptions.value.find((option) => option.value === status)
+  return match?.label ?? status
+}
+
 function resolveMetaLabel(meta: unknown) {
   if (!meta || typeof meta !== 'object' || Array.isArray(meta)) return null
   const label = (meta as Record<string, unknown>).label
   if (typeof label !== 'string') return null
   const trimmed = label.trim()
   return trimmed.length ? trimmed : null
+}
+
+function parseKpiArray(value: unknown) {
+  if (!value) return []
+  if (Array.isArray(value)) return value
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value)
+      return Array.isArray(parsed) ? parsed : []
+    } catch {
+      return []
+    }
+  }
+  return []
+}
+
+function resolveKpiValue(kpi: unknown, id: string) {
+  const list = parseKpiArray(kpi)
+  const row = list.find((item: any) => item && item.id === id)
+  if (!row) return null
+  return row.actual ?? row.planed ?? row.planned ?? null
+}
+
+function matchKpiValue(raw: unknown, query: string) {
+  if (raw == null) return false
+  const queryTrimmed = query.trim()
+  if (!queryTrimmed) return true
+  const rawNum = Number(raw)
+  const queryNum = Number(queryTrimmed)
+  if (!Number.isNaN(rawNum) && !Number.isNaN(queryNum)) {
+    return rawNum === queryNum
+  }
+  return String(raw).toLowerCase().includes(queryTrimmed.toLowerCase())
 }
 
 function goEdit(id: string) {
@@ -379,21 +574,7 @@ function closeCreate() {
   showCreate.value = false
 }
 
-function normalizeParentBatches(rows: ParentBatchInput[]) {
-  if (!rows?.length) return null
-  const cleaned = rows
-    .map((row) => {
-      const code = row.batch_code?.trim()
-      if (!code) return null
-      const qty = Number(row.quantity_liters)
-      if (!Number.isFinite(qty) || qty <= 0) return null
-      return { batch_code: code, quantity_liters: qty }
-    })
-    .filter((row): row is ParentBatchMeta => row !== null)
-  return cleaned.length ? cleaned : null
-}
-
-async function handleCreate(payload: { recipeId: string, batchCode: string | null, label: string | null, plannedStart: string | null, targetVolume: number | null, notes: string | null, processVersion: number | null, parentBatches: ParentBatchInput[] }) {
+async function handleCreate(payload: { recipeId: string, batchCode: string | null, label: string | null, plannedStart: string | null, notes: string | null, processVersion: number | null }) {
   try {
     loading.value = true
     const tenant = await ensureTenant()
@@ -403,21 +584,22 @@ async function handleCreate(payload: { recipeId: string, batchCode: string | nul
       _recipe_id: payload.recipeId,
       _batch_code: batchCode,
       _planned_start: payload.plannedStart ? new Date(payload.plannedStart).toISOString() : null,
-      _target_volume_l: payload.targetVolume,
       _process_version: payload.processVersion,
       _notes: payload.notes,
     })
     if (error) throw error
-    const parentBatches = normalizeParentBatches(payload.parentBatches)
     const meta: Record<string, unknown> = {}
     if (payload.label) meta.label = payload.label
-    if (parentBatches) meta.parent_batches = parentBatches
-    if (data && Object.keys(meta).length > 0) {
-      const { error: labelError } = await supabase
+    const updatePayload: Record<string, unknown> = {
+      batch_label: payload.label || null,
+    }
+    if (Object.keys(meta).length > 0) updatePayload.meta = meta
+    if (data) {
+      const { error: updateError } = await supabase
         .from('mes_batches')
-        .update({ meta })
+        .update(updatePayload)
         .eq('id', data)
-      if (labelError) throw labelError
+      if (updateError) throw updateError
     }
     showCreate.value = false
     fetchBatches()
@@ -448,6 +630,6 @@ async function generateBatchCode() {
 
 onMounted(async () => {
   await ensureTenant()
-  await Promise.all([fetchBatches(), fetchRecipes()])
+  await Promise.all([loadKpiMeta(), loadBatchStatusOptions(), fetchBatches(), fetchRecipes()])
 })
 </script>

@@ -52,3 +52,11 @@ VALUES
     "max_abv": 10
   }'
 );
+
+CREATE OR REPLACE VIEW v_batch_with_alcohol_type AS
+SELECT
+  b.*,
+  at.label AS alcohol_type_label
+FROM batch b
+LEFT JOIN v_alcohol_type_options at
+  ON at.value = b.alcohol_type_key;

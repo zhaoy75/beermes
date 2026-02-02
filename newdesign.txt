@@ -1,0 +1,13 @@
+I want to build a manufacturing management system for making craft beer, 
+I want my design will fit for various kinds of industry, but different 
+industry has different master, tell me the best practice to store master 
+and link to common table and keep intergrity. Here is my requirements for
+ making craft beer, please give me design priciplen and design database table for me.
+
+1. Recipe and recipe verison is needed
+   recipe version should have an id, code, name, description and some craft beer sepecific attributes like beer type, alcohol content, bitterness, color, etc.   
+   recipe should include process step (include input material, output material, equipment, parameters, quality check,haccp)
+
+2. Batch should be create by recipe version 
+   batch should have an id, code, name, description, start date, end date, status, quantity produced, etc.
+   batch should include process step (include input material, output material, equipment, parameters, quality check,haccp)

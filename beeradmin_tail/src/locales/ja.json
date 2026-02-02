@@ -6,6 +6,7 @@
     "delete": "削除",
     "save": "保存",
     "saving": "保存中…",
+    "saved": "保存しました",
     "cancel": "キャンセル",
     "close": "閉じる",
     "actions": "操作",
@@ -17,6 +18,7 @@
     "loading": "読み込み中…",
     "copy": "コピー",
     "copying": "コピー中…",
+    "deleted": "削除しました",
     "reset": "リセット",
     "add": "追加",
     "collapse": "折りたたむ",
@@ -27,17 +29,17 @@
   "batch": {
     "list": {
       "title": "バッチ管理",
-      "searchTitle": "ロット検索",
-      "newBatch": "ロット作成",
-      "nameLabel": "ロット名／メモ",
+      "searchTitle": "バッチ検索",
+      "newBatch": "バッチ作成",
+      "nameLabel": "バッチ名／メモ",
       "namePlaceholder": "BATCH-20240601-0001",
       "labelLabel": "銘柄名",
       "abvLabel": "実績ABV",
       "startDate": "開始日",
       "endDate": "終了日",
       "showing": "{total}件中{count}件を表示",
-      "tableTitle": "ロット一覧",
-      "colBatchCode": "ロットコード",
+      "tableTitle": "バッチ一覧",
+      "colBatchCode": "バッチコード",
       "colName": "名称",
       "colLabel": "銘柄名",
       "colVersion": "工程版",
@@ -50,11 +52,11 @@
       "summary": "サマリー"
     },
     "create": {
-      "title": "ロット作成",
-      "subtitle": "ロットコードは入力可能です。空欄なら自動採番されます。",
+      "title": "バッチ作成",
+      "subtitle": "バッチコードは入力可能です。空欄なら自動採番されます。",
       "recipe": "レシピ",
       "recipePlaceholder": "レシピを選択",
-      "batchCode": "ロットコード",
+      "batchCode": "バッチコード",
       "batchCodePlaceholder": "空欄なら自動採番",
       "plannedStart": "計画開始",
       "processVersion": "工程バージョン",
@@ -62,23 +64,23 @@
       "label": "銘柄名",
       "targetVolume": "目標仕込み量 (L)",
       "notes": "メモ",
-      "parentBatchesTitle": "親ロット",
-      "parentBatchesSubtitle": "必要に応じて元のロットと数量を記録します。",
-      "parentBatchesAdd": "親ロットを追加",
+      "parentBatchesTitle": "親バッチ",
+      "parentBatchesSubtitle": "必要に応じて元のバッチと数量を記録します。",
+      "parentBatchesAdd": "親バッチを追加",
       "parentBatchesRemove": "削除",
-      "parentBatchesEmpty": "親ロットは未登録です。",
-      "parentBatchCode": "親ロットコード",
+      "parentBatchesEmpty": "親バッチは未登録です。",
+      "parentBatchCode": "親バッチコード",
       "parentBatchQuantity": "数量 (L)",
       "autoCodeHint": "空欄の場合は BATCH-YYYYMMDD-XXXX 形式で自動生成されます。",
       "createButton": "作成"
     },
     "delete": {
-      "title": "ロット削除",
-      "confirm": "ロット {code} を削除しますか？ この操作は元に戻せません。",
+      "title": "バッチ削除",
+      "confirm": "バッチ {code} を削除しますか？ この操作は元に戻せません。",
       "warning": "関連する工程ステップも削除されます。"
     },
     "summary": {
-      "title": "ロット {code} サマリー",
+      "title": "バッチ {code} サマリー",
       "subtitle": "計画と進捗の概要",
       "overview": "概要",
       "status": "ステータス",
@@ -101,39 +103,74 @@
       "noSteps": "工程が登録されていません。"
     },
     "edit": {
-      "title": "ロット編集",
-      "notFound": "ロットが見つからないか、権限がありません。",
-      "infoTitle": "ロット情報",
+      "title": "バッチ編集",
+      "notFound": "バッチが見つからないか、権限がありません。",
+      "infoTitle": "バッチ情報",
       "infoSubtitle": "スケジュールやステータス、メモを更新します。",
       "actualTitle": "実績値",
       "actualSubtitle": "実績OG/FG/ABV/SRMと製品量を記録します。",
-      "batchCode": "ロットコード",
+      "batchCode": "バッチコード",
       "status": "ステータス",
       "label": "銘柄名",
+      "scaleFactor": "スケール係数",
       "processVersion": "工程バージョン",
       "plannedStart": "計画開始",
       "plannedEnd": "計画終了",
       "actualStart": "実績開始",
       "actualEnd": "実績終了",
-      "targetVolume": "目標仕込み量",
-      "actualProductVolume": "実績製品量 (L)",
-      "actualOg": "実績OG",
-      "actualFg": "実績FG",
-      "actualAbv": "実績ABV",
-      "actualSrm": "実績SRM",
-      "vessel": "タンク",
+      "kpiTitle": "KPI",
+      "kpiSubtitle": "計画値と実績値を記録します。",
+      "kpiId": "ID",
+      "kpiName": "名称",
+      "kpiUom": "単位",
+      "kpiPlanned": "計画",
+      "kpiActual": "実績",
+      "materialConsumptionTitle": "原材料登録",
+      "materialConsumptionSubtitle": "原材料ごとの計画量と実績量を記録します。",
+      "materialConsumptionLabel": "原材料登録",
+      "materialConsumptionClass": "原材料区分",
+      "materialConsumptionMaterialList": "原材料一覧",
+      "materialConsumptionMaterial": "原材料",
+      "materialConsumptionPlanned": "計画数量",
+      "materialConsumptionActual": "実績数量",
+      "materialConsumptionVariance": "差異",
+      "materialConsumptionDetails": "詳細メモ",
+      "materialConsumptionDetailsButton": "詳細",
+      "materialConsumptionDetailsCount": "件",
+      "materialConsumptionDetailsTitle": "原材料消費の詳細",
+      "materialConsumptionDetailsNotes": "詳細メモ",
+      "materialConsumptionDetailsRecords": "消費記録",
+      "materialConsumptionDetailsBatch": "バッチ",
+      "materialConsumptionDetailsQty": "数量",
+      "materialConsumptionDetailsUom": "単位",
+      "outputActualTitle": "副産物管理",
+      "outputActualSubtitle": "生産アウトプットと処分方法を記録します。",
+      "outputActualMaterialId": "品目",
+      "outputActualQty": "数量",
+      "outputActualUom": "単位",
+      "outputActualType": "種別",
+      "outputActualDispositionType": "処分区分",
+      "outputActualDispositionNone": "処分なし",
+      "outputActualDispositionTransferBatch": "他バッチへ移動",
+      "outputActualDispositionTransferWarehouse": "倉庫へ移動",
+      "outputActualDispositionDisposal": "廃棄",
+      "outputActualTargetBatch": "移動先バッチ",
+      "outputActualTargetWarehouse": "移動先倉庫",
+      "outputActualTransferQty": "移動数量",
+      "outputActualTransferUom": "移動単位",
+      "outputActualDisposalReason": "廃棄理由",
       "notes": "メモ",
-      "parentBatchesTitle": "親ロット",
-      "parentBatchesSubtitle": "元のロットと数量を記録します。",
-      "parentBatchesAdd": "親ロットを追加",
+      "parentBatchesTitle": "親バッチ",
+      "parentBatchesSubtitle": "元のバッチと数量を記録します。",
+      "parentBatchesAdd": "親バッチを追加",
       "parentBatchesRemove": "削除",
-      "parentBatchesEmpty": "親ロットは未登録です。",
-      "parentBatchCode": "親ロットコード",
+      "parentBatchesEmpty": "親バッチは未登録です。",
+      "parentBatchCode": "親バッチコード",
       "parentBatchQuantity": "数量 (L)"
     },
     "ingredients": {
       "sectionTitle": "原材料",
-      "sectionSubtitle": "このロットで使用するレシピ原材料を管理します。",
+      "sectionSubtitle": "このバッチで使用するレシピ原材料を管理します。",
       "material": "原材料",
       "amount": "数量",
       "uom": "単位",
@@ -156,12 +193,12 @@
     },
     "yeast": {
       "sectionTitle": "酵母スターター管理",
-      "sectionSubtitle": "ロットやタンク間の酵母の受け渡しを記録します。",
+      "sectionSubtitle": "バッチやタンク間の酵母の受け渡しを記録します。",
       "totalPulled": "タンクから採取",
       "totalReturned": "タンクへ戻し",
       "totalDumped": "廃棄量",
       "colTimestamp": "記録日時",
-      "colSourceBatch": "供給ロット",
+      "colSourceBatch": "供給バッチ",
       "colTankFrom": "Fromタンク",
       "colTankTo": "Toタンク",
       "colVolumePulled": "採取量",
@@ -172,31 +209,88 @@
       "todoHint": "※ データベースを準備したら、この表と接続してください。"
     },
     "packaging": {
-      "sectionTitle": "充填管理",
-      "sectionSubtitle": "このロットで充填された数量を記録します。",
-      "addButton": "充填",
-      "addTitle": "充填記録の追加",
-      "editTitle": "充填記録の編集",
-      "deleteConfirm": "充填 {code} の記録を削除しますか？",
-      "noData": "充填記録がありません。",
-      "packagePlaceholder": "充填を選択",
-      "defaultSizeHint": "既定容量: {size}",
-      "noDefaultSize": "既定容量なし",
-      "lUnit": "L",
-      "summaryTotalProduct": "仕込み量",
-      "summaryFilled": "充填済み",
-      "summaryRemaining": "残量",
+      "sectionTitle": "パッキング",
+      "sectionSubtitle": "このバッチのパッキングイベントを記録します。",
+      "openDialog": "パッキング…",
+      "noData": "パッキング記録がありません。",
       "columns": {
-        "fillDate": "充填日",
-        "package": "詰口種別",
-        "outputSite": "出力拠点",
-        "quantity": "数量",
-        "unitSize": "単位あたり容量",
-        "totalVolume": "総容量",
-        "notes": "メモ",
-        "sizeOverride": "単位容量 (L)"
+        "eventTime": "日時",
+        "type": "種別",
+        "volume": "容量",
+        "movement": "移動",
+        "filling": "充填",
+        "memo": "メモ"
       },
-      "sitePlaceholder": "出力拠点を選択"
+      "types": {
+        "ship": "出荷",
+        "filling": "充填",
+        "transfer": "移送",
+        "loss": "ロス",
+        "dispose": "廃棄"
+      },
+      "actions": {
+        "edit": "編集",
+        "delete": "削除"
+      },
+      "confirmDelete": "このパッキング記録を削除しますか？",
+      "warnings": {
+        "movementMismatch": "移動数量が容量または充填合計と一致しません。"
+      },
+      "dialog": {
+        "title": "パッキング",
+        "batchSummary": "バッチ {code} / {name}",
+        "packingType": "パッキング種別",
+        "eventTime": "日時",
+        "memo": "共通メモ",
+        "volumeSection": "容量",
+        "volumeQty": "数量",
+        "volumeUnit": "L",
+        "reason": "理由（任意）",
+        "movementSection": "移動",
+        "movementSite": "移動先拠点",
+        "movementQty": "数量",
+        "movementMemo": "メモ（任意）",
+        "fillingSection": "充填",
+        "addFilling": "充填を追加",
+        "noFillingLines": "充填明細がありません。",
+        "fillingTable": {
+          "packageType": "詰口種別",
+          "qty": "数量",
+          "unitVolume": "単位容量",
+          "totalVolume": "総容量"
+        },
+        "fillingTotals": {
+          "units": "合計本数: {count}",
+          "volume": "合計容量: {volume}",
+          "summary": "{units}本 / {volume}"
+        },
+        "reviewTitle": "確認",
+        "reviewType": "種別",
+        "reviewVolume": "容量",
+        "reviewMovement": "移動",
+        "reviewFilling": "充填",
+        "reviewMemo": "メモ",
+        "save": "パッキング保存",
+        "saveAndAdd": "保存して続けて追加",
+        "cancel": "キャンセル",
+        "closeConfirm": "変更を破棄しますか？",
+        "typeChangeConfirm": "種別を変更すると入力がリセットされます。続行しますか？"
+      },
+      "errors": {
+        "typeRequired": "パッキング種別は必須です。",
+        "eventTimeRequired": "日時は必須です。",
+        "volumeRequired": "容量は0より大きい値を入力してください。",
+        "siteRequired": "移動先拠点は必須です。",
+        "movementQtyRequired": "移動数量は0より大きい値を入力してください。",
+        "fillingRequired": "充填明細を1件以上追加してください。",
+        "fillingLineInvalid": "詰口種別と数量（1以上の整数）を入力してください。",
+        "saveFailed": "パッキングの保存に失敗しました。",
+        "deleteFailed": "パッキングの削除に失敗しました。"
+      },
+      "toast": {
+        "saved": "パッキングを保存しました。",
+        "deleted": "パッキングを削除しました。"
+      }
     }
   },
   "packageCategory": {
@@ -224,12 +318,12 @@
       "searchTitle": "廃棄データ検索",
       "startDate": "開始日",
       "endDate": "終了日",
-      "batchCode": "ロットコード",
+      "batchCode": "バッチコード",
       "batchPlaceholder": "BATCH-20240601-0001",
       "showing": "{total}件中{count}件を表示",
       "tableTitle": "廃棄一覧",
       "colCreated": "記録日時",
-      "colBatch": "ロット",
+      "colBatch": "バッチ",
       "colMaterial": "原材料",
       "colQty": "数量",
       "colReason": "理由"
@@ -353,6 +447,178 @@
       "labelRequired": "表示名は必須です。",
       "categoryRequired": "カテゴリは必須です。",
       "flagInvalid": "フラグは true/false を指定してください。",
+      "adminOnlySystem": "システムスコープは管理者のみ編集できます。"
+    }
+  },
+  "materialType": {
+    "title": "原材料種別管理",
+    "subtitle": "原材料種別ツリーと属性割り当てを管理します。",
+    "treeTitle": "原材料種別ツリー",
+    "attributeTitle": "属性一覧",
+    "attributeSetCount": "割り当て済み属性セット {count} 件",
+    "selectedLabel": "選択中の原材料種別",
+    "noSelection": "原材料種別を選択してください",
+    "selectPrompt": "左のツリーから原材料種別を選択してください。",
+    "addChild": "子種別を追加",
+    "manageAttributes": "属性を管理",
+    "manageAttributesSubtitle": "選択した原材料種別に属性セットを割り当てます。",
+    "attrEmpty": "属性が割り当てられていません。",
+    "attrSetEmpty": "利用可能な属性セットがありません。",
+    "newTitle": "原材料種別の追加",
+    "editTitle": "原材料種別の編集",
+    "deleteTitle": "原材料種別の削除",
+    "deleteConfirm": "原材料種別 {name} を削除しますか？この操作は元に戻せません。",
+    "table": {
+      "attrSet": "属性セット",
+      "code": "コード",
+      "name": "名称",
+      "dataType": "データ型",
+      "required": "必須",
+      "uiSection": "UIセクション",
+      "uiWidget": "UIウィジェット",
+      "active": "有効"
+    },
+    "form": {
+      "code": "コード",
+      "name": "名称",
+      "parent": "親種別",
+      "noParent": "親なし",
+      "sortOrder": "並び順",
+      "active": "有効"
+    },
+    "errors": {
+      "codeRequired": "コードは必須です。",
+      "nameRequired": "名称は必須です。",
+      "adminOnlySystem": "システムスコープは管理者のみ編集できます。"
+    }
+  },
+  "attrDef": {
+    "title": "属性定義管理",
+    "subtitle": "ドメイン・業界で利用する属性定義を管理します。",
+    "newTitle": "新規属性",
+    "editTitle": "属性編集",
+    "deleteTitle": "属性削除",
+    "deleteConfirm": "属性 {code} を削除しますか？元に戻せません。",
+    "countLabel": "{count} 件の属性",
+    "industryShared": "共通 (業界なし)",
+    "filters": {
+      "codePlaceholder": "コードで検索",
+      "domainAll": "全ドメイン"
+    },
+    "table": {
+      "code": "コード",
+      "displayName": "表示名",
+      "domainIndustry": "ドメイン / 業界",
+      "dataType": "データ型",
+      "uom": "単位",
+      "validation": "バリデーション",
+      "active": "有効",
+      "usage": "使用数"
+    },
+    "form": {
+      "code": "コード",
+      "name": "表示名",
+      "nameI18n": "表示名 (i18n JSON)",
+      "domain": "ドメイン",
+      "industry": "業界",
+      "industryShared": "共通 (業界なし)",
+      "dataType": "データ型",
+      "dataTypePlaceholder": "データ型を選択",
+      "uom": "単位",
+      "uomNone": "単位なし",
+      "numMin": "最小",
+      "numMax": "最大",
+      "regex": "正規表現",
+      "enumValues": "列挙値",
+      "enumPlaceholder": "列挙値を追加",
+      "enumEmpty": "列挙値が未登録です。",
+      "defaultValue": "デフォルト値 (JSON)",
+      "required": "必須",
+      "active": "有効",
+      "technical": "技術項目 (JSON スキーマ風)",
+      "refKind": "参照種別",
+      "refDomain": "参照ドメイン",
+      "description": "説明",
+      "deprecated": "廃止 (削除禁止)",
+      "deprecatedHint": "この属性は廃止扱いのため削除できません。"
+    },
+    "types": {
+      "number": "数値",
+      "text": "テキスト",
+      "enum": "列挙",
+      "bool": "真偽"
+    },
+    "errors": {
+      "codeRequired": "コードは必須です。",
+      "nameRequired": "表示名は必須です。",
+      "domainRequired": "ドメインは必須です。",
+      "dataTypeRequired": "データ型を選択してください。",
+      "numRange": "最小値は最大値以下である必要があります。",
+      "enumRequired": "列挙値を1件以上追加してください。",
+      "jsonInvalid": "JSON形式が正しくありません。",
+      "jsonObject": "JSONはオブジェクトである必要があります。",
+      "jsonRequired": "JSON値は必須です。",
+      "deleteUsed": "この属性はすでに使用されています。",
+      "adminOnlySystem": "システムスコープは管理者のみ編集できます。"
+    },
+    "usedWarning": "⚠️ この属性は {count} 回使用されています。編集すると既存データに影響する可能性があります。"
+  },
+  "attrSet": {
+    "title": "属性セット管理",
+    "subtitle": "属性パレットからドラッグして属性セットを構築します。",
+    "newTitle": "属性セット追加",
+    "editTitle": "属性セット編集",
+    "deleteConfirm": "属性セット {code} を削除しますか？元に戻せません。",
+    "palette": {
+      "title": "属性パレット",
+      "subtitle": "属性をドラッグしてセットに追加します。",
+      "searchPlaceholder": "コードや表示名で検索"
+    },
+    "canvas": {
+      "title": "セットキャンバス",
+      "noSelection": "属性セットを選択してください",
+      "noSelectionHint": "属性セットを選択してルールを設定します。"
+    },
+    "list": {
+      "title": "属性セット一覧",
+      "subtitle": "右クリックで操作できます。"
+    },
+    "rules": {
+      "title": "属性ルール",
+      "dialogTitle": "属性ルール編集",
+      "emptyHint": "属性をドロップしてセットを作成します。",
+      "code": "コード",
+      "name": "表示名",
+      "required": "必須",
+      "editable": "編集可",
+      "visible": "表示",
+      "defaultValue": "デフォルト値",
+      "alreadyAdded": "この属性は追加済みです。"
+    },
+    "preview": {
+      "title": "フォームプレビュー",
+      "empty": "プレビューできる項目がありません。"
+    },
+    "form": {
+      "code": "コード",
+      "name": "表示名",
+      "nameI18n": "表示名 (i18n JSON)",
+      "domain": "ドメイン",
+      "industry": "業界",
+      "industryShared": "共通 (業界なし)",
+      "active": "有効"
+    },
+    "actions": {
+      "preview": "プレビュー",
+      "editRules": "ルール設定",
+      "save": "保存",
+      "delete": "削除"
+    },
+    "errors": {
+      "codeRequired": "コードは必須です。",
+      "nameRequired": "表示名は必須です。",
+      "domainRequired": "ドメインは必須です。",
+      "jsonObject": "JSONはオブジェクトである必要があります。",
       "adminOnlySystem": "システムスコープは管理者のみ編集できます。"
     }
   },
@@ -498,19 +764,19 @@
     }
   },
   "producedBeer": {
-    "title": "移動記録",
-    "subtitle": "製品ビールの在庫と移動を管理します。",
+    "title": "移出記録",
+    "subtitle": "製品ビールの在庫と移出を管理します。",
     "sections": {
       "inventory": "在庫",
-      "movements": "移動"
+      "movements": "移出"
     },
     "inventory": {
-      "subtitle": "ロットとパッケージ別の製品在庫。",
+      "subtitle": "バッチとパッケージ別の製品在庫。",
       "table": {
         "beerName": "ビール名",
         "category": "カテゴリ",
         "packageType": "パッケージ種別",
-        "batchNo": "製造ロット",
+        "batchNo": "製造バッチ",
         "productionDate": "製造日",
         "qtyLiters": "数量(L)",
         "qtyPackages": "数量(本/箱)",
@@ -518,88 +784,88 @@
       }
     },
     "movement": {
-      "subtitle": "倉庫・顧客間の移動履歴。",
+      "subtitle": "倉庫・顧客間の移出履歴。",
       "viewList": "リスト表示",
       "viewCard": "カード表示",
       "filters": {
         "beerName": "ビール名",
         "category": "カテゴリ",
         "packageType": "パッケージ種別",
-        "batchNo": "製造ロット",
+        "batchNo": "製造バッチ",
         "dateFrom": "開始日",
         "dateTo": "終了日",
-        "movementType": "移動種別"
+        "movementType": "移出種別"
       },
       "types": {
         "taxed": "課税移出",
         "notax": "未納税移出",
         "returnNotax": "返品",
         "wasteNotax": "廃棄",
-        "transferNotax": "内部移動"
+        "transferNotax": "内部移出"
       },
       "docTypeMap": {
         "sale": "課税移出",
         "tax_transfer": "輸出免税",
         "return": "移入戻り",
-        "transfer": "社内移動",
+        "transfer": "社内移出",
         "waste": "廃棄"
       },
       "actions": {
-        "new": "移動登録",
-        "edit": "移動編集",
+        "new": "移出登録",
+        "edit": "移出編集",
         "exportCsv": "CSV出力"
       },
       "card": {
         "docNo": "伝票番号",
         "taxType": "税区分",
-        "movementDate": "移動日",
-        "source": "移動元",
-        "destination": "移動先",
+        "movementDate": "移出日",
+        "source": "移出元",
+        "destination": "移出先",
         "totalLiters": "数量(L)",
         "totalPackages": "数量(本/箱)",
         "lines": "明細",
         "lineBeer": "ビール名",
         "lineCategory": "カテゴリ",
         "linePackageType": "パッケージ種別",
-        "lineBatch": "ロット",
+        "lineBatch": "バッチ",
         "lineQtyPackages": "数量(本/箱)",
         "lineQtyLiters": "数量(L)"
       }
     },
     "edit": {
-      "breadcrumb": "ビール移動",
-      "titleNew": "移動登録",
-      "titleEdit": "移動編集",
-      "subtitle": "移動元在庫を選択して拠点間の移動を作成します。",
+      "breadcrumb": "ビール移出",
+      "titleNew": "移出登録",
+      "titleEdit": "移出編集",
+      "subtitle": "移出元在庫を選択して拠点間の移出を作成します。",
       "back": "一覧へ戻る",
       "form": {
         "docNo": "伝票番号",
         "docType": "種別",
-        "movementType": "移動種別",
-        "movementDate": "移動日",
-        "sourceSite": "移動元",
-        "destinationSite": "移動先"
+        "movementType": "移出種別",
+        "movementDate": "移出日",
+        "sourceSite": "移出元",
+        "destinationSite": "移出先"
       },
       "source": {
-        "title": "移動元",
-        "subtitle": "カードを選択し、ダブルクリックで数量入力、または移動ボタンで追加します。"
+        "title": "移出元",
+        "subtitle": "カードを選択し、ダブルクリックで数量入力、または移出ボタンで追加します。"
       },
       "destination": {
-        "title": "移動先",
+        "title": "移出先",
         "subtitle": "明細の内容を確認してください。"
       },
       "actions": {
-        "moveToDestination": "移動先へ追加",
-        "moveToSource": "移動元へ戻す"
+        "moveToDestination": "移出先へ追加",
+        "moveToSource": "移出元へ戻す"
       },
       "lines": {
         "title": "明細",
-        "hint": "移動元のカードまたは移動ボタンで明細を追加します。",
+        "hint": "移出元のカードまたは移出ボタンで明細を追加します。",
         "columns": {
           "beer": "ビール名",
           "category": "カテゴリ",
           "packageType": "パッケージ種別",
-          "batch": "ロット",
+          "batch": "バッチ",
           "qtyPackages": "数量(本/箱)",
           "qtyLiters": "数量(L)"
         }
@@ -771,16 +1037,16 @@
   "dashboard": {
     "title": "概要",
     "kpis": {
-      "inProgress": "進行中ロット",
-      "completed30d": "完了ロット（30日）",
+      "inProgress": "進行中バッチ",
+      "completed30d": "完了バッチ（30日）",
       "volume30d": "仕込み量（30日）",
       "revenue30d": "売上（30日）"
     },
     "lists": {
-      "inProgressTitle": "進行中ロット",
+      "inProgressTitle": "進行中バッチ",
       "brewedMeta": "仕込日 {date} ・ {style} ・ {liters} L",
       "inProgressBadge": "進行中",
-      "none": "進行中のロットはありません。"
+      "none": "進行中のバッチはありません。"
     },
     "todos": {
       "title": "To‑do",
@@ -845,7 +1111,7 @@
   "assistant": {
     "title": "AIアシスタント",
     "subtitle": "醸造・在庫・計画に関する質問を入力すると、AIが最新情報をもとに回答します。",
-    "seedMessage": "こんにちは！醸造所コーパイロットです。生産や在庫、計画について何でも聞いてください。",
+    "seedMessage": "こんにちは！醸造所コーパイバッチです。生産や在庫、計画について何でも聞いてください。",
     "emptyState": "まだ会話がありません。下の入力欄から質問して開始しましょう。",
     "promptLabel": "質問内容",
     "promptPlaceholder": "例）現在の在庫で330mlボトルは何本充填できますか？",
@@ -949,6 +1215,10 @@
       "alcoholTypeMaster": "酒類種別管理",
       "alcoholTaxMaster": "酒税管理",
       "materialClassMaster": "原材料区分管理",
+      "materialTypeMaster": "原材料種別管理",
+      "systemRelated": "システム関連",
+      "attrDefMaster": "属性定義管理",
+      "attrSetMaster": "属性セット管理",
       "siteTypeMaster": "サイト種別管理",
       "catalogMaster": "酒類登録",
       "uomMaster": "単位マスタ",
@@ -1095,31 +1365,31 @@
   },
   "batchYield": {
     "title": "エキス収率サマリー",
-    "subtitle": "完了したロットから仕込室収率（エキス）を分析します。",
+    "subtitle": "完了したバッチから仕込室収率（エキス）を分析します。",
     "filters": {
       "style": "スタイル",
       "recipe": "レシピ",
-      "status": "ロットステータス",
+      "status": "バッチステータス",
       "dateFrom": "開始日",
       "dateTo": "終了日"
     },
     "summary": {
       "style": "スタイル",
       "recipe": "レシピ",
-      "batchCount": "ロット数",
+      "batchCount": "バッチ数",
       "targetVolume": "目標量 (L)",
       "actualVolume": "充填量 (L)",
       "yield": "収率 (%)"
     },
     "batches": {
-      "batchCode": "ロット",
+      "batchCode": "バッチ",
       "planned": "開始予定日",
       "target": "目標量 (L)",
       "actual": "充填量 (L)",
       "yield": "収率 (%)",
       "status": "ステータス"
     },
-    "noData": "条件に合致する完了ロットはありません。",
+    "noData": "条件に合致する完了バッチはありません。",
     "yieldLabel": "収率"
   },
   "calendar": {
@@ -1159,9 +1429,9 @@
     "monthlyChartTitle": "月別生産量と酒税額",
     "volumeSeries": "生産量 (L)",
     "taxSeries": "酒税額 (¥)",
-    "batchesSectionTitle": "月別ロット明細",
+    "batchesSectionTitle": "月別バッチ明細",
     "monthTotal": "小計",
-    "batch": "ロット",
+    "batch": "バッチ",
     "fillDate": "充填日",
     "volumeShort": "生産量",
     "taxShort": "酒税",

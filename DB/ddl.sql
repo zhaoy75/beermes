@@ -36,30 +36,16 @@ create extension if not exists pgcrypto;  -- for gen_random_uuid()
 -- =========================================
 -- Enums (idempotent)
 -- =========================================
-do $$ begin
-  create type mst_material_category as enum (
-    'malt','hop','yeast','adjunct','water','packaging','chemical','cleaning','other'
-  );
-exception when duplicate_object then null; end $$;
 
 do $$ begin
-  create type prc_step_type as enum (
-    'mashing','lautering','boil','whirlpool','cooling','fermentation',
-    'dry_hop','cold_crash','packaging','transfer','other'
-  );
+  CREATE TYPE public.mes_batch_status AS ENUM (
+    'planned',
+    'ready',
+    'in_progress',
+    'hold',
+    'finished');
 exception when duplicate_object then null; end $$;
 
-do $$ begin
-  create type haccp_hazard_type as enum (
-    'biological','chemical','physical','allergen'
-  );
-exception when duplicate_object then null; end $$;
-
-do $$ begin
-  create type haccp_limit_type as enum (
-    'min','max','range','set'
-  );
-exception when duplicate_object then null; end $$;
 
 -- =========================================
 -- Masters
@@ -75,41 +61,6 @@ create table if not exists mst_uom (
   created_at timestamptz default now(),
   unique (tenant_id, code)
 );
-
-create table if not exists mst_materials (
-  id uuid primary key default gen_random_uuid(),
-  tenant_id uuid not null,
-  category mst_material_category not null,
-  code text not null,
-  name text not null,
-  uom_id uuid not null references mst_uom(id),
-  active boolean default true,
-  created_at timestamptz default now(),
-  unique (tenant_id, code)
-);
-
-create table if not exists mst_beer_package_category (
-  id uuid primary key default gen_random_uuid(),
-  tenant_id uuid not null,
-  package_code text not null,
-  package_name text,
-  size numeric,
-  uom_id uuid references mst_uom(id),
-  size_fixed boolean default false,
-  created_at timestamptz default now(),
-  unique (tenant_id, package_code)
-);
-
-create table if not exists public.mst_category (
-  id uuid primary key default gen_random_uuid(),
-  code text not null,
-  tenant_id uuid not null,
-  name character varying,
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  unique (tenant_id, code)
-);
-
-
 
 
 -- =========================================
@@ -186,16 +137,19 @@ create table if not exists mes_batches (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null,
   batch_code text not null,
+  batch_label varchar,
   recipe_id uuid not null references mes_recipes(id),
   process_version int not null,
-  vessel_id uuid,
-  target_volume_l numeric,
+  scale_factor numeric,
+  recipe_json jsonb,
   planned_start timestamptz,
+  planned_end timestamptz,
+  actual_start timestamptz,
+  actual_end timestamptz,
   status text default 'planned',
-  actual_og numeric,
-  actual_fg numeric,
-  actual_abv numeric,
-  actual_srm numeric,
+  kpi jsonb default '[]'::jsonb,
+  material_consumption jsonb default '[]'::jsonb,
+  output_actual jsonb default '[]'::jsonb,
   created_at timestamptz default now(),
   notes text,
   meta jsonb default '{}'::jsonb,

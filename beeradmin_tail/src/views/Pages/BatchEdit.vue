@@ -6,7 +6,7 @@
     <div v-else-if="!batch" class="p-6 text-sm text-red-600">{{ t('batch.edit.notFound') }}</div>
     <div v-else class="space-y-6">
       <!-- Batch Information -->
-      <section class="bg-white rounded-xl shadow border border-gray-200 p-5">
+      <section class="bg-white rounded-xl shadow border border-gray-200 px-4 py-5">
         <header class="flex items-center justify-between mb-4">
           <div>
             <h2 class="text-lg font-semibold text-gray-800">{{ t('batch.edit.infoTitle') }}</h2>
@@ -21,17 +21,24 @@
           </div>
           <div>
             <label class="block text-sm text-gray-600 mb-1" for="batchStatus">{{ t('batch.edit.status') }}</label>
-            <input id="batchStatus" v-model.trim="batchForm.status" type="text" class="w-full h-[40px] border rounded px-3" />
+            <select id="batchStatus" v-model="batchForm.status" class="w-full h-[40px] border rounded px-3 bg-white" :disabled="batchStatusLoading">
+              <option value="">{{ t('common.select') }}</option>
+              <option v-for="option in batchStatusOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+            </select>
           </div>
           <div>
             <label class="block text-sm text-gray-600 mb-1" for="batchLabel">{{ t('batch.edit.label') }}</label>
-            <input id="batchLabel" v-model.trim="batchForm.label" type="text" class="w-full h-[40px] border rounded px-3" />
+            <input id="batchLabel" v-model.trim="batchForm.batch_label" type="text" class="w-full h-[40px] border rounded px-3" />
+          </div>
+          <div>
+            <label class="block text-sm text-gray-600 mb-1" for="batchScaleFactor">{{ t('batch.edit.scaleFactor') }}</label>
+            <input id="batchScaleFactor" v-model.number="batchForm.scale_factor" type="number" min="0" step="0.0001" class="w-full h-[40px] border rounded px-3" />
           </div>
           <div>
             <label class="block text-sm text-gray-600 mb-1" for="batchPlannedStart">{{ t('batch.edit.plannedStart') }}</label>
             <input id="batchPlannedStart" v-model="batchForm.planned_start" type="datetime-local" class="w-full h-[40px] border rounded px-3" />
           </div>
-          <!-- <div>
+          <div>
             <label class="block text-sm text-gray-600 mb-1" for="batchPlannedEnd">{{ t('batch.edit.plannedEnd') }}</label>
             <input id="batchPlannedEnd" v-model="batchForm.planned_end" type="datetime-local" class="w-full h-[40px] border rounded px-3" />
           </div>
@@ -42,77 +49,238 @@
           <div>
             <label class="block text-sm text-gray-600 mb-1" for="batchActualEnd">{{ t('batch.edit.actualEnd') }}</label>
             <input id="batchActualEnd" v-model="batchForm.actual_end" type="datetime-local" class="w-full h-[40px] border rounded px-3" />
-          </div> -->
-          <div>
-            <label class="block text-sm text-gray-600 mb-1" for="batchTargetVolume">{{ t('batch.edit.targetVolume') }}</label>
-            <input id="batchTargetVolume" v-model.number="batchForm.target_volume_l" type="number" min="0" step="0.01" class="w-full h-[40px] border rounded px-3" />
           </div>
           <div class="lg:col-span-3">
             <label class="block text-sm text-gray-600 mb-1" for="batchNotes">{{ t('batch.edit.notes') }}</label>
             <textarea id="batchNotes" v-model.trim="batchForm.notes" rows="3" class="w-full border rounded px-3 py-2"></textarea>
           </div>
-          <div class="lg:col-span-3 space-y-2">
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="text-sm font-semibold text-gray-700">{{ t('batch.edit.parentBatchesTitle') }}</p>
-                <p class="text-xs text-gray-500">{{ t('batch.edit.parentBatchesSubtitle') }}</p>
-              </div>
-              <button class="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-100" type="button" @click="addParentBatch">{{ t('batch.edit.parentBatchesAdd') }}</button>
-            </div>
-            <div v-if="batchForm.parent_batches.length === 0" class="text-xs text-gray-500">{{ t('batch.edit.parentBatchesEmpty') }}</div>
-            <div v-for="(row, index) in batchForm.parent_batches" :key="`parent-${index}`" class="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div class="md:col-span-2">
-                <label class="block text-sm text-gray-600 mb-1" :for="`editParentBatchCode-${index}`">{{ t('batch.edit.parentBatchCode') }}</label>
-                <input :id="`editParentBatchCode-${index}`" v-model.trim="row.batch_code" type="text" class="w-full h-[40px] border rounded px-3" />
-              </div>
-              <div>
-                <label class="block text-sm text-gray-600 mb-1" :for="`editParentBatchQty-${index}`">{{ t('batch.edit.parentBatchQuantity') }}</label>
-                <input :id="`editParentBatchQty-${index}`" v-model="row.quantity_liters" type="number" min="0" step="0.01" class="w-full h-[40px] border rounded px-3" />
-              </div>
-              <div class="md:col-span-3 flex justify-end">
-                <button class="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-100" type="button" @click="removeParentBatch(index)">{{ t('batch.edit.parentBatchesRemove') }}</button>
-              </div>
-            </div>
-          </div>
         </form>
       </section>
 
-      <section class="bg-white rounded-xl shadow border border-gray-200 p-5">
+      <section class="bg-white rounded-xl shadow border border-gray-200 px-4 py-5">
         <header class="flex items-center justify-between mb-4">
-          <div>
-            <h2 class="text-lg font-semibold text-gray-800">{{ t('batch.edit.actualTitle') }}</h2>
-            <p class="text-xs text-gray-500">{{ t('batch.edit.actualSubtitle') }}</p>
+          <div class="flex items-center gap-3">
+            <button class="px-2 py-1 text-xs rounded border border-gray-300 hover:bg-gray-100" type="button" @click="toggleSection('kpi')">
+              {{ collapseLabel(sectionCollapsed.kpi) }}
+            </button>
+            <div>
+              <h2 class="text-lg font-semibold text-gray-800">{{ t('batch.edit.kpiTitle') }}</h2>
+              <p class="text-xs text-gray-500">{{ t('batch.edit.kpiSubtitle') }}</p>
+            </div>
           </div>
           <button class="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50" type="button" :disabled="savingBatch" @click="saveBatch">
             {{ savingBatch ? t('common.saving') : t('common.save') }}
           </button>
         </header>
-        <form class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" @submit.prevent>
-          <div>
-            <label class="block text-sm text-gray-600 mb-1" for="batchActualProductVolume">{{ t('batch.edit.actualProductVolume') }}</label>
-            <input id="batchActualProductVolume" v-model.trim="batchForm.actual_product_volume" type="number" min="0" step="0.01" class="w-full h-[40px] border rounded px-3" />
+        <div v-show="!sectionCollapsed.kpi" class="overflow-x-auto border border-gray-200 rounded-lg">
+          <table class="min-w-full text-sm divide-y divide-gray-200">
+            <thead class="bg-gray-50 text-gray-600 uppercase text-xs">
+              <tr>
+                <th class="px-2 py-1 text-left w-[160px]">{{ t('batch.edit.kpiName') }}</th>
+                <th class="px-2 py-1 text-left w-[90px]">{{ t('batch.edit.kpiUom') }}</th>
+                <th class="px-3 py-1 text-right">{{ t('batch.edit.kpiPlanned') }}</th>
+                <th class="px-3 py-1 text-right">{{ t('batch.edit.kpiActual') }}</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              <tr v-for="(row, index) in batchForm.kpi_rows" :key="`${row.id}-${index}`" class="hover:bg-gray-50">
+                <td class="px-2 py-1 text-sm text-gray-700 w-[160px]">
+                  <span class="block truncate">{{ row.name }}</span>
+                </td>
+                <td class="px-2 py-1 text-sm text-gray-700 w-[90px]">
+                  <span class="block truncate">{{ row.uom }}</span>
+                </td>
+                <td class="px-3 py-1 text-right">
+                  <input
+                    v-model="row.planed"
+                    :type="isNumericKpi(row) ? 'number' : 'text'"
+                    :min="isNumericKpi(row) ? '0' : undefined"
+                    :step="isNumericKpi(row) ? '0.001' : undefined"
+                    class="w-full h-[30px] border rounded px-2 text-right"
+                  />
+                </td>
+                <td class="px-3 py-1 text-right">
+                  <input
+                    v-model="row.actual"
+                    :type="isNumericKpi(row) ? 'number' : 'text'"
+                    :min="isNumericKpi(row) ? '0' : undefined"
+                    :step="isNumericKpi(row) ? '0.001' : undefined"
+                    class="w-full h-[30px] border rounded px-2 text-right"
+                  />
+                </td>
+              </tr>
+              <tr v-if="batchForm.kpi_rows.length === 0">
+                <td class="px-3 py-4 text-center text-gray-500" colspan="5">{{ t('common.noData') }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="bg-white rounded-xl shadow border border-gray-200 px-4 py-5">
+        <header class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-3">
+            <button class="px-2 py-1 text-xs rounded border border-gray-300 hover:bg-gray-100" type="button" @click="toggleSection('materials')">
+              {{ collapseLabel(sectionCollapsed.materials) }}
+            </button>
+            <div>
+              <h2 class="text-lg font-semibold text-gray-800">{{ t('batch.edit.materialConsumptionTitle') }}</h2>
+              <p class="text-xs text-gray-500">{{ t('batch.edit.materialConsumptionSubtitle') }}</p>
+            </div>
           </div>
-          <div>
-            <label class="block text-sm text-gray-600 mb-1" for="batchActualOg">{{ t('batch.edit.actualOg') }}</label>
-            <input id="batchActualOg" v-model.trim="batchForm.actual_og" type="number" min="0" step="0.001" class="w-full h-[40px] border rounded px-3" />
+          <button class="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50" type="button" :disabled="savingBatch" @click="saveBatch">
+            {{ savingBatch ? t('common.saving') : t('common.save') }}
+          </button>
+        </header>
+        <div v-show="!sectionCollapsed.materials" class="space-y-4">
+          <div v-if="materialConsumptionGroups.length === 0" class="text-sm text-gray-500">{{ t('common.noData') }}</div>
+          <div class="overflow-x-auto border border-gray-200 rounded-lg">
+            <table class="min-w-full text-sm divide-y divide-gray-200">
+              <thead class="bg-gray-50 text-gray-600 uppercase text-xs">
+                <tr>
+                  <th class="px-3 py-2 text-left">{{ t('batch.edit.materialConsumptionClass') }}</th>
+                  <th class="px-3 py-2 text-left">{{ t('batch.edit.materialConsumptionMaterialList') }}</th>
+                  <th class="px-3 py-2 text-right">{{ t('batch.edit.materialConsumptionPlanned') }}</th>
+                  <th class="px-3 py-2 text-right">{{ t('batch.edit.materialConsumptionActual') }}</th>
+                  <th class="px-3 py-2 text-right">{{ t('batch.edit.materialConsumptionVariance') }}</th>
+                  <th class="px-3 py-2 text-left">{{ t('batch.edit.materialConsumptionDetails') }}</th>
+                  <th class="px-3 py-2 text-left">{{ t('batch.edit.materialConsumptionDetailsButton') }}</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100">
+                <tr v-for="group in materialConsumptionGroups" :key="group.key" class="hover:bg-gray-50">
+                  <td class="px-3 py-2 text-sm text-gray-700">{{ group.label }}</td>
+                  <td class="px-3 py-2 text-sm text-gray-700">
+                    <div class="max-w-[280px] text-xs text-gray-600 line-clamp-2">
+                      {{ materialListText(group.row.materials) }}
+                    </div>
+                  </td>
+                  <td class="px-3 py-2 text-right">
+                    <input v-model="group.row.planned_qty" type="number" min="0" step="0.001" class="w-24 h-[36px] border rounded px-2 text-right" />
+                  </td>
+                  <td class="px-3 py-2 text-right">
+                    <input v-model="group.row.actual_qty" type="number" min="0" step="0.001" class="w-24 h-[36px] border rounded px-2 text-right" />
+                  </td>
+                  <td class="px-3 py-2 text-right">
+                    <input v-model="group.row.variance" type="number" step="0.001" class="w-24 h-[36px] border rounded px-2 text-right" :placeholder="variancePlaceholder(group.row)" />
+                  </td>
+                  <td class="px-3 py-2">
+                    <input v-model.trim="group.row.details_notes" type="text" class="w-full h-[36px] border rounded px-2" />
+                  </td>
+                  <td class="px-3 py-2">
+                    <div class="flex items-center gap-2">
+                      <button class="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-100" type="button" @click="openMaterialDetail(group.label, group.key)">
+                        {{ t('batch.edit.materialConsumptionDetailsButton') }}
+                      </button>
+                      <span class="text-xs text-gray-500">{{ group.row.materials.length }} {{ t('batch.edit.materialConsumptionDetailsCount') }}</span>
+                    </div>
+                  </td>
+                </tr>
+                <tr v-if="materialConsumptionGroups.length === 0">
+                  <td class="px-3 py-4 text-center text-gray-500" colspan="7">{{ t('common.noData') }}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
+        </div>
+      </section>
+
+      <section class="bg-white rounded-xl shadow border border-gray-200 px-4 py-5">
+        <header class="flex items-center justify-between mb-4">
           <div>
-            <label class="block text-sm text-gray-600 mb-1" for="batchActualFg">{{ t('batch.edit.actualFg') }}</label>
-            <input id="batchActualFg" v-model.trim="batchForm.actual_fg" type="number" min="0" step="0.001" class="w-full h-[40px] border rounded px-3" />
+            <h2 class="text-lg font-semibold text-gray-800">{{ t('batch.edit.outputActualTitle') }}</h2>
+            <p class="text-xs text-gray-500">{{ t('batch.edit.outputActualSubtitle') }}</p>
           </div>
-          <div>
-            <label class="block text-sm text-gray-600 mb-1" for="batchActualAbv">{{ t('batch.edit.actualAbv') }}</label>
-            <input id="batchActualAbv" v-model.trim="batchForm.actual_abv" type="number" min="0" step="0.01" class="w-full h-[40px] border rounded px-3" />
+          <div class="flex items-center gap-2">
+            <button class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-100" type="button" @click="addOutputRow">{{ t('common.add') }}</button>
+            <button class="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50" type="button" :disabled="savingBatch" @click="saveBatch">
+              {{ savingBatch ? t('common.saving') : t('common.save') }}
+            </button>
           </div>
-          <div>
-            <label class="block text-sm text-gray-600 mb-1" for="batchActualSrm">{{ t('batch.edit.actualSrm') }}</label>
-            <input id="batchActualSrm" v-model.trim="batchForm.actual_srm" type="number" min="0" step="0.1" class="w-full h-[40px] border rounded px-3" />
+        </header>
+        <div class="space-y-4">
+          <div v-if="batchForm.output_rows.length === 0" class="text-sm text-gray-500">{{ t('common.noData') }}</div>
+          <div v-for="(row, index) in batchForm.output_rows" :key="`output-${index}`" class="border border-gray-200 rounded-lg p-3 space-y-3">
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+              <div>
+                <label class="block text-xs text-gray-500 mb-1">{{ t('batch.edit.outputActualMaterialId') }}</label>
+                <input v-model.trim="row.material_id" type="text" class="w-full h-[36px] border rounded px-2" />
+              </div>
+              <div>
+                <label class="block text-xs text-gray-500 mb-1">{{ t('batch.edit.outputActualQty') }}</label>
+                <input v-model="row.qty" type="number" min="0" step="0.001" class="w-full h-[36px] border rounded px-2 text-right" />
+              </div>
+              <div>
+                <label class="block text-xs text-gray-500 mb-1">{{ t('batch.edit.outputActualUom') }}</label>
+                <input v-model.trim="row.uom" type="text" class="w-full h-[36px] border rounded px-2" />
+              </div>
+              <div>
+                <label class="block text-xs text-gray-500 mb-1">{{ t('batch.edit.outputActualType') }}</label>
+                <input v-model.trim="row.type" type="text" class="w-full h-[36px] border rounded px-2" />
+              </div>
+              <div>
+                <label class="block text-xs text-gray-500 mb-1">{{ t('batch.edit.outputActualDispositionType') }}</label>
+                <select v-model="row.disposition_type" class="w-full h-[36px] border rounded px-2 bg-white">
+                  <option value="">{{ t('batch.edit.outputActualDispositionNone') }}</option>
+                  <option value="transfer_batch">{{ t('batch.edit.outputActualDispositionTransferBatch') }}</option>
+                  <option value="transfer_warehouse">{{ t('batch.edit.outputActualDispositionTransferWarehouse') }}</option>
+                  <option value="disposal">{{ t('batch.edit.outputActualDispositionDisposal') }}</option>
+                </select>
+              </div>
+            </div>
+
+            <div v-if="row.disposition_type === 'transfer_batch'" class="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <div class="md:col-span-2">
+                <label class="block text-xs text-gray-500 mb-1">{{ t('batch.edit.outputActualTargetBatch') }}</label>
+                <select v-model="row.transfer_batch_id" class="w-full h-[36px] border rounded px-2 bg-white">
+                  <option value="">{{ t('common.select') }}</option>
+                  <option v-for="option in batchOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs text-gray-500 mb-1">{{ t('batch.edit.outputActualTransferQty') }}</label>
+                <input v-model="row.transfer_qty" type="number" min="0" step="0.001" class="w-full h-[36px] border rounded px-2 text-right" />
+              </div>
+              <div>
+                <label class="block text-xs text-gray-500 mb-1">{{ t('batch.edit.outputActualTransferUom') }}</label>
+                <input v-model.trim="row.transfer_uom" type="text" class="w-full h-[36px] border rounded px-2" />
+              </div>
+            </div>
+
+            <div v-if="row.disposition_type === 'transfer_warehouse'" class="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <div class="md:col-span-2">
+                <label class="block text-xs text-gray-500 mb-1">{{ t('batch.edit.outputActualTargetWarehouse') }}</label>
+                <select v-model="row.warehouse_site_id" class="w-full h-[36px] border rounded px-2 bg-white">
+                  <option value="">{{ t('common.select') }}</option>
+                  <option v-for="option in siteOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs text-gray-500 mb-1">{{ t('batch.edit.outputActualTransferQty') }}</label>
+                <input v-model="row.warehouse_qty" type="number" min="0" step="0.001" class="w-full h-[36px] border rounded px-2 text-right" />
+              </div>
+              <div>
+                <label class="block text-xs text-gray-500 mb-1">{{ t('batch.edit.outputActualTransferUom') }}</label>
+                <input v-model.trim="row.warehouse_uom" type="text" class="w-full h-[36px] border rounded px-2" />
+              </div>
+            </div>
+
+            <div v-if="row.disposition_type === 'disposal'" class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div class="md:col-span-2">
+                <label class="block text-xs text-gray-500 mb-1">{{ t('batch.edit.outputActualDisposalReason') }}</label>
+                <input v-model.trim="row.disposal_reason" type="text" class="w-full h-[36px] border rounded px-2" />
+              </div>
+            </div>
+
+            <div class="flex justify-end">
+              <button class="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-100" type="button" @click="removeOutputRow(index)">{{ t('common.delete') }}</button>
+            </div>
           </div>
-        </form>
+        </div>
       </section>
 
       <!-- Ingredients -->
-      <section v-if="false" class="bg-white rounded-xl shadow border border-gray-200 p-5">
+      <section v-if="false" class="bg-white rounded-xl shadow border border-gray-200 px-4 py-5">
         <header class="flex items-center justify-between mb-4">
           <div class="flex items-center gap-3">
             <button class="px-2 py-1 text-xs rounded border border-gray-300 hover:bg-gray-100" type="button" @click="toggleSection('ingredients')">
@@ -159,7 +327,7 @@
       </section>
 
       <!-- Packaging -->
-      <section class="bg-white rounded-xl shadow border border-gray-200 p-5">
+      <section class="bg-white rounded-xl shadow border border-gray-200 px-4 py-5">
         <header class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
           <div class="flex items-center gap-3">
             <button class="px-2 py-1 text-xs rounded border border-gray-300 hover:bg-gray-100" type="button" @click="toggleSection('packaging')">
@@ -171,144 +339,53 @@
             </div>
           </div>
           <div class="flex items-center gap-2">
-            <span v-if="packagesLoading" class="text-sm text-gray-500">{{ t('common.loading') }}</span>
-            <button class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-50" type="button" :disabled="packagesLoading || savingPackaging" @click="savePackagingMovement">
-              {{ savingPackaging ? t('common.saving') : t('common.save') }}
+            <span v-if="packingNotice" class="text-xs text-green-600">{{ packingNotice }}</span>
+            <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50" type="button" :disabled="packingDialog.loading || !batch" @click="openPackingDialog">
+              {{ t('batch.packaging.openDialog') }}
             </button>
-            <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50" type="button" :disabled="packagesLoading" @click="openPackageAdd">{{ t('batch.packaging.addButton') }}</button>
           </div>
         </header>
 
-        <div v-show="!sectionCollapsed.packaging" class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-          <div class="border border-dashed border-gray-300 rounded-lg p-3 bg-gray-50">
-            <p class="text-xs uppercase text-gray-500">{{ t('batch.packaging.summaryTotalProduct') }}</p>
-            <p class="text-lg font-semibold text-gray-800">{{ formatVolumeValue(totalProductVolume) }}</p>
-          </div>
-          <div class="border border-dashed border-gray-300 rounded-lg p-3 bg-gray-50">
-            <p class="text-xs uppercase text-gray-500">{{ t('batch.packaging.summaryFilled') }}</p>
-            <p class="text-lg font-semibold text-gray-800">{{ formatVolumeValue(totalFilledVolume) }}</p>
-          </div>
-          <div class="border border-dashed border-gray-300 rounded-lg p-3 bg-gray-50">
-            <p class="text-xs uppercase text-gray-500">{{ t('batch.packaging.summaryRemaining') }}</p>
-            <p class="text-lg font-semibold text-gray-800">{{ formatVolumeValue(remainingVolume) }}</p>
-          </div>
-        </div>
-
-        <div v-show="!sectionCollapsed.packaging" class="overflow-x-auto border border-gray-200 rounded-lg">
-          <table class="min-w-full text-sm divide-y divide-gray-200">
-            <thead class="bg-gray-50 text-gray-600 uppercase text-xs">
-              <tr>
-                <th class="px-3 py-2 text-left">{{ t('batch.packaging.columns.fillDate') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('batch.packaging.columns.package') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('batch.packaging.columns.outputSite') }}</th>
-                <th class="px-3 py-2 text-right">{{ t('batch.packaging.columns.quantity') }}</th>
-                <th class="px-3 py-2 text-right">{{ t('batch.packaging.columns.unitSize') }}</th>
-                <th class="px-3 py-2 text-right">{{ t('batch.packaging.columns.totalVolume') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('batch.packaging.columns.notes') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('common.actions') }}</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-100">
-              <tr v-for="pkg in packages" :key="pkg.id" class="hover:bg-gray-50">
-                <td class="px-3 py-2 text-gray-600">{{ pkg.fill_at ? new Date(pkg.fill_at).toLocaleDateString() : '—' }}</td>
-                <td class="px-3 py-2">
-                  <div class="font-medium text-gray-800">{{ pkg.package_label }}</div>
-                  <div class="text-xs text-gray-500">{{ pkg.package_code }}</div>
-                </td>
-                <td class="px-3 py-2 text-gray-600">{{ siteLabel(pkg.site_id) }}</td>
-                <td class="px-3 py-2 text-right">{{ pkg.package_qty.toLocaleString() }}</td>
-                <td class="px-3 py-2 text-right">{{ formatVolumeValue(pkg.unit_volume_l) }}</td>
-                <td class="px-3 py-2 text-right font-semibold text-gray-800">{{ formatVolumeValue(pkg.total_volume_l) }}</td>
-                <td class="px-3 py-2 text-sm text-gray-600 whitespace-pre-wrap">{{ pkg.notes || '—' }}</td>
-                <td class="px-3 py-2 space-x-2">
-                  <button class="px-2 py-1 text-xs rounded border hover:bg-gray-100" type="button" @click="openPackageEdit(pkg)">{{ t('common.edit') }}</button>
-                  <button class="px-2 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700" type="button" @click="deletePackage(pkg)">{{ t('common.delete') }}</button>
-                </td>
-              </tr>
-              <tr v-if="!packagesLoading && packages.length === 0">
-                <td class="px-3 py-6 text-center text-gray-500" colspan="8">{{ t('batch.packaging.noData') }}</td>
-              </tr>
-              <tr v-if="packagesLoading">
-                <td class="px-3 py-6 text-center text-gray-500" colspan="8">{{ t('common.loading') }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <!-- Yeast Starter Maintenance -->
-      <section class="bg-white rounded-xl shadow border border-gray-200 p-5">
-        <header class="flex items-center justify-between mb-4">
-          <div class="flex items-center gap-3">
-            <button class="px-2 py-1 text-xs rounded border border-gray-300 hover:bg-gray-100" type="button" @click="toggleSection('yeast')">
-              {{ collapseLabel(sectionCollapsed.yeast) }}
-            </button>
-            <div>
-              <h2 class="text-lg font-semibold text-gray-800">{{ t('batch.yeast.sectionTitle') }}</h2>
-              <p class="text-xs text-gray-500">{{ t('batch.yeast.sectionSubtitle') }}</p>
-            </div>
-          </div>
-          <div class="text-sm text-gray-500" v-if="yeastLoading">{{ t('common.loading') }}</div>
-        </header>
-
-        <div v-show="!sectionCollapsed.yeast" class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-          <div class="border border-dashed border-gray-300 rounded-lg p-3 bg-gray-50">
-            <p class="text-xs uppercase text-gray-500">{{ t('batch.yeast.totalPulled') }}</p>
-            <p class="text-lg font-semibold text-gray-800">{{ formatQuantity(yeastTotals.totalPulled) }}</p>
-          </div>
-          <div class="border border-dashed border-gray-300 rounded-lg p-3 bg-gray-50">
-            <p class="text-xs uppercase text-gray-500">{{ t('batch.yeast.totalReturned') }}</p>
-            <p class="text-lg font-semibold text-gray-800">{{ formatQuantity(yeastTotals.totalReturned) }}</p>
-          </div>
-          <div class="border border-dashed border-gray-300 rounded-lg p-3 bg-gray-50">
-            <p class="text-xs uppercase text-gray-500">{{ t('batch.yeast.totalDumped') }}</p>
-            <p class="text-lg font-semibold text-gray-800">{{ formatQuantity(yeastTotals.totalDumped) }}</p>
+        <div v-show="!sectionCollapsed.packaging" class="space-y-3">
+          <div v-if="packingEvents.length === 0" class="text-sm text-gray-500">{{ t('batch.packaging.noData') }}</div>
+          <div v-else class="overflow-x-auto border border-gray-200 rounded-lg">
+            <table class="min-w-full text-sm divide-y divide-gray-200">
+              <thead class="bg-gray-50 text-gray-600 uppercase text-xs">
+                <tr>
+                  <th class="px-3 py-2 text-left">{{ t('batch.packaging.columns.eventTime') }}</th>
+                  <th class="px-3 py-2 text-left">{{ t('batch.packaging.columns.type') }}</th>
+                  <th class="px-3 py-2 text-left">{{ t('batch.packaging.columns.volume') }}</th>
+                  <th class="px-3 py-2 text-left">{{ t('batch.packaging.columns.movement') }}</th>
+                  <th class="px-3 py-2 text-left">{{ t('batch.packaging.columns.filling') }}</th>
+                  <th class="px-3 py-2 text-left">{{ t('batch.packaging.columns.memo') }}</th>
+                  <th class="px-3 py-2 text-left">{{ t('common.actions') }}</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100">
+                <tr v-for="event in packingEvents" :key="event.id" class="hover:bg-gray-50">
+                  <td class="px-3 py-2 text-gray-600">{{ formatPackingDate(event.event_time) }}</td>
+                  <td class="px-3 py-2 font-medium text-gray-800">{{ formatPackingType(event.packing_type) }}</td>
+                  <td class="px-3 py-2 text-gray-700">{{ formatPackingVolume(event) }}</td>
+                  <td class="px-3 py-2 text-gray-700">{{ formatPackingMovement(event) }}</td>
+                  <td class="px-3 py-2 text-gray-700">{{ formatPackingFilling(event) }}</td>
+                  <td class="px-3 py-2 text-gray-600">{{ event.memo || '—' }}</td>
+                  <td class="px-3 py-2 space-x-2">
+                    <button class="px-2 py-1 text-xs rounded border hover:bg-gray-100" type="button" @click="openPackingEdit(event)">
+                      {{ t('batch.packaging.actions.edit') }}
+                    </button>
+                    <button class="px-2 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700" type="button" @click="deletePackingEvent(event)">
+                      {{ t('batch.packaging.actions.delete') }}
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
-
-        <div v-show="!sectionCollapsed.yeast" class="overflow-x-auto border border-gray-200 rounded-lg">
-          <table class="min-w-full text-sm divide-y divide-gray-200">
-            <thead class="bg-gray-50 text-gray-600 uppercase text-xs">
-              <tr>
-                <th class="px-3 py-2 text-left">{{ t('batch.yeast.colTimestamp') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('batch.yeast.colSourceBatch') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('batch.yeast.colTankFrom') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('batch.yeast.colTankTo') }}</th>
-                <th class="px-3 py-2 text-right">{{ t('batch.yeast.colVolumePulled') }}</th>
-                <th class="px-3 py-2 text-right">{{ t('batch.yeast.colVolumeReturned') }}</th>
-                <th class="px-3 py-2 text-right">{{ t('batch.yeast.colVolumeDumped') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('batch.yeast.colNotes') }}</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-100">
-              <tr v-for="movement in yeastMovements" :key="movement.id" class="hover:bg-gray-50">
-                <td class="px-3 py-2 text-gray-600">{{ fmtDateTime(movement.recorded_at) }}</td>
-                <td class="px-3 py-2">
-                  <div class="font-medium text-gray-800">{{ movement.source_batch_code || '—' }}</div>
-                  <div v-if="movement.source_batch_id" class="text-xs text-gray-500">{{ movement.source_batch_id }}</div>
-                </td>
-                <td class="px-3 py-2 text-gray-600">{{ movement.from_tank || '—' }}</td>
-                <td class="px-3 py-2 text-gray-600">{{ movement.to_tank || '—' }}</td>
-                <td class="px-3 py-2 text-right">{{ formatQuantity(movement.volume_out) }}</td>
-                <td class="px-3 py-2 text-right">{{ formatQuantity(movement.volume_in) }}</td>
-                <td class="px-3 py-2 text-right">{{ formatQuantity(movement.volume_dumped) }}</td>
-                <td class="px-3 py-2 text-gray-600 whitespace-pre-wrap">{{ movement.notes || '—' }}</td>
-              </tr>
-              <tr v-if="!yeastLoading && yeastMovements.length === 0">
-                <td class="px-3 py-6 text-center text-gray-500" colspan="8">{{ t('batch.yeast.noData') }}</td>
-              </tr>
-              <tr v-if="yeastLoading">
-                <td class="px-3 py-6 text-center text-gray-500" colspan="8">{{ t('common.loading') }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <p class="mt-3 text-xs text-gray-400">{{ t('batch.yeast.todoHint') }}</p>
       </section>
 
       <!-- Steps -->
-      <section class="bg-white rounded-xl shadow border border-gray-200 p-5">
+      <section class="bg-white rounded-xl shadow border border-gray-200 px-4 py-5">
         <header class="flex items-center justify-between mb-4">
           <div class="flex items-center gap-3">
             <button class="px-2 py-1 text-xs rounded border border-gray-300 hover:bg-gray-100" type="button" @click="toggleSection('steps')">
@@ -361,8 +438,280 @@
       </section>
     </div>
 
+    <div v-if="materialDetailDialog.open && materialDetailDialog.row" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div class="w-full max-w-3xl bg-white rounded-xl shadow-lg border border-gray-200">
+        <header class="flex items-center justify-between px-4 py-3 border-b">
+          <div>
+            <h3 class="text-lg font-semibold text-gray-800">{{ t('batch.edit.materialConsumptionDetailsTitle') }}</h3>
+            <p class="text-xs text-gray-500">{{ materialDetailDialog.materialLabel }}</p>
+          </div>
+          <button class="text-sm px-2 py-1 rounded border hover:bg-gray-100" type="button" @click="closeMaterialDetail">{{ t('common.close') }}</button>
+        </header>
+        <div class="p-4 space-y-4">
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">{{ t('batch.edit.materialConsumptionDetailsNotes') }}</label>
+            <textarea v-model="materialDetailDialog.row.details_notes" rows="3" class="w-full border rounded px-3 py-2 text-sm"></textarea>
+          </div>
+          <div class="space-y-2">
+            <div class="flex items-center justify-between">
+              <h4 class="text-sm font-semibold text-gray-700">{{ t('batch.edit.materialConsumptionDetailsRecords') }}</h4>
+              <button class="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-100" type="button" @click="addDetailMaterialRow">{{ t('common.add') }}</button>
+            </div>
+            <div class="overflow-x-auto border border-gray-200 rounded-lg">
+              <table class="min-w-full text-sm divide-y divide-gray-200">
+                <thead class="bg-gray-50 text-gray-600 uppercase text-xs">
+                  <tr>
+                    <th class="px-3 py-2 text-left">{{ t('batch.edit.materialConsumptionMaterial') }}</th>
+                    <th class="px-3 py-2 text-right">{{ t('batch.edit.materialConsumptionPlanned') }}</th>
+                    <th class="px-3 py-2 text-right">{{ t('batch.edit.materialConsumptionActual') }}</th>
+                    <th class="px-3 py-2 text-right">{{ t('batch.edit.materialConsumptionVariance') }}</th>
+                    <th class="px-3 py-2 text-left">{{ t('batch.edit.materialConsumptionDetailsNotes') }}</th>
+                    <th class="px-3 py-2 text-left">{{ t('common.actions') }}</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                  <template v-for="(row, index) in materialDetailDialog.row.materials" :key="`detail-${index}`">
+                    <tr class="hover:bg-gray-50">
+                      <td class="px-3 py-2">
+                        <select v-model="row.material_id" class="w-full h-[34px] border rounded px-2 bg-white">
+                          <option value="">{{ t('common.select') }}</option>
+                          <option v-for="option in materialOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+                        </select>
+                      </td>
+                      <td class="px-3 py-2 text-right">
+                        <input v-model="row.planned_qty" type="number" min="0" step="0.001" class="w-full h-[34px] border rounded px-2 text-right" />
+                      </td>
+                      <td class="px-3 py-2 text-right">
+                        <input v-model="row.actual_qty" type="number" min="0" step="0.001" class="w-full h-[34px] border rounded px-2 text-right" />
+                      </td>
+                      <td class="px-3 py-2 text-right">
+                        <input v-model="row.variance" type="number" step="0.001" class="w-24 h-[34px] border rounded px-2 text-right" :placeholder="variancePlaceholder(row)" />
+                      </td>
+                      <td class="px-3 py-2">
+                        <input v-model.trim="row.details_notes" type="text" class="w-full h-[34px] border rounded px-2" />
+                      </td>
+                      <td class="px-3 py-2">
+                        <button class="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-100" type="button" @click="removeDetailMaterialRow(index)">{{ t('common.delete') }}</button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="px-3 py-2 bg-gray-50" colspan="6">
+                        <div class="flex items-center justify-between mb-2">
+                          <span class="text-xs text-gray-500">{{ t('batch.edit.materialConsumptionDetailsBatch') }}</span>
+                          <button class="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-100" type="button" @click="addDetailBatch(row)">
+                            {{ t('common.add') }}
+                          </button>
+                        </div>
+                        <div class="overflow-x-auto border border-gray-200 rounded-lg bg-white">
+                          <table class="min-w-full text-xs divide-y divide-gray-200">
+                            <thead class="bg-gray-50 text-gray-500 uppercase">
+                              <tr>
+                                <th class="px-2 py-1 text-left">{{ t('batch.edit.materialConsumptionDetailsBatch') }}</th>
+                                <th class="px-2 py-1 text-right">{{ t('batch.edit.materialConsumptionDetailsQty') }}</th>
+                                <th class="px-2 py-1 text-left">{{ t('batch.edit.materialConsumptionDetailsUom') }}</th>
+                                <th class="px-2 py-1 text-left">{{ t('common.actions') }}</th>
+                              </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                              <tr v-for="(b, bIndex) in row.batches" :key="`batch-${index}-${bIndex}`">
+                                <td class="px-2 py-1">
+                                  <input v-model.trim="b.batch_id" type="text" class="w-full h-[30px] border rounded px-2" />
+                                </td>
+                                <td class="px-2 py-1 text-right">
+                                  <input v-model="b.qty" type="number" min="0" step="0.001" class="w-full h-[30px] border rounded px-2 text-right" />
+                                </td>
+                                <td class="px-2 py-1">
+                                  <input v-model.trim="b.uom" type="text" class="w-full h-[30px] border rounded px-2" />
+                                </td>
+                                <td class="px-2 py-1">
+                                  <button class="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-100" type="button" @click="removeDetailBatch(row, bIndex)">{{ t('common.delete') }}</button>
+                                </td>
+                              </tr>
+                              <tr v-if="row.batches.length === 0">
+                                <td class="px-2 py-3 text-center text-gray-500" colspan="4">{{ t('common.noData') }}</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </td>
+                    </tr>
+                  </template>
+                  <tr v-if="materialDetailDialog.row.materials.length === 0">
+                    <td class="px-3 py-5 text-center text-gray-500" colspan="6">{{ t('common.noData') }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="packingDialog.open" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div class="w-full max-w-4xl bg-white rounded-xl shadow-lg border border-gray-200">
+        <header class="flex items-start justify-between px-4 py-3 border-b gap-4">
+          <div>
+            <h3 class="text-lg font-semibold text-gray-800">{{ t('batch.packaging.dialog.title') }}</h3>
+            <p class="text-xs text-gray-500">
+              {{ t('batch.packaging.dialog.batchSummary', { code: batch?.batch_code ?? '—', name: batchForm.batch_label || '—' }) }}
+            </p>
+          </div>
+          <button class="text-sm px-2 py-1 rounded border hover:bg-gray-100" type="button" @click="closePackingDialog">
+            {{ t('common.close') }}
+          </button>
+        </header>
+        <div class="p-4 space-y-4">
+          <div v-if="packingDialog.globalError" class="text-sm text-red-600">{{ packingDialog.globalError }}</div>
+          <div class="space-y-3">
+            <div>
+              <p class="text-xs uppercase text-gray-500 mb-2">{{ t('batch.packaging.dialog.packingType') }}</p>
+              <div class="grid grid-cols-1 sm:grid-cols-5 gap-2">
+                <button
+                  v-for="option in packingTypeOptions"
+                  :key="option.value"
+                  class="px-3 py-2 rounded border text-sm"
+                  :class="packingDialog.form.packing_type === option.value ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'"
+                  type="button"
+                  @click="selectPackingType(option.value)"
+                >
+                  {{ option.label }}
+                </button>
+              </div>
+              <p v-if="packingDialog.errors.packing_type" class="mt-1 text-xs text-red-600">{{ packingDialog.errors.packing_type }}</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-sm text-gray-600 mb-1" for="packingEventTime">{{ t('batch.packaging.dialog.eventTime') }}</label>
+                <input id="packingEventTime" v-model="packingDialog.form.event_time" type="datetime-local" class="w-full h-[40px] border rounded px-3" />
+                <p v-if="packingDialog.errors.event_time" class="mt-1 text-xs text-red-600">{{ packingDialog.errors.event_time }}</p>
+              </div>
+              <div>
+                <label class="block text-sm text-gray-600 mb-1" for="packingMemo">{{ t('batch.packaging.dialog.memo') }}</label>
+                <input id="packingMemo" v-model.trim="packingDialog.form.memo" type="text" class="w-full h-[40px] border rounded px-3" />
+              </div>
+            </div>
+          </div>
+
+          <div v-if="showPackingVolumeSection" class="border border-gray-200 rounded-lg p-3 space-y-3">
+            <div>
+              <h4 class="text-sm font-semibold text-gray-700">{{ t('batch.packaging.dialog.volumeSection') }}</h4>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label class="block text-sm text-gray-600 mb-1" for="packingVolumeQty">{{ t('batch.packaging.dialog.volumeQty') }}</label>
+                <div class="flex items-center gap-2">
+                  <input id="packingVolumeQty" v-model="packingDialog.form.volume_qty" type="number" min="0" step="0.001" class="w-full h-[40px] border rounded px-3 text-right" />
+                  <span class="text-sm text-gray-500">{{ t('batch.packaging.dialog.volumeUnit') }}</span>
+                </div>
+                <p v-if="packingDialog.errors.volume_qty" class="mt-1 text-xs text-red-600">{{ packingDialog.errors.volume_qty }}</p>
+              </div>
+              <div v-if="showPackingReason" class="md:col-span-2">
+                <label class="block text-sm text-gray-600 mb-1" for="packingReason">{{ t('batch.packaging.dialog.reason') }}</label>
+                <input id="packingReason" v-model.trim="packingDialog.form.reason" type="text" class="w-full h-[40px] border rounded px-3" />
+              </div>
+            </div>
+          </div>
+
+          <div v-if="showPackingFillingSection" class="border border-gray-200 rounded-lg p-3 space-y-3">
+            <div class="flex items-center justify-between">
+              <h4 class="text-sm font-semibold text-gray-700">{{ t('batch.packaging.dialog.fillingSection') }}</h4>
+              <button class="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-100" type="button" @click="addFillingLine">
+                {{ t('batch.packaging.dialog.addFilling') }}
+              </button>
+            </div>
+            <div v-if="packingDialog.errors.filling_lines" class="text-xs text-red-600">{{ packingDialog.errors.filling_lines }}</div>
+            <div class="overflow-x-auto border border-gray-200 rounded-lg">
+              <table class="min-w-full text-sm divide-y divide-gray-200">
+                <thead class="bg-gray-50 text-gray-600 uppercase text-xs">
+                  <tr>
+                    <th class="px-3 py-2 text-left">{{ t('batch.packaging.dialog.fillingTable.packageType') }}</th>
+                    <th class="px-3 py-2 text-right">{{ t('batch.packaging.dialog.fillingTable.qty') }}</th>
+                    <th class="px-3 py-2 text-right">{{ t('batch.packaging.dialog.fillingTable.unitVolume') }}</th>
+                    <th class="px-3 py-2 text-right">{{ t('batch.packaging.dialog.fillingTable.totalVolume') }}</th>
+                    <th class="px-3 py-2 text-left">{{ t('common.actions') }}</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                  <tr v-for="(line, index) in packingDialog.form.filling_lines" :key="line.id">
+                    <td class="px-3 py-2">
+                      <select v-model="line.package_type_id" class="w-full h-[36px] border rounded px-2 bg-white">
+                        <option value="">{{ t('common.select') }}</option>
+                        <option v-for="option in packageCategoryOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+                      </select>
+                    </td>
+                    <td class="px-3 py-2 text-right">
+                      <input v-model="line.qty" type="number" min="1" step="1" class="w-full h-[36px] border rounded px-2 text-right" />
+                    </td>
+                    <td class="px-3 py-2 text-right text-gray-600">{{ formatFillingUnitVolume(line.package_type_id) }}</td>
+                    <td class="px-3 py-2 text-right text-gray-600">{{ formatFillingLineTotal(line) }}</td>
+                    <td class="px-3 py-2">
+                      <button class="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-100" type="button" @click="removeFillingLine(index)">
+                        {{ t('batch.packaging.actions.delete') }}
+                      </button>
+                    </td>
+                  </tr>
+                  <tr v-if="packingDialog.form.filling_lines.length === 0">
+                    <td class="px-3 py-4 text-center text-gray-500" colspan="5">{{ t('batch.packaging.dialog.noFillingLines') }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-600">
+              <div>{{ t('batch.packaging.dialog.fillingTotals.units', { count: packingFillingTotals.totalUnits }) }}</div>
+              <div>{{ t('batch.packaging.dialog.fillingTotals.volume', { volume: formatVolumeValue(packingFillingTotals.totalVolume) }) }}</div>
+            </div>
+          </div>
+
+          <div v-if="showPackingMovementSection" class="border border-gray-200 rounded-lg p-3 space-y-3">
+            <h4 class="text-sm font-semibold text-gray-700">{{ t('batch.packaging.dialog.movementSection') }}</h4>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div class="md:col-span-2">
+                <label class="block text-sm text-gray-600 mb-1" for="packingMovementSite">{{ t('batch.packaging.dialog.movementSite') }}</label>
+                <select id="packingMovementSite" v-model="packingDialog.form.movement_site_id" class="w-full h-[40px] border rounded px-3 bg-white">
+                  <option value="">{{ t('common.select') }}</option>
+                  <option v-for="option in siteOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+                </select>
+                <p v-if="packingDialog.errors.movement_site_id" class="mt-1 text-xs text-red-600">{{ packingDialog.errors.movement_site_id }}</p>
+              </div>
+              <div>
+                <label class="block text-sm text-gray-600 mb-1" for="packingMovementQty">{{ t('batch.packaging.dialog.movementQty') }}</label>
+                <input id="packingMovementQty" v-model="packingDialog.form.movement_qty" type="number" min="0" step="0.001" class="w-full h-[40px] border rounded px-3 text-right" @input="markMovementQtyTouched" />
+                <p v-if="packingDialog.errors.movement_qty" class="mt-1 text-xs text-red-600">{{ packingDialog.errors.movement_qty }}</p>
+              </div>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-600 mb-1" for="packingMovementMemo">{{ t('batch.packaging.dialog.movementMemo') }}</label>
+              <input id="packingMovementMemo" v-model.trim="packingDialog.form.movement_memo" type="text" class="w-full h-[40px] border rounded px-3" />
+            </div>
+          </div>
+
+          <div class="border border-gray-200 rounded-lg p-3 space-y-2">
+            <h4 class="text-sm font-semibold text-gray-700">{{ t('batch.packaging.dialog.reviewTitle') }}</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-600">
+              <div>{{ t('batch.packaging.dialog.reviewType') }}: <span class="text-gray-800">{{ formatPackingType(packingDialog.form.packing_type) }}</span></div>
+              <div>{{ t('batch.packaging.dialog.reviewVolume') }}: <span class="text-gray-800">{{ reviewVolumeText }}</span></div>
+              <div>{{ t('batch.packaging.dialog.reviewMovement') }}: <span class="text-gray-800">{{ reviewMovementText }}</span></div>
+              <div>{{ t('batch.packaging.dialog.reviewFilling') }}: <span class="text-gray-800">{{ reviewFillingText }}</span></div>
+              <div class="md:col-span-2">{{ t('batch.packaging.dialog.reviewMemo') }}: <span class="text-gray-800">{{ packingDialog.form.memo || '—' }}</span></div>
+            </div>
+            <p v-if="packingMismatchWarning" class="text-xs text-amber-600">{{ packingMismatchWarning }}</p>
+          </div>
+        </div>
+        <footer class="flex items-center justify-end gap-2 px-4 py-3 border-t">
+          <button class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-100" type="button" :disabled="packingDialog.loading" @click="closePackingDialog">
+            {{ t('batch.packaging.dialog.cancel') }}
+          </button>
+          <button class="px-3 py-2 rounded border border-blue-600 text-blue-600 hover:bg-blue-50 disabled:opacity-50" type="button" :disabled="packingDialog.loading" @click="savePackingEvent(true)">
+            {{ t('batch.packaging.dialog.saveAndAdd') }}
+          </button>
+          <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50" type="button" :disabled="packingDialog.loading" @click="savePackingEvent(false)">
+            {{ packingDialog.loading ? t('common.saving') : t('batch.packaging.dialog.save') }}
+          </button>
+        </footer>
+      </div>
+    </div>
+
     <BatchIngredientDialog :open="ingredientDialog.open" :editing="ingredientDialog.editing" :loading="ingredientDialog.loading" :materials="materials" :uoms="uoms" :initial="ingredientDialog.initial" @close="closeIngredientDialog" @submit="saveIngredient" />
-    <BatchPackageDialog :open="packageDialog.open" :editing="packageDialog.editing" :loading="packageDialog.loading" :categories="packageCategories" :sites="siteOptions" :initial="packageDialog.initial" @close="closePackageDialog" @submit="savePackage" />
   </AdminLayout>
 </template>
 
@@ -374,10 +723,9 @@ import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { supabase } from '@/lib/supabase'
 import BatchIngredientDialog from '@/views/Pages/components/BatchIngredientDialog.vue'
-import BatchPackageDialog from '@/views/Pages/components/BatchPackageDialog.vue'
 
 const route = useRoute()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 const batchId = computed(() => route.params.batchId as string | undefined)
 
@@ -392,31 +740,80 @@ const savingPackaging = ref(false)
 const batchForm = reactive({
   batch_code: '',
   status: '',
-  label: '',
+  batch_label: '',
+  scale_factor: null as number | null,
   process_version: null as number | null,
   planned_start: '',
-  // planned_end: '',
-  // actual_start: '',
-  // actual_end: '',
-  target_volume_l: null as number | null,
-  actual_product_volume: '',
-  actual_og: '',
-  actual_fg: '',
-  actual_abv: '',
-  actual_srm: '',
-  vessel_id: '',
+  planned_end: '',
+  actual_start: '',
+  actual_end: '',
   notes: '',
-  parent_batches: [] as ParentBatchFormRow[],
+  kpi_rows: [] as KpiRow[],
+  material_consumption_rows: {} as Record<string, MaterialConsumptionClassRow>,
+  output_rows: [] as OutputRowForm[],
 })
 
-type ParentBatchFormRow = {
-  batch_code: string
-  quantity_liters: string
+type KpiRow = {
+  id: string
+  name: string
+  uom: string
+  datasource?: string | null
+  search_key_flg?: boolean
+  planed: string
+  actual: string
 }
 
-type ParentBatchMeta = {
-  batch_code: string
-  quantity_liters: number
+type MaterialClass = {
+  def_key: string
+  name: string
+  label: string
+}
+
+type MaterialConsumptionDetail = {
+  batch_id: string
+  qty: string
+  uom: string
+}
+
+type MaterialConsumptionRow = {
+  material_id: string
+  planned_qty: string
+  actual_qty: string
+  variance: string
+  uom: string
+  details_notes: string
+  batches: MaterialConsumptionDetail[]
+}
+
+type MaterialConsumptionClassRow = {
+  planned_qty: string
+  actual_qty: string
+  variance: string
+  details_notes: string
+  materials: MaterialConsumptionRow[]
+}
+
+type OutputRowForm = {
+  material_id: string
+  qty: string
+  uom: string
+  type: string
+  disposition_type: '' | 'transfer_batch' | 'transfer_warehouse' | 'disposal'
+  transfer_batch_id: string
+  transfer_qty: string
+  transfer_uom: string
+  warehouse_site_id: string
+  warehouse_qty: string
+  warehouse_uom: string
+  disposal_reason: string
+}
+
+type KpiMeta = {
+  id: string
+  name: string
+  uom: string
+  datasource?: string | null
+  search_key_flg?: boolean
 }
 
 const ingredients = ref<Array<any>>([])
@@ -431,11 +828,19 @@ const ingredientDialog = reactive({
   initial: null as any,
 })
 
+const materialDetailDialog = reactive({
+  open: false,
+  row: null as MaterialConsumptionClassRow | null,
+  materialLabel: '',
+  classKey: '',
+})
+
 const sectionCollapsed = reactive({
   ingredients: false,
   packaging: false,
-  yeast: false,
   steps: false,
+  kpi: false,
+  materials: false,
 })
 
 interface PackageCategoryOption {
@@ -477,33 +882,77 @@ const packageDialog = reactive({
   initial: null as any,
 })
 
+type PackingType = 'ship' | 'filling' | 'transfer' | 'loss' | 'dispose'
+
+type PackingFillingLine = {
+  id: string
+  package_type_id: string
+  qty: number
+}
+
+type PackingEvent = {
+  id: string
+  packing_type: PackingType
+  event_time: string
+  memo: string | null
+  volume_qty: number | null
+  volume_uom: string | null
+  movement: { site_id: string | null, qty: number | null, memo: string | null } | null
+  filling_lines: PackingFillingLine[]
+  reason: string | null
+}
+
+type PackingFillingLineForm = {
+  id: string
+  package_type_id: string
+  qty: string
+}
+
+type PackingFormState = {
+  id?: string
+  packing_type: PackingType
+  event_time: string
+  memo: string
+  volume_qty: string
+  movement_site_id: string
+  movement_qty: string
+  movement_memo: string
+  filling_lines: PackingFillingLineForm[]
+  reason: string
+}
+
+const packingEvents = ref<PackingEvent[]>([])
+const packingNotice = ref('')
+const packingMovementQtyTouched = ref(false)
+const packingDialog = reactive({
+  open: false,
+  editing: false,
+  loading: false,
+  globalError: '',
+  errors: {} as Record<string, string>,
+  form: null as PackingFormState | null,
+})
+
 const steps = ref<Array<any>>([])
 const stepsLoading = ref(false)
 
-interface YeastMovementRow {
-  id: string
-  recorded_at: string | null
-  source_batch_id: string | null
-  source_batch_code: string | null
-  from_tank: string | null
-  to_tank: string | null
-  volume_in: number | null
-  volume_out: number | null
-  volume_dumped: number | null
-  notes: string | null
-}
+const materialClasses = ref<MaterialClass[]>([])
+const materialClassLoading = ref(false)
+const batchOptions = ref<Array<{ value: string, label: string }>>([])
+const batchStatusRows = ref<Array<{ status_code: string, label_ja: string | null, label_en: string | null, sort_order: number | null }>>([])
+const batchStatusLoading = ref(false)
 
-const yeastMovements = ref<YeastMovementRow[]>([])
-const yeastLoading = ref(false)
-
-const yeastTotals = computed(() => {
-  const totals = { totalPulled: 0, totalReturned: 0, totalDumped: 0 }
-  for (const row of yeastMovements.value) {
-    totals.totalPulled += row.volume_out ?? 0
-    totals.totalReturned += row.volume_in ?? 0
-    totals.totalDumped += row.volume_dumped ?? 0
-  }
-  return totals
+const batchStatusOptions = computed(() => {
+  const lang = String(locale.value ?? '').toLowerCase()
+  const useJa = lang.startsWith('ja')
+  return batchStatusRows.value
+    .slice()
+    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+    .map((row) => {
+      const label = useJa ? row.label_ja : row.label_en
+      const fallback = row.label_en ?? row.label_ja ?? row.status_code
+      return { value: row.status_code, label: String(label ?? fallback ?? row.status_code).trim() || row.status_code }
+    })
 })
 
 const totalFilledVolume = computed(() => {
@@ -511,11 +960,14 @@ const totalFilledVolume = computed(() => {
 })
 
 const totalProductVolume = computed(() => {
-  const actual = numberOrNull(batchForm.actual_product_volume)
-  if (actual != null) return actual
-  const target = batchForm.target_volume_l
-  if (target == null || Number.isNaN(Number(target))) return null
-  return Number(target)
+  const actualKpi = kpiValue(batchForm.kpi_rows, 'volume', 'actual')
+    ?? kpiValue(batchForm.kpi_rows, 'volume_l', 'actual')
+  if (actualKpi != null) return actualKpi
+  const plannedKpi = kpiValue(batchForm.kpi_rows, 'volume', 'planed')
+    ?? kpiValue(batchForm.kpi_rows, 'volume_l', 'planed')
+  if (plannedKpi != null) return plannedKpi
+  const legacyActual = resolveMetaNumber(batch.value?.meta, 'actual_product_volume')
+  return legacyActual
 })
 
 const remainingVolume = computed(() => {
@@ -545,9 +997,630 @@ const uomLookup = computed(() => {
   return map
 })
 
+const materialConsumptionGroups = computed(() => {
+  const groups: Array<{ key: string, label: string, row: MaterialConsumptionClassRow }> = []
+  const keys = new Set<string>()
+  materialClasses.value.forEach((cls) => {
+    const label = cls.label || cls.name || cls.def_key
+    keys.add(cls.def_key)
+    groups.push({
+      key: cls.def_key,
+      label,
+      row: batchForm.material_consumption_rows[cls.def_key] ?? {
+        planned_qty: '',
+        actual_qty: '',
+        variance: '',
+        details_notes: '',
+        materials: [],
+      },
+    })
+  })
+  Object.keys(batchForm.material_consumption_rows || {}).forEach((key) => {
+    if (keys.has(key)) return
+    groups.push({
+      key,
+      label: key,
+      row: batchForm.material_consumption_rows[key] ?? {
+        planned_qty: '',
+        actual_qty: '',
+        variance: '',
+        details_notes: '',
+        materials: [],
+      },
+    })
+  })
+  return groups
+})
+
+const materialOptions = computed(() => {
+  return materials.value.map((row) => ({
+    value: row.id,
+    label: row.code ? `${row.name} (${row.code})` : row.name,
+  }))
+})
+
+const materialLabelMap = computed(() => {
+  const map = new Map<string, string>()
+  materialOptions.value.forEach((option) => {
+    if (!option.value) return
+    map.set(option.value, option.label)
+  })
+  return map
+})
+
+const packageCategoryOptions = computed(() =>
+  packageCategories.value.map((row) => ({
+    value: row.id,
+    label: row.display,
+  }))
+)
+
+const packingTypeOptions = computed(() => ([
+  { value: 'ship', label: t('batch.packaging.types.ship') },
+  { value: 'filling', label: t('batch.packaging.types.filling') },
+  { value: 'transfer', label: t('batch.packaging.types.transfer') },
+  { value: 'loss', label: t('batch.packaging.types.loss') },
+  { value: 'dispose', label: t('batch.packaging.types.dispose') },
+] as Array<{ value: PackingType, label: string }>))
+
+const showPackingVolumeSection = computed(() => {
+  const type = packingDialog.form?.packing_type
+  return type === 'ship' || type === 'transfer' || type === 'loss' || type === 'dispose'
+})
+
+const showPackingMovementSection = computed(() => {
+  const type = packingDialog.form?.packing_type
+  return type === 'ship' || type === 'filling' || type === 'transfer'
+})
+
+const showPackingFillingSection = computed(() => packingDialog.form?.packing_type === 'filling')
+
+const showPackingReason = computed(() => {
+  const type = packingDialog.form?.packing_type
+  return type === 'loss' || type === 'dispose'
+})
+
+const packingFillingTotals = computed(() => {
+  const lines = packingDialog.form?.filling_lines ?? []
+  return computeFillingTotals(lines)
+})
+
+const reviewVolumeText = computed(() => {
+  if (!packingDialog.form) return '—'
+  if (!showPackingVolumeSection.value) return '—'
+  const qty = toNumber(packingDialog.form.volume_qty)
+  return qty != null ? formatVolumeValue(qty) : '—'
+})
+
+const reviewMovementText = computed(() => {
+  if (!packingDialog.form || !showPackingMovementSection.value) return '—'
+  const site = siteLabel(packingDialog.form.movement_site_id || null)
+  const qty = toNumber(packingDialog.form.movement_qty)
+  const qtyLabel = qty != null ? formatVolumeValue(qty) : '—'
+  return `${site} / ${qtyLabel}`
+})
+
+const reviewFillingText = computed(() => {
+  if (!showPackingFillingSection.value) return '—'
+  return formatFillingTotals(packingFillingTotals.value)
+})
+
+const packingMismatchWarning = computed(() => {
+  if (!packingDialog.form || !showPackingMovementSection.value) return ''
+  const movementQty = toNumber(packingDialog.form.movement_qty)
+  if (movementQty == null) return ''
+  if (packingDialog.form.packing_type === 'filling') {
+    const total = packingFillingTotals.value.totalVolume
+    if (total != null && Math.abs(movementQty - total) > 0.0001) {
+      return t('batch.packaging.warnings.movementMismatch')
+    }
+    return ''
+  }
+  if (showPackingVolumeSection.value) {
+    const volumeQty = toNumber(packingDialog.form.volume_qty)
+    if (volumeQty != null && Math.abs(movementQty - volumeQty) > 0.0001) {
+      return t('batch.packaging.warnings.movementMismatch')
+    }
+  }
+  return ''
+})
+
+function materialListText(rows: MaterialConsumptionRow[]) {
+  if (!rows || rows.length === 0) return t('common.noData')
+  const labels = rows
+    .map((row) => materialLabelMap.value.get(row.material_id) || row.material_id)
+    .map((label) => String(label || '').trim())
+    .filter((label) => label.length)
+  if (!labels.length) return t('common.noData')
+  return labels.join(', ')
+}
+
+const kpiMeta = ref<KpiMeta[]>([])
+const kpiMetaLoading = ref(false)
+
+const fallbackKpiMeta: KpiMeta[] = [
+  { id: 'tax_category_code', name: '製品種類', uom: '', datasource: 'registry_def', search_key_flg: true },
+  { id: 'volume', name: '生産量', uom: 'l' },
+  { id: 'abv', name: 'ABV', uom: '' },
+  { id: 'og', name: 'OG', uom: '' },
+  { id: 'fg', name: 'FG', uom: '' },
+  { id: 'srm', name: 'SRM', uom: '' },
+  { id: 'ibu', name: 'IBU', uom: '' },
+]
+
 function siteLabel(siteId?: string | null) {
   if (!siteId) return '—'
   return siteOptionMap.value.get(siteId) ?? '—'
+}
+
+function parseKpiArray(value: unknown) {
+  if (!value) return []
+  if (Array.isArray(value)) return value
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value)
+      return Array.isArray(parsed) ? parsed : []
+    } catch {
+      return []
+    }
+  }
+  return []
+}
+
+function normalizeKpiMeta(list: unknown): KpiMeta[] {
+  if (!Array.isArray(list)) return []
+  return list
+    .map((item) => {
+      if (!item || typeof item !== 'object' || Array.isArray(item)) return null
+      const id = String((item as Record<string, unknown>).id ?? '').trim()
+      if (!id) return null
+      const name = String((item as Record<string, unknown>).name ?? id).trim()
+      const uom = String((item as Record<string, unknown>).uom ?? '').trim()
+      const datasource = (item as Record<string, unknown>).datasource
+      const searchKey = (item as Record<string, unknown>).search_key_flg
+      return {
+        id,
+        name: name || id,
+        uom,
+        datasource: datasource != null ? String(datasource) : null,
+        search_key_flg: Boolean(searchKey),
+      }
+    })
+    .filter((row): row is KpiMeta => row !== null)
+}
+
+async function loadKpiMeta() {
+  if (kpiMeta.value.length || kpiMetaLoading.value) return
+  try {
+    kpiMetaLoading.value = true
+    const { data, error } = await supabase
+      .from('registry_def')
+      .select('def_id, scope, spec')
+      .eq('kind', 'kpi_definition')
+      .eq('def_key', 'beer_production_kpi')
+    if (error) throw error
+    const selected = (data ?? []).find((row: any) => row.scope === 'tenant')
+      ?? (data ?? [])[0]
+    const metaList = normalizeKpiMeta((selected?.spec as any)?.kpi_meta)
+    kpiMeta.value = metaList
+  } catch (err) {
+    console.warn('Failed to load KPI meta', err)
+    kpiMeta.value = []
+  } finally {
+    kpiMetaLoading.value = false
+  }
+}
+
+function normalizeKpiRows(source: unknown): KpiRow[] {
+  const list = parseKpiArray(source)
+  const existing = new Map<string, any>()
+  list.forEach((row) => {
+    if (!row || typeof row !== 'object' || Array.isArray(row)) return
+    const id = String((row as Record<string, unknown>).id ?? '').trim()
+    if (!id) return
+    existing.set(id, row)
+  })
+
+  const metaList = kpiMeta.value.length ? kpiMeta.value : fallbackKpiMeta
+  return metaList.map((def) => {
+    const raw = (existing.get(def.id)
+      ?? (def.id === 'volume' ? existing.get('volume_l') : undefined)) as Record<string, unknown> | undefined
+    const plannedValue = raw?.planed ?? raw?.planned
+    return {
+      id: def.id,
+      name: def.name,
+      uom: def.uom,
+      datasource: def.datasource ?? null,
+      search_key_flg: def.search_key_flg ?? false,
+      planed: plannedValue != null ? String(plannedValue) : '',
+      actual: raw?.actual != null ? String(raw.actual) : '',
+    }
+  })
+}
+
+function kpiValue(rows: KpiRow[], id: string, key: 'planed' | 'actual') {
+  const match = rows.find((row) => row.id === id)
+  if (!match) return null
+  return toNumber(match[key])
+}
+
+function isNumericKpi(row: KpiRow) {
+  return row.datasource !== 'registry_def'
+}
+
+function kpiPayloadValue(row: KpiRow, value: string) {
+  if (value == null || value === '') return null
+  if (isNumericKpi(row)) return toNumber(value)
+  const trimmed = value.trim()
+  return trimmed.length ? trimmed : null
+}
+
+function buildKpiPayload(rows: KpiRow[]) {
+  if (!rows.length) return []
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name?.trim() || row.id,
+    uom: row.uom?.trim() || '',
+    datasource: row.datasource ?? undefined,
+    search_key_flg: row.search_key_flg ?? undefined,
+    planed: kpiPayloadValue(row, row.planed),
+    actual: kpiPayloadValue(row, row.actual),
+  }))
+}
+
+function normalizeMaterialConsumptionRows(value: unknown) {
+  const toRows = (list: any[]): MaterialConsumptionRow[] => {
+    return (list ?? []).map((item) => {
+      const planned = item?.planned_qty ?? item?.planned
+      const actual = item?.actual_qty ?? item?.actual
+      const variance = item?.variance
+      const notes = item?.details_notes ?? item?.notes ?? ''
+      const batches = Array.isArray(item?.batches) ? item.batches : []
+      return {
+        material_id: String(item?.material_id ?? ''),
+        planned_qty: planned != null ? String(planned) : '',
+        actual_qty: actual != null ? String(actual) : '',
+        variance: variance != null ? String(variance) : '',
+        uom: String(item?.uom ?? ''),
+        details_notes: String(notes ?? ''),
+        batches: batches.map((batch: any) => ({
+          batch_id: String(batch?.batch_id ?? ''),
+          qty: batch?.qty != null ? String(batch.qty) : '',
+          uom: String(batch?.uom ?? ''),
+        })),
+      }
+    })
+  }
+
+  if (!value) return {}
+  const toClassRow = (items: MaterialConsumptionRow[], summary?: any): MaterialConsumptionClassRow => {
+    const planned = summary?.planned_qty ?? summary?.planned
+    const actual = summary?.actual_qty ?? summary?.actual
+    const variance = summary?.variance
+    const notes = summary?.details_notes ?? summary?.notes ?? ''
+    const plannedValue = planned != null ? String(planned) : ''
+    const actualValue = actual != null ? String(actual) : ''
+    const varianceValue = variance != null ? String(variance) : ''
+    return {
+      planned_qty: plannedValue,
+      actual_qty: actualValue,
+      variance: varianceValue,
+      details_notes: String(notes ?? ''),
+      materials: items,
+    }
+  }
+
+  if (Array.isArray(value)) {
+    const items = toRows(value)
+    return { unclassified: toClassRow(items) }
+  }
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value)
+      if (Array.isArray(parsed)) return { unclassified: toClassRow(toRows(parsed)) }
+      if (parsed && typeof parsed === 'object') {
+        return Object.fromEntries(Object.entries(parsed as Record<string, unknown>)
+          .map(([key, val]) => {
+            if (Array.isArray(val)) return [key, toClassRow(toRows(val))]
+            if (typeof val === 'string') {
+              try {
+                const parsedVal = JSON.parse(val)
+                return [key, toClassRow(toRows(Array.isArray(parsedVal) ? parsedVal : []))]
+              } catch {
+                return [key, toClassRow([])]
+              }
+            }
+            if (val && typeof val === 'object') {
+              const items = Array.isArray((val as any).items) ? (val as any).items : []
+              const summary = (val as any).summary ?? val
+              return [key, toClassRow(toRows(items), summary)]
+            }
+            return [key, toClassRow([])]
+          }))
+      }
+    } catch {
+      return {}
+    }
+  }
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value as Record<string, unknown>)
+      .map(([key, val]) => {
+        if (Array.isArray(val)) return [key, toClassRow(toRows(val))]
+        if (typeof val === 'string') {
+          try {
+            const parsedVal = JSON.parse(val)
+            return [key, toClassRow(toRows(Array.isArray(parsedVal) ? parsedVal : []))]
+          } catch {
+            return [key, toClassRow([])]
+          }
+        }
+        if (val && typeof val === 'object') {
+          const items = Array.isArray((val as any).items) ? (val as any).items : []
+          const summary = (val as any).summary ?? val
+          return [key, toClassRow(toRows(items), summary)]
+        }
+        return [key, toClassRow([])]
+      }))
+  }
+  return {}
+}
+
+function ensureMaterialConsumptionKeys() {
+  const map = { ...(batchForm.material_consumption_rows || {}) }
+  materialClasses.value.forEach((cls) => {
+    if (!(cls.def_key in map)) {
+      map[cls.def_key] = {
+        planned_qty: '',
+        actual_qty: '',
+        variance: '',
+        details_notes: '',
+        materials: [],
+      }
+    }
+  })
+  batchForm.material_consumption_rows = map
+}
+
+function buildMaterialConsumptionPayload(map: Record<string, MaterialConsumptionClassRow>) {
+  const payload: Record<string, unknown> = {}
+  Object.entries(map || {}).forEach(([key, rows]) => {
+    const detailRows = (rows.materials ?? [])
+      .map((row) => {
+        const planned = row.planned_qty !== '' ? toNumber(row.planned_qty) : null
+        const actual = row.actual_qty !== '' ? toNumber(row.actual_qty) : null
+        const variance = row.variance !== ''
+          ? toNumber(row.variance)
+          : (planned != null && actual != null ? actual - planned : null)
+        const batches = (row.batches ?? [])
+          .map((batch) => ({
+            batch_id: batch.batch_id || null,
+            qty: batch.qty !== '' ? toNumber(batch.qty) : null,
+            uom: batch.uom || null,
+          }))
+          .filter((batch) => batch.batch_id || batch.qty != null || batch.uom)
+        const hasCore = row.material_id || planned != null || actual != null || row.uom || variance != null
+        if (!hasCore) return null
+        const entry: Record<string, unknown> = {
+          material_id: row.material_id || null,
+          planned_qty: planned,
+          actual_qty: actual,
+          uom: row.uom || null,
+          variance,
+        }
+        const notes = row.details_notes?.trim()
+        if (notes) entry.details_notes = notes
+        if (batches.length) entry.batches = batches
+        return entry
+      })
+      .filter((row): row is Record<string, unknown> => row !== null)
+
+    const summaryPlanned = rows.planned_qty !== '' ? toNumber(rows.planned_qty) : null
+    const summaryActual = rows.actual_qty !== '' ? toNumber(rows.actual_qty) : null
+    const summaryVariance = rows.variance !== ''
+      ? toNumber(rows.variance)
+      : (summaryPlanned != null && summaryActual != null ? summaryActual - summaryPlanned : null)
+    const summaryNotes = rows.details_notes?.trim()
+
+    const summary: Record<string, unknown> = {}
+    if (summaryPlanned != null) summary.planned_qty = summaryPlanned
+    if (summaryActual != null) summary.actual_qty = summaryActual
+    if (summaryVariance != null) summary.variance = summaryVariance
+    if (summaryNotes) summary.details_notes = summaryNotes
+
+    if (Object.keys(summary).length) {
+      payload[key] = { summary, items: detailRows }
+    } else if (detailRows.length) {
+      payload[key] = detailRows
+    }
+  })
+  return payload
+}
+
+function newMaterialConsumptionRow(): MaterialConsumptionRow {
+  return {
+    material_id: '',
+    planned_qty: '',
+    actual_qty: '',
+    variance: '',
+    uom: '',
+    details_notes: '',
+    batches: [],
+  }
+}
+
+function newMaterialConsumptionClassRow(): MaterialConsumptionClassRow {
+  return {
+    planned_qty: '',
+    actual_qty: '',
+    variance: '',
+    details_notes: '',
+    materials: [],
+  }
+}
+
+function variancePlaceholder(row: { planned_qty: string; actual_qty: string }) {
+  const planned = toNumber(row.planned_qty)
+  const actual = toNumber(row.actual_qty)
+  if (planned == null || actual == null) return ''
+  return String(actual - planned)
+}
+
+function openMaterialDetail(label: string, classKey: string) {
+  if (!batchForm.material_consumption_rows[classKey]) {
+    batchForm.material_consumption_rows[classKey] = newMaterialConsumptionClassRow()
+  }
+  if (!batchForm.material_consumption_rows[classKey].materials) {
+    batchForm.material_consumption_rows[classKey].materials = []
+  }
+  materialDetailDialog.row = batchForm.material_consumption_rows[classKey]
+  materialDetailDialog.materialLabel = label
+  materialDetailDialog.classKey = classKey
+  materialDetailDialog.open = true
+}
+
+function closeMaterialDetail() {
+  materialDetailDialog.open = false
+  materialDetailDialog.row = null
+  materialDetailDialog.materialLabel = ''
+  materialDetailDialog.classKey = ''
+}
+
+function addDetailMaterialRow() {
+  if (!materialDetailDialog.row) return
+  materialDetailDialog.row.materials.push(newMaterialConsumptionRow())
+}
+
+function removeDetailMaterialRow(index: number) {
+  if (!materialDetailDialog.row) return
+  materialDetailDialog.row.materials.splice(index, 1)
+}
+
+function addDetailBatch(row: MaterialConsumptionRow) {
+  if (!row.batches) row.batches = []
+  row.batches.push({ batch_id: '', qty: '', uom: '' })
+}
+
+function removeDetailBatch(row: MaterialConsumptionRow, index: number) {
+  row.batches.splice(index, 1)
+}
+
+function newOutputRow(): OutputRowForm {
+  return {
+    material_id: '',
+    qty: '',
+    uom: '',
+    type: '',
+    disposition_type: '',
+    transfer_batch_id: '',
+    transfer_qty: '',
+    transfer_uom: '',
+    warehouse_site_id: '',
+    warehouse_qty: '',
+    warehouse_uom: '',
+    disposal_reason: '',
+  }
+}
+
+function normalizeOutputRows(value: unknown): OutputRowForm[] {
+  const list = Array.isArray(value) ? value : parseKpiArray(value)
+  if (!Array.isArray(list)) return []
+  return list.map((item: any) => {
+    const disposition = item?.disposition ?? {}
+    let dispositionType: OutputRowForm['disposition_type'] = ''
+    let transferBatchId = ''
+    let transferQty = ''
+    let transferUom = ''
+    let warehouseSiteId = ''
+    let warehouseQty = ''
+    let warehouseUom = ''
+    let disposalReason = ''
+
+    const dispType = String(disposition?.type ?? '')
+    if (dispType === 'transfer' || dispType === 'transfer_batch') {
+      dispositionType = 'transfer_batch'
+      const to = Array.isArray(disposition?.to) ? disposition.to[0] : null
+      if (to) {
+        transferBatchId = String(to.batch_id ?? '')
+        transferQty = to.qty != null ? String(to.qty) : ''
+        transferUom = String(to.uom ?? '')
+      }
+    } else if (dispType === 'transfer_warehouse' || dispType === 'warehouse') {
+      dispositionType = 'transfer_warehouse'
+      warehouseSiteId = String(disposition?.site_id ?? disposition?.warehouse_id ?? disposition?.to_site_id ?? '')
+      warehouseQty = disposition?.qty != null ? String(disposition.qty) : ''
+      warehouseUom = String(disposition?.uom ?? '')
+    } else if (dispType === 'dispose' || dispType === 'disposal') {
+      dispositionType = 'disposal'
+      disposalReason = String(disposition?.reason ?? disposition?.reason_code ?? '')
+    }
+
+    return {
+      material_id: String(item?.material_id ?? ''),
+      qty: item?.qty != null ? String(item.qty) : '',
+      uom: String(item?.uom ?? ''),
+      type: String(item?.type ?? ''),
+      disposition_type: dispositionType,
+      transfer_batch_id: transferBatchId,
+      transfer_qty: transferQty,
+      transfer_uom: transferUom,
+      warehouse_site_id: warehouseSiteId,
+      warehouse_qty: warehouseQty,
+      warehouse_uom: warehouseUom,
+      disposal_reason: disposalReason,
+    }
+  })
+}
+
+function buildOutputPayload(rows: OutputRowForm[]) {
+  return (rows ?? [])
+    .map((row) => {
+      const hasCore = row.material_id || row.qty || row.uom || row.type
+      const base: Record<string, unknown> = {
+        material_id: row.material_id || null,
+        qty: row.qty !== '' ? toNumber(row.qty) : null,
+        uom: row.uom || null,
+        type: row.type || null,
+      }
+
+      let disposition: Record<string, unknown> | null = null
+      if (row.disposition_type === 'transfer_batch') {
+        const qty = row.transfer_qty !== '' ? toNumber(row.transfer_qty) : toNumber(row.qty)
+        const uom = row.transfer_uom || row.uom || null
+        disposition = {
+          type: 'transfer',
+          to: row.transfer_batch_id
+            ? [{ batch_id: row.transfer_batch_id, qty, uom }]
+            : [],
+        }
+      } else if (row.disposition_type === 'transfer_warehouse') {
+        const qty = row.warehouse_qty !== '' ? toNumber(row.warehouse_qty) : toNumber(row.qty)
+        const uom = row.warehouse_uom || row.uom || null
+        disposition = {
+          type: 'transfer_warehouse',
+          site_id: row.warehouse_site_id || null,
+          qty,
+          uom,
+        }
+      } else if (row.disposition_type === 'disposal') {
+        disposition = {
+          type: 'dispose',
+          reason: row.disposal_reason || null,
+        }
+      }
+
+      if (disposition) base.disposition = disposition
+      return { base, hasCore }
+    })
+    .filter((row) => row.hasCore)
+    .map((row) => row.base)
+}
+
+function addOutputRow() {
+  batchForm.output_rows.push(newOutputRow())
+}
+
+function removeOutputRow(index: number) {
+  batchForm.output_rows.splice(index, 1)
 }
 
 function findLitersUomId() {
@@ -655,48 +1728,13 @@ function resolveMetaNumber(meta: unknown, key: string) {
   return Number.isNaN(num) ? null : num
 }
 
-function resolveParentBatches(meta: unknown) {
-  if (!meta || typeof meta !== 'object' || Array.isArray(meta)) return []
-  const raw = (meta as Record<string, unknown>).parent_batches
-  if (!Array.isArray(raw)) return []
-  return raw
-    .map((row) => {
-      if (!row || typeof row !== 'object' || Array.isArray(row)) return null
-      const code = String((row as Record<string, unknown>).batch_code ?? '').trim()
-      const qty = Number((row as Record<string, unknown>).quantity_liters)
-      if (!code || Number.isNaN(qty)) return null
-      return { batch_code: code, quantity_liters: String(qty) }
-    })
-    .filter((row): row is ParentBatchFormRow => row !== null)
-}
-
-function numberOrNull(value: string) {
-  if (value === null || value === undefined || value === '') return null
-  const num = Number(value)
-  return Number.isNaN(num) ? null : num
-}
-
 function toNumber(value: any): number | null {
   if (value === null || value === undefined || value === '') return null
   const num = Number(value)
   return Number.isFinite(num) ? num : null
 }
 
-function normalizeParentBatches(rows: ParentBatchFormRow[]) {
-  if (!rows.length) return null
-  const cleaned = rows
-    .map((row) => {
-      const code = row.batch_code.trim()
-      if (!code) return null
-      const qty = Number(row.quantity_liters)
-      if (!Number.isFinite(qty) || qty <= 0) return null
-      return { batch_code: code, quantity_liters: qty }
-    })
-    .filter((row): row is ParentBatchMeta => row !== null)
-  return cleaned.length ? cleaned : null
-}
-
-function buildMetaWithLabel(meta: unknown, label: string, actualProductVolume: string, parentBatches: ParentBatchMeta[] | null) {
+function buildMetaWithLabel(meta: unknown, label: string) {
   const base = (meta && typeof meta === 'object' && !Array.isArray(meta))
     ? { ...(meta as Record<string, unknown>) }
     : {}
@@ -705,17 +1743,6 @@ function buildMetaWithLabel(meta: unknown, label: string, actualProductVolume: s
     base.label = trimmed
   } else {
     delete base.label
-  }
-  const volume = numberOrNull(actualProductVolume)
-  if (volume == null) {
-    delete base.actual_product_volume
-  } else {
-    base.actual_product_volume = volume
-  }
-  if (!parentBatches || parentBatches.length === 0) {
-    delete base.parent_batches
-  } else {
-    base.parent_batches = parentBatches
   }
   return base
 }
@@ -728,14 +1755,6 @@ function toggleSection(key: SectionKey) {
 
 function collapseLabel(collapsed: boolean) {
   return collapsed ? t('common.expand') : t('common.collapse')
-}
-
-function addParentBatch() {
-  batchForm.parent_batches.push({ batch_code: '', quantity_liters: '' })
-}
-
-function removeParentBatch(index: number) {
-  batchForm.parent_batches.splice(index, 1)
 }
 
 async function ensureTenant() {
@@ -757,6 +1776,10 @@ async function fetchBatch() {
   try {
     loadingBatch.value = true
     await ensureTenant()
+    await loadKpiMeta()
+    await loadMaterialClasses()
+    await loadBatchOptions()
+    await loadBatchStatusOptions()
     const { data, error } = await supabase
       .from('mes_batches')
       .select('*')
@@ -767,35 +1790,35 @@ async function fetchBatch() {
     if (data) {
       batchForm.batch_code = data.batch_code ?? ''
       batchForm.status = data.status ?? ''
-      batchForm.label = resolveMetaLabel(data.meta) ?? ''
-      const actualVolume = resolveMetaNumber(data.meta, 'actual_product_volume')
-      batchForm.actual_product_volume = actualVolume != null ? String(actualVolume) : ''
-      batchForm.parent_batches = resolveParentBatches(data.meta)
+      batchForm.batch_label = data.batch_label ?? resolveMetaLabel(data.meta) ?? ''
+      batchForm.scale_factor = data.scale_factor ?? null
       batchForm.process_version = data.process_version ?? null
       batchForm.planned_start = toInputDateTime(data.planned_start)
-      // batchForm.planned_end = toInputDateTime(data.planned_end)
-      // batchForm.actual_start = toInputDateTime(data.actual_start)
-      // batchForm.actual_end = toInputDateTime(data.actual_end)
-      batchForm.target_volume_l = data.target_volume_l ?? null
-      batchForm.actual_og = data.actual_og != null ? String(data.actual_og) : ''
-      batchForm.actual_fg = data.actual_fg != null ? String(data.actual_fg) : ''
-      batchForm.actual_abv = data.actual_abv != null ? String(data.actual_abv) : ''
-      batchForm.actual_srm = data.actual_srm != null ? String(data.actual_srm) : ''
-      batchForm.vessel_id = data.vessel_id ?? ''
+      batchForm.planned_end = toInputDateTime(data.planned_end)
+      batchForm.actual_start = toInputDateTime(data.actual_start)
+      batchForm.actual_end = toInputDateTime(data.actual_end)
+      batchForm.kpi_rows = normalizeKpiRows(data.kpi)
+      batchForm.material_consumption_rows = normalizeMaterialConsumptionRows(data.material_consumption)
+      ensureMaterialConsumptionKeys()
+      batchForm.output_rows = normalizeOutputRows(data.output_actual)
       batchForm.notes = data.notes ?? ''
+      packingEvents.value = normalizePackingEvents((data.meta as any)?.packing_events)
       await Promise.all([
         loadIngredients(data.recipe_id),
         loadSteps(),
         loadMaterialsAndUoms(),
         loadSites(),
-        loadYeastMovements(data.id),
         loadPackages(data.id),
       ])
     } else {
       ingredients.value = []
       steps.value = []
-      yeastMovements.value = []
       packages.value = []
+      batchForm.kpi_rows = normalizeKpiRows(null)
+      batchForm.material_consumption_rows = normalizeMaterialConsumptionRows(null)
+      ensureMaterialConsumptionKeys()
+      batchForm.output_rows = []
+      packingEvents.value = []
     }
   } catch (err) {
     console.error(err)
@@ -836,6 +1859,84 @@ async function loadSites() {
     }))
   } catch (err) {
     console.error(err)
+  }
+}
+
+async function loadMaterialClasses() {
+  if (materialClassLoading.value) return
+  try {
+    materialClassLoading.value = true
+    const { data, error } = await supabase
+      .from('registry_def')
+      .select('def_key, scope, spec, is_active')
+      .eq('kind', 'material_class')
+      .eq('is_active', true)
+    if (error) throw error
+    const rows = (data ?? []).filter((row: any) => {
+      const category = String(row.spec?.category ?? '').trim()
+      return category === '原材料'
+    })
+    const tenantRows = rows.filter((row: any) => row.scope === 'tenant')
+    const systemRows = rows.filter((row: any) => row.scope !== 'tenant')
+    const seen = new Set<string>()
+    const merged: MaterialClass[] = []
+    ;[...tenantRows, ...systemRows].forEach((row: any) => {
+      const key = String(row.def_key ?? '').trim()
+      if (!key || seen.has(key)) return
+      const spec = row.spec ?? {}
+      const name = String(spec.name ?? key).trim()
+      const label = String(spec.label ?? spec.name ?? key).trim()
+      merged.push({ def_key: key, name: name || key, label: label || key })
+      seen.add(key)
+    })
+    merged.sort((a, b) => a.label.localeCompare(b.label))
+    materialClasses.value = merged
+    ensureMaterialConsumptionKeys()
+  } catch (err) {
+    console.warn('Failed to load material classes', err)
+    materialClasses.value = []
+  } finally {
+    materialClassLoading.value = false
+  }
+}
+
+async function loadBatchOptions() {
+  try {
+    const tenant = await ensureTenant()
+    const { data, error } = await supabase
+      .from('mes_batches')
+      .select('id, batch_code')
+      .eq('tenant_id', tenant)
+      .order('batch_code')
+    if (error) throw error
+    batchOptions.value = (data ?? [])
+      .filter((row: any) => row.id !== batchId.value)
+      .map((row: any) => ({ value: row.id, label: row.batch_code }))
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+async function loadBatchStatusOptions() {
+  if (batchStatusLoading.value) return
+  try {
+    batchStatusLoading.value = true
+    const { data, error } = await supabase
+      .from('v_batch_status')
+      .select('status_code, label_ja, label_en, sort_order')
+      .order('sort_order')
+    if (error) throw error
+    batchStatusRows.value = (data ?? []).map((row: any) => ({
+      status_code: String(row.status_code ?? '').trim(),
+      label_ja: row.label_ja ?? null,
+      label_en: row.label_en ?? null,
+      sort_order: typeof row.sort_order === 'number' ? row.sort_order : Number(row.sort_order ?? 0),
+    })).filter((row: any) => row.status_code)
+  } catch (err) {
+    console.error('Failed to load batch statuses', err)
+    batchStatusRows.value = []
+  } finally {
+    batchStatusLoading.value = false
   }
 }
 
@@ -892,20 +1993,6 @@ async function loadSteps() {
     console.error(err)
   } finally {
     stepsLoading.value = false
-  }
-}
-
-async function loadYeastMovements(targetBatchId: string | undefined) {
-  yeastMovements.value = []
-  if (!targetBatchId) return
-  try {
-    yeastLoading.value = true
-    // TODO: Replace with Supabase query once yeast starter movements are stored server-side.
-    yeastMovements.value = []
-  } catch (err) {
-    console.error(err)
-  } finally {
-    yeastLoading.value = false
   }
 }
 
@@ -1078,23 +2165,22 @@ async function saveBatch() {
   if (!batchId.value) return
   try {
     savingBatch.value = true
-    const parentBatches = normalizeParentBatches(batchForm.parent_batches)
-    const meta = buildMetaWithLabel(batch.value?.meta, batchForm.label, batchForm.actual_product_volume, parentBatches)
+    const meta = buildMetaWithLabel(batch.value?.meta, batchForm.batch_label)
     const trimmedBatchCode = batchForm.batch_code.trim()
+    const trimmedBatchLabel = batchForm.batch_label.trim()
     const update: Record<string, any> = {
       batch_code: trimmedBatchCode || batch.value?.batch_code || null,
       status: batchForm.status || null,
+      batch_label: trimmedBatchLabel || null,
+      scale_factor: toNumber(batchForm.scale_factor),
       process_version: batchForm.process_version,
       planned_start: fromInputDateTime(batchForm.planned_start),
-      // planned_end: fromInputDateTime(batchForm.planned_end),
-      // actual_start: fromInputDateTime(batchForm.actual_start),
-      // actual_end: fromInputDateTime(batchForm.actual_end),
-      target_volume_l: batchForm.target_volume_l,
-      actual_og: numberOrNull(batchForm.actual_og),
-      actual_fg: numberOrNull(batchForm.actual_fg),
-      actual_abv: numberOrNull(batchForm.actual_abv),
-      actual_srm: numberOrNull(batchForm.actual_srm),
-      vessel_id: batchForm.vessel_id || null,
+      planned_end: fromInputDateTime(batchForm.planned_end),
+      actual_start: fromInputDateTime(batchForm.actual_start),
+      actual_end: fromInputDateTime(batchForm.actual_end),
+      kpi: buildKpiPayload(batchForm.kpi_rows),
+      material_consumption: buildMaterialConsumptionPayload(batchForm.material_consumption_rows),
+      output_actual: buildOutputPayload(batchForm.output_rows),
       notes: batchForm.notes || null,
       meta,
     }
@@ -1221,7 +2307,7 @@ async function savePackage(payload: any) {
 }
 
 async function deletePackage(row: PackageRow) {
-  if (!window.confirm(t('batch.packaging.deleteConfirm', { code: row.package_code }))) return
+  if (!window.confirm(t('batch.packaging.confirmDelete'))) return
   try {
     const { error } = await supabase.from('inv_movement_lines').delete().eq('id', row.id)
     if (error) throw error
@@ -1244,6 +2330,431 @@ async function savePackagingMovement() {
     savingPackaging.value = false
   }
 }
+
+function nowInputDateTime() {
+  return toInputDateTime(new Date().toISOString())
+}
+
+function newPackingForm(type: PackingType): PackingFormState {
+  return {
+    packing_type: type,
+    event_time: nowInputDateTime(),
+    memo: '',
+    volume_qty: '',
+    movement_site_id: '',
+    movement_qty: '',
+    movement_memo: '',
+    filling_lines: [],
+    reason: '',
+  }
+}
+
+function normalizePackingEvents(value: unknown): PackingEvent[] {
+  if (!Array.isArray(value)) return []
+  return value
+    .map((item) => {
+      if (!item || typeof item !== 'object' || Array.isArray(item)) return null
+      const raw = item as Record<string, unknown>
+      const type = String(raw.packing_type ?? '').trim() as PackingType
+      if (!type) return null
+      const eventTime = String(raw.event_time ?? '').trim()
+      return {
+        id: String(raw.id ?? generateLocalId()),
+        packing_type: type,
+        event_time: eventTime || new Date().toISOString(),
+        memo: raw.memo != null ? String(raw.memo) : null,
+        volume_qty: toNumber(raw.volume_qty),
+        volume_uom: raw.volume_uom != null ? String(raw.volume_uom) : 'L',
+        movement: raw.movement && typeof raw.movement === 'object' ? {
+          site_id: (raw.movement as any).site_id != null ? String((raw.movement as any).site_id) : null,
+          qty: toNumber((raw.movement as any).qty),
+          memo: (raw.movement as any).memo != null ? String((raw.movement as any).memo) : null,
+        } : null,
+        filling_lines: Array.isArray(raw.filling_lines)
+          ? (raw.filling_lines as any[]).map((line) => ({
+            id: String(line?.id ?? generateLocalId()),
+            package_type_id: String(line?.package_type_id ?? ''),
+            qty: toNumber(line?.qty) ?? 0,
+          }))
+          : [],
+        reason: raw.reason != null ? String(raw.reason) : null,
+      }
+    })
+    .filter((row): row is PackingEvent => row !== null)
+}
+
+function generateLocalId() {
+  return `local-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`
+}
+
+function openPackingDialog() {
+  packingDialog.open = true
+  packingDialog.editing = false
+  packingDialog.loading = false
+  packingDialog.globalError = ''
+  packingDialog.errors = {}
+  packingDialog.form = newPackingForm('ship')
+  packingMovementQtyTouched.value = false
+}
+
+function openPackingEdit(event: PackingEvent) {
+  packingDialog.open = true
+  packingDialog.editing = true
+  packingDialog.loading = false
+  packingDialog.globalError = ''
+  packingDialog.errors = {}
+  packingDialog.form = {
+    id: event.id,
+    packing_type: event.packing_type,
+    event_time: toInputDateTime(event.event_time),
+    memo: event.memo ?? '',
+    volume_qty: event.volume_qty != null ? String(event.volume_qty) : '',
+    movement_site_id: event.movement?.site_id ?? '',
+    movement_qty: event.movement?.qty != null ? String(event.movement.qty) : '',
+    movement_memo: event.movement?.memo ?? '',
+    filling_lines: event.filling_lines.map((line) => ({
+      id: line.id ?? generateLocalId(),
+      package_type_id: line.package_type_id,
+      qty: String(line.qty ?? ''),
+    })),
+    reason: event.reason ?? '',
+  }
+  packingMovementQtyTouched.value = true
+}
+
+function closePackingDialog() {
+  if (!packingDialog.form) {
+    packingDialog.open = false
+    return
+  }
+  if (isPackingFormDirty(packingDialog.form)) {
+    if (!window.confirm(t('batch.packaging.dialog.closeConfirm'))) return
+  }
+  packingDialog.open = false
+  packingDialog.form = null
+  packingDialog.errors = {}
+  packingDialog.globalError = ''
+}
+
+function isPackingFormDirty(form: PackingFormState) {
+  return Boolean(
+    form.memo ||
+    form.volume_qty ||
+    form.movement_site_id ||
+    form.movement_qty ||
+    form.movement_memo ||
+    form.reason ||
+    (form.filling_lines && form.filling_lines.length)
+  )
+}
+
+function selectPackingType(value: PackingType) {
+  if (!packingDialog.form) return
+  if (packingDialog.form.packing_type === value) return
+  if (shouldConfirmPackingTypeChange(packingDialog.form, value)) {
+    if (!window.confirm(t('batch.packaging.dialog.typeChangeConfirm'))) return
+  }
+  const prevType = packingDialog.form.packing_type
+  packingDialog.form.packing_type = value
+  resetPackingFormForType(packingDialog.form, prevType)
+  packingMovementQtyTouched.value = false
+}
+
+function shouldConfirmPackingTypeChange(form: PackingFormState, next: PackingType) {
+  const wasFilling = form.packing_type === 'filling'
+  const willBeFilling = next === 'filling'
+  if (wasFilling && !willBeFilling && form.filling_lines.length) return true
+  const wasVolume = isVolumeType(form.packing_type)
+  const willVolume = isVolumeType(next)
+  if (wasVolume && !willVolume && form.volume_qty) return true
+  const wasMovement = isMovementType(form.packing_type)
+  const willMovement = isMovementType(next)
+  if (wasMovement && !willMovement && (form.movement_site_id || form.movement_qty || form.movement_memo)) return true
+  if ((form.packing_type === 'loss' || form.packing_type === 'dispose') && !(next === 'loss' || next === 'dispose') && form.reason) return true
+  return false
+}
+
+function resetPackingFormForType(form: PackingFormState, prevType: PackingType) {
+  if (!isVolumeType(form.packing_type) || !isVolumeType(prevType)) {
+    form.volume_qty = ''
+  }
+  if (!isMovementType(form.packing_type) || !isMovementType(prevType)) {
+    form.movement_site_id = ''
+    form.movement_qty = ''
+    form.movement_memo = ''
+  }
+  if (form.packing_type !== 'filling') {
+    form.filling_lines = []
+  }
+  if (!(form.packing_type === 'loss' || form.packing_type === 'dispose')) {
+    form.reason = ''
+  }
+}
+
+function isVolumeType(type: PackingType) {
+  return type === 'ship' || type === 'transfer' || type === 'loss' || type === 'dispose'
+}
+
+function isMovementType(type: PackingType) {
+  return type === 'ship' || type === 'filling' || type === 'transfer'
+}
+
+function addFillingLine() {
+  if (!packingDialog.form) return
+  packingDialog.form.filling_lines.push({
+    id: generateLocalId(),
+    package_type_id: '',
+    qty: '',
+  })
+}
+
+function removeFillingLine(index: number) {
+  if (!packingDialog.form) return
+  packingDialog.form.filling_lines.splice(index, 1)
+}
+
+function markMovementQtyTouched() {
+  packingMovementQtyTouched.value = true
+}
+
+async function savePackingEvent(addAnother: boolean) {
+  if (!packingDialog.form || !batchId.value) return
+  packingDialog.errors = {}
+  packingDialog.globalError = ''
+  const errors = validatePackingForm(packingDialog.form)
+  if (Object.keys(errors).length) {
+    packingDialog.errors = errors
+    return
+  }
+  try {
+    packingDialog.loading = true
+    const nextEvent = buildPackingEvent(packingDialog.form)
+    if (packingDialog.editing && packingDialog.form.id) {
+      const idx = packingEvents.value.findIndex((row) => row.id === packingDialog.form?.id)
+      if (idx >= 0) {
+        packingEvents.value.splice(idx, 1, nextEvent)
+      } else {
+        packingEvents.value.unshift(nextEvent)
+      }
+    } else {
+      packingEvents.value.unshift(nextEvent)
+    }
+    await persistPackingEvents()
+    showPackingNotice(t('batch.packaging.toast.saved'))
+    if (addAnother) {
+      const nextType = packingDialog.form.packing_type
+      packingDialog.form = newPackingForm(nextType)
+      packingDialog.editing = false
+      packingMovementQtyTouched.value = false
+    } else {
+      packingDialog.open = false
+      packingDialog.form = null
+    }
+  } catch (err) {
+    console.error(err)
+    packingDialog.globalError = t('batch.packaging.errors.saveFailed')
+  } finally {
+    packingDialog.loading = false
+  }
+}
+
+async function deletePackingEvent(event: PackingEvent) {
+  if (!window.confirm(t('batch.packaging.confirmDelete'))) return
+  try {
+    packingEvents.value = packingEvents.value.filter((row) => row.id !== event.id)
+    await persistPackingEvents()
+    showPackingNotice(t('batch.packaging.toast.deleted'))
+  } catch (err) {
+    console.error(err)
+    packingDialog.globalError = t('batch.packaging.errors.deleteFailed')
+  }
+}
+
+async function persistPackingEvents() {
+  if (!batchId.value) return
+  const base = buildMetaWithLabel(batch.value?.meta, batchForm.batch_label)
+  const nextMeta = { ...base, packing_events: packingEvents.value }
+  const { error } = await supabase
+    .from('mes_batches')
+    .update({ meta: nextMeta })
+    .eq('id', batchId.value)
+  if (error) throw error
+  if (batch.value) {
+    batch.value = { ...batch.value, meta: nextMeta }
+  }
+}
+
+function validatePackingForm(form: PackingFormState) {
+  const errors: Record<string, string> = {}
+  if (!form.packing_type) errors.packing_type = t('batch.packaging.errors.typeRequired')
+  if (!form.event_time) errors.event_time = t('batch.packaging.errors.eventTimeRequired')
+  if (isVolumeType(form.packing_type)) {
+    const qty = toNumber(form.volume_qty)
+    if (qty == null || qty <= 0) errors.volume_qty = t('batch.packaging.errors.volumeRequired')
+  }
+  if (isMovementType(form.packing_type)) {
+    if (!form.movement_site_id) errors.movement_site_id = t('batch.packaging.errors.siteRequired')
+    const qty = toNumber(form.movement_qty)
+    if (qty == null || qty <= 0) errors.movement_qty = t('batch.packaging.errors.movementQtyRequired')
+  }
+  if (form.packing_type === 'filling') {
+    if (!form.filling_lines.length) {
+      errors.filling_lines = t('batch.packaging.errors.fillingRequired')
+    } else {
+      const invalid = form.filling_lines.some((line) => {
+        const qty = toNumber(line.qty)
+        return !line.package_type_id || qty == null || qty < 1 || !Number.isInteger(qty)
+      })
+      if (invalid) errors.filling_lines = t('batch.packaging.errors.fillingLineInvalid')
+    }
+  }
+  return errors
+}
+
+function buildPackingEvent(form: PackingFormState): PackingEvent {
+  const id = form.id ?? generateLocalId()
+  const volumeQty = isVolumeType(form.packing_type) ? toNumber(form.volume_qty) : null
+  const movement = isMovementType(form.packing_type)
+    ? {
+      site_id: form.movement_site_id || null,
+      qty: toNumber(form.movement_qty),
+      memo: form.movement_memo ? form.movement_memo.trim() : null,
+    }
+    : null
+  const fillingLines = form.packing_type === 'filling'
+    ? form.filling_lines.map((line) => ({
+      id: line.id ?? generateLocalId(),
+      package_type_id: line.package_type_id,
+      qty: toNumber(line.qty) ?? 0,
+    }))
+    : []
+  return {
+    id,
+    packing_type: form.packing_type,
+    event_time: fromInputDateTime(form.event_time) ?? new Date().toISOString(),
+    memo: form.memo ? form.memo.trim() : null,
+    volume_qty: volumeQty,
+    volume_uom: volumeQty != null ? 'L' : null,
+    movement,
+    filling_lines: fillingLines,
+    reason: form.reason ? form.reason.trim() : null,
+  }
+}
+
+function computeFillingTotals(lines: PackingFillingLineForm[]) {
+  let totalUnits = 0
+  let totalVolume = 0
+  let hasMissing = false
+  lines.forEach((line) => {
+    const qty = toNumber(line.qty)
+    if (qty == null) return
+    totalUnits += qty
+    const unitVolume = resolvePackageUnitVolume(line.package_type_id)
+    if (unitVolume == null) {
+      hasMissing = true
+      return
+    }
+    totalVolume += qty * unitVolume
+  })
+  return {
+    totalUnits,
+    totalVolume: hasMissing ? null : totalVolume,
+  }
+}
+
+function resolvePackageUnitVolume(packageTypeId: string) {
+  const row = packageCategories.value.find((item) => item.id === packageTypeId)
+  return row?.default_volume_l ?? null
+}
+
+function formatFillingUnitVolume(packageTypeId: string) {
+  const unit = resolvePackageUnitVolume(packageTypeId)
+  return unit != null ? formatVolumeValue(unit) : '—'
+}
+
+function formatFillingLineTotal(line: PackingFillingLineForm) {
+  const qty = toNumber(line.qty)
+  const unit = resolvePackageUnitVolume(line.package_type_id)
+  if (qty == null || unit == null) return '—'
+  return formatVolumeValue(qty * unit)
+}
+
+function formatFillingTotals(totals: { totalUnits: number, totalVolume: number | null }) {
+  const volumeLabel = totals.totalVolume != null ? formatVolumeValue(totals.totalVolume) : '—'
+  return t('batch.packaging.dialog.fillingTotals.summary', { units: totals.totalUnits, volume: volumeLabel })
+}
+
+function formatPackingType(type: PackingType) {
+  const match = packingTypeOptions.value.find((option) => option.value === type)
+  return match?.label ?? type
+}
+
+function formatPackingDate(value: string) {
+  if (!value) return '—'
+  try {
+    return new Date(value).toLocaleString()
+  } catch {
+    return value
+  }
+}
+
+function formatPackingVolume(event: PackingEvent) {
+  if (event.volume_qty == null) return '—'
+  return formatVolumeValue(event.volume_qty)
+}
+
+function formatPackingMovement(event: PackingEvent) {
+  if (!event.movement) return '—'
+  const site = siteLabel(event.movement.site_id)
+  const qty = event.movement.qty != null ? formatVolumeValue(event.movement.qty) : '—'
+  return `${site} / ${qty}`
+}
+
+function formatPackingFilling(event: PackingEvent) {
+  if (!event.filling_lines.length) return '—'
+  let totalUnits = 0
+  let totalVolume = 0
+  let hasMissing = false
+  event.filling_lines.forEach((line) => {
+    totalUnits += line.qty ?? 0
+    const unit = resolvePackageUnitVolume(line.package_type_id)
+    if (unit == null) {
+      hasMissing = true
+      return
+    }
+    totalVolume += line.qty * unit
+  })
+  const volumeLabel = hasMissing ? '—' : formatVolumeValue(totalVolume)
+  return `${totalUnits} / ${volumeLabel}`
+}
+
+function showPackingNotice(message: string) {
+  packingNotice.value = message
+  window.setTimeout(() => {
+    if (packingNotice.value === message) packingNotice.value = ''
+  }, 3000)
+}
+
+watch(
+  () => [packingDialog.form?.volume_qty, packingDialog.form?.packing_type],
+  () => {
+    if (!packingDialog.form || !showPackingMovementSection.value) return
+    if (packingMovementQtyTouched.value) return
+    if (packingDialog.form.packing_type === 'ship' || packingDialog.form.packing_type === 'transfer') {
+      packingDialog.form.movement_qty = packingDialog.form.volume_qty || ''
+    }
+  }
+)
+
+watch(
+  () => packingFillingTotals.value.totalVolume,
+  (total) => {
+    if (!packingDialog.form || packingDialog.form.packing_type !== 'filling') return
+    if (packingMovementQtyTouched.value) return
+    if (total == null) return
+    packingDialog.form.movement_qty = String(total)
+  }
+)
 
 function summariseJson(value: any) {
   if (!value) return '—'
@@ -1337,6 +2848,7 @@ function fromInputDateTime(value: string) {
 onMounted(async () => {
   try {
     await ensureTenant()
+    await Promise.all([loadKpiMeta(), loadMaterialClasses(), loadBatchOptions(), loadBatchStatusOptions()])
     await fetchPackageCategories()
   } catch (err) {
     console.error(err)

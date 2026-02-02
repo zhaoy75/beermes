@@ -40,7 +40,7 @@
             </div> -->
             <div>
               <dt class="font-medium text-gray-600">{{ t('batch.summary.targetVolume') }}</dt>
-              <dd class="text-gray-800">{{ detail?.target_volume_l ?? '—' }}</dd>
+              <dd class="text-gray-800">{{ formatVolume(resolvePlannedVolume(detail?.kpi)) }}</dd>
             </div>
             <div>
               <dt class="font-medium text-gray-600">{{ t('batch.summary.processVersion') }}</dt>
@@ -133,6 +133,39 @@ const loadingSteps = ref(false)
 const detail = ref<any>(null)
 const ingredients = ref<Array<{ id: string, material_name: string, amount: number | null, uom_code: string | null, usage_stage: string | null, notes: string | null }>>([])
 const steps = ref<Array<any>>([])
+
+function toNumber(value: any): number | null {
+  if (value === null || value === undefined || value === '') return null
+  const num = Number(value)
+  return Number.isFinite(num) ? num : null
+}
+
+function parseKpi(value: any) {
+  if (!value) return []
+  if (Array.isArray(value)) return value
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value)
+      return Array.isArray(parsed) ? parsed : []
+    } catch {
+      return []
+    }
+  }
+  return []
+}
+
+function resolvePlannedVolume(kpi: any) {
+  const rows = parseKpi(kpi)
+  const row = rows.find((item: any) => item && item.id === 'volume')
+    ?? rows.find((item: any) => item && item.id === 'volume_l')
+  if (!row) return null
+  return toNumber(row.planed ?? row.planned)
+}
+
+function formatVolume(value: number | null) {
+  if (value == null || Number.isNaN(value)) return '—'
+  return `${Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+}
 
 watch(() => props.open, (val) => {
   if (val) {

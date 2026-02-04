@@ -1,5 +1,5 @@
 
-I want you to rewrite packaging section of batchedit.vue page. Following is the specification
+I want you to modify packaging section of batchedit.vue page. Following is the specification
 
 1. Purpose
 The Packing Dialog records a packaging-related batch event.
@@ -8,7 +8,7 @@ One packing dialog submission creates one packing event.
 For Filling type, multiple filling lines may be created.
 
 2. Entry Points
-- Batch Edit page → button: “Packing…”
+- Batch Edit page → button: “Packing…”　(japanese text: 移送詰口管理)
 - Opens a modal dialog
 - Can be used multiple times per batch
 
@@ -24,12 +24,17 @@ Header:
 - Close button
 
 Body (top):
-1) Packing Type Selector
+1) Product Volume Summary
+   - Total product volume of the batch
+   - Processed volume (shipped, fillin, transferred, lost, disposed)
+   - Remaining volume available
+
+2) Packing Type Selector
    - UI: segmented control or radio cards
-   - Values: Ship, Filling, Transfer, Loss, Dispose
-2) Common Fields
+   - Values: Ship, Fillin(japanese text: 詰口), Transfer, Loss, Dispose
+3) Common Fields
    - Event time (default now)
-   - Global memo (optional)
+   - memo (optional)
 
 Dynamic Sections (order fixed):
 1) Volume Section
@@ -43,6 +48,15 @@ Footer:
 - Optional: Save and Add Another
 
 5. Field Definitions
+
+5.0 Summary section 
+   - Total product volume of the batch
+   - Processed volume (shipped, fillin, transferred, lost, disposed)
+   - Remaining volume available(left volume = total volume - processed volume)
+     remaining volume should be zero or positive and finally reach zero. 
+     remain volume should be color as yellow when it is above zero and green if it is zero.
+      
+
 
 5.1 Packing Type
 - Required

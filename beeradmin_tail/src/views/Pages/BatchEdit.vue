@@ -562,6 +562,29 @@
         </header>
         <div class="p-4 space-y-4">
           <div v-if="packingDialog.globalError" class="text-sm text-red-600">{{ packingDialog.globalError }}</div>
+          <div class="border border-gray-200 rounded-lg p-3 space-y-3">
+            <h4 class="text-sm font-semibold text-gray-700">{{ t('batch.packaging.dialog.summaryTitle') }}</h4>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm text-gray-600">
+              <div class="space-y-1">
+                <div class="text-xs uppercase text-gray-500">{{ t('batch.packaging.dialog.summaryTotal') }}</div>
+                <div class="text-base font-semibold text-gray-800">{{ packingSummaryTotalText }}</div>
+              </div>
+              <div class="space-y-1">
+                <div class="text-xs uppercase text-gray-500">{{ t('batch.packaging.dialog.summaryProcessed') }}</div>
+                <div class="text-base font-semibold text-gray-800">{{ packingSummaryProcessedText }}</div>
+              </div>
+              <div class="space-y-1">
+                <div class="text-xs uppercase text-gray-500">{{ t('batch.packaging.dialog.summaryRemaining') }}</div>
+                <div
+                  class="text-base font-semibold"
+                  :class="packingRemainingVolumeClass"
+                >
+                  {{ packingSummaryRemainingText }}
+                </div>
+              </div>
+            </div>
+            <p class="text-xs text-gray-500">{{ t('batch.packaging.dialog.summaryHint') }}</p>
+          </div>
           <div class="space-y-3">
             <div>
               <p class="text-xs uppercase text-gray-500 mb-2">{{ t('batch.packaging.dialog.packingType') }}</p>
@@ -584,10 +607,6 @@
                 <label class="block text-sm text-gray-600 mb-1" for="packingEventTime">{{ t('batch.packaging.dialog.eventTime') }}</label>
                 <input id="packingEventTime" v-model="packingDialog.form.event_time" type="datetime-local" class="w-full h-[40px] border rounded px-3" />
                 <p v-if="packingDialog.errors.event_time" class="mt-1 text-xs text-red-600">{{ packingDialog.errors.event_time }}</p>
-              </div>
-              <div>
-                <label class="block text-sm text-gray-600 mb-1" for="packingMemo">{{ t('batch.packaging.dialog.memo') }}</label>
-                <input id="packingMemo" v-model.trim="packingDialog.form.memo" type="text" class="w-full h-[40px] border rounded px-3" />
               </div>
             </div>
           </div>
@@ -692,7 +711,6 @@
               <div>{{ t('batch.packaging.dialog.reviewVolume') }}: <span class="text-gray-800">{{ reviewVolumeText }}</span></div>
               <div>{{ t('batch.packaging.dialog.reviewMovement') }}: <span class="text-gray-800">{{ reviewMovementText }}</span></div>
               <div>{{ t('batch.packaging.dialog.reviewFilling') }}: <span class="text-gray-800">{{ reviewFillingText }}</span></div>
-              <div class="md:col-span-2">{{ t('batch.packaging.dialog.reviewMemo') }}: <span class="text-gray-800">{{ packingDialog.form.memo || '—' }}</span></div>
             </div>
             <p v-if="packingMismatchWarning" class="text-xs text-amber-600">{{ packingMismatchWarning }}</p>
           </div>
@@ -1056,8 +1074,8 @@ const packageCategoryOptions = computed(() =>
 )
 
 const packingTypeOptions = computed(() => ([
-  { value: 'ship', label: t('batch.packaging.types.ship') },
   { value: 'filling', label: t('batch.packaging.types.filling') },
+  { value: 'ship', label: t('batch.packaging.types.ship') },
   { value: 'transfer', label: t('batch.packaging.types.transfer') },
   { value: 'loss', label: t('batch.packaging.types.loss') },
   { value: 'dispose', label: t('batch.packaging.types.dispose') },
@@ -1085,8 +1103,55 @@ const packingFillingTotals = computed(() => {
   return computeFillingTotals(lines)
 })
 
+const packingProcessedVolume = computed(() => {
+  if (!packingEvents.value.length) return 0
+  let total = 0
+  packingEvents.value.forEach((event) => {
+    if (event.packing_type === 'filling') {
+      const qty = event.movement?.qty
+      if (qty != null) total += qty
+      return
+    }
+    if (event.volume_qty != null) {
+      total += event.volume_qty
+      return
+    }
+    if (event.movement?.qty != null) total += event.movement.qty
+  })
+  return total
+})
+
+const packingRemainingVolume = computed(() => {
+  if (totalProductVolume.value == null) return null
+  return Math.max(totalProductVolume.value - packingProcessedVolume.value, 0)
+})
+
+const packingSummaryTotalText = computed(() => {
+  if (totalProductVolume.value == null) return '—'
+  return formatVolumeValue(totalProductVolume.value)
+})
+
+const packingSummaryProcessedText = computed(() => {
+  return formatVolumeValue(packingProcessedVolume.value)
+})
+
+const packingSummaryRemainingText = computed(() => {
+  if (packingRemainingVolume.value == null) return '—'
+  return formatVolumeValue(packingRemainingVolume.value)
+})
+
+const packingRemainingVolumeClass = computed(() => {
+  if (packingRemainingVolume.value == null) return 'text-gray-800'
+  if (packingRemainingVolume.value > 0) return 'text-amber-600'
+  return 'text-emerald-600'
+})
+
 const reviewVolumeText = computed(() => {
   if (!packingDialog.form) return '—'
+  if (packingDialog.form.packing_type === 'filling') {
+    const total = packingFillingTotals.value.totalVolume
+    return total != null ? formatVolumeValue(total) : '—'
+  }
   if (!showPackingVolumeSection.value) return '—'
   const qty = toNumber(packingDialog.form.volume_qty)
   return qty != null ? formatVolumeValue(qty) : '—'

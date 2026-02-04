@@ -242,6 +242,11 @@
         "packingType": "Packing type",
         "eventTime": "Event time",
         "memo": "Global memo",
+        "summaryTitle": "Summary",
+        "summaryTotal": "Product volume",
+        "summaryProcessed": "Processed volume",
+        "summaryRemaining": "Remaining volume",
+        "summaryHint": "Processed includes ship, filling, transfer, loss, and dispose events.",
         "volumeSection": "Volume",
         "volumeQty": "Quantity",
         "volumeUnit": "L",
@@ -896,6 +901,128 @@
       },
       "toast": {
         "saved": "Movement saved."
+      }
+    },
+    "taxEvent": {
+      "breadcrumb": "Liquor Tax Event",
+      "title": "Liquor Tax Event",
+      "subtitle": "Create compliant liquor tax events with guided intent selection.",
+      "back": "Back to list",
+      "wizardTitle": "Tax Event Wizard",
+      "wizardSubtitle": "Select intent first, then complete the required steps.",
+      "confirmIntentChange": "Changing intent will reset some inputs. Continue?",
+      "steps": {
+        "intent": {
+          "label": "Intent",
+          "title": "Select Intent",
+          "subtitle": "Choose the business intent. Tax treatment is computed automatically.",
+          "returnHint": "Return acceptance must reference an original posted shipment."
+        },
+        "parties": {
+          "label": "Parties / Route",
+          "title": "Parties and Route",
+          "subtitle": "Provide the required parties and route details.",
+          "intentFirst": "Select an intent to see the required fields."
+        },
+        "items": {
+          "label": "Items / Quantity",
+          "title": "Items and Quantity",
+          "subtitle": "Add products, batches, and quantities for this event."
+        },
+        "evidence": {
+          "label": "Evidence",
+          "title": "Evidence",
+          "subtitle": "Attach or reference required evidence for compliance."
+        },
+        "review": {
+          "label": "Review",
+          "title": "Review & Save",
+          "subtitle": "Confirm intent, tax treatment, and required data before saving."
+        }
+      },
+      "intents": {
+        "domestic": "Domestic Shipment",
+        "export": "Export Shipment",
+        "return": "Return Acceptance",
+        "inbound": "Inbound Receipt",
+        "nontaxOther": "Non-taxable Removal – Other",
+        "domesticNote": "Taxed removal for domestic shipments.",
+        "exportNote": "Tax-exempt export shipment.",
+        "returnNote": "Return acceptance tied to original shipment.",
+        "inboundNote": "Receipt from another brewery or source.",
+        "nontaxOtherNote": "Non-taxable removal with reason code.",
+        "unselected": "Not selected"
+      },
+      "treatments": {
+        "taxed": "課税移出",
+        "export": "輸出免税",
+        "return": "戻入",
+        "inbound": "移入",
+        "nontaxOther": "非課税移出",
+        "unselected": "—"
+      },
+      "fields": {
+        "shipFrom": "Ship-from site",
+        "shipToParty": "Ship-to party",
+        "shipDate": "Ship date",
+        "exportMode": "Export mode",
+        "destinationCountry": "Destination country",
+        "plannedShipDate": "Planned ship date",
+        "receivingSite": "Receiving site",
+        "sourceType": "Source type",
+        "sourceParty": "Source party",
+        "receiptDate": "Receipt date",
+        "removalSite": "Removal site",
+        "reasonCode": "Reason code",
+        "plannedDate": "Planned date"
+      },
+      "exportModes": {
+        "direct": "Direct",
+        "forwarder": "Forwarder"
+      },
+      "items": {
+        "product": "Product",
+        "batch": "Lot / Batch",
+        "qty": "Quantity",
+        "uom": "UOM",
+        "abv": "ABV",
+        "taxCategory": "Tax category",
+        "addLine": "Add line"
+      },
+      "evidence": {
+        "invoiceNo": "Invoice number",
+        "blNo": "B/L or AWB number",
+        "attachmentsHint": "Attach evidence files here (upload integration pending)."
+      },
+      "review": {
+        "intent": "Intent",
+        "taxTreatment": "Tax treatment",
+        "items": "Items",
+        "evidence": "Evidence",
+        "evidenceProvided": "Provided",
+        "evidenceMissing": "Missing",
+        "evidenceOptional": "Optional",
+        "warningsTitle": "Warnings",
+        "warningIntentLocked": "Intent changes require creating a new event.",
+        "warningPostValidation": "Posting requires all validations to pass."
+      },
+      "panel": {
+        "title": "Tax Summary",
+        "taxTreatment": "Tax treatment",
+        "status": "Status",
+        "checklistTitle": "Validation Checklist",
+        "checkIntent": "Intent selected",
+        "checkParties": "Parties/route completed",
+        "checkItems": "Items and quantities valid",
+        "checkEvidence": "Evidence collected",
+        "taxPreview": "Tax preview",
+        "taxPreviewHint": "Tax preview will appear here once configured."
+      },
+      "actions": {
+        "prev": "Previous",
+        "next": "Next",
+        "saveDraft": "Save Draft",
+        "post": "Post"
       }
     }
   },

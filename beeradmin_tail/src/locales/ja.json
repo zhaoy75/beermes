@@ -209,10 +209,10 @@
       "todoHint": "※ データベースを準備したら、この表と接続してください。"
     },
     "packaging": {
-      "sectionTitle": "パッキング",
-      "sectionSubtitle": "このバッチのパッキングイベントを記録します。",
-      "openDialog": "パッキング…",
-      "noData": "パッキング記録がありません。",
+      "sectionTitle": "移送詰口管理",
+      "sectionSubtitle": "このバッチの移送詰口管理イベントを記録します。",
+      "openDialog": "移送詰口管理",
+      "noData": "移送詰口管理記録がありません。",
       "columns": {
         "eventTime": "日時",
         "type": "種別",
@@ -223,7 +223,7 @@
       },
       "types": {
         "ship": "出荷",
-        "filling": "充填",
+        "filling": "詰口",
         "transfer": "移送",
         "loss": "ロス",
         "dispose": "廃棄"
@@ -232,16 +232,21 @@
         "edit": "編集",
         "delete": "削除"
       },
-      "confirmDelete": "このパッキング記録を削除しますか？",
+      "confirmDelete": "この移送詰口管理記録を削除しますか？",
       "warnings": {
         "movementMismatch": "移動数量が容量または充填合計と一致しません。"
       },
       "dialog": {
-        "title": "パッキング",
+        "title": "移送詰口管理",
         "batchSummary": "バッチ {code} / {name}",
-        "packingType": "パッキング種別",
+        "packingType": "移送詰口管理種別",
         "eventTime": "日時",
         "memo": "共通メモ",
+        "summaryTitle": "サマリー",
+        "summaryTotal": "製品容量",
+        "summaryProcessed": "処理済み容量",
+        "summaryRemaining": "残容量",
+        "summaryHint": "出荷・詰口・移送・ロス・廃棄の合計が処理済み容量です。",
         "volumeSection": "容量",
         "volumeQty": "数量",
         "volumeUnit": "L",
@@ -250,9 +255,9 @@
         "movementSite": "移動先拠点",
         "movementQty": "数量",
         "movementMemo": "メモ（任意）",
-        "fillingSection": "充填",
-        "addFilling": "充填を追加",
-        "noFillingLines": "充填明細がありません。",
+        "fillingSection": "詰口",
+        "addFilling": "詰口を追加",
+        "noFillingLines": "詰口明細がありません。",
         "fillingTable": {
           "packageType": "詰口種別",
           "qty": "数量",
@@ -268,28 +273,28 @@
         "reviewType": "種別",
         "reviewVolume": "容量",
         "reviewMovement": "移動",
-        "reviewFilling": "充填",
+        "reviewFilling": "詰口",
         "reviewMemo": "メモ",
-        "save": "パッキング保存",
+        "save": "移送詰口管理保存",
         "saveAndAdd": "保存して続けて追加",
         "cancel": "キャンセル",
         "closeConfirm": "変更を破棄しますか？",
         "typeChangeConfirm": "種別を変更すると入力がリセットされます。続行しますか？"
       },
       "errors": {
-        "typeRequired": "パッキング種別は必須です。",
+        "typeRequired": "移送詰口管理種別は必須です。",
         "eventTimeRequired": "日時は必須です。",
         "volumeRequired": "容量は0より大きい値を入力してください。",
         "siteRequired": "移動先拠点は必須です。",
         "movementQtyRequired": "移動数量は0より大きい値を入力してください。",
         "fillingRequired": "充填明細を1件以上追加してください。",
         "fillingLineInvalid": "詰口種別と数量（1以上の整数）を入力してください。",
-        "saveFailed": "パッキングの保存に失敗しました。",
-        "deleteFailed": "パッキングの削除に失敗しました。"
+        "saveFailed": "移送詰口管理の保存に失敗しました。",
+        "deleteFailed": "移送詰口管理の削除に失敗しました。"
       },
       "toast": {
-        "saved": "パッキングを保存しました。",
-        "deleted": "パッキングを削除しました。"
+        "saved": "移送詰口管理を保存しました。",
+        "deleted": "移送詰口管理を削除しました。"
       }
     }
   },
@@ -896,6 +901,128 @@
       },
       "toast": {
         "saved": "移動を保存しました。"
+      }
+    },
+    "taxEvent": {
+      "breadcrumb": "酒税イベント",
+      "title": "酒税イベント作成",
+      "subtitle": "目的を先に選択し、酒税イベントをガイド形式で作成します。",
+      "back": "一覧へ戻る",
+      "wizardTitle": "酒税イベント作成",
+      "wizardSubtitle": "目的を選択して必要な項目を入力してください。",
+      "confirmIntentChange": "目的を変更すると入力がリセットされます。続行しますか？",
+      "steps": {
+        "intent": {
+          "label": "目的",
+          "title": "目的の選択",
+          "subtitle": "目的を選択すると税区分が自動決定されます。",
+          "returnHint": "返品受入は元の移出イベントの参照が必要です。"
+        },
+        "parties": {
+          "label": "取引先/経路",
+          "title": "取引先と経路",
+          "subtitle": "目的に応じた取引先・経路情報を入力します。",
+          "intentFirst": "目的を選択すると必要項目が表示されます。"
+        },
+        "items": {
+          "label": "品目/数量",
+          "title": "品目と数量",
+          "subtitle": "品目・バッチ・数量を入力します。"
+        },
+        "evidence": {
+          "label": "証憑",
+          "title": "証憑",
+          "subtitle": "必要な証憑情報を登録します。"
+        },
+        "review": {
+          "label": "確認",
+          "title": "確認と保存",
+          "subtitle": "目的・税区分・入力内容を確認してください。"
+        }
+      },
+      "intents": {
+        "domestic": "国内出荷",
+        "export": "輸出",
+        "return": "返品受入",
+        "inbound": "受入",
+        "nontaxOther": "非課税移出：その他",
+        "domesticNote": "国内販売に伴う課税移出。",
+        "exportNote": "輸出免税の移出。",
+        "returnNote": "元の移出イベントに紐づく返品。",
+        "inboundNote": "他製造場などからの搬入。",
+        "nontaxOtherNote": "理由コード必須の非課税移出。",
+        "unselected": "未選択"
+      },
+      "treatments": {
+        "taxed": "課税移出",
+        "export": "輸出免税",
+        "return": "戻入",
+        "inbound": "移入",
+        "nontaxOther": "非課税移出",
+        "unselected": "—"
+      },
+      "fields": {
+        "shipFrom": "出荷元拠点",
+        "shipToParty": "出荷先",
+        "shipDate": "出荷日",
+        "exportMode": "輸出方法",
+        "destinationCountry": "仕向国",
+        "plannedShipDate": "出荷予定日",
+        "receivingSite": "受入拠点",
+        "sourceType": "搬入元種別",
+        "sourceParty": "搬入元",
+        "receiptDate": "受入日",
+        "removalSite": "移出拠点",
+        "reasonCode": "理由コード",
+        "plannedDate": "予定日"
+      },
+      "exportModes": {
+        "direct": "直送",
+        "forwarder": "フォワーダー"
+      },
+      "items": {
+        "product": "製品",
+        "batch": "ロット/バッチ",
+        "qty": "数量",
+        "uom": "単位",
+        "abv": "ABV",
+        "taxCategory": "税区分",
+        "addLine": "明細を追加"
+      },
+      "evidence": {
+        "invoiceNo": "インボイス番号",
+        "blNo": "B/L または AWB 番号",
+        "attachmentsHint": "証憑ファイルの添付は準備中です。"
+      },
+      "review": {
+        "intent": "目的",
+        "taxTreatment": "税区分",
+        "items": "明細数",
+        "evidence": "証憑",
+        "evidenceProvided": "提出済み",
+        "evidenceMissing": "未提出",
+        "evidenceOptional": "任意",
+        "warningsTitle": "注意事項",
+        "warningIntentLocked": "目的変更は新規イベントで行ってください。",
+        "warningPostValidation": "確定には必須チェックがすべて必要です。"
+      },
+      "panel": {
+        "title": "税区分サマリー",
+        "taxTreatment": "税区分",
+        "status": "ステータス",
+        "checklistTitle": "検証チェック",
+        "checkIntent": "目的の選択",
+        "checkParties": "取引先・経路の入力",
+        "checkItems": "明細と数量の確認",
+        "checkEvidence": "証憑の確認",
+        "taxPreview": "税額プレビュー",
+        "taxPreviewHint": "税額プレビューは準備中です。"
+      },
+      "actions": {
+        "prev": "戻る",
+        "next": "次へ",
+        "saveDraft": "下書き保存",
+        "post": "確定"
       }
     }
   },

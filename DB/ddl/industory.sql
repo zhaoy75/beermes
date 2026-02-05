@@ -1,32 +1,50 @@
--- public.industry definition
 
--- Drop table
+CREATE TABLE IF NOT EXISTS industry (
+  industry_id uuid primary key default gen_random_uuid(),
 
--- DROP TABLE public.industry;
+  -- Stable code used by API / JSON / config
+  code text NOT NULL,              -- e.g. 'CRAFT_BEER'
 
-CREATE TABLE public.industry (
-	industry_id uuid DEFAULT gen_random_uuid() NOT NULL,
-	code text NOT NULL,
-	"name" text NOT NULL,
-	name_i18n jsonb NULL,
-	description text NULL,
-	is_active bool DEFAULT true NOT NULL,
-	sort_order int4 DEFAULT 0 NOT NULL,
-	meta jsonb DEFAULT '{}'::jsonb NOT NULL,
-	created_at timestamptz DEFAULT now() NOT NULL,
-	updated_at timestamptz DEFAULT now() NOT NULL,
-	CONSTRAINT ck_industry_meta_object CHECK ((jsonb_typeof(meta) = 'object'::text)),
-	CONSTRAINT ck_industry_name_i18n_object CHECK (((name_i18n IS NULL) OR (jsonb_typeof(name_i18n) = 'object'::text))),
-	CONSTRAINT industry_pkey PRIMARY KEY (industry_id),
-	CONSTRAINT uq_industry_code UNIQUE (code)
+  -- Display name
+  name text NOT NULL,              -- e.g. 'Craft Beer'
+
+  -- Optional i18n name
+  name_i18n jsonb NULL,            -- {"ja":"クラフトビール","en":"Craft Beer"}
+
+  description text NULL,
+
+  is_active boolean NOT NULL DEFAULT true,
+  sort_order int NOT NULL DEFAULT 0,
+
+  meta jsonb NOT NULL DEFAULT '{}'::jsonb,
+
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+
+  CONSTRAINT uq_industry_code
+    UNIQUE (code),
+
+  CONSTRAINT ck_industry_name_i18n_object
+    CHECK (name_i18n IS NULL OR jsonb_typeof(name_i18n) = 'object'),
+
+  CONSTRAINT ck_industry_meta_object
+    CHECK (jsonb_typeof(meta) = 'object')
 );
 
--- Table Triggers
 
-create trigger trg_industry_updated_at before
-update
-    on
-    public.industry for each row execute function set_updated_at();
+
+CREATE OR REPLACE FUNCTION set_updated_at()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  NEW.updated_at := now();
+  RETURN NEW;
+END $$;
+
+DROP TRIGGER IF EXISTS trg_industry_updated_at ON industry;
+CREATE TRIGGER trg_industry_updated_at
+BEFORE UPDATE ON industry
+FOR EACH ROW
+EXECUTE FUNCTION set_updated_at();
 
 -- Permissions
 

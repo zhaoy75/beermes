@@ -628,13 +628,53 @@
     }
   },
   "uom": {
-    "title": "単位マスタ",
-    "subtitle": "計量単位を管理します",
+    "title": "単位（UOM）管理",
+    "subtitle": "システムで使用する単位を追加・編集・削除します。",
+    "addButton": "単位を追加",
+    "saveButton": "単位を保存",
     "newTitle": "単位の追加",
     "editTitle": "単位の編集",
     "deleteTitle": "単位の削除",
     "deleteConfirm": "単位 {code} を削除しますか？ この操作は元に戻せません。",
-    "tenantHint": "テナント: {tenant}"
+    "tenantHint": "テナント: {tenant}",
+    "table": {
+      "dimension": "次元",
+      "code": "コード",
+      "name": "名称",
+      "conversionFactor": "換算係数",
+      "baseUnit": "基準単位"
+    },
+    "form": {
+      "dimension": "次元",
+      "dimensionPlaceholder": "次元を選択",
+      "code": "コード",
+      "nameEn": "名称（英語）",
+      "nameJa": "名称（日本語）",
+      "conversionFactor": "基準単位への換算係数",
+      "isBaseUnit": "基準単位"
+    },
+    "pagination": {
+      "showing": "全{total}件中 {start}-{end}件を表示",
+      "prev": "前へ",
+      "next": "次へ",
+      "page": "ページ {page} / {total}"
+    },
+    "errors": {
+      "fetch": "単位の取得に失敗しました: {message}",
+      "save": "単位の保存に失敗しました: {message}",
+      "delete": "単位の削除に失敗しました: {message}",
+      "systemReadOnly": "システムスコープの単位は編集・削除できません。",
+      "adminOnlyCreate": "管理者のみ単位を作成できます。",
+      "dimensionRequired": "次元は必須です。",
+      "codeRequired": "コードは必須です。",
+      "nameEnRequired": "英語名は必須です。",
+      "factorRequired": "換算係数は必須です。",
+      "factorNumber": "換算係数は数値である必要があります。",
+      "factorPositive": "換算係数は正の数である必要があります。",
+      "codeUnique": "同一の次元内でコードは一意である必要があります。",
+      "baseUnitSingle": "次元ごとに基準単位は1つだけです。",
+      "baseUnitMissing": "先にこの次元の基準単位を設定してください。"
+    }
   },
   "material": {
     "title": "原材料マスタ",

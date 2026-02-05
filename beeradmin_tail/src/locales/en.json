@@ -628,13 +628,53 @@
     }
   },
   "uom": {
-    "title": "Unit of Measure Maintenance",
-    "subtitle": "Supabase-backed CRUD for measurement units",
-    "newTitle": "New Unit",
-    "editTitle": "Edit Unit",
-    "deleteTitle": "Delete Unit",
-    "deleteConfirm": "Delete unit {code}? This cannot be undone.",
-    "tenantHint": "Tenant: {tenant}"
+    "title": "Unit of Measure (UOM) Management",
+    "subtitle": "Add, edit, and delete units of measure used in the system.",
+    "addButton": "Add UOM",
+    "saveButton": "Save UOM",
+    "newTitle": "Add UOM",
+    "editTitle": "Edit UOM",
+    "deleteTitle": "Delete UOM",
+    "deleteConfirm": "Delete UOM {code}? This cannot be undone.",
+    "tenantHint": "Tenant: {tenant}",
+    "table": {
+      "dimension": "Dimension",
+      "code": "Code",
+      "name": "Name",
+      "conversionFactor": "Conversion factor",
+      "baseUnit": "Base unit"
+    },
+    "form": {
+      "dimension": "Dimension",
+      "dimensionPlaceholder": "Select dimension",
+      "code": "Code",
+      "nameEn": "Name (English)",
+      "nameJa": "Name (Japanese)",
+      "conversionFactor": "Conversion factor to base unit",
+      "isBaseUnit": "Is base unit"
+    },
+    "pagination": {
+      "showing": "Showing {start}-{end} of {total}",
+      "prev": "Prev",
+      "next": "Next",
+      "page": "Page {page} / {total}"
+    },
+    "errors": {
+      "fetch": "Failed to load UOMs: {message}",
+      "save": "Failed to save UOM: {message}",
+      "delete": "Failed to delete UOM: {message}",
+      "systemReadOnly": "System-scope UOMs cannot be edited or deleted.",
+      "adminOnlyCreate": "Only admins can create UOMs.",
+      "dimensionRequired": "Dimension is required.",
+      "codeRequired": "Code is required.",
+      "nameEnRequired": "English name is required.",
+      "factorRequired": "Conversion factor is required.",
+      "factorNumber": "Conversion factor must be a number.",
+      "factorPositive": "Conversion factor must be a positive number.",
+      "codeUnique": "Code must be unique within the same dimension.",
+      "baseUnitSingle": "Only one base unit is allowed per dimension.",
+      "baseUnitMissing": "Define a base unit for this dimension first."
+    }
   },
   "material": {
     "title": "Material Master Maintenance",

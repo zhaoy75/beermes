@@ -31,7 +31,7 @@ Body (top):
 
 2) Packing Type Selector
    - UI: segmented control or radio cards
-   - Values: Ship, Fillin(japanese text: 詰口), Transfer, Loss, Dispose
+   - Values: Fillin(japanese text: 詰口)，Ship, Transfer, Loss, Dispose
 3) Common Fields
    - Event time (default now)
    - memo (optional)
@@ -49,13 +49,13 @@ Footer:
 
 5. Field Definitions
 
-5.0 Summary section 
+5.0 product Summary section 
    - Total product volume of the batch
    - Processed volume (shipped, fillin, transferred, lost, disposed)
    - Remaining volume available(left volume = total volume - processed volume)
      remaining volume should be zero or positive and finally reach zero. 
      remain volume should be color as yellow when it is above zero and green if it is zero.
-      
+
 
 
 5.1 Packing Type

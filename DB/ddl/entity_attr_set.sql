@@ -1,15 +1,14 @@
 -- ============================================================================
 -- entity_attr
 -- Stores actual attribute values for entities (batch / recipe / item / etc.)
--- Supports BIGINT or UUID entity IDs
+-- Uses UUID entity IDs
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS entity_attr (
   tenant_id uuid NOT NULL,
 
   entity_type text NOT NULL,
-  entity_id_bigint bigint NULL,
-  entity_id_uuid   uuid NULL,
+  entity_id uuid NOT NULL,
 
   attr_id bigint NOT NULL,
 
@@ -30,14 +29,6 @@ CREATE TABLE IF NOT EXISTS entity_attr (
   updated_at timestamptz NOT NULL DEFAULT now(),
   updated_by uuid NULL,
 
-  -- Exactly one entity ID must be set
-  CONSTRAINT ck_entity_attr_one_entity_id
-  CHECK (
-    (entity_id_bigint IS NOT NULL AND entity_id_uuid IS NULL)
-    OR
-    (entity_id_bigint IS NULL AND entity_id_uuid IS NOT NULL)
-  ),
-
   -- At most one value column allowed
   CONSTRAINT ck_entity_attr_single_value
   CHECK (
@@ -54,8 +45,7 @@ CREATE TABLE IF NOT EXISTS entity_attr (
   PRIMARY KEY (
     tenant_id,
     entity_type,
-    entity_id_bigint,
-    entity_id_uuid,
+    entity_id,
     attr_id
   ),
 
@@ -78,13 +68,8 @@ CREATE TABLE IF NOT EXISTS entity_attr (
 );
 
 -- Indexes
-CREATE INDEX IF NOT EXISTS ix_entity_attr_by_entity_bigint
-  ON entity_attr(tenant_id, entity_type, entity_id_bigint)
-  WHERE entity_id_bigint IS NOT NULL;
-
-CREATE INDEX IF NOT EXISTS ix_entity_attr_by_entity_uuid
-  ON entity_attr(tenant_id, entity_type, entity_id_uuid)
-  WHERE entity_id_uuid IS NOT NULL;
+CREATE INDEX IF NOT EXISTS ix_entity_attr_by_entity
+  ON entity_attr(tenant_id, entity_type, entity_id);
 
 CREATE INDEX IF NOT EXISTS ix_entity_attr_by_attr
   ON entity_attr(tenant_id, attr_id);
@@ -123,15 +108,14 @@ USING (tenant_id = app_current_tenant_id());
 -- ============================================================================
 -- entity_attr_set
 -- Assigns one or more attr_set profiles to an entity instance
--- Supports BIGINT or UUID entity IDs
+-- Uses UUID entity IDs
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS entity_attr_set (
   tenant_id uuid NOT NULL,
 
   entity_type text NOT NULL,        -- e.g. 'batch', 'recipe_version', 'item'
-  entity_id_bigint bigint NULL,
-  entity_id_uuid   uuid NULL,
+  entity_id uuid NOT NULL,
 
   attr_set_id bigint NOT NULL,
   is_active boolean NOT NULL DEFAULT true,
@@ -139,19 +123,10 @@ CREATE TABLE IF NOT EXISTS entity_attr_set (
   created_at timestamptz NOT NULL DEFAULT now(),
   created_by uuid NULL,
 
-  -- Exactly one entity ID must be set
-  CONSTRAINT ck_entity_attr_set_one_entity_id
-  CHECK (
-    (entity_id_bigint IS NOT NULL AND entity_id_uuid IS NULL)
-    OR
-    (entity_id_bigint IS NULL AND entity_id_uuid IS NOT NULL)
-  ),
-
   PRIMARY KEY (
     tenant_id,
     entity_type,
-    entity_id_bigint,
-    entity_id_uuid,
+    entity_id,
     attr_set_id
   ),
 
@@ -162,13 +137,8 @@ CREATE TABLE IF NOT EXISTS entity_attr_set (
 );
 
 -- Indexes
-CREATE INDEX IF NOT EXISTS ix_entity_attr_set_lookup_bigint
-  ON entity_attr_set(tenant_id, entity_type, entity_id_bigint, is_active)
-  WHERE entity_id_bigint IS NOT NULL;
-
-CREATE INDEX IF NOT EXISTS ix_entity_attr_set_lookup_uuid
-  ON entity_attr_set(tenant_id, entity_type, entity_id_uuid, is_active)
-  WHERE entity_id_uuid IS NOT NULL;
+CREATE INDEX IF NOT EXISTS ix_entity_attr_set_lookup
+  ON entity_attr_set(tenant_id, entity_type, entity_id, is_active);
 
 ALTER TABLE entity_attr_set ENABLE ROW LEVEL SECURITY;
 

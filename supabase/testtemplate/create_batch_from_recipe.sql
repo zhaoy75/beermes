@@ -49,6 +49,25 @@ begin
         _notes
       )
       returning id into v_batch_id;
+
+      insert into entity_attr_set (
+          tenant_id,
+          entity_type,
+          entity_id,
+          attr_set_id,
+          is_active
+        )
+      select
+        _tenant_id,
+        'batch',
+        v_batch_id,
+        s.attr_set_id,
+        true
+      from attr_set s
+      where s.tenant_id = _tenant_id
+        and s.domain = 'batch'
+        and s.is_active = true
+  on conflict (tenant_id, entity_type, entity_id, attr_set_id) do nothing;
     exception when unique_violation then
       raise exception 'Batch code % already exists for tenant %', _batch_code, _tenant_id;
     end;
@@ -116,6 +135,25 @@ begin
   delete from mes_batch_steps
   where batch_id = v_batch_id
     and tenant_id = _tenant_id;
+
+  insert into entity_attr_set (
+    tenant_id,
+    entity_type,
+    entity_id,
+    attr_set_id,
+    is_active
+  )
+  select
+    _tenant_id,
+    'batch',
+    v_batch_id,
+    s.attr_set_id,
+    true
+  from attr_set s
+  where s.tenant_id = _tenant_id
+    and s.domain = 'batch'
+    and s.is_active = true
+  on conflict (tenant_id, entity_type, entity_id, attr_set_id) do nothing;
 
   insert into mes_batch_steps (
     tenant_id,

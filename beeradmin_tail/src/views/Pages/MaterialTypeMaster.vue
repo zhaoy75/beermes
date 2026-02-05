@@ -682,7 +682,7 @@ async function loadAttributes() {
       .from('entity_attr_set')
       .select('attr_set_id')
       .eq('entity_type', ENTITY_TYPE)
-      .eq('entity_id_bigint', selectedType.value.type_id)
+      .eq('entity_id', selectedType.value.type_id)
       .eq('is_active', true)
     if (assignmentError) throw assignmentError
     const setIds = (assignmentData ?? []).map((row) => row.attr_set_id as number)
@@ -694,7 +694,7 @@ async function loadAttributes() {
     const { data: ruleData, error: ruleError } = await supabase
       .from('attr_set_rule')
       .select(
-        'attr_set_id, attr_id, required, sort_order, is_active, ui_section, ui_widget, help_text, attr_def:attr_id(attr_id, code, name, data_type, description, is_active)'
+        'attr_set_id, attr_id, required, sort_order, is_active, ui_section, ui_widget, help_text, attr_def:attr_def!fk_attr_set_rule_attr(attr_id, code, name, data_type, description, is_active)'
       )
       .in('attr_set_id', setIds)
       .order('sort_order', { ascending: true })
@@ -811,7 +811,7 @@ async function saveAttrSets() {
       const insertRows = toAdd.map((id) => ({
         tenant_id: tenant,
         entity_type: ENTITY_TYPE,
-        entity_id_bigint: selectedType.value?.type_id ?? null,
+        entity_id: selectedType.value?.type_id ?? null,
         attr_set_id: id,
         is_active: true,
       }))
@@ -824,7 +824,7 @@ async function saveAttrSets() {
         .from('entity_attr_set')
         .delete()
         .eq('entity_type', ENTITY_TYPE)
-        .eq('entity_id_bigint', selectedType.value.type_id)
+        .eq('entity_id', selectedType.value.type_id)
         .in('attr_set_id', toRemove)
       if (error) throw error
     }

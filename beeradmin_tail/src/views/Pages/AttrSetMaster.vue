@@ -582,7 +582,7 @@ async function fetchAttrSets() {
 async function fetchRulesForSet(attrSetId: number) {
   const { data, error } = await supabase
     .from('attr_set_rule')
-    .select('attr_id, required, sort_order, is_active, meta, attr_def:attr_id(attr_id, code, name, name_i18n, data_type, allowed_values)')
+    .select('attr_id, required, sort_order, is_active, meta, attr_def:attr_def!fk_attr_set_rule_attr(attr_id, code, name, name_i18n, data_type, allowed_values)')
     .eq('attr_set_id', attrSetId)
     .order('sort_order', { ascending: true })
   if (error) throw error

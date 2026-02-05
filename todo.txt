@@ -627,3 +627,7 @@ I want to create an vue page to maintain attr_set & attr_set_rule table.
 I want you to rewrite the packaging section of batchedit.vue page
 - change 充填管理 to 詰口管理
 - dialog 充填 should be totally changed 
+
+http://localhost:54321/rest/v1/attr_set?select=attr_set_id%2Ccode%2Cname%2Cdomain%2C
+scope%2Cowner_id%2Cis_active%2Csort_order&domain=in.%28material%2Cmaterial_type%29
+&industry_id=eq.00000000-0000-0000-0000-000000000000&is_active=eq.true&order=sort_order.asc%2Ccode.asc

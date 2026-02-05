@@ -3,7 +3,7 @@
 -- Values are stored separately (e.g., entity_attr)
 
 CREATE TABLE IF NOT EXISTS attr_def (
-  tenant_id uuid NOT NULL,
+  tenant_id uuid NULL,
 
   attr_id bigint GENERATED ALWAYS AS IDENTITY,
 
@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS attr_def (
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
 
-  PRIMARY KEY (tenant_id, attr_id),
+  PRIMARY KEY (attr_id),
 
   -- Attribute code must be unique per scope
   CONSTRAINT uq_attr_def_code

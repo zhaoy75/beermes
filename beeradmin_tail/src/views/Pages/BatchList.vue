@@ -600,6 +600,7 @@ async function handleCreate(payload: { recipeId: string, batchCode: string | nul
         .update(updatePayload)
         .eq('id', data)
       if (updateError) throw updateError
+      await assignBatchAttrSets(data, tenant)
     }
     showCreate.value = false
     fetchBatches()
@@ -608,6 +609,27 @@ async function handleCreate(payload: { recipeId: string, batchCode: string | nul
   } finally {
     loading.value = false
   }
+}
+
+async function assignBatchAttrSets(batchId: string, tenant: string) {
+  const { data: setData, error: setError } = await supabase
+    .from('attr_set')
+    .select('attr_set_id')
+    .eq('domain', 'batch')
+    .eq('is_active', true)
+  if (setError) throw setError
+  const rows = (setData ?? []).map((row) => ({
+    tenant_id: tenant,
+    entity_type: 'batch',
+    entity_id: batchId,
+    attr_set_id: row.attr_set_id,
+    is_active: true,
+  }))
+  if (!rows.length) return
+  const { error } = await supabase
+    .from('entity_attr_set')
+    .upsert(rows, { onConflict: 'tenant_id,entity_type,entity_id,attr_set_id' })
+  if (error) throw error
 }
 
 async function generateBatchCode() {

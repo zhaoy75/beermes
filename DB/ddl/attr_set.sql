@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS attr_set (
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
 
-  PRIMARY KEY (tenant_id, attr_set_id),
+  PRIMARY KEY (attr_set_id),
 
   -- Set code must be unique per scope
   CONSTRAINT uq_attr_set_code

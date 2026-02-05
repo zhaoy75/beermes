@@ -60,6 +60,64 @@
       <section class="bg-white rounded-xl shadow border border-gray-200 px-4 py-5">
         <header class="flex items-center justify-between mb-4">
           <div class="flex items-center gap-3">
+            <button class="px-2 py-1 text-xs rounded border border-gray-300 hover:bg-gray-100" type="button" @click="toggleSection('attributes')">
+              {{ collapseLabel(sectionCollapsed.attributes) }}
+            </button>
+            <div>
+              <h2 class="text-lg font-semibold text-gray-800">{{ t('batch.edit.attrTitle') }}</h2>
+              <p class="text-xs text-gray-500">{{ t('batch.edit.attrSubtitle') }}</p>
+            </div>
+          </div>
+          <button class="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50" type="button" :disabled="savingBatch" @click="saveBatch">
+            {{ savingBatch ? t('common.saving') : t('common.save') }}
+          </button>
+        </header>
+        <div v-show="!sectionCollapsed.attributes" class="space-y-3">
+          <div v-if="attrLoading" class="text-sm text-gray-500">{{ t('common.loading') }}</div>
+          <div v-else-if="attrFields.length === 0" class="text-sm text-gray-500">{{ t('batch.edit.attrEmpty') }}</div>
+          <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div v-for="field in attrFields" :key="field.attr_id">
+              <label class="block text-sm text-gray-600 mb-1">
+                {{ attrLabel(field) }}<span v-if="field.required" class="text-red-600">*</span>
+              </label>
+              <template v-if="field.data_type === 'ref'">
+                <select v-model="field.value" class="w-full h-[40px] border rounded px-3 bg-white">
+                  <option value="">{{ t('common.select') }}</option>
+                  <option v-for="opt in field.options" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                </select>
+              </template>
+              <template v-else-if="field.data_type === 'number'">
+                <div class="flex items-center gap-2">
+                  <input v-model="field.value" type="number" step="any" class="w-full h-[40px] border rounded px-3" />
+                  <span v-if="field.uom_code" class="text-xs text-gray-500">{{ field.uom_code }}</span>
+                </div>
+              </template>
+              <template v-else-if="field.data_type === 'boolean'">
+                <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                  <input v-model="field.value" type="checkbox" class="h-4 w-4" />
+                  {{ t('common.yes') }}
+                </label>
+              </template>
+              <template v-else-if="field.data_type === 'date'">
+                <input v-model="field.value" type="date" class="w-full h-[40px] border rounded px-3" />
+              </template>
+              <template v-else-if="field.data_type === 'timestamp'">
+                <input v-model="field.value" type="datetime-local" class="w-full h-[40px] border rounded px-3" />
+              </template>
+              <template v-else-if="field.data_type === 'json'">
+                <textarea v-model.trim="field.value" rows="3" class="w-full border rounded px-3 py-2 font-mono text-xs"></textarea>
+              </template>
+              <template v-else>
+                <input v-model.trim="field.value" type="text" class="w-full h-[40px] border rounded px-3" />
+              </template>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="bg-white rounded-xl shadow border border-gray-200 px-4 py-5">
+        <header class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-3">
             <button class="px-2 py-1 text-xs rounded border border-gray-300 hover:bg-gray-100" type="button" @click="toggleSection('kpi')">
               {{ collapseLabel(sectionCollapsed.kpi) }}
             </button>
@@ -859,7 +917,44 @@ const sectionCollapsed = reactive({
   steps: false,
   kpi: false,
   materials: false,
+  attributes: false,
 })
+
+type AttrRuleRow = {
+  attr_id: number
+  required: boolean
+  sort_order: number | null
+  is_active: boolean
+  attr_def?: {
+    attr_id: number
+    code: string
+    name: string
+    name_i18n: Record<string, string> | null
+    data_type: string
+    uom_id: string | null
+    ref_kind: string | null
+    ref_domain: string | null
+  } | null
+}
+
+type AttrField = {
+  attr_id: number
+  code: string
+  name: string
+  name_i18n: Record<string, string> | null
+  data_type: string
+  required: boolean
+  uom_id: string | null
+  uom_code: string | null
+  ref_kind: string | null
+  ref_domain: string | null
+  value: any
+  options: Array<{ value: string | number, label: string }>
+}
+
+const attrFields = ref<AttrField[]>([])
+const attrLoading = ref(false)
+const refOptionsCache = new Map<string, Array<{ value: string | number, label: string }>>()
 
 interface PackageCategoryOption {
   id: string
@@ -1868,6 +1963,7 @@ async function fetchBatch() {
       batchForm.output_rows = normalizeOutputRows(data.output_actual)
       batchForm.notes = data.notes ?? ''
       packingEvents.value = normalizePackingEvents((data.meta as any)?.packing_events)
+      await loadBatchAttributes(data.id)
       await Promise.all([
         loadIngredients(data.recipe_id),
         loadSteps(),
@@ -1879,6 +1975,7 @@ async function fetchBatch() {
       ingredients.value = []
       steps.value = []
       packages.value = []
+      attrFields.value = []
       batchForm.kpi_rows = normalizeKpiRows(null)
       batchForm.material_consumption_rows = normalizeMaterialConsumptionRows(null)
       ensureMaterialConsumptionKeys()
@@ -1889,6 +1986,208 @@ async function fetchBatch() {
     console.error(err)
   } finally {
     loadingBatch.value = false
+  }
+}
+
+function attrLabel(field: AttrField) {
+  const lang = locale.value?.toString().toLowerCase().startsWith('ja') ? 'ja' : 'en'
+  const label = field.name_i18n?.[lang]
+  return label || field.name || field.code
+}
+
+async function loadBatchAttributes(batchUuid: string) {
+  try {
+    attrLoading.value = true
+    const tenant = await ensureTenant()
+    const { data: assigned, error: assignedError } = await supabase
+      .from('entity_attr_set')
+      .select('attr_set_id')
+      .eq('entity_type', 'batch')
+      .eq('entity_id', batchUuid)
+      .eq('is_active', true)
+    if (assignedError) throw assignedError
+    const setIds = (assigned ?? []).map((row) => row.attr_set_id as number)
+    if (setIds.length === 0) {
+      attrFields.value = []
+      return
+    }
+
+    const { data: ruleRows, error: ruleError } = await supabase
+      .from('attr_set_rule')
+      .select('attr_id, required, sort_order, is_active, attr_def:attr_def!fk_attr_set_rule_attr(attr_id, code, name, name_i18n, data_type, uom_id, ref_kind, ref_domain)')
+      .in('attr_set_id', setIds)
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true })
+    if (ruleError) throw ruleError
+
+    const { data: valueRows, error: valueError } = await supabase
+      .from('entity_attr')
+      .select('attr_id, value_text, value_num, value_bool, value_date, value_ts, value_json, value_ref_type_id, uom_id')
+      .eq('entity_type', 'batch')
+      .eq('entity_id', batchUuid)
+    if (valueError) throw valueError
+
+    const valueMap = new Map<number, any>()
+    ;(valueRows ?? []).forEach((row: any) => valueMap.set(Number(row.attr_id), row))
+
+    const uomIds = new Set<string>()
+    const refKeys = new Set<string>()
+    for (const row of ruleRows ?? []) {
+      const attr = row.attr_def as any
+      if (!attr) continue
+      if (attr.uom_id) uomIds.add(String(attr.uom_id))
+      if (attr.data_type === 'ref' && attr.ref_kind && attr.ref_domain) {
+        refKeys.add(`${attr.ref_kind}:${attr.ref_domain}`)
+      }
+    }
+
+    const uomMap = new Map<string, string>()
+    if (uomIds.size) {
+      const { data: uomRows, error: uomError } = await supabase
+        .from('mst_uom')
+        .select('id, code')
+        .eq('tenant_id', tenant)
+        .in('id', Array.from(uomIds))
+      if (uomError) throw uomError
+      for (const row of uomRows ?? []) uomMap.set(String(row.id), row.code)
+    }
+
+    const refOptions = new Map<string, Array<{ value: string | number, label: string }>>()
+    for (const key of Array.from(refKeys)) {
+      if (refOptionsCache.has(key)) {
+        refOptions.set(key, refOptionsCache.get(key) ?? [])
+        continue
+      }
+      const [kind, domain] = key.split(':')
+      let options: Array<{ value: string | number, label: string }> = []
+      if (kind === 'registry_def') {
+        const { data, error } = await supabase
+          .from('registry_def')
+          .select('def_id, def_key, spec')
+          .eq('kind', domain)
+          .eq('is_active', true)
+          .order('def_key', { ascending: true })
+        if (error) throw error
+        options = (data ?? []).map((row: any) => ({
+          value: row.def_id,
+          label: row.spec?.name || row.def_key,
+        }))
+      } else if (kind === 'type_def') {
+        const { data, error } = await supabase
+          .from('type_def')
+          .select('type_id, code, name')
+          .eq('domain', domain)
+          .eq('is_active', true)
+          .order('sort_order', { ascending: true })
+        if (error) throw error
+        options = (data ?? []).map((row: any) => ({
+          value: row.type_id,
+          label: row.name || row.code,
+        }))
+      }
+      refOptionsCache.set(key, options)
+      refOptions.set(key, options)
+    }
+
+    const fields: AttrField[] = []
+    for (const row of ruleRows ?? []) {
+      const attr = (row as AttrRuleRow).attr_def
+      if (!attr) continue
+      const valueRow = valueMap.get(attr.attr_id)
+      let value: any = ''
+      if (attr.data_type === 'number') value = valueRow?.value_num ?? ''
+      else if (attr.data_type === 'boolean') value = valueRow?.value_bool ?? false
+      else if (attr.data_type === 'date') value = valueRow?.value_date ?? ''
+      else if (attr.data_type === 'timestamp') value = toInputDateTime(valueRow?.value_ts)
+      else if (attr.data_type === 'json') value = valueRow?.value_json ? JSON.stringify(valueRow.value_json, null, 2) : ''
+      else if (attr.data_type === 'ref') {
+        if (attr.ref_kind === 'registry_def') value = valueRow?.value_json?.def_id ?? ''
+        else value = valueRow?.value_ref_type_id ?? ''
+      } else value = valueRow?.value_text ?? ''
+
+      const optionsKey = attr.ref_kind && attr.ref_domain ? `${attr.ref_kind}:${attr.ref_domain}` : ''
+      fields.push({
+        attr_id: attr.attr_id,
+        code: attr.code,
+        name: attr.name,
+        name_i18n: attr.name_i18n ?? null,
+        data_type: attr.data_type,
+        required: Boolean((row as AttrRuleRow).required),
+        uom_id: attr.uom_id ?? null,
+        uom_code: attr.uom_id ? uomMap.get(String(attr.uom_id)) ?? null : null,
+        ref_kind: attr.ref_kind ?? null,
+        ref_domain: attr.ref_domain ?? null,
+        value,
+        options: optionsKey ? refOptions.get(optionsKey) ?? [] : [],
+      })
+    }
+    attrFields.value = fields
+  } catch (err) {
+    console.error(err)
+    attrFields.value = []
+  } finally {
+    attrLoading.value = false
+  }
+}
+
+async function saveBatchAttributes(batchUuid: string) {
+  const tenant = await ensureTenant()
+  const toUpsert: Array<Record<string, any>> = []
+  const toDelete: number[] = []
+
+  for (const field of attrFields.value) {
+    const base = {
+      tenant_id: tenant,
+      entity_type: 'batch',
+      entity_id: batchUuid,
+      attr_id: field.attr_id,
+      uom_id: field.uom_id ?? null,
+    }
+
+    const isEmpty =
+      field.value === null ||
+      field.value === undefined ||
+      field.value === '' ||
+      (field.data_type === 'json' && String(field.value).trim() === '')
+
+    if (isEmpty) {
+      toDelete.push(field.attr_id)
+      continue
+    }
+
+    const row: Record<string, any> = { ...base }
+    if (field.data_type === 'number') row.value_num = Number(field.value)
+    else if (field.data_type === 'boolean') row.value_bool = Boolean(field.value)
+    else if (field.data_type === 'date') row.value_date = field.value
+    else if (field.data_type === 'timestamp') row.value_ts = fromInputDateTime(String(field.value))
+    else if (field.data_type === 'json') row.value_json = parseJsonSafe(String(field.value))
+    else if (field.data_type === 'ref') {
+      if (field.ref_kind === 'registry_def') {
+        row.value_json = { def_id: field.value, kind: field.ref_domain }
+      } else {
+        row.value_ref_type_id = Number(field.value)
+      }
+    } else row.value_text = String(field.value)
+
+    toUpsert.push(row)
+  }
+
+  if (toDelete.length) {
+    const { error } = await supabase
+      .from('entity_attr')
+      .delete()
+      .eq('tenant_id', tenant)
+      .eq('entity_type', 'batch')
+      .eq('entity_id', batchUuid)
+      .in('attr_id', toDelete)
+    if (error) throw error
+  }
+
+  if (toUpsert.length) {
+    const { error } = await supabase
+      .from('entity_attr')
+      .upsert(toUpsert, { onConflict: 'tenant_id,entity_type,entity_id,attr_id' })
+    if (error) throw error
   }
 }
 
@@ -2254,6 +2553,7 @@ async function saveBatch() {
       .update(update)
       .eq('id', batchId.value)
     if (error) throw error
+    await saveBatchAttributes(batchId.value)
     await fetchBatch()
   } catch (err) {
     console.error(err)

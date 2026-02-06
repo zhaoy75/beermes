@@ -59,6 +59,7 @@
       "batchCode": "バッチコード",
       "batchCodePlaceholder": "空欄なら自動採番",
       "plannedStart": "計画開始",
+      "plannedEnd": "計画終了",
       "processVersion": "工程バージョン",
       "processPlaceholder": "最新を使用",
       "label": "銘柄名",

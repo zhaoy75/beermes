@@ -10,7 +10,7 @@
             {{ t('batch.list.newBatch') }}
           </button>
           <button class="text-sm px-3 py-1 rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-50" :disabled="loading" @click="fetchBatches">
-            {{ t('common.refresh') }}
+            {{ t('common.search') }}
           </button>
         </div>
       </div>
@@ -20,19 +20,63 @@
           <input id="batchNameFilter" v-model.trim="search.name" type="search" class="w-full h-[36px] border rounded px-3" :placeholder="t('batch.list.namePlaceholder')" />
         </div>
         <div>
-          <label class="block text-sm text-gray-600 mb-1" for="batchLabelFilter">{{ t('batch.list.labelLabel') }}</label>
-          <input id="batchLabelFilter" v-model.trim="search.label" type="search" class="w-full h-[36px] border rounded px-3" />
-        </div>
-        <div>
           <label class="block text-sm text-gray-600 mb-1" for="batchStatusFilter">{{ t('batch.list.colStatus') }}</label>
           <select id="batchStatusFilter" v-model="search.status" class="w-full h-[36px] border rounded px-3 bg-white" :disabled="batchStatusLoading">
             <option value="">{{ t('common.select') }}</option>
             <option v-for="option in batchStatusOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
           </select>
         </div>
-        <div v-for="field in kpiSearchFields" :key="field.id">
-          <label class="block text-sm text-gray-600 mb-1" :for="`kpi-search-${field.id}`">{{ field.name }}</label>
-          <input :id="`kpi-search-${field.id}`" v-model.trim="search.kpi[field.id]" type="search" class="w-full h-[36px] border rounded px-3" />
+        <div v-for="field in attrSearchFields" :key="field.attr_id">
+          <label class="block text-sm text-gray-600 mb-1" :for="`attr-search-${field.attr_id}`">{{ attrLabel(field) }}</label>
+          <select
+            v-if="field.data_type === 'ref'"
+            :id="`attr-search-${field.attr_id}`"
+            v-model="search.attr[String(field.attr_id)]"
+            class="w-full h-[36px] border rounded px-3 bg-white"
+          >
+            <option value="">{{ t('common.select') }}</option>
+            <option v-for="option in attrOptions(field)" :key="`${option.value}`" :value="String(option.value)">
+              {{ option.label }}
+            </option>
+          </select>
+          <select
+            v-else-if="field.data_type === 'boolean'"
+            :id="`attr-search-${field.attr_id}`"
+            v-model="search.attr[String(field.attr_id)]"
+            class="w-full h-[36px] border rounded px-3 bg-white"
+          >
+            <option value="">{{ t('common.select') }}</option>
+            <option value="true">{{ t('common.yes') }}</option>
+            <option value="false">{{ t('common.no') }}</option>
+          </select>
+          <input
+            v-else-if="field.data_type === 'date'"
+            :id="`attr-search-${field.attr_id}`"
+            v-model="search.attr[String(field.attr_id)]"
+            type="date"
+            class="w-full h-[36px] border rounded px-3"
+          />
+          <input
+            v-else-if="field.data_type === 'timestamp'"
+            :id="`attr-search-${field.attr_id}`"
+            v-model="search.attr[String(field.attr_id)]"
+            type="datetime-local"
+            class="w-full h-[36px] border rounded px-3"
+          />
+          <input
+            v-else-if="field.data_type === 'number'"
+            :id="`attr-search-${field.attr_id}`"
+            v-model.trim="search.attr[String(field.attr_id)]"
+            type="number"
+            class="w-full h-[36px] border rounded px-3"
+          />
+          <input
+            v-else
+            :id="`attr-search-${field.attr_id}`"
+            v-model.trim="search.attr[String(field.attr_id)]"
+            type="search"
+            class="w-full h-[36px] border rounded px-3"
+          />
         </div>
         <div>
           <label class="block text-sm text-gray-600 mb-1" for="startFilter">{{ t('batch.list.startDate') }}</label>
@@ -62,30 +106,29 @@
           <thead class="bg-gray-50">
             <tr>
               <th v-for="col in columns" :key="col.key" class="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                <button class="inline-flex items-center gap-1" @click="setSort(col.key)" type="button">
-                  <span>{{ t(col.label) }}</span>
+                <button v-if="col.sortable" class="inline-flex items-center gap-1" @click="setSort(col.key as SortKey)" type="button">
+                  <span>{{ col.i18n ? t(col.label) : col.label }}</span>
                   <span class="text-[10px] text-gray-400">{{ sortGlyph(col.key) }}</span>
                 </button>
+                <span v-else>{{ col.i18n ? t(col.label) : col.label }}</span>
               </th>
               <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">{{ t('common.actions') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100">
             <tr v-for="batch in sortedBatches" :key="batch.id" class="hover:bg-gray-50">
-              <td class="px-3 py-2 text-sm text-blue-600 hover:underline cursor-pointer" @click="goEdit(batch.id)">{{ batch.batch_code }}</td>
-              <td class="px-3 py-2 text-sm">{{ batch.label || '—' }}</td>
-              <td class="px-3 py-2 text-sm">{{ batch.display_name }}</td>
+              <td class="px-3 py-2 text-sm text-blue-600 hover:underline cursor-pointer" @click="goEdit(batch)">{{ batch.label || batch.batch_code }}</td>
               <td class="px-3 py-2 text-sm">
                 <span :class="statusClass(batch.status)">{{ statusLabel(batch.status) }}</span>
               </td>
-              <td class="px-3 py-2 text-sm text-gray-600">{{ fmtDateTime(batch.created_at) }}</td>
-              <!-- <td class="px-3 py-2 text-sm text-gray-600">{{ fmtDateTime(batch.planned_end) }}</td>
-              <td class="px-3 py-2 text-sm text-gray-600">{{ fmtDateTime(batch.actual_start) }}</td>
-              <td class="px-3 py-2 text-sm text-gray-600">{{ fmtDateTime(batch.actual_end) }}</td> -->
+              <td class="px-3 py-2 text-sm text-gray-600">{{ fmtDateTime(batch.planned_start) }}</td>
+              <td class="px-3 py-2 text-sm text-gray-600">{{ fmtDateTime(batch.planned_end) }}</td>
+              <td v-for="field in attrSearchFields" :key="`${batch.id}-${field.attr_id}`" class="px-3 py-2 text-sm text-gray-600">
+                {{ formatAttrValueForField(attrValueFor(batch.id, field.attr_id), field) }}
+              </td>
               <td class="px-3 py-2 text-sm">
                 <div class="flex flex-wrap gap-2">
-                  <button class="px-2 py-1 text-xs rounded border hover:bg-gray-100" @click="openSummary(batch)" type="button">{{ t('batch.list.summary') }}</button>
-                  <button class="px-2 py-1 text-xs rounded border hover:bg-gray-100" @click="goEdit(batch.id)" type="button">{{ t('common.edit') }}</button>
+                  <button class="px-2 py-1 text-xs rounded border hover:bg-gray-100" @click="goEdit(batch)" type="button">{{ t('common.edit') }}</button>
                   <button class="px-2 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-50" :disabled="loading" @click="confirmDelete(batch)" type="button">{{ t('common.delete') }}</button>
                 </div>
               </td>
@@ -132,9 +175,9 @@ interface RawBatchRow {
   meta?: Record<string, any> | null
   process_version: number | null
   status: string | null
-  kpi?: any
   created_at: string | null
   planned_start: string | null
+  planned_end: string | null
   // planned_end?: string | null
   // actual_start?: string | null
   // actual_end?: string | null
@@ -146,50 +189,50 @@ interface BatchRow extends RawBatchRow {
   label: string
 }
 
-type SortKey = 'batch_code' | 'display_name' | 'label' | 'status' | 'created_at'
+type SortKey = 'label' | 'status' | 'planned_start' | 'planned_end'
 
 type SearchState = {
   name: string
-  label: string
   status: string
   start: string
   end: string
-  kpi: Record<string, string>
+  attr: Record<string, string>
 }
 
-type KpiMeta = {
-  id: string
+type AttrField = {
+  attr_set_id: number
+  attr_id: number
+  code: string
   name: string
-  uom?: string
-  datasource?: string | null
-  search_key_flg?: boolean
+  name_i18n?: Record<string, string> | null
+  data_type: string
+  ref_kind?: string | null
+  ref_domain?: string | null
 }
 
-const columns: Array<{ key: SortKey, label: string }> = [
-  { key: 'batch_code', label: 'batch.list.colBatchCode' },
-  { key: 'label', label: 'batch.list.colLabel' },
-  { key: 'display_name', label: 'batch.list.colName' },
-  { key: 'status', label: 'batch.list.colStatus' },
-  { key: 'created_at', label: 'batch.list.colCreated' },
-  // { key: 'planned_end', label: 'batch.list.colPlannedEnd' },
-  // { key: 'actual_start', label: 'batch.list.colActualStart' },
-  // { key: 'actual_end', label: 'batch.list.colActualEnd' },
+type ColumnDef = { key: SortKey | string, label: string, sortable: boolean, i18n: boolean }
+
+const baseColumns: ColumnDef[] = [
+  { key: 'label', label: 'batch.list.colName', sortable: true, i18n: true },
+  { key: 'status', label: 'batch.list.colStatus', sortable: true, i18n: true },
+  { key: 'planned_start', label: 'batch.list.startDate', sortable: true, i18n: true },
+  { key: 'planned_end', label: 'batch.list.endDate', sortable: true, i18n: true },
 ]
 
 const batches = ref<BatchRow[]>([])
 const loading = ref(false)
 const tenantId = ref<string | null>(null)
 const recipes = ref<Array<{ id: string, name: string, code: string, version: number }>>([])
+const isAdmin = ref(false)
 
 const search = reactive<SearchState>({
   name: '',
-  label: '',
   status: '',
   start: defaultStartDate(),
   end: '',
-  kpi: {},
+  attr: {},
 })
-const sortKey = ref<SortKey>('created_at')
+const sortKey = ref<SortKey>('planned_start')
 const sortDirection = ref<'asc' | 'desc'>('desc')
 
 const showSummary = ref(false)
@@ -197,24 +240,24 @@ const summaryState = ref<BatchRow | null>(null)
 const showCreate = ref(false)
 const toDelete = ref<BatchRow | null>(null)
 
-const kpiMeta = ref<KpiMeta[]>([])
-const kpiMetaLoading = ref(false)
 const batchStatusRows = ref<Array<{ status_code: string, label_ja: string | null, label_en: string | null, sort_order: number | null }>>([])
 const batchStatusLoading = ref(false)
 
-const fallbackKpiMeta: KpiMeta[] = [
-  { id: 'tax_category_code', name: '製品種類', uom: '', datasource: 'registry_def', search_key_flg: true },
-  { id: 'volume', name: '生産量', uom: 'l' },
-  { id: 'abv', name: 'ABV', uom: '' },
-  { id: 'og', name: 'OG', uom: '' },
-  { id: 'fg', name: 'FG', uom: '' },
-  { id: 'srm', name: 'SRM', uom: '' },
-  { id: 'ibu', name: 'IBU', uom: '' },
-]
+const attrFields = ref<AttrField[]>([])
+const attrLoading = ref(false)
+const attrValuesByBatch = ref<Record<string, Record<string, unknown>>>({})
+const attrRefOptions = ref<Record<string, Array<{ value: string | number, label: string }>>>({})
 
-const kpiSearchFields = computed(() => {
-  const metaList = kpiMeta.value.length ? kpiMeta.value : fallbackKpiMeta
-  return metaList.filter((item) => item.search_key_flg)
+const attrSearchFields = computed(() => attrFields.value)
+
+const columns = computed<ColumnDef[]>(() => {
+  const dynamic = attrSearchFields.value.map((field) => ({
+    key: `attr-${field.attr_id}`,
+    label: attrLabel(field),
+    sortable: false,
+    i18n: false,
+  }))
+  return [...baseColumns, ...dynamic]
 })
 
 const batchStatusOptions = computed(() => {
@@ -233,17 +276,16 @@ const batchStatusOptions = computed(() => {
 const searchConditions = computed(() => {
   const conditions: Array<{ key: string; label: string; value: string }> = []
   if (search.name) conditions.push({ key: 'name', label: t('batch.list.nameLabel'), value: search.name })
-  if (search.label) conditions.push({ key: 'label', label: t('batch.list.labelLabel'), value: search.label })
   if (search.status) {
     const match = batchStatusOptions.value.find((option) => option.value === search.status)
     conditions.push({ key: 'status', label: t('batch.list.colStatus'), value: match?.label ?? search.status })
   }
   if (search.start) conditions.push({ key: 'start', label: t('batch.list.startDate'), value: search.start })
   if (search.end) conditions.push({ key: 'end', label: t('batch.list.endDate'), value: search.end })
-  kpiSearchFields.value.forEach((field) => {
-    const value = search.kpi[field.id]
+  attrSearchFields.value.forEach((field) => {
+    const value = search.attr[String(field.attr_id)]
     if (value) {
-      conditions.push({ key: `kpi-${field.id}`, label: field.name, value })
+      conditions.push({ key: `attr-${field.attr_id}`, label: attrLabel(field), value })
     }
   })
   return conditions
@@ -257,50 +299,68 @@ async function ensureTenant() {
   if (!id) {
     throw new Error('Tenant not resolved in session')
   }
+  const role = String(data.user?.app_metadata?.role ?? data.user?.user_metadata?.role ?? '').toLowerCase()
+  const adminFlag = Boolean(data.user?.app_metadata?.is_admin || data.user?.user_metadata?.is_admin)
+  isAdmin.value = adminFlag || role === 'admin'
   tenantId.value = id
   return id
 }
 
-function normalizeKpiMeta(list: unknown): KpiMeta[] {
-  if (!Array.isArray(list)) return []
-  return list
-    .map((item) => {
-      if (!item || typeof item !== 'object' || Array.isArray(item)) return null
-      const id = String((item as Record<string, unknown>).id ?? '').trim()
-      if (!id) return null
-      const name = String((item as Record<string, unknown>).name ?? id).trim()
-      const uom = String((item as Record<string, unknown>).uom ?? '').trim()
-      const datasource = (item as Record<string, unknown>).datasource
-      const searchKey = (item as Record<string, unknown>).search_key_flg
-      return {
-        id,
-        name: name || id,
-        uom,
-        datasource: datasource != null ? String(datasource) : null,
-        search_key_flg: Boolean(searchKey),
-      }
-    })
-    .filter((row): row is KpiMeta => row !== null)
-}
-
-async function loadKpiMeta() {
-  if (kpiMeta.value.length || kpiMetaLoading.value) return
+async function loadAttrFields() {
+  if (attrLoading.value) return
   try {
-    kpiMetaLoading.value = true
-    const { data, error } = await supabase
-      .from('registry_def')
-      .select('def_id, scope, spec')
-      .eq('kind', 'kpi_definition')
-      .eq('def_key', 'beer_production_kpi')
-    if (error) throw error
-    const selected = (data ?? []).find((row: any) => row.scope === 'tenant')
-      ?? (data ?? [])[0]
-    kpiMeta.value = normalizeKpiMeta((selected?.spec as any)?.kpi_meta)
+    attrLoading.value = true
+    await ensureTenant()
+    const { data: setData, error: setError } = await supabase
+      .from('attr_set')
+      .select('attr_set_id, code, name, domain, scope, owner_id, is_active, sort_order')
+      .eq('domain', 'batch')
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true })
+      .order('code', { ascending: true })
+    if (setError) throw setError
+    const setIds = (setData ?? []).map((row: any) => Number(row.attr_set_id)).filter((id) => !Number.isNaN(id))
+    if (!setIds.length) {
+      attrFields.value = []
+      return
+    }
+    const { data: ruleData, error: ruleError } = await supabase
+      .from('attr_set_rule')
+      .select('attr_set_id, attr_id, required, sort_order, is_active, attr_def:attr_def!fk_attr_set_rule_attr(attr_id, code, name, name_i18n, data_type, ref_kind, ref_domain, is_active)')
+      .in('attr_set_id', setIds)
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true })
+    if (ruleError) throw ruleError
+    const fields: AttrField[] = []
+    const seen = new Set<number>()
+    for (const row of ruleData ?? []) {
+      const attr = (row as any).attr_def
+      if (!attr || !attr.is_active) continue
+      const attrId = Number(attr.attr_id)
+      if (seen.has(attrId)) continue
+      seen.add(attrId)
+      fields.push({
+        attr_set_id: Number((row as any).attr_set_id),
+        attr_id: attrId,
+        code: String(attr.code ?? ''),
+        name: String(attr.name ?? attr.code ?? attr.attr_id),
+        name_i18n: (attr as any).name_i18n ?? null,
+        data_type: String(attr.data_type ?? ''),
+        ref_kind: (attr as any).ref_kind ?? null,
+        ref_domain: (attr as any).ref_domain ?? null,
+      })
+    }
+    attrFields.value = fields
+    for (const field of fields) {
+      const key = String(field.attr_id)
+      if (!(key in search.attr)) search.attr[key] = ''
+    }
+    await loadAttrRefOptions(fields)
   } catch (err) {
-    console.warn('Failed to load KPI meta', err)
-    kpiMeta.value = []
+    console.warn('Failed to load attribute fields', err)
+    attrFields.value = []
   } finally {
-    kpiMetaLoading.value = false
+    attrLoading.value = false
   }
 }
 
@@ -331,6 +391,7 @@ async function fetchBatches() {
   try {
     loading.value = true
     const tenant = await ensureTenant()
+    await loadAttrFields()
     const query = supabase
       .from('mes_batches')
       .select('*')
@@ -344,7 +405,7 @@ async function fetchBatches() {
       query.lte('planned_start', search.end + 'T23:59:59')
     }
     if (search.name) {
-      query.ilike('batch_code', `%${search.name}%`)
+      query.or(`batch_code.ilike.%${search.name}%,batch_label.ilike.%${search.name}%`)
     }
     if (search.status) {
       query.eq('status', search.status)
@@ -359,11 +420,9 @@ async function fetchBatches() {
         ...row,
         label: label || '',
         display_name: row.notes?.split('\n')[0] || row.batch_code,
-        // planned_end: (row as any)?.planned_end ?? null,
-        // actual_start: (row as any)?.actual_start ?? null,
-        // actual_end: (row as any)?.actual_end ?? null,
       }
     })
+    await fetchAttrValues(batches.value.map((row) => row.id))
   } catch (err) {
     console.error(err)
   } finally {
@@ -386,14 +445,92 @@ async function fetchRecipes() {
   }
 }
 
+async function fetchAttrValues(batchIds: string[]) {
+  if (!batchIds.length || !attrSearchFields.value.length) {
+    attrValuesByBatch.value = {}
+    return
+  }
+  try {
+    const attrIds = attrSearchFields.value.map((field) => field.attr_id)
+    const { data, error } = await supabase
+      .from('entity_attr')
+      .select('entity_id, attr_id, value_text, value_num, value_bool, value_date, value_ts, value_json, value_ref_type_id')
+      .eq('entity_type', 'batch')
+      .in('entity_id', batchIds)
+      .in('attr_id', attrIds)
+    if (error) throw error
+    const map: Record<string, Record<string, unknown>> = {}
+    for (const row of data ?? []) {
+      const entityId = String((row as any).entity_id)
+      if (!map[entityId]) map[entityId] = {}
+      map[entityId][String((row as any).attr_id)] = pickAttrValue(row as any)
+    }
+    attrValuesByBatch.value = map
+  } catch (err) {
+    console.warn('Failed to load attribute values', err)
+    attrValuesByBatch.value = {}
+  }
+}
+
+async function loadAttrRefOptions(fields: AttrField[]) {
+  const keys = new Set<string>()
+  for (const field of fields) {
+    if (field.data_type === 'ref' && field.ref_kind && field.ref_domain) {
+      keys.add(`${field.ref_kind}:${field.ref_domain}`)
+    }
+  }
+  if (!keys.size) {
+    attrRefOptions.value = {}
+    return
+  }
+  const cache = { ...attrRefOptions.value }
+  for (const key of Array.from(keys)) {
+    if (cache[key]) continue
+    const [kind, domain] = key.split(':')
+    let options: Array<{ value: string | number, label: string }> = []
+    if (kind === 'registry_def') {
+      const { data, error } = await supabase
+        .from('registry_def')
+        .select('def_id, def_key, spec')
+        .eq('kind', domain)
+        .eq('is_active', true)
+        .order('def_key', { ascending: true })
+      if (error) {
+        console.warn('Failed to load registry options', error)
+      } else {
+        options = (data ?? []).map((row: any) => ({
+          value: row.def_id,
+          label: row.spec?.name || row.def_key,
+        }))
+      }
+    } else if (kind === 'type_def') {
+      const { data, error } = await supabase
+        .from('type_def')
+        .select('type_id, code, name')
+        .eq('domain', domain)
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true })
+      if (error) {
+        console.warn('Failed to load type options', error)
+      } else {
+        options = (data ?? []).map((row: any) => ({
+          value: row.type_id,
+          label: row.name || row.code,
+        }))
+      }
+    }
+    cache[key] = options
+  }
+  attrRefOptions.value = cache
+}
+
 function resetFilters() {
   search.name = ''
-  search.label = ''
   search.status = ''
   search.start = defaultStartDate()
   search.end = ''
-  kpiSearchFields.value.forEach((field) => {
-    search.kpi[field.id] = ''
+  attrSearchFields.value.forEach((field) => {
+    search.attr[String(field.attr_id)] = ''
   })
   fetchBatches()
 }
@@ -401,21 +538,20 @@ function resetFilters() {
 const filteredBatches = computed(() => {
   return batches.value.filter((batch) => {
     const nameQuery = search.name.toLowerCase()
-    const labelQuery = search.label.toLowerCase()
     const nameMatch = !search.name
       || batch.batch_code.toLowerCase().includes(nameQuery)
       || batch.display_name.toLowerCase().includes(nameQuery)
-    const labelMatch = !search.label || batch.label.toLowerCase().includes(labelQuery)
     const statusMatch = !search.status || String(batch.status ?? '') === search.status
     const startOk = !search.start || (!!batch.planned_start && safeTimestamp(batch.planned_start) >= safeTimestamp(search.start))
-    const endOk = !search.end || (!!batch.planned_start && safeTimestamp(batch.planned_start) <= safeTimestamp(search.end, true))
-    const kpiMatch = kpiSearchFields.value.every((field) => {
-      const query = (search.kpi[field.id] ?? '').trim()
+    const endSource = batch.planned_end ?? batch.planned_start
+    const endOk = !search.end || (!!endSource && safeTimestamp(endSource) <= safeTimestamp(search.end, true))
+    const attrMatch = attrSearchFields.value.every((field) => {
+      const query = (search.attr[String(field.attr_id)] ?? '').trim()
       if (!query) return true
-      const raw = resolveKpiValue(batch.kpi, field.id)
-      return matchKpiValue(raw, query)
+      const raw = attrValueFor(batch.id, field.attr_id)
+      return matchAttrValue(raw, query)
     })
-    return nameMatch && labelMatch && statusMatch && startOk && endOk && kpiMatch
+    return nameMatch && statusMatch && startOk && endOk && attrMatch
   })
 })
 
@@ -504,41 +640,114 @@ function resolveMetaLabel(meta: unknown) {
   return trimmed.length ? trimmed : null
 }
 
-function parseKpiArray(value: unknown) {
-  if (!value) return []
-  if (Array.isArray(value)) return value
-  if (typeof value === 'string') {
+function attrLabel(field: AttrField) {
+  const lang = String(locale.value ?? '').toLowerCase()
+  const key = lang.startsWith('ja') ? 'ja' : 'en'
+  const label = field.name_i18n?.[key]
+  return label || field.name || field.code
+}
+
+function attrOptions(field: AttrField) {
+  if (!field.ref_kind || !field.ref_domain) return []
+  const key = `${field.ref_kind}:${field.ref_domain}`
+  return attrRefOptions.value[key] ?? []
+}
+
+function pickAttrValue(row: Record<string, any>) {
+  if (row.value_text != null) return row.value_text
+  if (row.value_num != null) return row.value_num
+  if (row.value_bool != null) return row.value_bool
+  if (row.value_date != null) return row.value_date
+  if (row.value_ts != null) return row.value_ts
+  if (row.value_json != null) return row.value_json
+  if (row.value_ref_type_id != null) return row.value_ref_type_id
+  return null
+}
+
+function attrValueFor(batchId: string, attrId: number) {
+  const batchMap = attrValuesByBatch.value[batchId]
+  if (!batchMap) return null
+  return batchMap[String(attrId)] ?? null
+}
+
+function normalizeAttrValue(raw: unknown) {
+  if (raw && typeof raw === 'object' && 'def_id' in (raw as any)) {
+    return (raw as any).def_id
+  }
+  return raw
+}
+
+function formatAttrValueForField(value: unknown, field: AttrField) {
+  if (value == null) return '—'
+  if (field.data_type === 'ref') {
+    const normalized = normalizeAttrValue(value)
+    const options = attrOptions(field)
+    const hit = options.find((opt) => String(opt.value) === String(normalized))
+    return hit?.label ?? String(normalized ?? '—')
+  }
+  if (field.data_type === 'boolean' || typeof value === 'boolean') {
+    return Boolean(value) ? t('common.yes') : t('common.no')
+  }
+  if (field.data_type === 'date') {
     try {
-      const parsed = JSON.parse(value)
-      return Array.isArray(parsed) ? parsed : []
+      return new Date(String(value)).toLocaleDateString()
     } catch {
-      return []
+      return String(value)
     }
   }
-  return []
+  if (field.data_type === 'timestamp') {
+    return fmtDateTime(String(value))
+  }
+  if (typeof value === 'object') {
+    try {
+      return JSON.stringify(value)
+    } catch {
+      return String(value)
+    }
+  }
+  return String(value)
 }
 
-function resolveKpiValue(kpi: unknown, id: string) {
-  const list = parseKpiArray(kpi)
-  const row = list.find((item: any) => item && item.id === id)
-  if (!row) return null
-  return row.actual ?? row.planed ?? row.planned ?? null
-}
-
-function matchKpiValue(raw: unknown, query: string) {
+function matchAttrValue(raw: unknown, query: string) {
   if (raw == null) return false
   const queryTrimmed = query.trim()
   if (!queryTrimmed) return true
-  const rawNum = Number(raw)
+  const normalized = normalizeAttrValue(raw)
+  if (typeof normalized === 'boolean') {
+    const lowered = queryTrimmed.toLowerCase()
+    const wanted = ['true', '1', 'yes', 'y'].includes(lowered)
+      ? true
+      : ['false', '0', 'no', 'n'].includes(lowered)
+        ? false
+        : null
+    if (wanted === null) return false
+    return normalized === wanted
+  }
+  const rawNum = Number(normalized)
   const queryNum = Number(queryTrimmed)
   if (!Number.isNaN(rawNum) && !Number.isNaN(queryNum)) {
     return rawNum === queryNum
   }
-  return String(raw).toLowerCase().includes(queryTrimmed.toLowerCase())
+  return String(normalized).toLowerCase().includes(queryTrimmed.toLowerCase())
 }
 
-function goEdit(id: string) {
-  router.push({ path: `/batches/${id}` })
+function tOr(key: string, fallback: string) {
+  const value = t(key)
+  return value === key ? fallback : value
+}
+
+function isRestrictedStatus(status: string | null | undefined) {
+  if (!status) return false
+  const lower = status.toLowerCase()
+  return lower.includes('progress') || lower.includes('complete')
+}
+
+function goEdit(batch: BatchRow) {
+  if (!isAdmin.value && isRestrictedStatus(batch.status)) {
+    window.alert(tOr('batch.list.editBlocked', 'This batch cannot be edited in its current status.'))
+    return
+  }
+  router.push({ path: `/batches/${batch.id}` })
 }
 
 function openSummary(batch: BatchRow) {
@@ -547,11 +756,19 @@ function openSummary(batch: BatchRow) {
 }
 
 function confirmDelete(batch: BatchRow) {
+  if (!isAdmin.value && isRestrictedStatus(batch.status)) {
+    window.alert(tOr('batch.list.deleteBlocked', 'This batch cannot be deleted in its current status.'))
+    return
+  }
   toDelete.value = batch
 }
 
 async function deleteBatch() {
   if (!toDelete.value) return
+  if (!isAdmin.value && isRestrictedStatus(toDelete.value.status)) {
+    window.alert(tOr('batch.list.deleteBlocked', 'This batch cannot be deleted in its current status.'))
+    return
+  }
   try {
     loading.value = true
     await ensureTenant()
@@ -574,7 +791,7 @@ function closeCreate() {
   showCreate.value = false
 }
 
-async function handleCreate(payload: { recipeId: string, batchCode: string | null, label: string | null, plannedStart: string | null, notes: string | null, processVersion: number | null }) {
+async function handleCreate(payload: { recipeId: string, batchCode: string | null, label: string | null, plannedStart: string | null, plannedEnd: string | null, notes: string | null, processVersion: number | null }) {
   try {
     loading.value = true
     const tenant = await ensureTenant()
@@ -589,11 +806,15 @@ async function handleCreate(payload: { recipeId: string, batchCode: string | nul
     })
     if (error) throw error
     const meta: Record<string, unknown> = {}
-    if (payload.label) meta.label = payload.label
+    const label = payload.label?.trim() || ''
+    if (label) meta.label = label
     const updatePayload: Record<string, unknown> = {
-      batch_label: payload.label || null,
+      batch_label: label || null,
     }
     if (Object.keys(meta).length > 0) updatePayload.meta = meta
+    if (payload.plannedEnd) {
+      updatePayload.planned_end = new Date(payload.plannedEnd).toISOString()
+    }
     if (data) {
       const { error: updateError } = await supabase
         .from('mes_batches')
@@ -652,6 +873,6 @@ async function generateBatchCode() {
 
 onMounted(async () => {
   await ensureTenant()
-  await Promise.all([loadKpiMeta(), loadBatchStatusOptions(), fetchBatches(), fetchRecipes()])
+  await Promise.all([loadBatchStatusOptions(), fetchBatches(), fetchRecipes()])
 })
 </script>

@@ -59,6 +59,7 @@
       "batchCode": "Batch code",
       "batchCodePlaceholder": "Leave blank to auto-generate",
       "plannedStart": "Planned start",
+      "plannedEnd": "Planned end",
       "processVersion": "Process version",
       "processPlaceholder": "Default latest",
       "label": "Label",

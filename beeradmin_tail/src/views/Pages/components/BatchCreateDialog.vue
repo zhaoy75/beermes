@@ -15,12 +15,26 @@
           <input id="batchCode" v-model.trim="form.batchCode" type="text" class="w-full h-[40px] border rounded px-3" :placeholder="t('batch.create.batchCodePlaceholder')" />
         </div>
         <div>
-          <label class="block text-sm text-gray-600 mb-1" for="batchLabel">{{ t('batch.create.label') }}</label>
-          <input id="batchLabel" v-model.trim="form.label" type="text" class="w-full h-[40px] border rounded px-3" />
+          <label class="block text-sm text-gray-600 mb-1" for="plannedStart">{{ t('batch.create.plannedStart') }}</label>
+          <input
+            id="plannedStart"
+            v-model="form.plannedStart"
+            type="date"
+            class="w-full h-[40px] border rounded px-3"
+            placeholder="YYYY-MM-DD"
+            @focus="openDatePicker"
+          />
         </div>
         <div>
-          <label class="block text-sm text-gray-600 mb-1" for="plannedStart">{{ t('batch.create.plannedStart') }}</label>
-          <input id="plannedStart" v-model="form.plannedStart" type="datetime-local" class="w-full h-[40px] border rounded px-3" />
+          <label class="block text-sm text-gray-600 mb-1" for="plannedEnd">{{ t('batch.create.plannedEnd') }}</label>
+          <input
+            id="plannedEnd"
+            v-model="form.plannedEnd"
+            type="date"
+            class="w-full h-[40px] border rounded px-3"
+            placeholder="YYYY-MM-DD"
+            @focus="openDatePicker"
+          />
         </div>
         <div>
           <label class="block text-sm text-gray-600 mb-1" for="notes">{{ t('batch.create.notes') }}</label>
@@ -52,7 +66,7 @@ type RecipeOption = {
 const props = defineProps<{ open: boolean, recipes: RecipeOption[], loading: boolean }>()
 const emit = defineEmits<{
   (e: 'close'): void
-  (e: 'submit', payload: { recipeId: string, batchCode: string | null, label: string | null, plannedStart: string | null, notes: string | null, processVersion: number | null }): void
+  (e: 'submit', payload: { recipeId: string, batchCode: string | null, label: string | null, plannedStart: string | null, plannedEnd: string | null, notes: string | null, processVersion: number | null }): void
 }>()
 
 const { t } = useI18n()
@@ -60,8 +74,8 @@ const { t } = useI18n()
 const blank = () => ({
   recipeId: '',
   batchCode: '',
-  label: '',
   plannedStart: '',
+  plannedEnd: '',
   notes: '',
   processVersion: null as number | null,
 })
@@ -88,10 +102,19 @@ function submitForm() {
   emit('submit', {
     recipeId: form.recipeId,
     batchCode: form.batchCode ? form.batchCode.trim() : null,
-    label: form.label ? form.label.trim() : null,
+    label: null,
     plannedStart: form.plannedStart || null,
+    plannedEnd: form.plannedEnd || null,
     notes: form.notes ? form.notes.trim() : null,
     processVersion: form.processVersion || null,
   })
+}
+
+function openDatePicker(event: Event) {
+  const target = event.target as HTMLInputElement | null
+  if (!target) return
+  if (typeof target.showPicker === 'function') {
+    target.showPicker()
+  }
 }
 </script>

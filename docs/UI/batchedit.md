@@ -34,11 +34,14 @@
     予定終了日  with calendar picker
     実績開始日　with calendar picker
 　　 実績終了日  with calendar picker
-    関連バッチ　with batch code list 
+    
     a horizontal line 
-    fields in entity_attr_set in domain "batch". 
-      field name should be choose according to system language setting
-      field text and input method should follow the attr_def rule
+      fields in entity_attr_set in domain "batch". 
+        field name should be choose according to system language setting
+        field text and input method should follow the attr_def rule
+    
+    a horizontal line 
+      関連バッチ　with batch code list 
   　
 ### material information section (not shown no needed in this phase)
     

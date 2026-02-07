@@ -40,38 +40,24 @@
       field name should be choose according to system language setting
       field text and input method should follow the attr_def rule
   　
-### material information section (not needed in this phase)
+### material information section (not shown no needed in this phase)
     
-### step edit section (not needed in this phase)
+### step edit section (not shown no needed in this phase)
 
 ### filling section
     a summary of move and filling information
-    a button to edit filling information (a click will launch beer_tax_move dialog)
-    a list of all move information of this batch (to be design)
+    a button to edit filling information (a click will launch packageing dialog)
+    the packaging dialog should follow the specification defined in batch_packing.md
 
 ## Action
-- Search
 
-- Add
-  A Batch Add dialog will shown to let user input related field.
-  after user fill the form and click confirm button, call create_batch_from_recipe
 
-- Edit
-  move to batchedit page
-
-- Delete
-  check the status of batch
-   if status is in_progress or complete show error message window. 
-   other status, delete the db record
-   
 ## Business Rules
-- default value of search section
-  開始日 should be two months previous
-- normal user can not delete batch whose status is in_progress or completed
 
 ## Data Handling
 - batch basic information stored in mes_batches
 - other attribute stored in entity_attr
+- 
 
 ## other
 - this page should be multilanguage (english and japanese)

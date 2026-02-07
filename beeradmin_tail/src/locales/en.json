@@ -90,13 +90,6 @@
       "plannedEnd": "Planned end",
       "actualStart": "Actual start",
       "actualEnd": "Actual end",
-      "batchName": "Batch name",
-      "relatedBatch": "Related batch",
-      "fillingTitle": "Filling",
-      "fillingSubtitle": "Summary of move and filling information.",
-      "fillingSummaryTotal": "Total product volume",
-      "fillingSummaryProcessed": "Processed volume",
-      "fillingSummaryRemaining": "Remaining volume",
       "targetVolume": "Target volume (L)",
       "processVersion": "Process version",
       "notes": "Notes",
@@ -129,6 +122,13 @@
       "plannedEnd": "Planned end",
       "actualStart": "Actual start",
       "actualEnd": "Actual end",
+      "batchName": "Batch name",
+      "relatedBatch": "Related batch",
+      "fillingTitle": "Filling",
+      "fillingSubtitle": "Summary of move and filling information.",
+      "fillingSummaryTotal": "Total product volume",
+      "fillingSummaryProcessed": "Processed volume",
+      "fillingSummaryRemaining": "Remaining volume",
       "kpiTitle": "KPIs",
       "kpiSubtitle": "Track planned vs actual KPIs for this batch.",
       "kpiId": "ID",
@@ -1458,7 +1458,8 @@
     "deleteConfirm": "Delete site {code}? This cannot be undone.",
     "filters": {
       "namePlaceholder": "Filter by name or code",
-      "siteType": "Site type"
+      "siteType": "Site type",
+      "codePlaceholder": "Search by code"
     },
     "table": {
       "code": "Code",
@@ -1480,6 +1481,10 @@
     "errors": {
       "invalidAddress": "Address must be valid JSON.",
       "invalidContact": "Contact must be valid JSON."
+    },
+    "tree": {
+      "empty": "No sites found.",
+      "root": "Site Root"
     }
   },
   "siteMovement": {

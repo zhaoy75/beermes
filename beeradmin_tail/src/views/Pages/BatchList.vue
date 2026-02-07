@@ -26,6 +26,20 @@
             <option v-for="option in batchStatusOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
           </select>
         </div>
+        <div>
+          <label class="block text-sm text-gray-600 mb-1" for="startFilter">{{ t('batch.list.startDate') }}</label>
+          <input id="startFilter" v-model="search.start" type="date" class="w-full h-[36px] border rounded px-3" />
+        </div>
+        <div>
+          <label class="block text-sm text-gray-600 mb-1" for="endFilter">{{ t('batch.list.endDate') }}</label>
+          <input id="endFilter" v-model="search.end" type="date" class="w-full h-[36px] border rounded px-3" />
+        </div>
+        <div class="flex items-end">
+          <button class="text-sm px-3 py-2 rounded border border-gray-300 hover:bg-gray-100" type="button" @click="resetFilters">{{ t('common.reset') }}</button>
+        </div>
+        <div class="md:col-span-4">
+          <hr class="border-gray-200" />
+        </div>
         <div v-for="field in attrSearchFields" :key="field.attr_id">
           <label class="block text-sm text-gray-600 mb-1" :for="`attr-search-${field.attr_id}`">{{ attrLabel(field) }}</label>
           <select
@@ -77,17 +91,6 @@
             type="search"
             class="w-full h-[36px] border rounded px-3"
           />
-        </div>
-        <div>
-          <label class="block text-sm text-gray-600 mb-1" for="startFilter">{{ t('batch.list.startDate') }}</label>
-          <input id="startFilter" v-model="search.start" type="date" class="w-full h-[36px] border rounded px-3" />
-        </div>
-        <div>
-          <label class="block text-sm text-gray-600 mb-1" for="endFilter">{{ t('batch.list.endDate') }}</label>
-          <input id="endFilter" v-model="search.end" type="date" class="w-full h-[36px] border rounded px-3" />
-        </div>
-        <div class="flex items-end">
-          <button class="text-sm px-3 py-2 rounded border border-gray-300 hover:bg-gray-100" type="button" @click="resetFilters">{{ t('common.reset') }}</button>
         </div>
       </form>
       <p class="mt-2 text-sm text-gray-500">{{ t('batch.list.showing', { count: filteredBatches.length, total: batches.length }) }}</p>

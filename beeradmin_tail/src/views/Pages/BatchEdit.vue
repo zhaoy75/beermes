@@ -34,13 +34,6 @@
             </select>
           </div>
           <div>
-            <label class="block text-sm text-gray-600 mb-1" for="relatedBatch">{{ t('batch.edit.relatedBatch') }}</label>
-            <select id="relatedBatch" v-model="batchForm.related_batch_id" class="w-full h-[40px] border rounded px-3 bg-white" :disabled="batchOptionsLoading">
-              <option value="">{{ t('common.none') }}</option>
-              <option v-for="option in batchOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-            </select>
-          </div>
-          <div>
             <label class="block text-sm text-gray-600 mb-1" for="batchPlannedStart">{{ t('batch.edit.plannedStart') }}</label>
             <input id="batchPlannedStart" v-model="batchForm.planned_start" type="date" class="w-full h-[40px] border rounded px-3" />
           </div>
@@ -99,6 +92,18 @@
                 <input v-model.trim="field.value" type="text" class="w-full h-[40px] border rounded px-3" />
               </template>
             </div>
+          </div>
+        </div>
+
+        <hr class="my-5 border-gray-200" />
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div>
+            <label class="block text-sm text-gray-600 mb-1" for="relatedBatch">{{ t('batch.edit.relatedBatch') }}</label>
+            <select id="relatedBatch" v-model="batchForm.related_batch_id" class="w-full h-[40px] border rounded px-3 bg-white" :disabled="batchOptionsLoading">
+              <option value="">{{ t('common.none') }}</option>
+              <option v-for="option in batchOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+            </select>
           </div>
         </div>
       </section>

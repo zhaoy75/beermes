@@ -30,6 +30,7 @@
       ステータス
       開始日  with calendar picker
       終了日  with calendar picker
+      a horizontal line 
       fields in entity_attr_set in domain "batch". 
         field name should be choose according to system language setting
         field text and input method should follow the attr_def rule

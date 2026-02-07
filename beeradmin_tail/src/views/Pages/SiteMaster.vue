@@ -1,198 +1,176 @@
 <template>
   <AdminLayout>
     <PageBreadcrumb :pageTitle="pageTitle" />
-    <div class="min-h-screen bg-white text-gray-900 p-4 max-w-6xl mx-auto space-y-4">
-      <header class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 class="text-xl font-semibold">{{ t('site.title') }}</h1>
-          <p class="text-sm text-gray-500">{{ t('site.subtitle') }}</p>
-        </div>
-        <div class="flex flex-wrap items-center gap-2">
-          <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" @click="openCreate">
-            {{ t('common.new') }}
-          </button>
-          <button
-            class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
-            :disabled="loading"
-            @click="fetchSites"
-          >
-            {{ t('common.refresh') }}
-          </button>
-        </div>
+
+    <div class="max-w-6xl mx-auto p-4 space-y-4">
+      <header class="flex flex-col gap-2">
+        <h1 class="text-xl font-semibold text-gray-800">{{ t('site.title') }}</h1>
       </header>
 
-      <section class="border border-gray-200 rounded-xl shadow-sm p-4 bg-white">
-        <form class="grid grid-cols-1 md:grid-cols-3 gap-3" @submit.prevent>
-          <div class="md:col-span-2">
-            <label class="block text-sm text-gray-600 mb-1" for="siteSearch">{{ t('common.search') }}</label>
+      <section class="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4">
+        <aside class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 space-y-4">
+          <div>
+            <label class="block text-sm text-gray-600 mb-1" for="siteCodeSearch">{{ t('site.table.code') }}</label>
             <input
-              id="siteSearch"
-              v-model.trim="filters.keyword"
-              :placeholder="t('site.filters.namePlaceholder')"
-              class="w-full h-[40px] border rounded px-3"
+              id="siteCodeSearch"
+              v-model.trim="filters.code"
               type="search"
+              class="w-full h-[36px] border rounded px-3"
+              :placeholder="t('site.filters.codePlaceholder')"
             />
           </div>
           <div>
-            <label class="block text-sm text-gray-600 mb-1" for="siteTypeFilter">{{ t('site.filters.siteType') }}</label>
-            <select id="siteTypeFilter" v-model="filters.siteType" class="w-full h-[40px] border rounded px-3 bg-white">
+            <label class="block text-sm text-gray-600 mb-1" for="siteTypeSearch">{{ t('site.filters.siteType') }}</label>
+            <select id="siteTypeSearch" v-model="filters.siteType" class="w-full h-[36px] border rounded px-3 bg-white">
               <option value="">{{ t('common.all') }}</option>
-              <option v-for="type in siteTypeOptions" :key="type.value" :value="type.value">
-                {{ type.label }}
-              </option>
+              <option v-for="option in siteTypeOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
             </select>
           </div>
-        </form>
-      </section>
+          <div class="flex items-center gap-2">
+            <button class="px-3 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700" type="button" @click="startCreate">
+              {{ t('common.add') }}
+            </button>
+            <button
+              class="px-3 py-2 text-sm rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-50"
+              type="button"
+              :disabled="!selectedId"
+              @click="deleteSelected"
+            >
+              {{ t('common.delete') }}
+            </button>
+          </div>
 
-      <section class="hidden md:block overflow-x-auto border border-gray-200 rounded-xl shadow-sm">
-        <table class="min-w-full divide-y divide-gray-200">
-          <thead class="bg-gray-50 text-xs text-gray-600 uppercase">
-            <tr>
-              <th class="px-3 py-2 text-left cursor-pointer" @click="setSort('code')">{{ t('site.table.code') }}<span v-if="sortKey === 'code'"> {{ sortGlyph }}</span></th>
-              <th class="px-3 py-2 text-left cursor-pointer" @click="setSort('name')">{{ t('site.table.name') }}<span v-if="sortKey === 'name'"> {{ sortGlyph }}</span></th>
-              <th class="px-3 py-2 text-left cursor-pointer" @click="setSort('site_type_name')">{{ t('site.table.siteType') }}<span v-if="sortKey === 'site_type_name'"> {{ sortGlyph }}</span></th>
-              <th class="px-3 py-2 text-left cursor-pointer" @click="setSort('parent_name')">{{ t('site.table.parent') }}<span v-if="sortKey === 'parent_name'"> {{ sortGlyph }}</span></th>
-              <th class="px-3 py-2 text-left cursor-pointer" @click="setSort('active')">{{ t('site.table.active') }}<span v-if="sortKey === 'active'"> {{ sortGlyph }}</span></th>
-              <th class="px-3 py-2 text-left cursor-pointer" @click="setSort('created_at')">{{ t('site.table.createdAt') }}<span v-if="sortKey === 'created_at'"> {{ sortGlyph }}</span></th>
-              <th class="px-3 py-2 text-left">{{ t('common.actions') }}</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-100 text-sm">
-            <tr v-for="row in sortedRows" :key="row.id" class="hover:bg-gray-50">
-              <td class="px-3 py-2 font-mono text-xs text-gray-700">{{ row.code }}</td>
-              <td class="px-3 py-2 text-gray-800">{{ row.name }}</td>
-              <td class="px-3 py-2 text-gray-600">{{ row.siteTypeName || '—' }}</td>
-              <td class="px-3 py-2 text-gray-600">{{ row.parentName || '—' }}</td>
-              <td class="px-3 py-2">
-                <span class="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full border" :class="row.active ? 'border-green-200 bg-green-50 text-green-700' : 'border-gray-200 bg-gray-50 text-gray-500'">
-                  <span class="h-2 w-2 rounded-full" :class="row.active ? 'bg-green-500' : 'bg-gray-400'" />
-                  {{ row.active ? t('common.yes') : t('common.no') }}
-                </span>
-              </td>
-              <td class="px-3 py-2 text-xs text-gray-500">{{ formatTimestamp(row.created_at) }}</td>
-              <td class="px-3 py-2 space-x-2">
-                <button class="px-2 py-1 text-xs rounded border hover:bg-gray-100" @click="openEdit(row)">{{ t('common.edit') }}</button>
-                <button class="px-2 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700" @click="confirmDelete(row)">{{ t('common.delete') }}</button>
-              </td>
-            </tr>
-            <tr v-if="!loading && sortedRows.length === 0">
-              <td colspan="7" class="px-3 py-8 text-center text-gray-500">{{ t('common.noData') }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </section>
+          <div class="border-t border-gray-200 pt-3">
+            <p v-if="!filteredTree.length" class="text-sm text-gray-500">{{ t('site.tree.empty') }}</p>
+            <ul class="space-y-2">
+              <li>
+                <button
+                  type="button"
+                  class="w-full text-left px-2 py-1 rounded text-sm"
+                  :class="selectedId === null ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50'"
+                  @click="selectRoot"
+                >
+                  {{ t('site.tree.root') }}
+                </button>
+                <ul class="ml-3 mt-1 space-y-1">
+                  <li v-for="node in filteredTree" :key="node.id">
+                    <SiteTreeNode
+                      :node="node"
+                      :selected-id="selectedId"
+                      @select="selectNode"
+                    />
+                  </li>
+                </ul>
+              </li>
+            </ul>
+          </div>
+        </aside>
 
-      <section class="md:hidden grid gap-3">
-        <article v-for="row in sortedRows" :key="row.id" class="border border-gray-200 rounded-xl shadow-sm p-4 space-y-2">
-          <header class="flex items-center justify-between">
+        <section class="bg-white border border-gray-200 rounded-xl shadow-sm p-4">
+          <header class="flex items-center justify-between mb-4">
             <div>
-              <p class="text-xs uppercase text-gray-400">{{ row.code }}</p>
-              <h2 class="text-lg font-semibold text-gray-900">{{ row.name }}</h2>
+              <h2 class="text-lg font-semibold text-gray-800">
+                {{ form.id ? t('site.editTitle') : t('site.newTitle') }}
+              </h2>
+              <p class="text-xs text-gray-500">{{ selectedPathLabel }}</p>
             </div>
-            <button class="px-2 py-1 text-xs rounded border hover:bg-gray-100" @click="openEdit(row)">{{ t('common.edit') }}</button>
-          </header>
-          <dl class="text-sm text-gray-600 space-y-1">
-            <div class="flex justify-between"><dt>{{ t('site.table.siteType') }}</dt><dd>{{ row.siteTypeName || '—' }}</dd></div>
-            <div class="flex justify-between"><dt>{{ t('site.table.parent') }}</dt><dd>{{ row.parentName || '—' }}</dd></div>
-            <div class="flex justify-between"><dt>{{ t('site.table.active') }}</dt><dd>{{ row.active ? t('common.yes') : t('common.no') }}</dd></div>
-            <div class="flex justify-between"><dt>{{ t('site.table.createdAt') }}</dt><dd class="text-xs text-gray-500">{{ formatTimestamp(row.created_at) }}</dd></div>
-          </dl>
-          <footer class="flex gap-2">
-            <button class="px-3 py-2 text-sm rounded border hover:bg-gray-100" @click="openEdit(row)">{{ t('common.edit') }}</button>
-            <button class="px-3 py-2 text-sm rounded bg-red-600 text-white hover:bg-red-700" @click="confirmDelete(row)">{{ t('common.delete') }}</button>
-          </footer>
-        </article>
-        <p v-if="!loading && sortedRows.length === 0" class="text-center text-sm text-gray-500">{{ t('common.noData') }}</p>
-      </section>
-
-      <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-        <div class="w-full max-w-2xl bg-white rounded-xl shadow-lg border">
-          <header class="px-4 py-3 border-b">
-            <h3 class="font-semibold">{{ editing ? t('site.editTitle') : t('site.newTitle') }}</h3>
-          </header>
-          <section class="p-4 space-y-4">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm text-gray-600 mb-1">{{ t('site.table.code') }}<span class="text-red-600">*</span></label>
-                <input v-model.trim="form.code" class="w-full h-[40px] border rounded px-3" />
-                <p v-if="errors.code" class="text-xs text-red-600 mt-1">{{ errors.code }}</p>
-              </div>
-              <div>
-                <label class="block text-sm text-gray-600 mb-1">{{ t('site.table.name') }}<span class="text-red-600">*</span></label>
-                <input v-model.trim="form.name" class="w-full h-[40px] border rounded px-3" />
-                <p v-if="errors.name" class="text-xs text-red-600 mt-1">{{ errors.name }}</p>
-              </div>
-              <div>
-                <label class="block text-sm text-gray-600 mb-1">{{ t('site.table.siteType') }}<span class="text-red-600">*</span></label>
-                <select v-model="form.site_type_id" class="w-full h-[40px] border rounded px-3 bg-white">
-                  <option value="">{{ t('site.filters.siteType') }}</option>
-                  <option v-for="type in siteTypeOptions" :key="type.value" :value="type.value">{{ type.label }}</option>
-                </select>
-                <p v-if="errors.site_type_id" class="text-xs text-red-600 mt-1">{{ errors.site_type_id }}</p>
-              </div>
-              <div>
-                <label class="block text-sm text-gray-600 mb-1">{{ t('site.table.parent') }}</label>
-                <select v-model="form.parent_site_id" class="w-full h-[40px] border rounded px-3 bg-white">
-                  <option value="">{{ t('common.none') }}</option>
-                  <option v-for="option in parentOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-                </select>
-              </div>
-              <div class="md:col-span-2">
-                <label class="block text-sm text-gray-600 mb-1">{{ t('site.form.address') }}</label>
-                <textarea v-model.trim="form.address" rows="3" class="w-full border rounded px-3 py-2 font-mono text-xs" placeholder='{"address1":"..."}'></textarea>
-                <p v-if="errors.address" class="text-xs text-red-600 mt-1">{{ errors.address }}</p>
-              </div>
-              <div class="md:col-span-2">
-                <label class="block text-sm text-gray-600 mb-1">{{ t('site.form.contact') }}</label>
-                <textarea v-model.trim="form.contact" rows="2" class="w-full border rounded px-3 py-2 font-mono text-xs" placeholder='{"phone":"..."}'></textarea>
-                <p v-if="errors.contact" class="text-xs text-red-600 mt-1">{{ errors.contact }}</p>
-              </div>
-              <div class="md:col-span-2">
-                <label class="block text-sm text-gray-600 mb-1">{{ t('site.form.notes') }}</label>
-                <textarea v-model.trim="form.notes" rows="2" class="w-full border rounded px-3 py-2"></textarea>
-              </div>
-              <div class="flex items-center gap-2 md:col-span-2">
-                <input id="siteActive" v-model="form.active" type="checkbox" class="h-4 w-4" />
-                <label for="siteActive" class="text-sm text-gray-700">{{ t('site.form.active') }}</label>
-              </div>
-            </div>
-          </section>
-          <footer class="px-4 py-3 border-t flex items-center justify-end gap-2">
-            <button class="px-3 py-2 rounded border hover:bg-gray-50" @click="closeModal">{{ t('common.cancel') }}</button>
-            <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50" :disabled="saving" @click="saveRecord">
+            <button
+              class="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+              type="button"
+              :disabled="saving"
+              @click="saveRecord"
+            >
               {{ saving ? t('common.saving') : t('common.save') }}
             </button>
-          </footer>
-        </div>
-      </div>
-
-      <div v-if="showDelete" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-        <div class="w-full max-w-md bg-white rounded-xl shadow-lg border">
-          <header class="px-4 py-3 border-b">
-            <h3 class="font-semibold">{{ t('site.deleteTitle') }}</h3>
           </header>
-          <section class="p-4 text-sm">{{ t('site.deleteConfirm', { code: toDelete?.code ?? '' }) }}</section>
-          <footer class="px-4 py-3 border-t flex items-center justify-end gap-2">
-            <button class="px-3 py-2 rounded border hover:bg-gray-50" @click="showDelete = false">{{ t('common.cancel') }}</button>
-            <button class="px-3 py-2 rounded bg-red-600 text-white hover:bg-red-700" @click="deleteRecord">{{ t('common.delete') }}</button>
-          </footer>
-        </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">{{ t('site.table.code') }}</label>
+              <input v-model.trim="form.code" class="w-full h-[40px] border rounded px-3" />
+              <p v-if="errors.code" class="text-xs text-red-600 mt-1">{{ errors.code }}</p>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">{{ t('site.table.name') }}</label>
+              <input v-model.trim="form.name" class="w-full h-[40px] border rounded px-3" />
+              <p v-if="errors.name" class="text-xs text-red-600 mt-1">{{ errors.name }}</p>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">{{ t('site.table.siteType') }}</label>
+              <select v-model="form.site_type_id" class="w-full h-[40px] border rounded px-3 bg-white">
+                <option value="">{{ t('common.select') }}</option>
+                <option v-for="option in siteTypeOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+              </select>
+              <p v-if="errors.site_type_id" class="text-xs text-red-600 mt-1">{{ errors.site_type_id }}</p>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">{{ t('site.form.address') }}</label>
+              <div class="flex items-center gap-2">
+                <button
+                  class="px-3 py-2 text-sm rounded border hover:bg-gray-100 disabled:opacity-50"
+                  type="button"
+                  :disabled="!addressRule"
+                  @click="openAddressDialog"
+                >
+                  {{ t('common.edit') }}
+                </button>
+                <span v-if="!addressRule" class="text-xs text-gray-500">{{ t('common.noData') }}</span>
+              </div>
+              <p class="mt-2 text-sm text-gray-600 whitespace-pre-line">
+                {{ formatAddressDisplay(form.address) }}
+              </p>
+            </div>
+            <div class="md:col-span-2">
+              <label class="block text-sm text-gray-600 mb-1">{{ t('site.form.notes') }}</label>
+              <textarea v-model.trim="form.notes" rows="3" class="w-full border rounded px-3 py-2"></textarea>
+            </div>
+          </div>
+        </section>
+      </section>
+    </div>
+
+    <div v-if="addressDialog.open && addressRule" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div class="w-full max-w-2xl bg-white rounded-xl shadow-lg border border-gray-200">
+        <header class="px-4 py-3 border-b flex items-center justify-between">
+          <h3 class="font-semibold">{{ t('site.form.address') }}</h3>
+          <button class="text-sm px-2 py-1 rounded border hover:bg-gray-100" type="button" @click="closeAddressDialog">
+            {{ t('common.close') }}
+          </button>
+        </header>
+        <section class="p-4 space-y-4">
+          <div v-for="field in addressFields" :key="field.key">
+            <label class="block text-sm text-gray-600 mb-1">
+              {{ addressFieldLabel(field) }}<span v-if="field.required" class="text-red-600">*</span>
+            </label>
+            <input
+              v-model.trim="addressDraft[field.key]"
+              type="text"
+              class="w-full h-[40px] border rounded px-3"
+            />
+          </div>
+        </section>
+        <footer class="px-4 py-3 border-t flex items-center justify-end gap-2">
+          <button class="px-3 py-2 rounded border hover:bg-gray-50" type="button" @click="closeAddressDialog">
+            {{ t('common.cancel') }}
+          </button>
+          <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" type="button" @click="saveAddressDialog">
+            {{ t('common.save') }}
+          </button>
+        </footer>
       </div>
     </div>
   </AdminLayout>
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, watch, onMounted } from 'vue'
+import { computed, reactive, ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { supabase } from '@/lib/supabase'
-import {mapSupabaseError} from '@/lib/supabaseErrors'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import { supabase } from '@/lib/supabase'
 import { toast } from 'vue3-toastify'
-import 'vue3-toastify/dist/index.css';
-
+import 'vue3-toastify/dist/index.css'
+import SiteTreeNode from '@/views/Pages/components/SiteTreeNode.vue'
 
 interface SiteRow {
   id: string
@@ -206,40 +184,45 @@ interface SiteRow {
   notes: string | null
   active: boolean
   created_at: string | null
-  siteTypeName: string | null
-  parentName: string | null
 }
 
-interface SiteTypeRow {
+interface RegistryDefRow {
+  def_id: string
+  def_key: string
+  spec: Record<string, any>
+}
+
+interface TreeNode {
   id: string
   code: string
   name: string
-  flags: Record<string, any> | null
+  site_type_id: string
+  parent_site_id: string | null
+  row: SiteRow
+  children: TreeNode[]
 }
 
-type SortKey = 'code' | 'name' | 'site_type_name' | 'parent_name' | 'active' | 'created_at'
-type SortDirection = 'asc' | 'desc'
+const { t, locale } = useI18n()
+const pageTitle = computed(() => t('site.title'))
 
 const TABLE = 'mst_sites'
 
-const { t } = useI18n()
-const pageTitle = computed(() => t('site.title'))
-
 const rows = ref<SiteRow[]>([])
+const siteTypes = ref<RegistryDefRow[]>([])
 const loading = ref(false)
 const saving = ref(false)
-const showModal = ref(false)
-const showDelete = ref(false)
-const editing = ref(false)
-const toDelete = ref<SiteRow | null>(null)
-
-const sortKey = ref<SortKey>('code')
-const sortDirection = ref<SortDirection>('asc')
-
-const filters = reactive({ keyword: '', siteType: '' })
 const tenantId = ref<string | null>(null)
 
-const siteTypes = ref<SiteTypeRow[]>([])
+const selectedId = ref<string | null>(null)
+const tempId = ref<string | null>(null)
+const addressRule = ref<RegistryDefRow | null>(null)
+const addressDialog = reactive({ open: false })
+const addressDraft = reactive<Record<string, string>>({})
+
+const filters = reactive({
+  code: '',
+  siteType: '',
+})
 
 const form = reactive({
   id: '',
@@ -247,82 +230,122 @@ const form = reactive({
   name: '',
   site_type_id: '',
   parent_site_id: '',
-  address: '',
-  contact: '',
+  address: null as Record<string, any> | null,
   notes: '',
+  contact: null as any,
   active: true,
 })
 
 const errors = reactive<Record<string, string>>({})
-
-const sortGlyph = computed(() => (sortDirection.value === 'asc' ? '▲' : '▼'))
+const TEMP_PREFIX = 'temp-'
 
 const siteTypeOptions = computed(() =>
   siteTypes.value.map((item) => {
-    const label = resolveSiteTypeLabel(item) || item.name || item.code
-    return { value: item.id, label }
+    const label = resolveRegistryLabel(item) || item.def_key
+    return { value: item.def_id, label }
   }),
 )
 
-const parentOptions = computed(() =>
-  rows.value
-    .filter((row) => !form.id || row.id !== form.id)
-    .map((row) => ({ value: row.id, label: `${row.code} — ${row.name}` })),
-)
+const treeNodes = computed<TreeNode[]>(() => buildTree(rows.value))
 
-function resolveSiteTypeLabel(source: any): string | null {
-  if (!source) return null
-  const flags = parseJson(source.flags)
-  const jaLabel = flags && typeof flags.ja === 'string' ? flags.ja.trim() : ''
-  if (jaLabel) return jaLabel
-  if (typeof source.name === 'string' && source.name.trim()) return source.name
-  if (typeof source.code === 'string' && source.code.trim()) return source.code
+const filteredTree = computed<TreeNode[]>(() => {
+  const codeFilter = filters.code.trim().toLowerCase()
+  const typeFilter = filters.siteType
+  if (!codeFilter && !typeFilter) return treeNodes.value
+  return filterTree(treeNodes.value, (node) => {
+    const matchesCode = !codeFilter || node.code.toLowerCase().includes(codeFilter)
+    const matchesType = !typeFilter || node.site_type_id === typeFilter
+    return matchesCode && matchesType
+  })
+})
+
+const selectedSite = computed(() => rows.value.find((row) => row.id === selectedId.value) || null)
+
+const selectedPathLabel = computed(() => {
+  if (!selectedSite.value) return t('site.tree.root')
+  return `${selectedSite.value.name} (${selectedSite.value.code})`
+})
+
+const addressFields = computed(() => {
+  const fields = addressRule.value?.spec?.fields
+  if (!Array.isArray(fields)) return []
+  return fields
+    .map((field: any) => ({
+      key: String(field?.key ?? '').trim(),
+      label: field?.label ?? '',
+      label_i18n: field?.label_i18n ?? null,
+      required: Boolean(field?.required),
+    }))
+    .filter((field: any) => field.key)
+})
+
+function resolveRegistryLabel(source: RegistryDefRow) {
+  const spec = source.spec || {}
+  const lang = String(locale.value ?? '').toLowerCase().startsWith('ja') ? 'ja' : 'en'
+  if (spec.name_i18n && typeof spec.name_i18n[lang] === 'string') return spec.name_i18n[lang]
+  if (typeof spec.name === 'string') return spec.name
   return null
 }
 
-const filteredRows = computed(() => {
-  const keyword = filters.keyword.trim().toLowerCase()
-  const siteTypeFilter = filters.siteType
-  return rows.value.filter((row) => {
-    const matchesKeyword = !keyword || row.code.toLowerCase().includes(keyword) || row.name.toLowerCase().includes(keyword)
-    const matchesType = !siteTypeFilter || row.site_type_id === siteTypeFilter
-    return matchesKeyword && matchesType
+function buildTree(list: SiteRow[]): TreeNode[] {
+  const map = new Map<string, TreeNode>()
+  list.forEach((row) => {
+    map.set(row.id, {
+      id: row.id,
+      code: row.code,
+      name: row.name,
+      site_type_id: row.site_type_id,
+      parent_site_id: row.parent_site_id,
+      row,
+      children: [],
+    })
   })
-})
-
-const sortedRows = computed(() => {
-  const list = [...filteredRows.value]
-  list.sort((a, b) => {
-    const dir = sortDirection.value === 'asc' ? 1 : -1
-    const key = sortKey.value
-    const av = (a as any)[key]
-    const bv = (b as any)[key]
-    if (av == null && bv == null) return 0
-    if (av == null) return 1
-    if (bv == null) return -1
-    if (key === 'active') return dir * ((av ? 1 : 0) - (bv ? 1 : 0))
-    if (key === 'created_at') return dir * (new Date(av).getTime() - new Date(bv).getTime())
-    return dir * String(av).localeCompare(String(bv))
+  const roots: TreeNode[] = []
+  map.forEach((node) => {
+    if (node.parent_site_id && map.has(node.parent_site_id)) {
+      map.get(node.parent_site_id)!.children.push(node)
+    } else {
+      roots.push(node)
+    }
   })
-  return list
-})
-
-function setSort(key: SortKey) {
-  if (sortKey.value === key) {
-    sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc'
-  } else {
-    sortKey.value = key
-    sortDirection.value = 'asc'
+  const sortNodes = (nodes: TreeNode[]) => {
+    nodes.sort((a, b) => a.code.localeCompare(b.code))
+    nodes.forEach((n) => sortNodes(n.children))
   }
+  sortNodes(roots)
+  return roots
 }
 
-function formatTimestamp(value: string | null) {
-  if (!value) return '—'
-  try {
-    return new Date(value).toLocaleString()
-  } catch {
-    return value
-  }
+function filterTree(nodes: TreeNode[], predicate: (node: TreeNode) => boolean): TreeNode[] {
+  const result: TreeNode[] = []
+  nodes.forEach((node) => {
+    const filteredChildren = filterTree(node.children, predicate)
+    if (predicate(node) || filteredChildren.length) {
+      result.push({ ...node, children: filteredChildren })
+    }
+  })
+  return result
+}
+
+function selectNode(node: TreeNode) {
+  selectedId.value = node.id
+  loadForm(node.row)
+}
+
+function selectRoot() {
+  selectedId.value = null
+  resetForm()
+}
+
+function startCreate() {
+  const parentId = selectedId.value
+  removeTempRow()
+  resetForm()
+  const tempRow = createTempRow(parentId)
+  rows.value = [...rows.value, tempRow]
+  selectedId.value = tempRow.id
+  tempId.value = tempRow.id
+  loadForm(tempRow)
 }
 
 function resetForm() {
@@ -331,57 +354,77 @@ function resetForm() {
   form.name = ''
   form.site_type_id = ''
   form.parent_site_id = ''
-  form.address = ''
-  form.contact = ''
+  form.address = null
   form.notes = ''
+  form.contact = null
   form.active = true
   Object.keys(errors).forEach((key) => delete errors[key])
 }
 
-function openCreate() {
-  editing.value = false
+function loadForm(row: SiteRow) {
   resetForm()
-  showModal.value = true
-}
-
-function openEdit(row: SiteRow) {
-  editing.value = true
-  resetForm()
-  form.id = row.id
+  const isTemp = isTempId(row.id)
+  form.id = isTemp ? '' : row.id
   form.code = row.code
   form.name = row.name
   form.site_type_id = row.site_type_id
   form.parent_site_id = row.parent_site_id ?? ''
-  form.address = row.address ? JSON.stringify(row.address, null, 2) : ''
-  form.contact = row.contact ? JSON.stringify(row.contact, null, 2) : ''
+  form.address = row.address ?? null
   form.notes = row.notes ?? ''
+  form.contact = row.contact ?? null
   form.active = row.active
-  showModal.value = true
 }
 
-function closeModal() {
-  showModal.value = false
+function isTempId(id: string) {
+  return id.startsWith(TEMP_PREFIX)
 }
 
-function confirmDelete(row: SiteRow) {
-  toDelete.value = row
-  showDelete.value = true
+function createTempRow(parentId: string | null) {
+  const id = `${TEMP_PREFIX}${Date.now()}`
+  return {
+    id,
+    tenant_id: tenantId.value ?? undefined,
+    code: '',
+    name: '',
+    site_type_id: '',
+    parent_site_id: parentId,
+    address: null,
+    contact: null,
+    notes: null,
+    active: true,
+    created_at: null,
+  } as SiteRow
 }
 
-function validateJson(value: string, fieldKey: 'address' | 'contact') {
-  const trimmed = value.trim()
-  if (!trimmed) {
-    delete errors[fieldKey]
-    return null
+function removeTempRow() {
+  if (!tempId.value) return
+  rows.value = rows.value.filter((row) => row.id !== tempId.value)
+  if (selectedId.value === tempId.value) selectedId.value = null
+  tempId.value = null
+}
+
+function formatAddressDisplay(value: Record<string, any> | null) {
+  if (!value) return '—'
+  const format = addressRule.value?.spec?.format
+  const lang = String(locale.value ?? '').toLowerCase().startsWith('ja') ? 'ja' : 'en'
+  const template = format && typeof format[lang] === 'string' ? format[lang] : ''
+  if (template) {
+    return template.replace(/\{([^}]+)\}/g, (_, key) => {
+      const raw = value[key]
+      return raw != null ? String(raw) : ''
+    }).trim() || '—'
   }
   try {
-    const parsed = JSON.parse(trimmed)
-    delete errors[fieldKey]
-    return parsed
+    return JSON.stringify(value, null, 2)
   } catch {
-    errors[fieldKey] = fieldKey === 'address' ? t('site.errors.invalidAddress') : t('site.errors.invalidContact')
-    throw new Error('invalid json')
+    return '—'
   }
+}
+
+function addressFieldLabel(field: { label: string; label_i18n: Record<string, string> | null }) {
+  const lang = String(locale.value ?? '').toLowerCase().startsWith('ja') ? 'ja' : 'en'
+  if (field.label_i18n && field.label_i18n[lang]) return field.label_i18n[lang]
+  return field.label || field.label_i18n?.en || ''
 }
 
 function validate() {
@@ -389,14 +432,7 @@ function validate() {
   if (!form.code) errors.code = t('site.form.codeRequired')
   if (!form.name) errors.name = t('site.form.nameRequired')
   if (!form.site_type_id) errors.site_type_id = t('site.form.siteTypeRequired')
-  if (Object.keys(errors).length > 0) return false
-  try {
-    validateJson(form.address, 'address')
-    validateJson(form.contact, 'contact')
-  } catch {
-    return false
-  }
-  return true
+  return Object.keys(errors).length === 0
 }
 
 async function ensureTenant() {
@@ -409,70 +445,67 @@ async function ensureTenant() {
   return id
 }
 
-async function fetchSiteTypes() {
-  const tenant = await ensureTenant()
+async function fetchAddressRule() {
   const { data, error } = await supabase
-    .from('mst_site_types')
-    .select('id, code, name, flags')
-    .eq('tenant_id', tenant)
-    .order('code', { ascending: true })
+    .from('registry_def')
+    .select('def_id, def_key, spec')
+    .eq('kind', 'address_rule')
+    .eq('def_key', 'jp_default')
+    .eq('is_active', true)
+    .maybeSingle()
   if (error) throw error
-  siteTypes.value = (data ?? []).map((item: any) => ({
-    id: item.id,
-    code: item.code,
-    name: item.name,
-    flags: parseJson(item.flags),
-  }))
+  addressRule.value = data ?? null
 }
 
-function parseJson(value: any) {
-  if (!value) return null
-  if (typeof value === 'object') return value
-  if (typeof value === 'string') {
-    try {
-      return JSON.parse(value)
-    } catch {
-      return null
+function openAddressDialog() {
+  if (!addressRule.value) return
+  addressDialog.open = true
+  Object.keys(addressDraft).forEach((key) => delete addressDraft[key])
+  const current = form.address || {}
+  addressFields.value.forEach((field) => {
+    addressDraft[field.key] = current[field.key] ? String(current[field.key]) : ''
+  })
+}
+
+function closeAddressDialog() {
+  addressDialog.open = false
+}
+
+function saveAddressDialog() {
+  const next: Record<string, any> = {}
+  addressFields.value.forEach((field) => {
+    const value = addressDraft[field.key]
+    if (value != null && String(value).trim()) {
+      next[field.key] = String(value).trim()
     }
-  }
-  return null
+  })
+  form.address = Object.keys(next).length ? next : null
+  addressDialog.open = false
+}
+
+async function fetchSiteTypes() {
+  const { data, error } = await supabase
+    .from('registry_def')
+    .select('def_id, def_key, spec')
+    .eq('kind', 'site_type')
+    .eq('is_active', true)
+    .order('def_key', { ascending: true })
+  if (error) throw error
+  siteTypes.value = (data ?? []) as RegistryDefRow[]
 }
 
 async function fetchSites() {
   try {
     loading.value = true
     const tenant = await ensureTenant()
-    let query = supabase
+    const { data, error } = await supabase
       .from(TABLE)
-      .select('id, tenant_id, code, name, site_type_id, parent_site_id, address, contact, notes, active, created_at, site_type:site_type_id(id, code, name, flags), parent:parent_site_id(id, code, name)')
+      .select('id, tenant_id, code, name, site_type_id, parent_site_id, address, contact, notes, active, created_at')
       .eq('tenant_id', tenant)
       .order('code', { ascending: true })
-
-    if (filters.siteType) query = query.eq('site_type_id', filters.siteType)
-    if (filters.keyword.trim()) {
-      const sanitized = filters.keyword.trim().replace(/[%_]/g, (char) => `\\${char}`)
-      const keyword = `%${sanitized}%`
-      query = query.or(`code.ilike.${keyword},name.ilike.${keyword}`)
-    }
-
-    const { data, error } = await query
     if (error) throw error
-
-    rows.value = (data ?? []).map((row: any) => ({
-      id: row.id,
-      tenant_id: row.tenant_id,
-      code: row.code,
-      name: row.name,
-      site_type_id: row.site_type_id,
-      parent_site_id: row.parent_site_id,
-      address: parseJson(row.address),
-      contact: parseJson(row.contact),
-      notes: row.notes ?? null,
-      active: row.active ?? false,
-      created_at: row.created_at ?? null,
-      siteTypeName: resolveSiteTypeLabel(row.site_type),
-      parentName: row.parent?.name || row.parent?.code || null,
-    }))
+    rows.value = (data ?? []) as SiteRow[]
+    removeTempRow()
   } catch (err) {
     console.error(err)
     rows.value = []
@@ -486,22 +519,21 @@ async function saveRecord() {
   try {
     saving.value = true
     const tenant = await ensureTenant()
-    const addressPayload = validateJson(form.address, 'address')
-    const contactPayload = validateJson(form.contact, 'contact')
-
+    const isUpdating = Boolean(form.id)
+    const targetCode = form.code.trim()
     const payload = {
       tenant_id: tenant,
-      code: form.code.trim(),
+      code: targetCode,
       name: form.name.trim(),
       site_type_id: form.site_type_id,
       parent_site_id: form.parent_site_id || null,
-      address: addressPayload,
-      contact: contactPayload,
+      address: form.address,
+      contact: form.contact,
       notes: form.notes.trim() || null,
-      active: !!form.active,
+      active: form.active,
     }
 
-    if (editing.value && form.id) {
+    if (isUpdating) {
       const { error } = await supabase.from(TABLE).update(payload).eq('id', form.id)
       if (error) throw error
     } else {
@@ -509,8 +541,21 @@ async function saveRecord() {
       if (error) throw error
     }
 
-    closeModal()
     await fetchSites()
+    if (isUpdating) {
+      const updated = rows.value.find((row) => row.id === form.id)
+      if (updated) loadForm(updated)
+    } else {
+      const created = rows.value.find((row) => row.code === targetCode)
+      if (created) {
+        selectedId.value = created.id
+        loadForm(created)
+      } else {
+        selectedId.value = null
+        resetForm()
+      }
+      tempId.value = null
+    }
   } catch (err) {
     console.error(err)
     toast.error(err instanceof Error ? err.message : String(err))
@@ -519,32 +564,47 @@ async function saveRecord() {
   }
 }
 
-async function deleteRecord() {
-  if (!toDelete.value) return
+function collectDescendantIds(id: string) {
+  const childrenMap = new Map<string, string[]>()
+  rows.value.forEach((row) => {
+    if (!row.parent_site_id) return
+    if (!childrenMap.has(row.parent_site_id)) childrenMap.set(row.parent_site_id, [])
+    childrenMap.get(row.parent_site_id)!.push(row.id)
+  })
+  const result: string[] = []
+  const stack = [id]
+  while (stack.length) {
+    const current = stack.pop()!
+    result.push(current)
+    const kids = childrenMap.get(current) || []
+    kids.forEach((kid) => stack.push(kid))
+  }
+  return result
+}
+
+async function deleteSelected() {
+  if (!selectedId.value) return
+  if (isTempId(selectedId.value)) {
+    removeTempRow()
+    resetForm()
+    return
+  }
+  if (!window.confirm(t('site.deleteConfirm', { code: selectedSite.value?.code ?? '' }))) return
   try {
-    const { error } = await supabase.from(TABLE).delete().eq('id', toDelete.value.id)
+    const ids = collectDescendantIds(selectedId.value)
+    const { error } = await supabase.from(TABLE).delete().in('id', ids)
     if (error) throw error
-    showDelete.value = false
-    toDelete.value = null
+    selectedId.value = null
+    resetForm()
     await fetchSites()
   } catch (err) {
     console.error(err)
-    const friendlyError = mapSupabaseError(err) ? mapSupabaseError(err).message : "Error occurred"
-    toast(friendlyError)
+    toast.error(err instanceof Error ? err.message : String(err))
   }
 }
 
-watch(
-  () => ({ ...filters }),
-  async () => {
-    await fetchSites()
-  },
-  { deep: true }
-)
-
 onMounted(async () => {
   await ensureTenant()
-  await fetchSiteTypes()
-  await fetchSites()
+  await Promise.all([fetchSiteTypes(), fetchSites(), fetchAddressRule()])
 })
 </script>

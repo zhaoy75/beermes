@@ -1,174 +1,70 @@
 diff --git a/docs/UI/batch_packing.md b/docs/UI/batch_packing.md
-index 93b1d16..4b31526 100644
+index 4b31526..c1d23ac 100644
 --- a/docs/UI/batch_packing.md
 +++ b/docs/UI/batch_packing.md
-@@ -7,23 +7,23 @@ The user selects a packing type, then inputs only the fields required for that t
- One packing dialog submission creates one packing event.
- For Filling type, multiple filling lines may be created.
+@@ -53,7 +53,7 @@ For Filling type, multiple filling lines may be created.
  
--# Entry Points
-+## Entry Points
- - Batch Edit page → button: “Packing…”　(japanese text: 移送詰口管理)
- - Opens a modal dialog
- - Can be used multiple times per batch
- 
--3. Users & Permissions
-+## Users & Permissions
- - Operator: create packing events
- - QA / Manager: create, edit, delete (policy dependent)
- - No permission: dialog read-only or blocked
- 
--4. Dialog Layout
--Header:
-+## Dialog Layout
-+### Header:
- - Title: Packing
- - Batch summary (batch code / name)
- - Close button
- 
--Body (top):
-+### Body (top):
- 1) Product Volume Summary
+ ### product Summary section 
     - Total product volume of the batch
-    - Processed volume (shipped, fillin, transferred, lost, disposed)
-@@ -31,46 +31,47 @@ Body (top):
- 
- 2) Packing Type Selector
-    - UI: segmented control or radio cards
--   - Values: Fillin(japanese text: 詰口)，Ship, Transfer, Loss, Dispose
-+   - Values: Fillin(japanese text: 詰口)，Ship(外部製造場移動), Transfer(社内
-+   移動), Loss, Dispose
-+
- 3) Common Fields
-    - Event time (default now)
-    - memo (optional)
- 
--Dynamic Sections (order fixed):
-+### Dynamic Sections (order fixed):
- 1) Volume Section
- 2) Filling Section
- 3) Movement Section
- 4) Review Summary
- 
--Footer:
-+### Footer:
- - Save Packing
- - Cancel
- - Optional: Save and Add Another
- 
--5. Field Definitions
-+## Field Definitions
- 
--5.0 product Summary section 
-+### product Summary section 
-    - Total product volume of the batch
--   - Processed volume (shipped, fillin, transferred, lost, disposed)
-+   - Processed volume (fillin, shipped, transferred, lost, disposed)
+-   - Processed volume (fillin, shipped, transferred, lost, disposed)
++   - Processed volume (filling, shipped(社外非納税移出), transferred(社内非納税移出), lost, disposed)
     - Remaining volume available(left volume = total volume - processed volume)
       remaining volume should be zero or positive and finally reach zero. 
       remain volume should be color as yellow when it is above zero and green if it is zero.
- 
--
--
--5.1 Packing Type
-+### Packing Type
- - Required
- - Changing type resets incompatible sections
- - Confirm before discarding inputs
- 
--5.2 Volume Section
-+### Volume Section
+@@ -67,10 +67,12 @@ For Filling type, multiple filling lines may be created.
  Shown for: Ship, Transfer, Loss, Dispose
  
  Fields:
-+- Tank (chosen from msg_equipment_tank)
+-- Tank (chosen from msg_equipment_tank)
++- Tank (text input or chosen from list of mst_equipment_tank) 
  - Quantity (numeric, required, > 0)
--- Unit of measure displayed (e.g. L)
-+- Unit of measure  (dropdown list chosen from mst_uom with dimension = volume)
+ - Unit of measure  (dropdown list chosen from mst_uom with dimension = volume)
  
--5.3 Movement Section
-+### Movement Section
++Tank is not needed for Loss, Dispose type
++
+ ### Movement Section
  Shown for: Ship, Filling, Transfer
  
- Fields:
-@@ -82,13 +83,13 @@ Defaults:
- - Ship/Transfer: movement quantity defaults to volume quantity
- - Filling: movement quantity defaults to filling total
- 
--5.4 Filling Section (Filling only)
-+### Filling Section (Filling only)
- Components:
- - Add Filling button
- - Filling lines table
+@@ -90,6 +92,7 @@ Components:
  
  Filling line fields:
--- Package type (dropdown, required)
-+- Package type (dropdown, from mst_package table)
+ - Package type (dropdown, from mst_package table)
++  when a package type is chosen, please use the proper uom 
  - Quantity (integer, >= 1)
  
  Table actions:
-@@ -103,7 +104,7 @@ Totals:
- - Total units
- - Total volume (if available)
- 
--6. Type-specific Behavior
-+### Type-specific Behavior
- 
- Ship:
- - Volume section
-@@ -127,7 +128,7 @@ Dispose:
- - Volume section only
- - Optional reason field
- 
--7. Review Summary
-+### Review Summary
- Always visible.
- Shows:
- - Packing type
-@@ -135,7 +136,7 @@ Shows:
- - Movement site and quantity
- - Filling breakdown (if applicable)
- 
--8. Validation Rules
-+### Validation Rules
- - Packing type required
- - Quantity > 0
- - Site required when movement is present
-@@ -145,11 +146,11 @@ Shows:
- Warnings:
- - Movement quantity differs from volume or filling total
- 
--9. State Reset Rules
-+### tate Reset Rules
- - Changing packing type resets irrelevant fields
- - Confirm dialog if data will be lost
- 
--10. Save Behavior
-+### Save Behavior
- - Disable Save during submission
- - On success:
-   - Close dialog
-@@ -158,7 +159,7 @@ Warnings:
- - On error:
-   - Show inline and global error
- 
--11. Suggested Payload Structure
-+### Suggested Payload Structure
- 
- {
-   "batch_id": "...",
-@@ -176,12 +177,12 @@ Warnings:
-   ]
- }
- 
--12. Accessibility & i18n
-+### Accessibility & i18n
- - Labels for all inputs
+@@ -182,6 +185,34 @@ Warnings:
  - Keyboard navigable
  - i18n for labels and messages
  
--13. Suggested UI Components
-+### Suggested UI Components
++## data handle
++### tables
++- mst_package for package
++- mst_equipment_tank for tank
++- inv_movement for record movement
++- inv_movement_line for movement line 
++
++### data usage
++- Saves packing events via inv_movements + inv_movement_lines.
++- Loads packing events from inv_movements where meta.source = 'packing' and meta.batch_id = <batchId>.
++- Soft-deletes by setting inv_movements.status = 'void'.
++- Uses UOM conversions for both package and volume calculations.
++- Stores UI detail in inv_movements.meta (e.g., packing_type, volume_qty, volume_uom, filling_lines, etc.) for display/edit.
++
++### doc_type mapping:
++- Movement
++  filling → production_receipt
++  ship → sale
++  transfer → transfer
++  loss → adjustment
++  dispose → waste
++  dest_site_id: set to movement_site_id for ship/transfer/filling; src_site_id is left null (needs your rule).
++- Movement lines:
++
++Filling: line per package; qty = unit_count * unit_volume(L); uom_id = liters UOM.
++Volume-only (ship/transfer/loss/dispose): a single line using a default package (currently first package in mst_package — TODO in code).
++
++
+ ### Suggested UI Components
  - PackingDialog
  - PackingTypeSelector
- - VolumeSection

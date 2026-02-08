@@ -244,12 +244,19 @@
           <div v-if="showPackingVolumeSection" class="border border-gray-200 rounded-lg p-3 space-y-3">
             <h4 class="text-sm font-semibold text-gray-700">{{ t('batch.packaging.dialog.volumeSection') }}</h4>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div>
+              <div v-if="showPackingTankField">
                 <label class="block text-sm text-gray-600 mb-1" for="packingVolumeTank">{{ t('batch.packaging.dialog.volumeTank') }}</label>
-                <select id="packingVolumeTank" v-model="packingDialog.form.tank_id" class="w-full h-[40px] border rounded px-3 bg-white">
-                  <option value="">{{ t('common.select') }}</option>
-                  <option v-for="option in tankOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-                </select>
+                <input
+                  id="packingVolumeTank"
+                  v-model="packingDialog.form.tank_id"
+                  type="text"
+                  class="w-full h-[40px] border rounded px-3"
+                  list="packingTankOptions"
+                  :placeholder="t('common.select')"
+                />
+                <datalist id="packingTankOptions">
+                  <option v-for="option in tankOptions" :key="option.id" :value="option.label" />
+                </datalist>
               </div>
               <div>
                 <label class="block text-sm text-gray-600 mb-1" for="packingVolumeQty">{{ t('batch.packaging.dialog.volumeQty') }}</label>
@@ -469,7 +476,7 @@ interface SiteOption {
 }
 
 interface TankOption {
-  value: string
+  id: string
   label: string
 }
 
@@ -572,6 +579,55 @@ function defaultVolumeUomId() {
   return preferred || volumeUoms.value[0]?.id || ''
 }
 
+function resolveTankLabel(value: string | null | undefined) {
+  if (!value) return ''
+  const match = tankOptions.value.find((row) => row.id === value || row.label === value)
+  return match?.label ?? value
+}
+
+function resolveTankId(value: string | null | undefined) {
+  if (!value) return null
+  const match = tankOptions.value.find((row) => row.id === value || row.label === value)
+  return match?.id ?? value
+}
+
+function formVolumeInLiters(form: PackingFormState) {
+  const qty = toNumber(form.volume_qty)
+  if (qty == null) return null
+  return convertToLiters(qty, resolveUomCode(form.volume_uom))
+}
+
+function eventVolumeInLiters(event: PackingEvent) {
+  if (event.volume_qty == null) return null
+  return convertToLiters(event.volume_qty, resolveUomCode(event.volume_uom))
+}
+
+function defaultPackageId() {
+  // TODO: confirm mapping for volume-only events; fallback to first package for now.
+  return packageCategories.value[0]?.id ?? ''
+}
+
+function resolveLitersUomId() {
+  return volumeUoms.value.find((row) => row.code === 'L')?.id ?? defaultVolumeUomId()
+}
+
+function mapPackingDocType(type: PackingType) {
+  switch (type) {
+    case 'filling':
+      return 'production_receipt'
+    case 'ship':
+      return 'sale'
+    case 'transfer':
+      return 'transfer'
+    case 'loss':
+      return 'adjustment'
+    case 'dispose':
+      return 'waste'
+    default:
+      return 'adjustment'
+  }
+}
+
 const packingTypeOptions = computed(() => ([
   { value: 'filling', label: t('batch.packaging.types.filling') },
   { value: 'ship', label: t('batch.packaging.types.ship') },
@@ -613,8 +669,9 @@ const packingProcessedVolume = computed(() => {
       if (qty != null) total += qty
       return
     }
-    if (event.volume_qty != null) {
-      total += event.volume_qty
+    const volume = eventVolumeInLiters(event)
+    if (volume != null) {
+      total += volume
       return
     }
     if (event.movement?.qty != null) total += event.movement.qty
@@ -664,6 +721,11 @@ const showPackingReason = computed(() => {
   return type === 'loss' || type === 'dispose'
 })
 
+const showPackingTankField = computed(() => {
+  const type = packingDialog.form?.packing_type
+  return type !== 'loss' && type !== 'dispose'
+})
+
 const packingFillingTotals = computed(() => {
   const lines = packingDialog.form?.filling_lines ?? []
   return computeFillingTotals(lines)
@@ -676,7 +738,7 @@ const reviewVolumeText = computed(() => {
     return total != null ? formatVolumeValue(total) : '—'
   }
   if (!showPackingVolumeSection.value) return '—'
-  const qty = toNumber(packingDialog.form.volume_qty)
+  const qty = formVolumeInLiters(packingDialog.form)
   return qty != null ? formatVolumeValue(qty) : '—'
 })
 
@@ -705,7 +767,7 @@ const packingMismatchWarning = computed(() => {
     return ''
   }
   if (showPackingVolumeSection.value) {
-    const volumeQty = toNumber(packingDialog.form.volume_qty)
+    const volumeQty = formVolumeInLiters(packingDialog.form)
     if (volumeQty != null && Math.abs(movementQty - volumeQty) > 0.0001) {
       return t('batch.packaging.warnings.movementMismatch')
     }
@@ -754,7 +816,7 @@ async function fetchBatch() {
       batchForm.actual_start = toInputDate(data.actual_start)
       batchForm.actual_end = toInputDate(data.actual_end)
       batchForm.related_batch_id = resolveMetaString(data.meta, 'related_batch_id') ?? ''
-      packingEvents.value = normalizePackingEvents((data.meta as any)?.packing_events)
+      await loadPackingEvents()
       await loadBatchAttributes(data.id)
     } else {
       attrFields.value = []
@@ -1049,24 +1111,86 @@ async function loadTankOptions() {
   try {
     const tenant = await ensureTenant()
     const { data, error } = await supabase
-      .from('mst_equipment')
-      .select('id, equipment_code, name_i18n, equipment_kind, equipment_status, is_active')
-      .eq('tenant_id', tenant)
-      .eq('equipment_kind', 'tank')
-      .eq('is_active', true)
-      .order('equipment_code')
+      .from('mst_equipment_tank')
+      .select('equipment_id, mst_equipment!inner(id, tenant_id, equipment_code, name_i18n, equipment_kind, is_active)')
+      .eq('mst_equipment.tenant_id', tenant)
+      .eq('mst_equipment.equipment_kind', 'tank')
+      .eq('mst_equipment.is_active', true)
+      .order('equipment_code', { foreignTable: 'mst_equipment' })
     if (error) throw error
     tankOptions.value = (data ?? []).map((row: any) => {
-      const name = resolveNameI18n(row.name_i18n ?? null)
+      const equipment = row.mst_equipment
+      const name = resolveNameI18n(equipment?.name_i18n ?? null)
       const namePart = name ? ` — ${name}` : ''
       return {
-        value: row.id,
-        label: `${row.equipment_code}${namePart}`,
+        id: row.equipment_id,
+        label: `${equipment?.equipment_code ?? row.equipment_id}${namePart}`,
       }
     })
   } catch (err) {
     console.error(err)
     tankOptions.value = []
+  }
+}
+
+async function loadPackingEvents() {
+  if (!batchId.value) return
+  try {
+    const { data: movementRows, error } = await supabase
+      .from('inv_movements')
+      .select('id, doc_no, doc_type, status, movement_at, src_site_id, dest_site_id, reason, notes, meta')
+      .eq('meta->>source', 'packing')
+      .eq('meta->>batch_id', batchId.value)
+      .neq('status', 'void')
+      .order('movement_at', { ascending: true })
+    if (error) throw error
+    const rows = (movementRows ?? []) as any[]
+    if (!rows.length) {
+      packingEvents.value = []
+      return
+    }
+    const movementIds = rows.map((row) => row.id)
+    const { data: lineRows, error: lineError } = await supabase
+      .from('inv_movement_lines')
+      .select('movement_id, package_id, qty, uom_id, meta')
+      .in('movement_id', movementIds)
+    if (lineError) throw lineError
+    const linesByMovement = new Map<string, any[]>()
+    ;(lineRows ?? []).forEach((line: any) => {
+      const list = linesByMovement.get(line.movement_id) ?? []
+      list.push(line)
+      linesByMovement.set(line.movement_id, list)
+    })
+
+    packingEvents.value = rows.map((row) => {
+      const meta = (row.meta ?? {}) as Record<string, any>
+      const fillingLines = Array.isArray(meta.filling_lines)
+        ? meta.filling_lines.map((line: any) => ({
+          id: String(line?.id ?? generateLocalId()),
+          package_type_id: String(line?.package_type_id ?? ''),
+          qty: toNumber(line?.qty) ?? 0,
+        }))
+        : []
+      return {
+        id: row.id,
+        packing_type: String(meta.packing_type ?? row.doc_type ?? '').trim() as PackingType,
+        event_time: row.movement_at ?? new Date().toISOString(),
+        memo: meta.memo ?? row.notes ?? null,
+        volume_qty: meta.volume_qty != null ? toNumber(meta.volume_qty) : null,
+        volume_uom: meta.volume_uom != null ? String(meta.volume_uom) : null,
+        tank_id: meta.tank_id != null ? resolveTankLabel(String(meta.tank_id)) : '',
+        movement: {
+          site_id: meta.movement_site_id != null ? String(meta.movement_site_id) : null,
+          qty: meta.movement_qty != null ? toNumber(meta.movement_qty) : null,
+          memo: meta.movement_memo != null ? String(meta.movement_memo) : null,
+        },
+        filling_lines: fillingLines,
+        reason: meta.reason != null ? String(meta.reason) : row.reason ?? null,
+      } as PackingEvent
+    })
+  } catch (err) {
+    console.error(err)
+    packingEvents.value = []
   }
 }
 
@@ -1119,41 +1243,6 @@ async function saveBatch() {
   }
 }
 
-function normalizePackingEvents(value: unknown): PackingEvent[] {
-  if (!Array.isArray(value)) return []
-  return value
-    .map((item) => {
-      if (!item || typeof item !== 'object' || Array.isArray(item)) return null
-      const raw = item as Record<string, unknown>
-      const type = String(raw.packing_type ?? '').trim() as PackingType
-      if (!type) return null
-      const eventTime = String(raw.event_time ?? '').trim()
-      return {
-        id: String(raw.id ?? generateLocalId()),
-        packing_type: type,
-        event_time: eventTime || new Date().toISOString(),
-        memo: raw.memo != null ? String(raw.memo) : null,
-        volume_qty: toNumber(raw.volume_qty),
-        volume_uom: raw.volume_uom != null ? String(raw.volume_uom) : null,
-        tank_id: raw.tank_id != null ? String(raw.tank_id) : null,
-        movement: raw.movement && typeof raw.movement === 'object' ? {
-          site_id: (raw.movement as any).site_id != null ? String((raw.movement as any).site_id) : null,
-          qty: toNumber((raw.movement as any).qty),
-          memo: (raw.movement as any).memo != null ? String((raw.movement as any).memo) : null,
-        } : null,
-        filling_lines: Array.isArray(raw.filling_lines)
-          ? (raw.filling_lines as any[]).map((line) => ({
-            id: String(line?.id ?? generateLocalId()),
-            package_type_id: String(line?.package_type_id ?? ''),
-            qty: toNumber(line?.qty) ?? 0,
-          }))
-          : [],
-        reason: raw.reason != null ? String(raw.reason) : null,
-      }
-    })
-    .filter((row): row is PackingEvent => row !== null)
-}
-
 function generateLocalId() {
   return `local-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`
 }
@@ -1181,7 +1270,7 @@ function openPackingEdit(event: PackingEvent) {
     memo: event.memo ?? '',
     volume_qty: event.volume_qty != null ? String(event.volume_qty) : '',
     volume_uom: resolveUomId(event.volume_uom) || defaultVolumeUomId(),
-    tank_id: event.tank_id ?? '',
+    tank_id: resolveTankLabel(event.tank_id ?? ''),
     movement_site_id: event.movement?.site_id ?? '',
     movement_qty: event.movement?.qty != null ? String(event.movement.qty) : '',
     movement_memo: event.movement?.memo ?? '',
@@ -1305,18 +1394,8 @@ async function savePackingEvent(addAnother: boolean) {
   }
   try {
     packingDialog.loading = true
-    const nextEvent = buildPackingEvent(packingDialog.form)
-    if (packingDialog.editing && packingDialog.form.id) {
-      const idx = packingEvents.value.findIndex((row) => row.id === packingDialog.form?.id)
-      if (idx >= 0) {
-        packingEvents.value.splice(idx, 1, nextEvent)
-      } else {
-        packingEvents.value.unshift(nextEvent)
-      }
-    } else {
-      packingEvents.value.unshift(nextEvent)
-    }
-    await persistPackingEvents()
+    await persistPackingEvent(packingDialog.form, packingDialog.editing)
+    await loadPackingEvents()
     showPackingNotice(t('batch.packaging.toast.saved'))
     if (addAnother) {
       const nextType = packingDialog.form.packing_type
@@ -1338,8 +1417,12 @@ async function savePackingEvent(addAnother: boolean) {
 async function deletePackingEvent(event: PackingEvent) {
   if (!window.confirm(t('batch.packaging.confirmDelete'))) return
   try {
-    packingEvents.value = packingEvents.value.filter((row) => row.id !== event.id)
-    await persistPackingEvents()
+    const { error } = await supabase
+      .from('inv_movements')
+      .update({ status: 'void' })
+      .eq('id', event.id)
+    if (error) throw error
+    await loadPackingEvents()
     showPackingNotice(t('batch.packaging.toast.deleted'))
   } catch (err) {
     console.error(err)
@@ -1347,17 +1430,109 @@ async function deletePackingEvent(event: PackingEvent) {
   }
 }
 
-async function persistPackingEvents() {
+async function persistPackingEvent(form: PackingFormState, isEditing: boolean) {
   if (!batchId.value) return
-  const base = buildBatchMeta(batch.value?.meta)
-  const nextMeta = { ...base, packing_events: packingEvents.value }
-  const { error } = await supabase
-    .from('mes_batches')
-    .update({ meta: nextMeta })
-    .eq('id', batchId.value)
-  if (error) throw error
-  if (batch.value) {
-    batch.value = { ...batch.value, meta: nextMeta }
+  const batchCode = batch.value?.batch_code ?? ''
+  const volumeQty = isVolumeType(form.packing_type) ? toNumber(form.volume_qty) : null
+  const volumeUomId = resolveUomId(form.volume_uom)
+  const lineUomId = resolveLitersUomId()
+  const packingId = form.id ?? generateLocalId()
+  const docNo = `PACK-${batchCode}-${Date.now()}`
+
+  const movementPayload = {
+    doc_no: isEditing ? undefined : docNo,
+    doc_type: mapPackingDocType(form.packing_type),
+    status: 'posted',
+    movement_at: fromInputDateTime(form.event_time) ?? new Date().toISOString(),
+    src_site_id: null,
+    dest_site_id: isMovementType(form.packing_type) ? (form.movement_site_id || null) : null,
+    reason: form.reason ? form.reason.trim() : null,
+    notes: form.memo ? form.memo.trim() : null,
+    meta: {
+      source: 'packing',
+      batch_id: batchId.value,
+      batch_code: batchCode,
+      packing_id: packingId,
+      packing_type: form.packing_type,
+      memo: form.memo ? form.memo.trim() : null,
+      volume_qty: volumeQty,
+      volume_uom: volumeUomId || null,
+      tank_id: resolveTankId(form.tank_id),
+      movement_site_id: form.movement_site_id || null,
+      movement_qty: form.movement_qty ? toNumber(form.movement_qty) : null,
+      movement_memo: form.movement_memo ? form.movement_memo.trim() : null,
+      filling_lines: form.filling_lines.map((line) => ({
+        id: line.id,
+        package_type_id: line.package_type_id,
+        qty: toNumber(line.qty),
+      })),
+      note: 'TODO: adjust mapping for src/dest sites and package/material usage.',
+    },
+  }
+
+  let movementId = form.id ?? ''
+
+  if (isEditing && form.id) {
+    const { error } = await supabase
+      .from('inv_movements')
+      .update(movementPayload)
+      .eq('id', form.id)
+    if (error) throw error
+    movementId = form.id
+    const { error: deleteError } = await supabase
+      .from('inv_movement_lines')
+      .delete()
+      .eq('movement_id', movementId)
+    if (deleteError) throw deleteError
+  } else {
+    const { data, error } = await supabase
+      .from('inv_movements')
+      .insert(movementPayload)
+      .select('id')
+      .single()
+    if (error) throw error
+    movementId = data.id
+  }
+
+  const lines: Array<Record<string, any>> = []
+  if (form.packing_type === 'filling') {
+    form.filling_lines.forEach((line, index) => {
+      const qtyUnits = toNumber(line.qty)
+      const unitVolume = resolvePackageUnitVolume(line.package_type_id)
+      if (qtyUnits == null || unitVolume == null) return
+      const volumeLiters = qtyUnits * unitVolume
+      lines.push({
+        movement_id: movementId,
+        line_no: index + 1,
+        package_id: line.package_type_id,
+        batch_id: batchId.value,
+        qty: volumeLiters,
+        uom_id: lineUomId,
+        notes: null,
+        meta: { unit_count: qtyUnits },
+      })
+    })
+  } else if (volumeQty != null) {
+    const packageId = defaultPackageId()
+    if (!packageId) {
+      throw new Error('No package configured for volume-only movement.')
+    }
+    const volumeLiters = convertToLiters(volumeQty, resolveUomCode(volumeUomId))
+    lines.push({
+      movement_id: movementId,
+      line_no: 1,
+      package_id: packageId,
+      batch_id: batchId.value,
+      qty: volumeLiters ?? volumeQty,
+      uom_id: lineUomId,
+      notes: null,
+      meta: { volume_uom_id: volumeUomId || null },
+    })
+  }
+
+  if (lines.length) {
+    const { error: lineError } = await supabase.from('inv_movement_lines').insert(lines)
+    if (lineError) throw lineError
   }
 }
 
@@ -1389,37 +1564,6 @@ function validatePackingForm(form: PackingFormState) {
   return errors
 }
 
-function buildPackingEvent(form: PackingFormState): PackingEvent {
-  const id = form.id ?? generateLocalId()
-  const volumeQty = isVolumeType(form.packing_type) ? toNumber(form.volume_qty) : null
-  const movement = isMovementType(form.packing_type)
-    ? {
-      site_id: form.movement_site_id || null,
-      qty: toNumber(form.movement_qty),
-      memo: form.movement_memo ? form.movement_memo.trim() : null,
-    }
-    : null
-  const fillingLines = form.packing_type === 'filling'
-    ? form.filling_lines.map((line) => ({
-      id: line.id ?? generateLocalId(),
-      package_type_id: line.package_type_id,
-      qty: toNumber(line.qty) ?? 0,
-    }))
-    : []
-  return {
-    id,
-    packing_type: form.packing_type,
-    event_time: fromInputDateTime(form.event_time) ?? new Date().toISOString(),
-    memo: form.memo ? form.memo.trim() : null,
-    volume_qty: volumeQty,
-    volume_uom: volumeQty != null ? (form.volume_uom || null) : null,
-    tank_id: isVolumeType(form.packing_type) ? (form.tank_id || null) : null,
-    movement,
-    filling_lines: fillingLines,
-    reason: form.reason ? form.reason.trim() : null,
-  }
-}
-
 function computeFillingTotals(lines: PackingFillingLineForm[]) {
   let totalUnits = 0
   let totalVolume = 0
@@ -1448,8 +1592,12 @@ function resolvePackageUnitVolume(packageTypeId: string) {
 }
 
 function formatFillingUnitVolume(packageTypeId: string) {
-  const unit = resolvePackageUnitVolume(packageTypeId)
-  return unit != null ? formatVolumeValue(unit) : '—'
+  const row = packageCategories.value.find((item) => item.id === packageTypeId)
+  if (!row || row.unit_volume == null) return '—'
+  const uomCode = resolveUomCode(row.volume_uom)
+  const qty = Number(row.unit_volume)
+  const display = Number.isFinite(qty) ? qty.toLocaleString(undefined, { maximumFractionDigits: 3 }) : String(row.unit_volume)
+  return uomCode ? `${display} ${uomCode}` : display
 }
 
 function formatFillingLineTotal(line: PackingFillingLineForm) {
@@ -1479,8 +1627,9 @@ function formatPackingDate(value: string) {
 }
 
 function formatPackingVolume(event: PackingEvent) {
-  if (event.volume_qty == null) return '—'
-  return formatVolumeValue(event.volume_qty)
+  const volume = eventVolumeInLiters(event)
+  if (volume == null) return '—'
+  return formatVolumeValue(volume)
 }
 
 function formatPackingMovement(event: PackingEvent) {
@@ -1713,7 +1862,7 @@ function newPackingForm(type: PackingType): PackingFormState {
 onMounted(async () => {
   try {
     await ensureTenant()
-    await Promise.all([loadBatchOptions(), loadBatchStatusOptions(), loadSites(), fetchPackageCategories()])
+    await Promise.all([loadBatchOptions(), loadBatchStatusOptions(), loadSites(), loadTankOptions(), loadVolumeUoms(), fetchPackageCategories(), loadPackingEvents()])
   } catch (err) {
     console.error(err)
   }

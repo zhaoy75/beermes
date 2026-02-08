@@ -278,11 +278,11 @@ const router = createRouter({
       },
     },
     {
-      path: '/beerPackageCategory',
-      name: 'beerPackageCategory',
-      component: () => import('../views/Pages/BeerPackageCategory.vue'),
+      path: '/packageMaster',
+      name: 'packageMaster',
+      component: () => import('../views/Pages/PackageMaster.vue'),
       meta: {
-        title: 'Beer Package Category',
+        title: 'Package Master',
         requiresAuth: true ,
       },
     },

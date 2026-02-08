@@ -406,7 +406,7 @@
     }
   },
   "package": {
-    "title": "パッケージ管理",
+    "title": "詰口容器管理",
     "subtitle": "詰口容器の情報を管理します。",
     "newTitle": "パッケージの追加",
     "editTitle": "パッケージの編集",
@@ -1505,7 +1505,7 @@
       "beerMaster": "ビール銘柄登録",
       "tankMaintenance": "タンク管理",
       "equipmentMaster": "設備管理",
-      "beerPackageCategory": "詰口容器管理",
+      "packageMaster": "詰口容器管理",
       "materialMaster": "原材料登録",
       "vendorMaster": "仕入先登録",
       "customerMaster": "顧客登録",

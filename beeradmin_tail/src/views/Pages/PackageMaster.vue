@@ -42,7 +42,7 @@
               <td class="px-3 py-2">{{ resolveName(row) || '—' }}</td>
               <td class="px-3 py-2 text-sm text-gray-600">{{ row.description || '—' }}</td>
               <td class="px-3 py-2 text-sm text-gray-700">{{ formatVolume(row.unit_volume) }}</td>
-              <td class="px-3 py-2 text-sm text-gray-700">{{ row.volume_uom }}</td>
+              <td class="px-3 py-2 text-sm text-gray-700">{{ resolveUomLabel(row.volume_uom) }}</td>
               <td class="px-3 py-2 text-xs text-gray-500">{{ formatTimestamp(row.created_at) }}</td>
               <td class="px-3 py-2 space-x-2">
                 <button class="px-2 py-1 text-sm rounded border hover:bg-gray-100" @click="openEdit(row)">
@@ -104,11 +104,10 @@
               <label class="block text-sm text-gray-600 mb-1">
                 {{ t('package.columns.volumeUom') }}<span class="text-red-600">*</span>
               </label>
-              <input
-                v-model.trim="form.volume_uom"
-                class="w-full h-[40px] border rounded px-3"
-                :placeholder="t('package.placeholders.volumeUom')"
-              />
+              <select v-model="form.volume_uom" class="w-full h-[40px] border rounded px-3 bg-white">
+                <option value="">{{ t('common.select') }}</option>
+                <option v-for="option in volumeUomOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+              </select>
               <p v-if="errors.volume_uom" class="mt-1 text-xs text-red-600">{{ errors.volume_uom }}</p>
             </div>
             <div class="md:col-span-2">
@@ -158,7 +157,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
@@ -180,6 +179,7 @@ const { t, locale } = useI18n()
 const pageTitle = computed(() => t('package.title'))
 
 const rows = ref<PackageRow[]>([])
+const volumeUoms = ref<{ id: string; code: string; name: string | null; dimension: string | null }[]>([])
 const loading = ref(false)
 const saving = ref(false)
 const showModal = ref(false)
@@ -194,13 +194,25 @@ const form = reactive({
   name_i18n: {} as Record<string, string>,
   description: '',
   unit_volume: '',
-  volume_uom: 'L',
+  volume_uom: '',
 })
 
 const errors = reactive<Record<string, string>>({})
+const volumeUomOptions = computed(() =>
+  volumeUoms.value.map((row) => ({
+    value: row.id,
+    label: row.name ? `${row.code} - ${row.name}` : row.code,
+  }))
+)
 
 function resolveLang() {
   return String(locale.value ?? '').toLowerCase().startsWith('ja') ? 'ja' : 'en'
+}
+
+function syncFormNameToLocale() {
+  const lang = resolveLang()
+  const fromI18n = form.name_i18n?.[lang]
+  form.name = fromI18n ?? ''
 }
 
 function resolveName(row: PackageRow) {
@@ -225,6 +237,13 @@ function formatTimestamp(value: string | null) {
   }
 }
 
+function resolveUomLabel(value: string | null) {
+  if (!value) return '—'
+  const match = volumeUoms.value.find((row) => row.id === value)
+  if (!match) return value
+  return match.name ? `${match.code} - ${match.name}` : match.code
+}
+
 function openCreate() {
   editing.value = false
   Object.assign(form, {
@@ -234,8 +253,10 @@ function openCreate() {
     name_i18n: {},
     description: '',
     unit_volume: '',
-    volume_uom: 'L',
+    volume_uom: '',
   })
+  const defaultUom = volumeUoms.value.find((row) => row.code === 'L')?.code
+  if (defaultUom) form.volume_uom = defaultUom
   Object.keys(errors).forEach((key) => delete errors[key])
   showModal.value = true
 }
@@ -250,7 +271,7 @@ function openEdit(row: PackageRow) {
     name_i18n: row.name_i18n ?? {},
     description: row.description ?? '',
     unit_volume: row.unit_volume != null ? String(row.unit_volume) : '',
-    volume_uom: row.volume_uom ?? 'L',
+    volume_uom: row.volume_uom ?? '',
   })
   Object.keys(errors).forEach((key) => delete errors[key])
   showModal.value = true
@@ -268,8 +289,29 @@ function validateForm() {
   } else if (Number(form.unit_volume) <= 0) {
     errors.unit_volume = t('errors.mustBePositive', { field: t('package.columns.unitVolume') })
   }
-  if (!form.volume_uom) errors.volume_uom = t('errors.required', { field: t('package.columns.volumeUom') })
+  if (!form.volume_uom) {
+    errors.volume_uom = t('errors.required', { field: t('package.columns.volumeUom') })
+  }
   return Object.keys(errors).length === 0
+}
+
+async function fetchVolumeUoms() {
+  try {
+    const { data, error } = await supabase
+      .from('mst_uom')
+      .select('id, code, name, dimension')
+      .eq('dimension', 'volume')
+      .order('code', { ascending: true })
+    if (error) throw error
+    volumeUoms.value = (data ?? []) as { id: string; code: string; name: string | null; dimension: string | null }[]
+    if (!form.volume_uom) {
+      const preferred = volumeUoms.value.find((row) => row.code === 'L')?.id
+      form.volume_uom = preferred || volumeUoms.value[0]?.id || ''
+    }
+  } catch (err) {
+    console.error(err)
+    volumeUoms.value = []
+  }
 }
 
 async function fetchPackages() {
@@ -302,7 +344,7 @@ async function saveRecord() {
       name_i18n: mergedName,
       description: form.description ? form.description.trim() : null,
       unit_volume: Number(form.unit_volume),
-      volume_uom: form.volume_uom.trim(),
+      volume_uom: form.volume_uom,
     }
 
     if (editing.value && form.id) {
@@ -341,6 +383,15 @@ async function deleteRecord() {
 }
 
 onMounted(async () => {
-  await fetchPackages()
+  await Promise.all([fetchPackages(), fetchVolumeUoms()])
 })
+
+watch(
+  () => locale.value,
+  () => {
+    if (showModal.value) {
+      syncFormNameToLocale()
+    }
+  }
+)
 </script>

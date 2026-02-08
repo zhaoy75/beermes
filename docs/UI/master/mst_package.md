@@ -9,8 +9,8 @@
 - Tenant User: edit all mst_package information
 
 ## Page Layout
-### Header: パッケージ管理
-- Title: パッケージ管理
+### Header: 詰口容器管理
+- Title: 詰口容器管理
 
 ### Body: 
 - There is only section
@@ -27,7 +27,7 @@
     text
 
     unit_volume
-    volume_uom
+    volume_uom (dropdown list chosen from mst_uom with dimension = volume)
 
 
 ## Action
@@ -40,6 +40,8 @@
 
 ## Data Handling
 - site information stored in mst_package
+- uom information stored in mst_uom
+
 
 ## other
 - this page should be multilanguage (english and japanese)

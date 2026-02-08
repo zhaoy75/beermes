@@ -406,7 +406,7 @@
     }
   },
   "package": {
-    "title": "Package Management",
+    "title": "Package Container Management",
     "subtitle": "Manage packaging definitions for filling.",
     "newTitle": "New Package",
     "editTitle": "Edit Package",
@@ -1506,7 +1506,7 @@
       "beerMaster": "Beer Master",
       "tankMaintenance": "Tank Maintenance",
       "equipmentMaster": "Equipment Master",
-      "beerPackageCategory": "Beer Package Categories",
+      "packageMaster": "Package Master",
       "materialMaster": "Material Master",
       "vendorMaster": "Vendor Master",
       "customerMaster": "Customer Master",

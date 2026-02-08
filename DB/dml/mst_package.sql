@@ -1,15 +1,16 @@
 -- Example DML for craft-beer packaging master
 INSERT INTO mst_package (
   package_code,
-  name,
-  text,
+  tenant_id,
+  name_i18n,
+  description,
   unit_volume,
   volume_uom
 ) VALUES
-  ('CAN_355', '355ml Can', 'Standard 12oz aluminum can for core beers', 355, 'mL'),
-  ('CAN_473', '473ml Can', '16oz tallboy can for seasonal releases', 473, 'mL'),
-  ('BOTTLE_330', '330ml Bottle', '330ml glass bottle for export/retail', 330, 'mL'),
-  ('BOTTLE_500', '500ml Bottle', '500ml glass bottle for specialty ales', 500, 'mL'),
-  ('KEG_20L', '20L Keg', '20L stainless keg for draft service', 20, 'L'),
-  ('KEG_30L', '30L Keg', '30L stainless keg for draft service', 30, 'L'),
-  ('KEG_50L', '50L Keg', '50L stainless keg for high-volume accounts', 50, 'L');
+  ('CAN_355', '2a231822-aa8d-452a-aa5f-9f5e4293cdaa', '{\"en\":\"355ml Can\",\"ja\":\"355ml 缶\"}', 'Standard 12oz aluminum can for core beers', 355, '5d449c18-f973-44ee-a501-48b7bfcd4e0c'),
+  ('CAN_473', '2a231822-aa8d-452a-aa5f-9f5e4293cdaa', '{\"en\":\"473ml Can\",\"ja\":\"473ml 缶\"}', '16oz tallboy can for seasonal releases', 473, '5d449c18-f973-44ee-a501-48b7bfcd4e0c'),
+  ('BOTTLE_330', '2a231822-aa8d-452a-aa5f-9f5e4293cdaa', '{\"en\":\"330ml Bottle\",\"ja\":\"330ml ボトル\"}', '330ml glass bottle for export/retail', 330, '5d449c18-f973-44ee-a501-48b7bfcd4e0c'),
+  ('BOTTLE_500', '2a231822-aa8d-452a-aa5f-9f5e4293cdaa', '{\"en\":\"500ml Bottle\",\"ja\":\"500ml ボトル\"}', '500ml glass bottle for specialty ales', 500, '5d449c18-f973-44ee-a501-48b7bfcd4e0c'),
+  ('KEG_20L', '2a231822-aa8d-452a-aa5f-9f5e4293cdaa', '{\"en\":\"20L Keg\",\"ja\":\"20L ケグ\"}', '20L stainless keg for draft service', 20, '0b038b0e-d1d8-464b-8511-a7706e2b2b65'),
+  ('KEG_30L', '2a231822-aa8d-452a-aa5f-9f5e4293cdaa', '{\"en\":\"30L Keg\",\"ja\":\"30L ケグ\"}', '30L stainless keg for draft service', 30, '0b038b0e-d1d8-464b-8511-a7706e2b2b65'),
+  ('KEG_50L', '2a231822-aa8d-452a-aa5f-9f5e4293cdaa', '{\"en\":\"50L Keg\",\"ja\":\"50L ケグ\"}', '50L stainless keg for high-volume accounts', 50, '0b038b0e-d1d8-464b-8511-a7706e2b2b65');

@@ -379,6 +379,7 @@ const menuGroups = computed(() => [
         subItems: [
           // { name: t('sidebar.items.materialMaster'), path: "/MaterialMaster", pro: false },
           { name: t('sidebar.items.siteMaster'), path: "/siteMaster", pro: false },
+          { name: t('sidebar.items.equipmentMaster'), path: "/equipmentMaster", pro: false },
           { name: t('sidebar.items.beerPackageCategory'), path: "/beerPackageCategory", pro: false },
           // { name: t('sidebar.items.tankMaintenance'), path: "/tankMaintenance", pro: false }
         ],

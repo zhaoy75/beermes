@@ -24,7 +24,84 @@
     "collapse": "折りたたむ",
     "expand": "展開",
     "none": "なし",
-    "select": "選択"
+    "select": "選択",
+    "active": "有効",
+    "inactive": "無効"
+  },
+  "equipment": {
+    "title": "設備管理",
+    "subtitle": "タンクや装置のマスタ情報を管理します。",
+    "editTitle": "設備編集",
+    "newTitle": "設備登録",
+    "detailHint": "左の一覧から設備を選択してください。",
+    "nameFallback": "名称未設定",
+    "filters": {
+      "code": "設備コード",
+      "codePlaceholder": "コードで検索",
+      "site": "サイト",
+      "kind": "設備種別",
+      "status": "ステータス"
+    },
+    "fields": {
+      "code": "設備コード",
+      "nameEn": "名称（英）",
+      "nameJa": "名称（日）",
+      "kind": "設備種別",
+      "type": "設備タイプ",
+      "site": "サイト",
+      "status": "ステータス",
+      "active": "有効",
+      "commissionedAt": "稼働開始日",
+      "decommissionedAt": "廃止日",
+      "description": "説明"
+    },
+    "status": {
+      "available": "使用可",
+      "inUse": "使用中",
+      "cleaning": "洗浄中",
+      "maintenance": "メンテナンス",
+      "retired": "廃止"
+    },
+    "kinds": {
+      "tank": "タンク",
+      "pump": "ポンプ",
+      "filler": "充填機",
+      "labeler": "ラベラー",
+      "kettle": "釜",
+      "mashTun": "マッシュタン",
+      "lauterTun": "ロイタータン",
+      "chiller": "チラー",
+      "other": "その他"
+    },
+    "actions": {
+      "maintenance": "メンテナンス",
+      "changeStatus": "状態変更"
+    },
+    "tank": {
+      "title": "タンク情報",
+      "capacity": "容量",
+      "volumeUom": "容量単位",
+      "maxWorkVolume": "最大作業容量",
+      "maxWorkUom": "最大作業容量単位",
+      "pressurized": "加圧対応",
+      "jacketed": "ジャケット付き",
+      "cipSupported": "CIP対応",
+      "attributes": "タンク属性（JSON）"
+    },
+    "maintenance": {
+      "title": "メンテナンス"
+    },
+    "deleteTitle": "設備削除",
+    "deleteConfirm": "設備 {code} を削除しますか？",
+    "confirmTankRemoval": "タンク情報があります。タンクを外して削除しますか？",
+    "errors": {
+      "required": "必須項目です。",
+      "nameRequired": "名称は少なくとも1つ必要です。",
+      "capacity": "容量は0より大きい必要があります。",
+      "maxWorkOverCapacity": "最大作業容量は容量以下にしてください。",
+      "decommissionedAfter": "廃止日は稼働開始日以降にしてください。",
+      "jsonObject": "正しいJSONオブジェクトを入力してください。"
+    }
   },
   "batch": {
     "list": {
@@ -326,6 +403,29 @@
       "uom": "単位",
       "sizeFixed": "固定",
       "createdAt": "作成日時"
+    }
+  },
+  "package": {
+    "title": "パッケージ管理",
+    "subtitle": "詰口容器の情報を管理します。",
+    "newTitle": "パッケージの追加",
+    "editTitle": "パッケージの編集",
+    "deleteTitle": "パッケージの削除",
+    "deleteConfirm": "パッケージ {code} を削除しますか？ この操作は元に戻せません。",
+    "columns": {
+      "code": "コード",
+      "name": "名称",
+      "text": "説明",
+      "unitVolume": "容量",
+      "volumeUom": "容量単位",
+      "createdAt": "作成日時"
+    },
+    "placeholders": {
+      "code": "例: CAN_350",
+      "name": "例: 350ml 缶",
+      "text": "任意の説明",
+      "unitVolume": "例: 0.35",
+      "volumeUom": "例: L"
     }
   },
   "waste": {
@@ -1209,6 +1309,7 @@
     "required": "{field} は必須です",
     "mustBeInteger": "{field} は整数である必要があります",
     "mustBeNumber": "{field} は数値である必要があります",
+    "mustBePositive": "{field} は 0 より大きい値である必要があります",
     "rateMin": "{field} は 0 以上である必要があります",
     "expireAfter": "適用終了日は適用開始日より後である必要があります"
   },
@@ -1403,6 +1504,7 @@
       "packingMaster": "詰口登録",
       "beerMaster": "ビール銘柄登録",
       "tankMaintenance": "タンク管理",
+      "equipmentMaster": "設備管理",
       "beerPackageCategory": "詰口容器管理",
       "materialMaster": "原材料登録",
       "vendorMaster": "仕入先登録",

@@ -260,6 +260,15 @@ const router = createRouter({
       },
     },
     {
+      path: '/equipmentMaster',
+      name: '設備マスタ',
+      component: () => import('../views/Pages/EquipmentMaster.vue'),
+      meta: {
+        title: 'Equipment Master',
+        requiresAuth: true ,
+      },
+    },
+    {
       path: '/batchYieldSummary',
       name: 'BatchYieldSummary',
       component: () => import('../views/Pages/BatchYieldSummary.vue'),

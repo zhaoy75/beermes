@@ -24,7 +24,84 @@
     "collapse": "Collapse",
     "expand": "Expand",
     "none": "None",
-    "select": "Select"
+    "select": "Select",
+    "active": "Active",
+    "inactive": "Inactive"
+  },
+  "equipment": {
+    "title": "Equipment",
+    "subtitle": "Manage tanks and non-tank equipment assets.",
+    "editTitle": "Edit Equipment",
+    "newTitle": "New Equipment",
+    "detailHint": "Select equipment from the list to view or edit details.",
+    "nameFallback": "Untitled equipment",
+    "filters": {
+      "code": "Equipment code",
+      "codePlaceholder": "Search by code",
+      "site": "Site",
+      "kind": "Equipment kind",
+      "status": "Status"
+    },
+    "fields": {
+      "code": "Equipment code",
+      "nameEn": "Name (EN)",
+      "nameJa": "Name (JA)",
+      "kind": "Equipment kind",
+      "type": "Equipment type",
+      "site": "Site",
+      "status": "Status",
+      "active": "Active",
+      "commissionedAt": "Commissioned at",
+      "decommissionedAt": "Decommissioned at",
+      "description": "Description"
+    },
+    "status": {
+      "available": "Available",
+      "inUse": "In use",
+      "cleaning": "Cleaning",
+      "maintenance": "Maintenance",
+      "retired": "Retired"
+    },
+    "kinds": {
+      "tank": "Tank",
+      "pump": "Pump",
+      "filler": "Filler",
+      "labeler": "Labeler",
+      "kettle": "Kettle",
+      "mashTun": "Mash tun",
+      "lauterTun": "Lauter tun",
+      "chiller": "Chiller",
+      "other": "Other"
+    },
+    "actions": {
+      "maintenance": "Maintenance",
+      "changeStatus": "Change status"
+    },
+    "tank": {
+      "title": "Tank Profile",
+      "capacity": "Capacity volume",
+      "volumeUom": "Volume UOM",
+      "maxWorkVolume": "Max working volume",
+      "maxWorkUom": "Max working UOM",
+      "pressurized": "Pressurized",
+      "jacketed": "Jacketed",
+      "cipSupported": "CIP supported",
+      "attributes": "Tank attributes (JSON)"
+    },
+    "maintenance": {
+      "title": "Maintenance"
+    },
+    "deleteTitle": "Delete equipment",
+    "deleteConfirm": "Delete equipment {code}?",
+    "confirmTankRemoval": "This equipment has a tank profile. Switch to non-tank and remove tank data?",
+    "errors": {
+      "required": "Required.",
+      "nameRequired": "At least one name is required.",
+      "capacity": "Capacity must be greater than 0.",
+      "maxWorkOverCapacity": "Max working volume must be less than or equal to capacity.",
+      "decommissionedAfter": "Decommissioned date must be after commissioned date.",
+      "jsonObject": "Enter a valid JSON object."
+    }
   },
   "batch": {
     "list": {
@@ -326,6 +403,29 @@
       "uom": "Unit",
       "sizeFixed": "Fixed",
       "createdAt": "Created"
+    }
+  },
+  "package": {
+    "title": "Package Management",
+    "subtitle": "Manage packaging definitions for filling.",
+    "newTitle": "New Package",
+    "editTitle": "Edit Package",
+    "deleteTitle": "Delete Package",
+    "deleteConfirm": "Delete package {code}? This cannot be undone.",
+    "columns": {
+      "code": "Package code",
+      "name": "Name",
+      "text": "Text",
+      "unitVolume": "Unit volume",
+      "volumeUom": "Volume unit",
+      "createdAt": "Created"
+    },
+    "placeholders": {
+      "code": "e.g., CAN_350",
+      "name": "e.g., 350ml can",
+      "text": "Optional description",
+      "unitVolume": "e.g., 0.35",
+      "volumeUom": "e.g., L"
     }
   },
   "waste": {
@@ -1209,6 +1309,7 @@
     "required": "{field} is required",
     "mustBeInteger": "{field} must be an integer",
     "mustBeNumber": "{field} must be a number",
+    "mustBePositive": "{field} must be greater than 0",
     "rateMin": "{field} must be >= 0",
     "expireAfter": "expire_date must be after effect_date"
   },
@@ -1404,6 +1505,7 @@
       "packingMaster": "Packing Master",
       "beerMaster": "Beer Master",
       "tankMaintenance": "Tank Maintenance",
+      "equipmentMaster": "Equipment Master",
       "beerPackageCategory": "Beer Package Categories",
       "materialMaster": "Material Master",
       "vendorMaster": "Vendor Master",

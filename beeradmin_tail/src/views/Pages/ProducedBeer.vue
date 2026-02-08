@@ -126,8 +126,8 @@
               <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.movement.filters.category') }}</label>
               <select v-model="movementFilters.category" class="w-full h-[40px] border rounded px-3 bg-white">
                 <option value="">{{ t('common.all') }}</option>
-                <option v-for="category in categories" :key="category.id" :value="category.id">
-                  {{ category.name || category.code || category.id }}
+                <option v-for="category in categories" :key="category.def_id" :value="category.def_id">
+                  {{ typeof category.spec?.name === 'string' ? category.spec.name : category.def_key }}
                 </option>
               </select>
             </div>
@@ -293,9 +293,9 @@ import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
 
 interface CategoryRow {
-  id: string
-  code: string
-  name: string | null
+  def_id: string
+  def_key: string
+  spec: Record<string, any>
 }
 
 interface SiteOption {
@@ -306,9 +306,9 @@ interface SiteOption {
 interface PackageCategoryRow {
   id: string
   package_code: string
-  package_name: string | null
-  size: number | null
-  uom_id: string | null
+  name_i18n: Record<string, string> | null
+  unit_volume: number | null
+  volume_uom: string | null
 }
 
 interface InventoryRow {
@@ -385,7 +385,7 @@ interface MovementCardView extends MovementCard {
   totalLiters: number | null
 }
 
-const { t, locale } = useI18n()
+const { t, locale, tm } = useI18n()
 const router = useRouter()
 const pageTitle = computed(() => t('producedBeer.title'))
 
@@ -422,7 +422,7 @@ const siteMap = computed(() => {
 
 const categoryMap = computed(() => {
   const map = new Map<string, CategoryRow>()
-  categories.value.forEach((row) => map.set(row.id, row))
+  categories.value.forEach((row) => map.set(row.def_id, row))
   return map
 })
 
@@ -430,9 +430,9 @@ const packageCategoryMap = computed(() => {
   const map = new Map<string, { label: string; size: number | null; uomId: string | null }>()
   packageCategories.value.forEach((row) => {
     map.set(row.id, {
-      label: row.package_name || row.package_code,
-      size: row.size ?? null,
-      uomId: row.uom_id ?? null,
+      label: resolvePackageName(row),
+      size: row.unit_volume ?? null,
+      uomId: row.volume_uom ?? null,
     })
   })
   return map
@@ -447,7 +447,7 @@ const uomMap = computed(() => {
 const packageCategoryOptions = computed(() =>
   packageCategories.value.map((row) => ({
     value: row.id,
-    label: row.package_name || row.package_code,
+    label: resolvePackageName(row),
   }))
 )
 
@@ -508,7 +508,19 @@ function formatDateTime(value: string | null | undefined) {
 function categoryLabel(categoryId: string | null | undefined) {
   if (!categoryId) return '—'
   const category = categoryMap.value.get(categoryId)
-  return category?.name || category?.code || categoryId
+  if (!category) return categoryId
+  const label = typeof category.spec?.name === 'string' ? category.spec.name : category.def_key
+  return label || categoryId
+}
+
+function resolveLang() {
+  return String(locale.value ?? '').toLowerCase().startsWith('ja') ? 'ja' : 'en'
+}
+
+function resolvePackageName(row: PackageCategoryRow) {
+  const lang = resolveLang()
+  const name = row.name_i18n?.[lang] ?? Object.values(row.name_i18n ?? {})[0]
+  return name || row.package_code
 }
 
 function resolveBatchLabel(meta: Record<string, any> | null | undefined) {
@@ -524,7 +536,8 @@ function siteLabel(siteId: string | null | undefined) {
 }
 
 function docTypeLabel(value: string) {
-  const map = t('producedBeer.movement.docTypeMap') as Record<string, string>
+  const map = tm('producedBeer.movement.docTypeMap') as Record<string, string> | string
+  if (!map || typeof map !== 'object') return value
   return map[value] || value
 }
 
@@ -659,12 +672,12 @@ async function ensureTenant() {
 }
 
 async function loadCategories() {
-  const tenant = await ensureTenant()
   const { data, error } = await supabase
-    .from('mst_category')
-    .select('id, code, name')
-    .eq('tenant_id', tenant)
-    .order('code', { ascending: true })
+    .from('registry_def')
+    .select('def_id, def_key, spec')
+    .eq('kind', 'alcohol_type')
+    .eq('is_active', true)
+    .order('def_key', { ascending: true })
   if (error) throw error
   categories.value = data ?? []
 }
@@ -672,9 +685,10 @@ async function loadCategories() {
 async function loadPackageCategories() {
   const tenant = await ensureTenant()
   const { data, error } = await supabase
-    .from('mst_beer_package_category')
-    .select('id, package_code, package_name, size, uom_id')
+    .from('mst_package')
+    .select('id, package_code, name_i18n, unit_volume, volume_uom, is_active')
     .eq('tenant_id', tenant)
+    .eq('is_active', true)
     .order('package_code', { ascending: true })
   if (error) throw error
   packageCategories.value = data ?? []

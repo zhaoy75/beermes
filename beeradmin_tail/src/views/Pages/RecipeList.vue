@@ -390,9 +390,9 @@ interface RecipeRow {
 }
 
 interface CategoryRow {
-  id: string
-  code: string
-  name: string | null
+  def_id: string
+  def_key: string
+  spec: Record<string, any>
 }
 
 type SortKey = 'code' | 'name' | 'version' | 'status' | 'created_at'
@@ -446,13 +446,17 @@ const styleOptions = computed(() => {
 const categoryMap = computed(() => {
   const map = new Map<string, string>()
   categories.value.forEach((row) => {
-    map.set(row.id, row.name || row.code)
+    const label = typeof row.spec?.name === 'string' ? row.spec.name : row.def_key
+    map.set(row.def_id, label || row.def_key)
   })
   return map
 })
 
 const categoryOptions = computed(() =>
-  categories.value.map((row) => ({ value: row.id, label: row.name || row.code })),
+  categories.value.map((row) => ({
+    value: row.def_id,
+    label: typeof row.spec?.name === 'string' ? row.spec.name : row.def_key,
+  })),
 )
 
 const filteredRecipes = computed(() => {
@@ -596,9 +600,11 @@ function validate() {
 async function fetchCategories() {
   try {
     const { data, error } = await supabase
-      .from('mst_category')
-      .select('id, code, name')
-      .order('name', { ascending: true, nullsFirst: false })
+      .from('registry_def')
+      .select('def_id, def_key, spec')
+      .eq('kind', 'alcohol_type')
+      .eq('is_active', true)
+      .order('def_key', { ascending: true })
     if (error) throw error
     categories.value = data ?? []
   } catch (err) {

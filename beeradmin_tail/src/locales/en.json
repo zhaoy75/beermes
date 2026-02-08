@@ -334,7 +334,7 @@
         "summaryTotal": "Product volume",
         "summaryProcessed": "Processed volume",
         "summaryRemaining": "Remaining volume",
-        "summaryHint": "Processed includes filling, shipped (external), transferred (internal), loss, and dispose events.",
+        "summaryHint": "Processed includes filling, shipped (external non-tax transfer), transferred (internal non-tax transfer), loss, and dispose events.",
         "volumeSection": "Volume",
         "volumeTank": "Tank",
         "volumeQty": "Quantity",

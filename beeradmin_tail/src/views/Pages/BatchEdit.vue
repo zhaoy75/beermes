@@ -244,20 +244,6 @@
           <div v-if="showPackingVolumeSection" class="border border-gray-200 rounded-lg p-3 space-y-3">
             <h4 class="text-sm font-semibold text-gray-700">{{ t('batch.packaging.dialog.volumeSection') }}</h4>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div v-if="showPackingTankField">
-                <label class="block text-sm text-gray-600 mb-1" for="packingVolumeTank">{{ t('batch.packaging.dialog.volumeTank') }}</label>
-                <input
-                  id="packingVolumeTank"
-                  v-model="packingDialog.form.tank_id"
-                  type="text"
-                  class="w-full h-[40px] border rounded px-3"
-                  list="packingTankOptions"
-                  :placeholder="t('common.select')"
-                />
-                <datalist id="packingTankOptions">
-                  <option v-for="option in tankOptions" :key="option.id" :value="option.label" />
-                </datalist>
-              </div>
               <div>
                 <label class="block text-sm text-gray-600 mb-1" for="packingVolumeQty">{{ t('batch.packaging.dialog.volumeQty') }}</label>
                 <input id="packingVolumeQty" v-model="packingDialog.form.volume_qty" type="number" min="0" step="0.001" class="w-full h-[40px] border rounded px-3 text-right" />
@@ -475,11 +461,6 @@ interface SiteOption {
   code?: string
 }
 
-interface TankOption {
-  id: string
-  label: string
-}
-
 interface VolumeUomOption {
   id: string
   code: string
@@ -501,7 +482,6 @@ type PackingEvent = {
   memo: string | null
   volume_qty: number | null
   volume_uom: string | null
-  tank_id: string | null
   movement: { site_id: string | null, qty: number | null, memo: string | null } | null
   filling_lines: PackingFillingLine[]
   reason: string | null
@@ -520,7 +500,6 @@ type PackingFormState = {
   memo: string
   volume_qty: string
   volume_uom: string
-  tank_id: string
   movement_site_id: string
   movement_qty: string
   movement_memo: string
@@ -530,7 +509,6 @@ type PackingFormState = {
 
 const packageCategories = ref<PackageCategoryOption[]>([])
 const siteOptions = ref<SiteOption[]>([])
-const tankOptions = ref<TankOption[]>([])
 const volumeUoms = ref<VolumeUomOption[]>([])
 const packingEvents = ref<PackingEvent[]>([])
 const packingNotice = ref('')
@@ -579,17 +557,7 @@ function defaultVolumeUomId() {
   return preferred || volumeUoms.value[0]?.id || ''
 }
 
-function resolveTankLabel(value: string | null | undefined) {
-  if (!value) return ''
-  const match = tankOptions.value.find((row) => row.id === value || row.label === value)
-  return match?.label ?? value
-}
 
-function resolveTankId(value: string | null | undefined) {
-  if (!value) return null
-  const match = tankOptions.value.find((row) => row.id === value || row.label === value)
-  return match?.id ?? value
-}
 
 function formVolumeInLiters(form: PackingFormState) {
   const qty = toNumber(form.volume_qty)
@@ -719,11 +687,6 @@ const showPackingFillingSection = computed(() => packingDialog.form?.packing_typ
 const showPackingReason = computed(() => {
   const type = packingDialog.form?.packing_type
   return type === 'loss' || type === 'dispose'
-})
-
-const showPackingTankField = computed(() => {
-  const type = packingDialog.form?.packing_type
-  return type !== 'loss' && type !== 'dispose'
 })
 
 const packingFillingTotals = computed(() => {
@@ -1107,32 +1070,6 @@ async function loadVolumeUoms() {
   }
 }
 
-async function loadTankOptions() {
-  try {
-    const tenant = await ensureTenant()
-    const { data, error } = await supabase
-      .from('mst_equipment_tank')
-      .select('equipment_id, mst_equipment!inner(id, tenant_id, equipment_code, name_i18n, equipment_kind, is_active)')
-      .eq('mst_equipment.tenant_id', tenant)
-      .eq('mst_equipment.equipment_kind', 'tank')
-      .eq('mst_equipment.is_active', true)
-      .order('equipment_code', { foreignTable: 'mst_equipment' })
-    if (error) throw error
-    tankOptions.value = (data ?? []).map((row: any) => {
-      const equipment = row.mst_equipment
-      const name = resolveNameI18n(equipment?.name_i18n ?? null)
-      const namePart = name ? ` — ${name}` : ''
-      return {
-        id: row.equipment_id,
-        label: `${equipment?.equipment_code ?? row.equipment_id}${namePart}`,
-      }
-    })
-  } catch (err) {
-    console.error(err)
-    tankOptions.value = []
-  }
-}
-
 async function loadPackingEvents() {
   if (!batchId.value) return
   try {
@@ -1178,7 +1115,6 @@ async function loadPackingEvents() {
         memo: meta.memo ?? row.notes ?? null,
         volume_qty: meta.volume_qty != null ? toNumber(meta.volume_qty) : null,
         volume_uom: meta.volume_uom != null ? String(meta.volume_uom) : null,
-        tank_id: meta.tank_id != null ? resolveTankLabel(String(meta.tank_id)) : '',
         movement: {
           site_id: meta.movement_site_id != null ? String(meta.movement_site_id) : null,
           qty: meta.movement_qty != null ? toNumber(meta.movement_qty) : null,
@@ -1270,7 +1206,6 @@ function openPackingEdit(event: PackingEvent) {
     memo: event.memo ?? '',
     volume_qty: event.volume_qty != null ? String(event.volume_qty) : '',
     volume_uom: resolveUomId(event.volume_uom) || defaultVolumeUomId(),
-    tank_id: resolveTankLabel(event.tank_id ?? ''),
     movement_site_id: event.movement?.site_id ?? '',
     movement_qty: event.movement?.qty != null ? String(event.movement.qty) : '',
     movement_memo: event.movement?.memo ?? '',
@@ -1303,7 +1238,6 @@ function isPackingFormDirty(form: PackingFormState) {
     form.memo ||
     form.volume_qty ||
     form.volume_uom ||
-    form.tank_id ||
     form.movement_site_id ||
     form.movement_qty ||
     form.movement_memo ||
@@ -1342,7 +1276,6 @@ function resetPackingFormForType(form: PackingFormState, prevType: PackingType) 
   if (!isVolumeType(form.packing_type) || !isVolumeType(prevType)) {
     form.volume_qty = ''
     form.volume_uom = defaultVolumeUomId()
-    form.tank_id = ''
   }
   if (!isMovementType(form.packing_type) || !isMovementType(prevType)) {
     form.movement_site_id = ''
@@ -1457,7 +1390,6 @@ async function persistPackingEvent(form: PackingFormState, isEditing: boolean) {
       memo: form.memo ? form.memo.trim() : null,
       volume_qty: volumeQty,
       volume_uom: volumeUomId || null,
-      tank_id: resolveTankId(form.tank_id),
       movement_site_id: form.movement_site_id || null,
       movement_qty: form.movement_qty ? toNumber(form.movement_qty) : null,
       movement_memo: form.movement_memo ? form.movement_memo.trim() : null,
@@ -1850,7 +1782,6 @@ function newPackingForm(type: PackingType): PackingFormState {
     memo: '',
     volume_qty: '',
     volume_uom: defaultVolumeUomId(),
-    tank_id: '',
     movement_site_id: '',
     movement_qty: '',
     movement_memo: '',
@@ -1862,7 +1793,7 @@ function newPackingForm(type: PackingType): PackingFormState {
 onMounted(async () => {
   try {
     await ensureTenant()
-    await Promise.all([loadBatchOptions(), loadBatchStatusOptions(), loadSites(), loadTankOptions(), loadVolumeUoms(), fetchPackageCategories(), loadPackingEvents()])
+    await Promise.all([loadBatchOptions(), loadBatchStatusOptions(), loadSites(), loadVolumeUoms(), fetchPackageCategories(), loadPackingEvents()])
   } catch (err) {
     console.error(err)
   }

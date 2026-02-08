@@ -310,9 +310,9 @@
         "memo": "メモ"
       },
       "types": {
-        "ship": "出荷",
+        "ship": "社外非納税移出",
         "filling": "詰口",
-        "transfer": "移送",
+        "transfer": "社内非納税移出",
         "loss": "ロス",
         "dispose": "廃棄"
       },
@@ -334,7 +334,7 @@
         "summaryTotal": "製品容量",
         "summaryProcessed": "処理済み容量",
         "summaryRemaining": "残容量",
-        "summaryHint": "詰口・社外出荷・社内移出・ロス・廃棄の合計が処理済み容量です。",
+        "summaryHint": "詰口・社外非納税移出・社内非納税移出・ロス・廃棄の合計が処理済み容量です。",
         "volumeSection": "容量",
         "volumeTank": "タンク",
         "volumeQty": "数量",

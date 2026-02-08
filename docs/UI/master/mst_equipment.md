@@ -76,7 +76,6 @@ Split layout (List + Detail):
 | Equipment Code | Yes | Create only | Immutable after create |
 | Name | Yes | Yes | Multilanguage |
 | Equipment Kind | Yes | Yes | Determines tank UI |
-| Equipment Type | Yes | Yes | From type_def |
 | Site | Yes | Yes | mst_sites |
 | Status | No | No | Read-only badge |
 | Active | Yes | Yes | Logical delete |

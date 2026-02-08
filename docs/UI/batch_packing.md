@@ -1,13 +1,13 @@
 
-I want you to modify packaging section of batchedit.vue page. Following is the specification
+# Packing Dialog UI Specification
 
-1. Purpose
+## Purpose
 The Packing Dialog records a packaging-related batch event.
 The user selects a packing type, then inputs only the fields required for that type.
 One packing dialog submission creates one packing event.
 For Filling type, multiple filling lines may be created.
 
-2. Entry Points
+# Entry Points
 - Batch Edit page → button: “Packing…”　(japanese text: 移送詰口管理)
 - Opens a modal dialog
 - Can be used multiple times per batch

@@ -83,7 +83,7 @@
                   </span>
                 </div>
                 <div class="text-xs text-gray-500 mt-1">
-                  {{ typeLabel(row.equipment_type_id) }} • {{ siteLabel(row.site_id) }}
+                  {{ kindLabel(row.equipment_kind) }} • {{ siteLabel(row.site_id) }}
                 </div>
               </button>
               <div class="mt-2 flex items-center gap-2">
@@ -152,16 +152,6 @@
             <div>
               <label class="block text-sm text-gray-600 mb-1">{{ t('equipment.fields.nameJa') }}</label>
               <input v-model.trim="form.name_ja" class="w-full h-[40px] border rounded px-3" />
-            </div>
-            <div>
-              <label class="block text-sm text-gray-600 mb-1">
-                {{ t('equipment.fields.type') }}<span class="text-red-600">*</span>
-              </label>
-              <select v-model="form.equipment_type_id" class="w-full h-[40px] border rounded px-3 bg-white">
-                <option value="">{{ t('common.select') }}</option>
-                <option v-for="option in typeOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-              </select>
-              <p v-if="errors.equipment_type_id" class="text-xs text-red-600 mt-1">{{ errors.equipment_type_id }}</p>
             </div>
             <div>
               <label class="block text-sm text-gray-600 mb-1">
@@ -347,13 +337,6 @@ type TankRow = {
   tank_attr_doc: Record<string, any> | null
 }
 
-type TypeDefRow = {
-  type_id: string
-  code: string
-  name: string | null
-  is_active: boolean | null
-}
-
 type SiteRow = {
   id: string
   code: string
@@ -369,13 +352,10 @@ type UomRow = {
 
 const TABLE = 'mst_equipment'
 const TANK_TABLE = 'mst_equipment_tank'
-const TYPE_DOMAIN = 'equipment'
-
 const { t, locale } = useI18n()
 const pageTitle = computed(() => t('equipment.title'))
 
 const rows = ref<EquipmentRow[]>([])
-const typeDefs = ref<TypeDefRow[]>([])
 const sites = ref<SiteRow[]>([])
 const volumeUoms = ref<UomRow[]>([])
 const loading = ref(false)
@@ -462,15 +442,6 @@ const siteOptions = computed(() =>
   }))
 )
 
-const typeOptions = computed(() =>
-  typeDefs.value
-    .filter((row) => row.is_active !== false)
-    .map((row) => ({
-      value: row.type_id,
-      label: row.name ? `${row.code} - ${row.name}` : row.code,
-    }))
-)
-
 const volumeUomOptions = computed(() =>
   volumeUoms.value.map((row) => ({
     value: row.code,
@@ -506,10 +477,10 @@ function displayName(row: EquipmentRow) {
   return fallback || ''
 }
 
-function typeLabel(typeId: string | null) {
-  if (!typeId) return t('common.noData')
-  const match = typeDefs.value.find((row) => row.type_id === typeId)
-  return match ? (match.name ? `${match.code} - ${match.name}` : match.code) : t('common.noData')
+function kindLabel(kind: string | null) {
+  if (!kind) return t('common.noData')
+  const match = kindOptions.find((option) => option.value === kind)
+  return match ? match.label : kind
 }
 
 function siteLabel(siteId: string) {
@@ -687,21 +658,6 @@ async function fetchEquipment() {
   }
 }
 
-async function fetchTypes() {
-  try {
-    const { data, error } = await supabase
-      .from('type_def')
-      .select('type_id, code, name, is_active')
-      .eq('domain', TYPE_DOMAIN)
-      .order('code', { ascending: true })
-    if (error) throw error
-    typeDefs.value = (data ?? []) as TypeDefRow[]
-  } catch (err) {
-    console.error(err)
-    toast.error(err instanceof Error ? err.message : String(err))
-  }
-}
-
 async function fetchSites() {
   try {
     const { data, error } = await supabase
@@ -747,9 +703,6 @@ function validateForm() {
     errors.equipment_kind = t('equipment.errors.required')
   }
 
-  if (!form.equipment_type_id) {
-    errors.equipment_type_id = t('equipment.errors.required')
-  }
 
   if (!form.site_id) {
     errors.site_id = t('equipment.errors.required')
@@ -923,6 +876,6 @@ async function deleteSelected() {
 }
 
 onMounted(async () => {
-  await Promise.all([fetchEquipment(), fetchTypes(), fetchSites(), fetchVolumeUoms()])
+  await Promise.all([fetchEquipment(), fetchSites(), fetchVolumeUoms()])
 })
 </script>

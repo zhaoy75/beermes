@@ -596,6 +596,23 @@ function mapPackingDocType(type: PackingType) {
   }
 }
 
+function mapPackingLotEventType(type: PackingType) {
+  switch (type) {
+    case 'filling':
+      return 'production'
+    case 'ship':
+      return 'sale'
+    case 'transfer':
+      return 'transfer'
+    case 'loss':
+      return 'adjustment'
+    case 'dispose':
+      return 'waste'
+    default:
+      return 'adjustment'
+  }
+}
+
 const packingTypeOptions = computed(() => ([
   { value: 'filling', label: t('batch.packaging.types.filling') },
   { value: 'ship', label: t('batch.packaging.types.ship') },
@@ -1350,11 +1367,24 @@ async function savePackingEvent(addAnother: boolean) {
 async function deletePackingEvent(event: PackingEvent) {
   if (!window.confirm(t('batch.packaging.confirmDelete'))) return
   try {
+    const { data: movementRow, error: movementError } = await supabase
+      .from('inv_movements')
+      .select('lot_event_id')
+      .eq('id', event.id)
+      .maybeSingle()
+    if (movementError) throw movementError
     const { error } = await supabase
       .from('inv_movements')
       .update({ status: 'void' })
       .eq('id', event.id)
     if (error) throw error
+    if (movementRow?.lot_event_id) {
+      const { error: lotError } = await supabase
+        .from('lot_event')
+        .update({ status: 'void' })
+        .eq('id', movementRow.lot_event_id)
+      if (lotError) throw lotError
+    }
     await loadPackingEvents()
     showPackingNotice(t('batch.packaging.toast.deleted'))
   } catch (err) {
@@ -1403,11 +1433,58 @@ async function persistPackingEvent(form: PackingFormState, isEditing: boolean) {
   }
 
   let movementId = form.id ?? ''
+  let lotEventId: string | null = null
+
+  const lotEventPayload = {
+    event_no: isEditing ? undefined : docNo,
+    event_type: mapPackingLotEventType(form.packing_type),
+    status: 'posted',
+    event_at: fromInputDateTime(form.event_time) ?? new Date().toISOString(),
+    src_site_id: null,
+    dest_site_id: isMovementType(form.packing_type) ? (form.movement_site_id || null) : null,
+    reason: form.reason ? form.reason.trim() : null,
+    notes: form.memo ? form.memo.trim() : null,
+    meta: {
+      source: 'packing',
+      batch_id: batchId.value,
+      batch_code: batchCode,
+      packing_id: packingId,
+      packing_type: form.packing_type,
+    },
+  }
 
   if (isEditing && form.id) {
+    const { data: existing, error: existingError } = await supabase
+      .from('inv_movements')
+      .select('lot_event_id')
+      .eq('id', form.id)
+      .maybeSingle()
+    if (existingError) throw existingError
+    lotEventId = existing?.lot_event_id ?? null
+    if (lotEventId) {
+      const { error: lotError } = await supabase
+        .from('lot_event')
+        .update(lotEventPayload)
+        .eq('id', lotEventId)
+      if (lotError) throw lotError
+      const { error: lotLineDeleteError } = await supabase
+        .from('lot_event_line')
+        .delete()
+        .eq('lot_event_id', lotEventId)
+      if (lotLineDeleteError) throw lotLineDeleteError
+    } else {
+      const { data: lotData, error: lotInsertError } = await supabase
+        .from('lot_event')
+        .insert(lotEventPayload)
+        .select('id')
+        .single()
+      if (lotInsertError) throw lotInsertError
+      lotEventId = lotData.id
+    }
+
     const { error } = await supabase
       .from('inv_movements')
-      .update(movementPayload)
+      .update({ ...movementPayload, lot_event_id: lotEventId })
       .eq('id', form.id)
     if (error) throw error
     movementId = form.id
@@ -1417,9 +1494,17 @@ async function persistPackingEvent(form: PackingFormState, isEditing: boolean) {
       .eq('movement_id', movementId)
     if (deleteError) throw deleteError
   } else {
+    const { data: lotData, error: lotInsertError } = await supabase
+      .from('lot_event')
+      .insert(lotEventPayload)
+      .select('id')
+      .single()
+    if (lotInsertError) throw lotInsertError
+    lotEventId = lotData.id
+
     const { data, error } = await supabase
       .from('inv_movements')
-      .insert(movementPayload)
+      .insert({ ...movementPayload, lot_event_id: lotEventId })
       .select('id')
       .single()
     if (error) throw error
@@ -1427,6 +1512,7 @@ async function persistPackingEvent(form: PackingFormState, isEditing: boolean) {
   }
 
   const lines: Array<Record<string, any>> = []
+  const lotLines: Array<Record<string, any>> = []
   if (form.packing_type === 'filling') {
     form.filling_lines.forEach((line, index) => {
       const qtyUnits = toNumber(line.qty)
@@ -1436,6 +1522,17 @@ async function persistPackingEvent(form: PackingFormState, isEditing: boolean) {
       lines.push({
         movement_id: movementId,
         line_no: index + 1,
+        package_id: line.package_type_id,
+        batch_id: batchId.value,
+        qty: volumeLiters,
+        uom_id: lineUomId,
+        notes: null,
+        meta: { unit_count: qtyUnits },
+      })
+      lotLines.push({
+        lot_event_id: lotEventId,
+        line_no: index + 1,
+        lot_id: null,
         package_id: line.package_type_id,
         batch_id: batchId.value,
         qty: volumeLiters,
@@ -1460,11 +1557,26 @@ async function persistPackingEvent(form: PackingFormState, isEditing: boolean) {
       notes: null,
       meta: { volume_uom_id: volumeUomId || null },
     })
+    lotLines.push({
+      lot_event_id: lotEventId,
+      line_no: 1,
+      lot_id: null,
+      package_id: packageId,
+      batch_id: batchId.value,
+      qty: volumeLiters ?? volumeQty,
+      uom_id: lineUomId,
+      notes: null,
+      meta: { volume_uom_id: volumeUomId || null },
+    })
   }
 
   if (lines.length) {
     const { error: lineError } = await supabase.from('inv_movement_lines').insert(lines)
     if (lineError) throw lineError
+  }
+  if (lotLines.length && lotEventId) {
+    const { error: lotLineError } = await supabase.from('lot_event_line').insert(lotLines)
+    if (lotLineError) throw lotLineError
   }
 }
 

@@ -191,6 +191,9 @@ Warnings:
 - mst_equipment_tank for tank
 - inv_movement for record movement
 - inv_movement_line for movement line 
+- lot for lot master
+- lot_event for lot event header
+- lot_event_line for lot event lines
 
 ### data usage
 - Saves packing events via inv_movements + inv_movement_lines.
@@ -198,6 +201,12 @@ Warnings:
 - Soft-deletes by setting inv_movements.status = 'void'.
 - Uses UOM conversions for both package and volume calculations.
 - Stores UI detail in inv_movements.meta (e.g., packing_type, volume_qty, volume_uom, filling_lines, etc.) for display/edit.
+- Lot handling (new):
+  - Create lot_event for each packing dialog submission.
+  - Create lot_event_line records that mirror movement lines (same quantities/uom).
+  - Link inv_movements.lot_event_id to lot_event.id.
+  - Link inv_movement_lines.lot_id to the affected lot (if known).
+  - Soft-delete: set lot_event.status = 'void' when inv_movements.status = 'void'.
 
 ### doc_type mapping:
 - Movement

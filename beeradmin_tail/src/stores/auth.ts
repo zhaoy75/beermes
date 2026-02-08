@@ -2,6 +2,7 @@
 import { defineStore } from 'pinia'
 import { supabase } from '../lib/supabase'
 
+let authListenerSet = false
 
 type AuthState = {
   accessToken: string | null
@@ -58,9 +59,16 @@ export const useAuthStore = defineStore('auth', {
       }
 
       // Keep Pinia in sync on auth events (token refresh, sign-in, sign-out)
+      if (authListenerSet) return
+      authListenerSet = true
       supabase.auth.onAuthStateChange((_event, sess) => {
         if (!sess) {
           this.$reset()
+          const path = window.location.pathname
+          if (path !== '/signin' && path !== '/signup') {
+            const redirect = encodeURIComponent(window.location.pathname + window.location.search + window.location.hash)
+            window.location.assign(`/signin?redirect=${redirect}`)
+          }
           return
         }
         this.accessToken = sess.access_token

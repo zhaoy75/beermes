@@ -245,12 +245,24 @@
             <h4 class="text-sm font-semibold text-gray-700">{{ t('batch.packaging.dialog.volumeSection') }}</h4>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
+                <label class="block text-sm text-gray-600 mb-1" for="packingVolumeTank">{{ t('batch.packaging.dialog.volumeTank') }}</label>
+                <select id="packingVolumeTank" v-model="packingDialog.form.tank_id" class="w-full h-[40px] border rounded px-3 bg-white">
+                  <option value="">{{ t('common.select') }}</option>
+                  <option v-for="option in tankOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+                </select>
+              </div>
+              <div>
                 <label class="block text-sm text-gray-600 mb-1" for="packingVolumeQty">{{ t('batch.packaging.dialog.volumeQty') }}</label>
-                <div class="flex items-center gap-2">
-                  <input id="packingVolumeQty" v-model="packingDialog.form.volume_qty" type="number" min="0" step="0.001" class="w-full h-[40px] border rounded px-3 text-right" />
-                  <span class="text-sm text-gray-500">{{ t('batch.packaging.dialog.volumeUnit') }}</span>
-                </div>
+                <input id="packingVolumeQty" v-model="packingDialog.form.volume_qty" type="number" min="0" step="0.001" class="w-full h-[40px] border rounded px-3 text-right" />
                 <p v-if="packingDialog.errors.volume_qty" class="mt-1 text-xs text-red-600">{{ packingDialog.errors.volume_qty }}</p>
+              </div>
+              <div>
+                <label class="block text-sm text-gray-600 mb-1" for="packingVolumeUom">{{ t('batch.packaging.dialog.volumeUom') }}</label>
+                <select id="packingVolumeUom" v-model="packingDialog.form.volume_uom" class="w-full h-[40px] border rounded px-3 bg-white">
+                  <option value="">{{ t('common.select') }}</option>
+                  <option v-for="option in volumeUomOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+                </select>
+                <p v-if="packingDialog.errors.volume_uom" class="mt-1 text-xs text-red-600">{{ packingDialog.errors.volume_uom }}</p>
               </div>
               <div v-if="showPackingReason" class="md:col-span-2">
                 <label class="block text-sm text-gray-600 mb-1" for="packingReason">{{ t('batch.packaging.dialog.reason') }}</label>
@@ -444,16 +456,27 @@ const batchStatusOptions = computed(() => {
 
 interface PackageCategoryOption {
   id: string
-  code: string
-  name: string | null
-  default_volume_l: number | null
-  display: string
+  package_code: string
+  name_i18n: Record<string, string> | null
+  unit_volume: number | null
+  volume_uom: string | null
 }
 
 interface SiteOption {
   value: string
   label: string
   code?: string
+}
+
+interface TankOption {
+  value: string
+  label: string
+}
+
+interface VolumeUomOption {
+  id: string
+  code: string
+  name: string | null
 }
 
 type PackingType = 'ship' | 'filling' | 'transfer' | 'loss' | 'dispose'
@@ -471,6 +494,7 @@ type PackingEvent = {
   memo: string | null
   volume_qty: number | null
   volume_uom: string | null
+  tank_id: string | null
   movement: { site_id: string | null, qty: number | null, memo: string | null } | null
   filling_lines: PackingFillingLine[]
   reason: string | null
@@ -488,6 +512,8 @@ type PackingFormState = {
   event_time: string
   memo: string
   volume_qty: string
+  volume_uom: string
+  tank_id: string
   movement_site_id: string
   movement_qty: string
   movement_memo: string
@@ -497,6 +523,8 @@ type PackingFormState = {
 
 const packageCategories = ref<PackageCategoryOption[]>([])
 const siteOptions = ref<SiteOption[]>([])
+const tankOptions = ref<TankOption[]>([])
+const volumeUoms = ref<VolumeUomOption[]>([])
 const packingEvents = ref<PackingEvent[]>([])
 const packingNotice = ref('')
 const packingMovementQtyTouched = ref(false)
@@ -509,6 +537,41 @@ const packingDialog = reactive({
   form: null as PackingFormState | null,
 })
 
+function resolveLang() {
+  return String(locale.value ?? '').toLowerCase().startsWith('ja') ? 'ja' : 'en'
+}
+
+function resolveNameI18n(value: Record<string, string> | null | undefined) {
+  if (!value) return ''
+  const lang = resolveLang()
+  if (value[lang]) return value[lang]
+  const fallback = Object.values(value)[0]
+  return fallback ?? ''
+}
+
+function resolveUomCode(value: string | null | undefined) {
+  if (!value) return null
+  const byId = volumeUoms.value.find((row) => row.id === value)
+  if (byId) return byId.code
+  const byCode = volumeUoms.value.find((row) => row.code === value)
+  if (byCode) return byCode.code
+  return value
+}
+
+function resolveUomId(value: string | null | undefined) {
+  if (!value) return ''
+  const byId = volumeUoms.value.find((row) => row.id === value)
+  if (byId) return byId.id
+  const byCode = volumeUoms.value.find((row) => row.code === value)
+  if (byCode) return byCode.id
+  return value
+}
+
+function defaultVolumeUomId() {
+  const preferred = volumeUoms.value.find((row) => row.code === 'L')?.id
+  return preferred || volumeUoms.value[0]?.id || ''
+}
+
 const packingTypeOptions = computed(() => ([
   { value: 'filling', label: t('batch.packaging.types.filling') },
   { value: 'ship', label: t('batch.packaging.types.ship') },
@@ -520,9 +583,24 @@ const packingTypeOptions = computed(() => ([
 const packageCategoryOptions = computed(() =>
   packageCategories.value.map((row) => ({
     value: row.id,
-    label: row.display,
+    label: formatPackageLabel(row),
   }))
 )
+
+const volumeUomOptions = computed(() =>
+  volumeUoms.value.map((row) => ({
+    value: row.id,
+    label: row.name ? `${row.code} - ${row.name}` : row.code,
+  }))
+)
+
+function formatPackageLabel(row: PackageCategoryOption) {
+  const name = resolveNameI18n(row.name_i18n)
+  const namePart = name ? ` — ${name}` : ''
+  const unitVolume = row.unit_volume != null ? convertToLiters(row.unit_volume, resolveUomCode(row.volume_uom)) : null
+  const sizePart = unitVolume != null ? ` (${unitVolume.toLocaleString(undefined, { maximumFractionDigits: 2 })} L)` : ''
+  return `${row.package_code}${namePart}${sizePart}`
+}
 
 const totalProductVolume = computed(() => resolveBatchVolume(batch.value))
 
@@ -948,26 +1026,65 @@ async function loadSites() {
   }
 }
 
+async function loadVolumeUoms() {
+  try {
+    const { data, error } = await supabase
+      .from('mst_uom')
+      .select('id, code, name, dimension')
+      .eq('dimension', 'volume')
+      .order('code')
+    if (error) throw error
+    volumeUoms.value = (data ?? []).map((row: any) => ({
+      id: row.id,
+      code: row.code,
+      name: row.name ?? null,
+    }))
+  } catch (err) {
+    console.error(err)
+    volumeUoms.value = []
+  }
+}
+
+async function loadTankOptions() {
+  try {
+    const tenant = await ensureTenant()
+    const { data, error } = await supabase
+      .from('mst_equipment')
+      .select('id, equipment_code, name_i18n, equipment_kind, equipment_status, is_active')
+      .eq('tenant_id', tenant)
+      .eq('equipment_kind', 'tank')
+      .eq('is_active', true)
+      .order('equipment_code')
+    if (error) throw error
+    tankOptions.value = (data ?? []).map((row: any) => {
+      const name = resolveNameI18n(row.name_i18n ?? null)
+      const namePart = name ? ` — ${name}` : ''
+      return {
+        value: row.id,
+        label: `${row.equipment_code}${namePart}`,
+      }
+    })
+  } catch (err) {
+    console.error(err)
+    tankOptions.value = []
+  }
+}
+
 async function fetchPackageCategories() {
   try {
     const { data, error } = await supabase
-      .from('mst_beer_package_category')
-      .select('id, package_code, package_name, size, uom:mst_uom(code)')
+      .from('mst_package')
+      .select('id, package_code, name_i18n, unit_volume, volume_uom, is_active')
+      .eq('is_active', true)
       .order('package_code', { ascending: true })
     if (error) throw error
-    packageCategories.value = (data ?? []).map((row: any) => {
-      const uomCode = row.uom?.code ?? null
-      const defaultVolume = convertToLiters(row.size, uomCode)
-      const namePart = row.package_name ? ` — ${row.package_name}` : ''
-      const sizePart = defaultVolume != null ? ` (${defaultVolume.toLocaleString(undefined, { maximumFractionDigits: 2 })} L)` : ''
-      return {
-        id: row.id,
-        code: row.package_code,
-        name: row.package_name ?? null,
-        default_volume_l: defaultVolume,
-        display: `${row.package_code}${namePart}${sizePart}`,
-      }
-    })
+    packageCategories.value = (data ?? []).map((row: any) => ({
+      id: row.id,
+      package_code: row.package_code,
+      name_i18n: row.name_i18n ?? null,
+      unit_volume: row.unit_volume != null ? Number(row.unit_volume) : null,
+      volume_uom: row.volume_uom != null ? String(row.volume_uom) : null,
+    }))
   } catch (err) {
     console.error(err)
   }
@@ -1017,7 +1134,8 @@ function normalizePackingEvents(value: unknown): PackingEvent[] {
         event_time: eventTime || new Date().toISOString(),
         memo: raw.memo != null ? String(raw.memo) : null,
         volume_qty: toNumber(raw.volume_qty),
-        volume_uom: raw.volume_uom != null ? String(raw.volume_uom) : 'L',
+        volume_uom: raw.volume_uom != null ? String(raw.volume_uom) : null,
+        tank_id: raw.tank_id != null ? String(raw.tank_id) : null,
         movement: raw.movement && typeof raw.movement === 'object' ? {
           site_id: (raw.movement as any).site_id != null ? String((raw.movement as any).site_id) : null,
           qty: toNumber((raw.movement as any).qty),
@@ -1062,6 +1180,8 @@ function openPackingEdit(event: PackingEvent) {
     event_time: toInputDateTime(event.event_time),
     memo: event.memo ?? '',
     volume_qty: event.volume_qty != null ? String(event.volume_qty) : '',
+    volume_uom: resolveUomId(event.volume_uom) || defaultVolumeUomId(),
+    tank_id: event.tank_id ?? '',
     movement_site_id: event.movement?.site_id ?? '',
     movement_qty: event.movement?.qty != null ? String(event.movement.qty) : '',
     movement_memo: event.movement?.memo ?? '',
@@ -1093,6 +1213,8 @@ function isPackingFormDirty(form: PackingFormState) {
   return Boolean(
     form.memo ||
     form.volume_qty ||
+    form.volume_uom ||
+    form.tank_id ||
     form.movement_site_id ||
     form.movement_qty ||
     form.movement_memo ||
@@ -1130,6 +1252,8 @@ function shouldConfirmPackingTypeChange(form: PackingFormState, next: PackingTyp
 function resetPackingFormForType(form: PackingFormState, prevType: PackingType) {
   if (!isVolumeType(form.packing_type) || !isVolumeType(prevType)) {
     form.volume_qty = ''
+    form.volume_uom = defaultVolumeUomId()
+    form.tank_id = ''
   }
   if (!isMovementType(form.packing_type) || !isMovementType(prevType)) {
     form.movement_site_id = ''
@@ -1244,6 +1368,7 @@ function validatePackingForm(form: PackingFormState) {
   if (isVolumeType(form.packing_type)) {
     const qty = toNumber(form.volume_qty)
     if (qty == null || qty <= 0) errors.volume_qty = t('batch.packaging.errors.volumeRequired')
+    if (!form.volume_uom) errors.volume_uom = t('batch.packaging.errors.volumeUomRequired')
   }
   if (isMovementType(form.packing_type)) {
     if (!form.movement_site_id) errors.movement_site_id = t('batch.packaging.errors.siteRequired')
@@ -1287,7 +1412,8 @@ function buildPackingEvent(form: PackingFormState): PackingEvent {
     event_time: fromInputDateTime(form.event_time) ?? new Date().toISOString(),
     memo: form.memo ? form.memo.trim() : null,
     volume_qty: volumeQty,
-    volume_uom: volumeQty != null ? 'L' : null,
+    volume_uom: volumeQty != null ? (form.volume_uom || null) : null,
+    tank_id: isVolumeType(form.packing_type) ? (form.tank_id || null) : null,
     movement,
     filling_lines: fillingLines,
     reason: form.reason ? form.reason.trim() : null,
@@ -1317,7 +1443,8 @@ function computeFillingTotals(lines: PackingFillingLineForm[]) {
 
 function resolvePackageUnitVolume(packageTypeId: string) {
   const row = packageCategories.value.find((item) => item.id === packageTypeId)
-  return row?.default_volume_l ?? null
+  if (!row || row.unit_volume == null) return null
+  return convertToLiters(row.unit_volume, resolveUomCode(row.volume_uom))
 }
 
 function formatFillingUnitVolume(packageTypeId: string) {
@@ -1573,6 +1700,8 @@ function newPackingForm(type: PackingType): PackingFormState {
     event_time: toInputDateTime(new Date().toISOString()),
     memo: '',
     volume_qty: '',
+    volume_uom: defaultVolumeUomId(),
+    tank_id: '',
     movement_site_id: '',
     movement_qty: '',
     movement_memo: '',

@@ -256,6 +256,58 @@
       "parentBatchCode": "親バッチコード",
       "parentBatchQuantity": "数量 (L)"
     },
+    "relation": {
+      "title": "バッチ関係",
+      "subtitle": "バッチの分割・統合などの関係を記録します。",
+      "actions": {
+        "add": "関係を追加",
+        "edit": "編集",
+        "delete": "削除"
+      },
+      "columns": {
+        "type": "関係種別",
+        "src": "元バッチ",
+        "dst": "先バッチ",
+        "quantity": "数量",
+        "uom": "単位",
+        "ratio": "比率",
+        "effectiveAt": "適用日時"
+      },
+      "fields": {
+        "type": "関係種別",
+        "src": "元バッチ",
+        "dst": "先バッチ",
+        "quantity": "数量",
+        "uom": "単位",
+        "ratio": "比率",
+        "effectiveAt": "適用日時"
+      },
+      "types": {
+        "split": "分割",
+        "merge": "統合",
+        "blend": "ブレンド",
+        "rework": "再加工",
+        "repackage": "再梱包",
+        "dilution": "希釈",
+        "transfer": "移送"
+      },
+      "dialog": {
+        "title": "バッチ関係の追加",
+        "editTitle": "バッチ関係の編集",
+        "subtitle": "関係種別と対象バッチを設定してください。"
+      },
+      "errors": {
+        "typeRequired": "関係種別は必須です。",
+        "srcRequired": "元バッチは必須です。",
+        "dstRequired": "先バッチは必須です。",
+        "sameBatch": "元バッチと先バッチは同一にできません。",
+        "quantityInvalid": "数量が不正です。",
+        "uomRequired": "数量入力時は単位が必須です。",
+        "effectiveRequired": "適用日時は必須です。",
+        "saveFailed": "保存に失敗しました。"
+      },
+      "confirmDelete": "このバッチ関係を削除しますか？"
+    },
     "ingredients": {
       "sectionTitle": "原材料",
       "sectionSubtitle": "このバッチで使用するレシピ原材料を管理します。",

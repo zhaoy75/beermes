@@ -111,6 +111,60 @@
       <section class="bg-white rounded-xl shadow border border-gray-200 px-4 py-5">
         <header class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
           <div>
+            <h2 class="text-lg font-semibold text-gray-800">{{ t('batch.relation.title') }}</h2>
+            <p class="text-xs text-gray-500">{{ t('batch.relation.subtitle') }}</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button class="px-3 py-2 rounded border hover:bg-gray-50" type="button" :disabled="relationLoading" @click="openRelationDialog()">
+              {{ t('batch.relation.actions.add') }}
+            </button>
+          </div>
+        </header>
+
+        <div v-if="relationLoading" class="text-sm text-gray-500">{{ t('common.loading') }}</div>
+        <div v-else class="overflow-x-auto border border-gray-200 rounded-lg">
+          <table class="min-w-full text-sm divide-y divide-gray-200">
+            <thead class="bg-gray-50 text-gray-600 uppercase text-xs">
+              <tr>
+                <th class="px-3 py-2 text-left">{{ t('batch.relation.columns.type') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('batch.relation.columns.src') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('batch.relation.columns.dst') }}</th>
+                <th class="px-3 py-2 text-right">{{ t('batch.relation.columns.quantity') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('batch.relation.columns.uom') }}</th>
+                <th class="px-3 py-2 text-right">{{ t('batch.relation.columns.ratio') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('batch.relation.columns.effectiveAt') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('common.actions') }}</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              <tr v-for="relation in batchRelations" :key="relation.id" class="hover:bg-gray-50">
+                <td class="px-3 py-2 text-gray-700">{{ relationTypeLabel(relation.relation_type) }}</td>
+                <td class="px-3 py-2 text-gray-700">{{ batchLabel(relation.src_batch_id) }}</td>
+                <td class="px-3 py-2 text-gray-700">{{ batchLabel(relation.dst_batch_id) }}</td>
+                <td class="px-3 py-2 text-right text-gray-700">{{ formatNumber(relation.quantity) }}</td>
+                <td class="px-3 py-2 text-gray-700">{{ uomLabel(relation.uom_id) }}</td>
+                <td class="px-3 py-2 text-right text-gray-700">{{ formatNumber(relation.ratio) }}</td>
+                <td class="px-3 py-2 text-gray-600">{{ formatDateTime(relation.effective_at) }}</td>
+                <td class="px-3 py-2 space-x-2">
+                  <button class="px-2 py-1 text-xs rounded border hover:bg-gray-100" type="button" @click="openRelationDialog(relation)">
+                    {{ t('batch.relation.actions.edit') }}
+                  </button>
+                  <button class="px-2 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700" type="button" @click="deleteRelation(relation)">
+                    {{ t('batch.relation.actions.delete') }}
+                  </button>
+                </td>
+              </tr>
+              <tr v-if="batchRelations.length === 0">
+                <td class="px-3 py-6 text-center text-gray-500" colspan="8">{{ t('common.noData') }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="bg-white rounded-xl shadow border border-gray-200 px-4 py-5">
+        <header class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+          <div>
             <h2 class="text-lg font-semibold text-gray-800">{{ t('batch.edit.fillingTitle') }}</h2>
             <p class="text-xs text-gray-500">{{ t('batch.edit.fillingSubtitle') }}</p>
           </div>
@@ -361,6 +415,79 @@
         </footer>
       </div>
     </div>
+
+    <div v-if="relationDialog.open" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div class="w-full max-w-3xl bg-white rounded-xl shadow-lg border border-gray-200">
+        <header class="flex items-start justify-between px-4 py-3 border-b gap-4">
+          <div>
+            <h3 class="text-lg font-semibold text-gray-800">{{ relationDialog.editing ? t('batch.relation.dialog.editTitle') : t('batch.relation.dialog.title') }}</h3>
+            <p class="text-xs text-gray-500">{{ t('batch.relation.dialog.subtitle') }}</p>
+          </div>
+          <button class="text-sm px-2 py-1 rounded border hover:bg-gray-100" type="button" @click="closeRelationDialog">
+            {{ t('common.close') }}
+          </button>
+        </header>
+        <div class="p-4 space-y-4">
+          <div v-if="relationDialog.globalError" class="text-sm text-red-600">{{ relationDialog.globalError }}</div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">{{ t('batch.relation.fields.type') }}</label>
+              <select v-model="relationDialog.form.relation_type" class="w-full h-[40px] border rounded px-3 bg-white">
+                <option value="">{{ t('common.select') }}</option>
+                <option v-for="option in relationTypeOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+              </select>
+              <p v-if="relationDialog.errors.relation_type" class="mt-1 text-xs text-red-600">{{ relationDialog.errors.relation_type }}</p>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">{{ t('batch.relation.fields.effectiveAt') }}</label>
+              <input v-model="relationDialog.form.effective_at" type="datetime-local" class="w-full h-[40px] border rounded px-3" />
+              <p v-if="relationDialog.errors.effective_at" class="mt-1 text-xs text-red-600">{{ relationDialog.errors.effective_at }}</p>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">{{ t('batch.relation.fields.src') }}</label>
+              <select v-model="relationDialog.form.src_batch_id" class="w-full h-[40px] border rounded px-3 bg-white">
+                <option value="">{{ t('common.select') }}</option>
+                <option v-for="option in batchAllOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+              </select>
+              <p v-if="relationDialog.errors.src_batch_id" class="mt-1 text-xs text-red-600">{{ relationDialog.errors.src_batch_id }}</p>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">{{ t('batch.relation.fields.dst') }}</label>
+              <select v-model="relationDialog.form.dst_batch_id" class="w-full h-[40px] border rounded px-3 bg-white">
+                <option value="">{{ t('common.select') }}</option>
+                <option v-for="option in batchAllOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+              </select>
+              <p v-if="relationDialog.errors.dst_batch_id" class="mt-1 text-xs text-red-600">{{ relationDialog.errors.dst_batch_id }}</p>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">{{ t('batch.relation.fields.quantity') }}</label>
+              <input v-model="relationDialog.form.quantity" type="number" step="0.000001" class="w-full h-[40px] border rounded px-3 text-right" />
+              <p v-if="relationDialog.errors.quantity" class="mt-1 text-xs text-red-600">{{ relationDialog.errors.quantity }}</p>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">{{ t('batch.relation.fields.uom') }}</label>
+              <select v-model="relationDialog.form.uom_id" class="w-full h-[40px] border rounded px-3 bg-white">
+                <option value="">{{ t('common.select') }}</option>
+                <option v-for="option in uomOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+              </select>
+              <p v-if="relationDialog.errors.uom_id" class="mt-1 text-xs text-red-600">{{ relationDialog.errors.uom_id }}</p>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">{{ t('batch.relation.fields.ratio') }}</label>
+              <input v-model="relationDialog.form.ratio" type="number" step="0.000001" class="w-full h-[40px] border rounded px-3 text-right" />
+            </div>
+          </div>
+        </div>
+        <footer class="flex items-center justify-end gap-2 px-4 py-3 border-t">
+          <button class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-100" type="button" :disabled="relationDialog.loading" @click="closeRelationDialog">
+            {{ t('common.cancel') }}
+          </button>
+          <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50" type="button" :disabled="relationDialog.loading" @click="saveRelation">
+            {{ relationDialog.loading ? t('common.saving') : t('common.save') }}
+          </button>
+        </footer>
+      </div>
+    </div>
   </AdminLayout>
 </template>
 
@@ -430,6 +557,7 @@ const attrLoading = ref(false)
 const refOptionsCache = new Map<string, Array<{ value: string | number, label: string }>>()
 
 const batchOptions = ref<Array<{ value: string, label: string }>>([])
+const batchAllOptions = ref<Array<{ value: string, label: string }>>([])
 const batchOptionsLoading = ref(false)
 const batchStatusRows = ref<Array<{ status_code: string, label_ja: string | null, label_en: string | null, sort_order: number | null }>>([])
 const batchStatusLoading = ref(false)
@@ -462,6 +590,12 @@ interface SiteOption {
 }
 
 interface VolumeUomOption {
+  id: string
+  code: string
+  name: string | null
+}
+
+type UomOption = {
   id: string
   code: string
   name: string | null
@@ -510,6 +644,7 @@ type PackingFormState = {
 const packageCategories = ref<PackageCategoryOption[]>([])
 const siteOptions = ref<SiteOption[]>([])
 const volumeUoms = ref<VolumeUomOption[]>([])
+const uomOptionsRaw = ref<UomOption[]>([])
 const packingEvents = ref<PackingEvent[]>([])
 const packingNotice = ref('')
 const packingMovementQtyTouched = ref(false)
@@ -520,6 +655,47 @@ const packingDialog = reactive({
   globalError: '',
   errors: {} as Record<string, string>,
   form: null as PackingFormState | null,
+})
+
+type BatchRelationRow = {
+  id: string
+  src_batch_id: string
+  dst_batch_id: string
+  relation_type: string
+  quantity: number | null
+  uom_id: string | null
+  ratio: number | null
+  effective_at: string | null
+}
+
+type RelationFormState = {
+  id?: string
+  relation_type: string
+  src_batch_id: string
+  dst_batch_id: string
+  quantity: string
+  uom_id: string
+  ratio: string
+  effective_at: string
+}
+
+const batchRelations = ref<BatchRelationRow[]>([])
+const relationLoading = ref(false)
+const relationDialog = reactive({
+  open: false,
+  editing: false,
+  loading: false,
+  globalError: '',
+  errors: {} as Record<string, string>,
+  form: {
+    relation_type: '',
+    src_batch_id: '',
+    dst_batch_id: '',
+    quantity: '',
+    uom_id: '',
+    ratio: '',
+    effective_at: '',
+  } as RelationFormState,
 })
 
 function resolveLang() {
@@ -634,6 +810,23 @@ const volumeUomOptions = computed(() =>
     label: row.name ? `${row.code} - ${row.name}` : row.code,
   }))
 )
+
+const uomOptions = computed(() =>
+  uomOptionsRaw.value.map((row) => ({
+    value: row.id,
+    label: row.name ? `${row.code} - ${row.name}` : row.code,
+  }))
+)
+
+const relationTypeOptions = computed(() => ([
+  { value: 'split', label: t('batch.relation.types.split') },
+  { value: 'merge', label: t('batch.relation.types.merge') },
+  { value: 'blend', label: t('batch.relation.types.blend') },
+  { value: 'rework', label: t('batch.relation.types.rework') },
+  { value: 'repackage', label: t('batch.relation.types.repackage') },
+  { value: 'dilution', label: t('batch.relation.types.dilution') },
+  { value: 'transfer', label: t('batch.relation.types.transfer') },
+]))
 
 function formatPackageLabel(row: PackageCategoryOption) {
   const name = resolveNameI18n(row.name_i18n)
@@ -780,7 +973,7 @@ async function fetchBatch() {
   try {
     loadingBatch.value = true
     await ensureTenant()
-    await Promise.all([loadBatchOptions(), loadBatchStatusOptions(), loadSites(), fetchPackageCategories()])
+    await Promise.all([loadBatchOptions(), loadBatchStatusOptions(), loadSites(), fetchPackageCategories(), loadUoms()])
     const { data, error } = await supabase
       .from('mes_batches')
       .select('*')
@@ -796,11 +989,13 @@ async function fetchBatch() {
       batchForm.actual_start = toInputDate(data.actual_start)
       batchForm.actual_end = toInputDate(data.actual_end)
       batchForm.related_batch_id = resolveMetaString(data.meta, 'related_batch_id') ?? ''
+      await loadBatchRelations()
       await loadPackingEvents()
       await loadBatchAttributes(data.id)
     } else {
       attrFields.value = []
       packingEvents.value = []
+      batchRelations.value = []
     }
   } catch (err) {
     console.error(err)
@@ -1016,9 +1211,9 @@ async function loadBatchOptions() {
       .eq('tenant_id', tenant)
       .order('batch_code')
     if (error) throw error
-    batchOptions.value = (data ?? [])
-      .filter((row: any) => row.id !== batchId.value)
-      .map((row: any) => ({ value: row.id, label: row.batch_code }))
+    const all = (data ?? []).map((row: any) => ({ value: row.id, label: row.batch_code }))
+    batchAllOptions.value = all
+    batchOptions.value = all.filter((row: any) => row.value !== batchId.value)
   } catch (err) {
     console.error(err)
   } finally {
@@ -1084,6 +1279,54 @@ async function loadVolumeUoms() {
   } catch (err) {
     console.error(err)
     volumeUoms.value = []
+  }
+}
+
+async function loadUoms() {
+  try {
+    const { data, error } = await supabase
+      .from('mst_uom')
+      .select('id, code, name')
+      .order('code')
+    if (error) throw error
+    uomOptionsRaw.value = (data ?? []).map((row: any) => ({
+      id: row.id,
+      code: row.code,
+      name: row.name ?? null,
+    }))
+  } catch (err) {
+    console.error(err)
+    uomOptionsRaw.value = []
+  }
+}
+
+async function loadBatchRelations() {
+  if (!batchId.value) return
+  try {
+    relationLoading.value = true
+    const tenant = await ensureTenant()
+    const { data, error } = await supabase
+      .from('mes_batch_relation')
+      .select('id, src_batch_id, dst_batch_id, relation_type, quantity, uom_id, ratio, effective_at')
+      .eq('tenant_id', tenant)
+      .or(`src_batch_id.eq.${batchId.value},dst_batch_id.eq.${batchId.value}`)
+      .order('effective_at', { ascending: false })
+    if (error) throw error
+    batchRelations.value = (data ?? []).map((row: any) => ({
+      id: row.id,
+      src_batch_id: row.src_batch_id,
+      dst_batch_id: row.dst_batch_id,
+      relation_type: row.relation_type,
+      quantity: row.quantity != null ? Number(row.quantity) : null,
+      uom_id: row.uom_id ?? null,
+      ratio: row.ratio != null ? Number(row.ratio) : null,
+      effective_at: row.effective_at ?? null,
+    }))
+  } catch (err) {
+    console.error(err)
+    batchRelations.value = []
+  } finally {
+    relationLoading.value = false
   }
 }
 
@@ -1198,6 +1441,30 @@ async function saveBatch() {
 
 function generateLocalId() {
   return `local-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`
+}
+
+function openRelationDialog(row?: BatchRelationRow) {
+  relationDialog.open = true
+  relationDialog.editing = Boolean(row)
+  relationDialog.loading = false
+  relationDialog.globalError = ''
+  relationDialog.errors = {}
+  relationDialog.form = {
+    id: row?.id,
+    relation_type: row?.relation_type ?? '',
+    src_batch_id: row?.src_batch_id ?? (batchId.value ?? ''),
+    dst_batch_id: row?.dst_batch_id ?? '',
+    quantity: row?.quantity != null ? String(row.quantity) : '',
+    uom_id: row?.uom_id ?? '',
+    ratio: row?.ratio != null ? String(row.ratio) : '',
+    effective_at: toInputDateTime(row?.effective_at ?? new Date().toISOString()),
+  }
+}
+
+function closeRelationDialog() {
+  relationDialog.open = false
+  relationDialog.errors = {}
+  relationDialog.globalError = ''
 }
 
 function openPackingDialog() {
@@ -1361,6 +1628,79 @@ async function savePackingEvent(addAnother: boolean) {
     packingDialog.globalError = t('batch.packaging.errors.saveFailed')
   } finally {
     packingDialog.loading = false
+  }
+}
+
+function validateRelationForm(form: RelationFormState) {
+  const errors: Record<string, string> = {}
+  if (!form.relation_type) errors.relation_type = t('batch.relation.errors.typeRequired')
+  if (!form.src_batch_id) errors.src_batch_id = t('batch.relation.errors.srcRequired')
+  if (!form.dst_batch_id) errors.dst_batch_id = t('batch.relation.errors.dstRequired')
+  if (form.src_batch_id && form.dst_batch_id && form.src_batch_id === form.dst_batch_id) {
+    errors.dst_batch_id = t('batch.relation.errors.sameBatch')
+  }
+  const qty = toNumber(form.quantity)
+  if (form.quantity && qty == null) errors.quantity = t('batch.relation.errors.quantityInvalid')
+  if (qty != null && !form.uom_id) errors.uom_id = t('batch.relation.errors.uomRequired')
+  if (!form.effective_at) errors.effective_at = t('batch.relation.errors.effectiveRequired')
+  return errors
+}
+
+async function saveRelation() {
+  if (!relationDialog.form) return
+  relationDialog.errors = {}
+  relationDialog.globalError = ''
+  const errors = validateRelationForm(relationDialog.form)
+  if (Object.keys(errors).length) {
+    relationDialog.errors = errors
+    return
+  }
+  try {
+    relationDialog.loading = true
+    const tenant = await ensureTenant()
+    const payload = {
+      tenant_id: tenant,
+      src_batch_id: relationDialog.form.src_batch_id,
+      dst_batch_id: relationDialog.form.dst_batch_id,
+      relation_type: relationDialog.form.relation_type,
+      quantity: toNumber(relationDialog.form.quantity),
+      uom_id: relationDialog.form.uom_id || null,
+      ratio: toNumber(relationDialog.form.ratio),
+      effective_at: fromInputDateTime(relationDialog.form.effective_at) ?? new Date().toISOString(),
+    }
+    if (relationDialog.editing && relationDialog.form.id) {
+      const { error } = await supabase
+        .from('mes_batch_relation')
+        .update(payload)
+        .eq('id', relationDialog.form.id)
+      if (error) throw error
+    } else {
+      const { error } = await supabase
+        .from('mes_batch_relation')
+        .insert(payload)
+      if (error) throw error
+    }
+    relationDialog.open = false
+    await loadBatchRelations()
+  } catch (err) {
+    console.error(err)
+    relationDialog.globalError = t('batch.relation.errors.saveFailed')
+  } finally {
+    relationDialog.loading = false
+  }
+}
+
+async function deleteRelation(row: BatchRelationRow) {
+  if (!window.confirm(t('batch.relation.confirmDelete'))) return
+  try {
+    const { error } = await supabase
+      .from('mes_batch_relation')
+      .delete()
+      .eq('id', row.id)
+    if (error) throw error
+    await loadBatchRelations()
+  } catch (err) {
+    console.error(err)
   }
 }
 
@@ -1701,6 +2041,38 @@ function formatPackingFilling(event: PackingEvent) {
   return `${totalUnits} / ${volumeLabel}`
 }
 
+function relationTypeLabel(value: string) {
+  const match = relationTypeOptions.value.find((option) => option.value === value)
+  return match?.label ?? value
+}
+
+function batchLabel(batchIdValue: string | null | undefined) {
+  if (!batchIdValue) return '—'
+  const match = batchAllOptions.value.find((row) => row.value === batchIdValue)
+  return match?.label ?? batchIdValue
+}
+
+function uomLabel(uomId: string | null | undefined) {
+  if (!uomId) return '—'
+  const match = uomOptionsRaw.value.find((row) => row.id === uomId)
+  if (match) return match.name ? `${match.code} - ${match.name}` : match.code
+  return uomId
+}
+
+function formatDateTime(value: string | null | undefined) {
+  if (!value) return '—'
+  try {
+    return new Date(value).toLocaleString()
+  } catch {
+    return value
+  }
+}
+
+function formatNumber(value: number | null | undefined) {
+  if (value == null || Number.isNaN(value)) return '—'
+  return Number(value).toLocaleString(undefined, { maximumFractionDigits: 6 })
+}
+
 function showPackingNotice(message: string) {
   packingNotice.value = message
   window.setTimeout(() => {
@@ -1905,7 +2277,7 @@ function newPackingForm(type: PackingType): PackingFormState {
 onMounted(async () => {
   try {
     await ensureTenant()
-    await Promise.all([loadBatchOptions(), loadBatchStatusOptions(), loadSites(), loadVolumeUoms(), fetchPackageCategories(), loadPackingEvents()])
+    await Promise.all([loadBatchOptions(), loadBatchStatusOptions(), loadSites(), loadVolumeUoms(), loadUoms(), fetchPackageCategories(), loadPackingEvents(), loadBatchRelations()])
   } catch (err) {
     console.error(err)
   }

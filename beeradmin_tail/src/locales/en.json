@@ -256,6 +256,58 @@
       "parentBatchCode": "Parent batch code",
       "parentBatchQuantity": "Quantity (L)"
     },
+    "relation": {
+      "title": "Batch Relations",
+      "subtitle": "Track splits, merges, and other batch lineage.",
+      "actions": {
+        "add": "Add relation",
+        "edit": "Edit",
+        "delete": "Delete"
+      },
+      "columns": {
+        "type": "Relation type",
+        "src": "Source batch",
+        "dst": "Destination batch",
+        "quantity": "Quantity",
+        "uom": "UOM",
+        "ratio": "Ratio",
+        "effectiveAt": "Effective at"
+      },
+      "fields": {
+        "type": "Relation type",
+        "src": "Source batch",
+        "dst": "Destination batch",
+        "quantity": "Quantity",
+        "uom": "UOM",
+        "ratio": "Ratio",
+        "effectiveAt": "Effective at"
+      },
+      "types": {
+        "split": "Split",
+        "merge": "Merge",
+        "blend": "Blend",
+        "rework": "Rework",
+        "repackage": "Repackage",
+        "dilution": "Dilution",
+        "transfer": "Transfer"
+      },
+      "dialog": {
+        "title": "Add Batch Relation",
+        "editTitle": "Edit Batch Relation",
+        "subtitle": "Set the relation type and related batches."
+      },
+      "errors": {
+        "typeRequired": "Relation type is required.",
+        "srcRequired": "Source batch is required.",
+        "dstRequired": "Destination batch is required.",
+        "sameBatch": "Source and destination must be different.",
+        "quantityInvalid": "Invalid quantity.",
+        "uomRequired": "UOM is required when quantity is set.",
+        "effectiveRequired": "Effective date/time is required.",
+        "saveFailed": "Failed to save relation."
+      },
+      "confirmDelete": "Delete this batch relation?"
+    },
     "ingredients": {
       "sectionTitle": "Ingredients",
       "sectionSubtitle": "Manage the recipe ingredients used for this batch.",

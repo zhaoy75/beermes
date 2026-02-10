@@ -57,6 +57,20 @@
               <div v-if="taxEvent.intent === 'return'" class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
                 {{ t('producedBeer.taxEvent.steps.intent.returnHint') }}
               </div>
+              <div class="rounded-lg border border-gray-200 p-3 text-sm text-gray-600 space-y-2">
+                <label class="block text-xs uppercase text-gray-500">{{ t('producedBeer.taxEvent.panel.taxTreatment') }}</label>
+                <select
+                  v-model="taxEvent.taxTreatment"
+                  class="w-full h-[40px] border rounded px-3 bg-white"
+                  :disabled="!taxEvent.intent"
+                >
+                  <option value="" disabled>{{ t('producedBeer.taxEvent.treatments.unselected') }}</option>
+                  <option v-for="option in taxTreatmentOptions" :key="option.value" :value="option.value">
+                    {{ option.label }}
+                  </option>
+                </select>
+                <p class="text-xs text-gray-500">{{ t('producedBeer.taxEvent.panel.taxTreatmentHint', { auto: autoTaxTreatmentLabel }) }}</p>
+              </div>
             </section>
 
             <section v-if="currentStep === 2" class="space-y-4">
@@ -228,6 +242,7 @@
               <div class="text-sm text-gray-600">
                 <div class="text-xs uppercase text-gray-500">{{ t('producedBeer.taxEvent.panel.taxTreatment') }}</div>
                 <div class="text-base font-semibold text-gray-900">{{ taxTreatmentLabel }}</div>
+                <div class="text-xs text-gray-500">{{ t('producedBeer.taxEvent.panel.taxTreatmentAuto', { auto: autoTaxTreatmentLabel }) }}</div>
               </div>
               <div class="text-sm text-gray-600">
                 <div class="text-xs uppercase text-gray-500">{{ t('producedBeer.taxEvent.panel.status') }}</div>
@@ -326,6 +341,7 @@ const intentOptions = computed(() => ([
 
 const taxEvent = reactive({
   intent: '',
+  taxTreatment: '',
   status: 'draft',
   shipFromSite: '',
   shipToParty: '',
@@ -353,21 +369,41 @@ const taxEvent = reactive({
   blNo: '',
 })
 
-const taxTreatmentLabel = computed(() => {
+const taxTreatmentOptions = computed(() => ([
+  { value: 'taxed', label: t('producedBeer.taxEvent.treatments.taxed') },
+  { value: 'export', label: t('producedBeer.taxEvent.treatments.export') },
+  { value: 'return', label: t('producedBeer.taxEvent.treatments.return') },
+  { value: 'inbound', label: t('producedBeer.taxEvent.treatments.inbound') },
+  { value: 'nontaxOther', label: t('producedBeer.taxEvent.treatments.nontaxOther') },
+]))
+
+const autoTaxTreatment = computed(() => {
   switch (taxEvent.intent) {
     case 'domestic':
-      return t('producedBeer.taxEvent.treatments.taxed')
+      return 'taxed'
     case 'export':
-      return t('producedBeer.taxEvent.treatments.export')
+      return 'export'
     case 'return':
-      return t('producedBeer.taxEvent.treatments.return')
+      return 'return'
     case 'inbound':
-      return t('producedBeer.taxEvent.treatments.inbound')
+      return 'inbound'
     case 'nontax_other':
-      return t('producedBeer.taxEvent.treatments.nontaxOther')
+      return 'nontaxOther'
     default:
-      return t('producedBeer.taxEvent.treatments.unselected')
+      return ''
   }
+})
+
+const autoTaxTreatmentLabel = computed(() => {
+  const match = taxTreatmentOptions.value.find((option) => option.value === autoTaxTreatment.value)
+  return match?.label ?? t('producedBeer.taxEvent.treatments.unselected')
+})
+
+const taxTreatmentLabel = computed(() => {
+  const selected = taxTreatmentOptions.value.find((option) => option.value === taxEvent.taxTreatment)
+  if (selected) return selected.label
+  if (!taxEvent.intent) return t('producedBeer.taxEvent.treatments.unselected')
+  return autoTaxTreatmentLabel.value
 })
 
 const intentLabel = computed(() => {
@@ -390,6 +426,7 @@ function selectIntent(value: string) {
     if (!confirmed) return
   }
   taxEvent.intent = value
+  taxEvent.taxTreatment = autoTaxTreatment.value
 }
 
 function addItem() {

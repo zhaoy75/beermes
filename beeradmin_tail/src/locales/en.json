@@ -969,7 +969,7 @@
         "waste": "Disposal"
       },
       "actions": {
-        "new": "New movement",
+        "new": "Tax Movement Regist...",
         "edit": "Edit movement",
         "exportCsv": "Export CSV"
       },
@@ -1068,7 +1068,7 @@
         "intent": {
           "label": "Intent",
           "title": "Select Intent",
-          "subtitle": "Choose the business intent. Tax treatment is computed automatically.",
+          "subtitle": "Choose the business intent. Tax treatment is auto-selected, but you can adjust it.",
           "returnHint": "Return acceptance must reference an original posted shipment."
         },
         "parties": {
@@ -1098,12 +1098,12 @@
         "export": "Export Shipment",
         "return": "Return Acceptance",
         "inbound": "Inbound Receipt",
-        "nontaxOther": "Non-taxable Removal – Other",
+        "nontaxOther": "Non-taxed Removal – Other",
         "domesticNote": "Taxed removal for domestic shipments.",
         "exportNote": "Tax-exempt export shipment.",
         "returnNote": "Return acceptance tied to original shipment.",
         "inboundNote": "Receipt from another brewery or source.",
-        "nontaxOtherNote": "Non-taxable removal with reason code.",
+        "nontaxOtherNote": "Non-taxed removal with reason code.",
         "unselected": "Not selected"
       },
       "treatments": {
@@ -1111,7 +1111,7 @@
         "export": "輸出免税",
         "return": "戻入",
         "inbound": "移入",
-        "nontaxOther": "非課税移出",
+        "nontaxOther": "非納税移出",
         "unselected": "—"
       },
       "fields": {
@@ -1162,6 +1162,8 @@
       "panel": {
         "title": "Tax Summary",
         "taxTreatment": "Tax treatment",
+        "taxTreatmentHint": "Auto suggestion: {auto}",
+        "taxTreatmentAuto": "Auto suggestion: {auto}",
         "status": "Status",
         "checklistTitle": "Validation Checklist",
         "checkIntent": "Intent selected",

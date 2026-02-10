@@ -969,7 +969,7 @@
         "waste": "廃棄"
       },
       "actions": {
-        "new": "移出登録",
+        "new": "酒税関連登録",
         "edit": "移出編集",
         "exportCsv": "CSV出力"
       },
@@ -1068,7 +1068,7 @@
         "intent": {
           "label": "目的",
           "title": "目的の選択",
-          "subtitle": "目的を選択すると税区分が自動決定されます。",
+          "subtitle": "目的を選択すると税区分が自動提案されます。必要に応じて変更できます。",
           "returnHint": "返品受入は元の移出イベントの参照が必要です。"
         },
         "parties": {
@@ -1098,12 +1098,12 @@
         "export": "輸出",
         "return": "返品受入",
         "inbound": "受入",
-        "nontaxOther": "非課税移出：その他",
+        "nontaxOther": "非納税移出：その他",
         "domesticNote": "国内販売に伴う課税移出。",
         "exportNote": "輸出免税の移出。",
         "returnNote": "元の移出イベントに紐づく返品。",
         "inboundNote": "他製造場などからの搬入。",
-        "nontaxOtherNote": "理由コード必須の非課税移出。",
+        "nontaxOtherNote": "理由コード必須の非納税移出。",
         "unselected": "未選択"
       },
       "treatments": {
@@ -1111,7 +1111,7 @@
         "export": "輸出免税",
         "return": "戻入",
         "inbound": "移入",
-        "nontaxOther": "非課税移出",
+        "nontaxOther": "非納税移出",
         "unselected": "—"
       },
       "fields": {
@@ -1162,6 +1162,8 @@
       "panel": {
         "title": "税区分サマリー",
         "taxTreatment": "税区分",
+        "taxTreatmentHint": "自動提案: {auto}",
+        "taxTreatmentAuto": "自動提案: {auto}",
         "status": "ステータス",
         "checklistTitle": "検証チェック",
         "checkIntent": "目的の選択",

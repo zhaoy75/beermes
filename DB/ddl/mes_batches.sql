@@ -36,12 +36,29 @@ CREATE TABLE public.mes_batches (
 	notes text NULL,
 	meta jsonb DEFAULT '{}'::jsonb NULL,
 	status public."mes_batch_status" DEFAULT 'planned'::mes_batch_status NULL,
+	product_name text NULL,
+	actual_yield numeric NULL,
+	actual_yield_uom uuid NULL,
 	CONSTRAINT mes_batches_pkey PRIMARY KEY (id),
 	CONSTRAINT mes_batches_tenant_id_batch_code_key UNIQUE (tenant_id, batch_code)
 );
 CREATE INDEX idx_mes_batches_created_at ON public.mes_batches USING btree (created_at);
 CREATE INDEX idx_mes_batches_planned_start ON public.mes_batches USING btree (planned_start);
 CREATE INDEX idx_mes_batches_tenant_batch_code ON public.mes_batches USING btree (tenant_id, batch_code);
+
+-- Permissions
+
+ALTER TABLE public.mes_batches OWNER TO postgres;
+GRANT ALL ON TABLE public.mes_batches TO postgres;
+GRANT ALL ON TABLE public.mes_batches TO anon;
+GRANT ALL ON TABLE public.mes_batches TO authenticated;
+GRANT ALL ON TABLE public.mes_batches TO service_role;
+
+
+-- public.mes_batches foreign keys
+
+ALTER TABLE public.mes_batches ADD CONSTRAINT fk_mes_batches_actual_yield_uom FOREIGN KEY (actual_yield_uom) REFERENCES public.mst_uom(id);
+ALTER TABLE public.mes_batches ADD CONSTRAINT mes_batches_recipe_id_fkey FOREIGN KEY (recipe_id) REFERENCES public.mes_recipes(id);
 
 
 -- public.mes_batches foreign keys

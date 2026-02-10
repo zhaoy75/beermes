@@ -23,8 +23,14 @@
 
         <form class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" @submit.prevent>
           <div>
-            <label class="block text-sm text-gray-600 mb-1" for="batchName">{{ t('batch.edit.batchName') }}</label>
-            <input id="batchName" v-model.trim="batchForm.batch_label" type="text" class="w-full h-[40px] border rounded px-3" />
+            <label class="block text-sm text-gray-600 mb-1" for="batchCode">{{ t('batch.edit.batchCode') }}</label>
+            <input
+              id="batchCode"
+              :value="batch?.batch_code ?? '—'"
+              type="text"
+              class="w-full h-[40px] border rounded px-3 bg-gray-50 text-gray-600"
+              readonly
+            />
           </div>
           <div>
             <label class="block text-sm text-gray-600 mb-1" for="batchStatus">{{ t('batch.edit.status') }}</label>

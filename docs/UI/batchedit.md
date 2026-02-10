@@ -32,8 +32,11 @@
 
 ## Field Definitions
 ### basic information section 
-    バッチ名
+    バッチコード
     ステータス
+    product_name 
+	　actual_yield 
+	  actual_yield_uom dropdown list from uom with domain volume
     予定開始日  with calendar picker
     予定終了日  with calendar picker
     実績開始日　with calendar picker
@@ -88,7 +91,7 @@
     the packaging dialog should follow the specification defined in batch_packing.md
 
 ## Action
-
+    when 　actual_yield is saved, please update the total product volume in filling section 
 
 ## Business Rules
 

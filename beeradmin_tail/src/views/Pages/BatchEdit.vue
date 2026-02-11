@@ -11,14 +11,19 @@
             <h2 class="text-lg font-semibold text-gray-800">{{ t('batch.edit.infoTitle') }}</h2>
             <p class="text-xs text-gray-500">{{ t('batch.edit.infoSubtitle') }}</p>
           </div>
-          <button
-            class="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
-            type="button"
-            :disabled="savingBatch"
-            @click="saveBatch"
-          >
-            {{ savingBatch ? t('common.saving') : t('common.save') }}
-          </button>
+          <div class="flex items-center gap-2">
+            <button class="px-3 py-2 rounded border hover:bg-gray-50" type="button" @click="openRelationDialog()">
+              {{ t('batch.relation.actions.add') }}
+            </button>
+            <button
+              class="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+              type="button"
+              :disabled="savingBatch"
+              @click="saveBatch"
+            >
+              {{ savingBatch ? t('common.saving') : t('common.save') }}
+            </button>
+          </div>
         </header>
 
         <form class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" @submit.prevent>
@@ -37,6 +42,21 @@
             <select id="batchStatus" v-model="batchForm.status" class="w-full h-[40px] border rounded px-3 bg-white" :disabled="batchStatusLoading">
               <option value="">{{ t('common.select') }}</option>
               <option v-for="option in batchStatusOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm text-gray-600 mb-1" for="batchProductName">{{ t('batch.edit.productName') }}</label>
+            <input id="batchProductName" v-model.trim="batchForm.product_name" type="text" class="w-full h-[40px] border rounded px-3" />
+          </div>
+          <div>
+            <label class="block text-sm text-gray-600 mb-1" for="batchActualYield">{{ t('batch.edit.actualYield') }}</label>
+            <input id="batchActualYield" v-model="batchForm.actual_yield" type="number" step="0.000001" class="w-full h-[40px] border rounded px-3 text-right" />
+          </div>
+          <div>
+            <label class="block text-sm text-gray-600 mb-1" for="batchActualYieldUom">{{ t('batch.edit.actualYieldUom') }}</label>
+            <select id="batchActualYieldUom" v-model="batchForm.actual_yield_uom" class="w-full h-[40px] border rounded px-3 bg-white">
+              <option value="">{{ t('common.select') }}</option>
+              <option v-for="option in volumeUomOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
             </select>
           </div>
           <div>
@@ -103,32 +123,21 @@
 
         <hr class="my-5 border-gray-200" />
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div>
-            <label class="block text-sm text-gray-600 mb-1" for="relatedBatch">{{ t('batch.edit.relatedBatch') }}</label>
-            <select id="relatedBatch" v-model="batchForm.related_batch_id" class="w-full h-[40px] border rounded px-3 bg-white" :disabled="batchOptionsLoading">
-              <option value="">{{ t('common.none') }}</option>
-              <option v-for="option in batchOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-            </select>
-          </div>
-        </div>
-      </section>
-
-      <section class="bg-white rounded-xl shadow border border-gray-200 px-4 py-5">
-        <header class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
-          <div>
-            <h2 class="text-lg font-semibold text-gray-800">{{ t('batch.relation.title') }}</h2>
-            <p class="text-xs text-gray-500">{{ t('batch.relation.subtitle') }}</p>
-          </div>
-          <div class="flex items-center gap-2">
-            <button class="px-3 py-2 rounded border hover:bg-gray-50" type="button" :disabled="relationLoading" @click="openRelationDialog()">
-              {{ t('batch.relation.actions.add') }}
-            </button>
-          </div>
-        </header>
-
         <div v-if="relationLoading" class="text-sm text-gray-500">{{ t('common.loading') }}</div>
-        <div v-else class="overflow-x-auto border border-gray-200 rounded-lg">
+        <div v-else-if="batchRelations.length > 0">
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+            <div>
+              <h3 class="text-base font-semibold text-gray-800">{{ t('batch.relation.title') }}</h3>
+              <p class="text-xs text-gray-500">{{ t('batch.relation.subtitle') }}</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button class="px-3 py-2 rounded border hover:bg-gray-50" type="button" :disabled="relationLoading" @click="openRelationDialog()">
+                {{ t('batch.relation.actions.add') }}
+              </button>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto border border-gray-200 rounded-lg">
           <table class="min-w-full text-sm divide-y divide-gray-200">
             <thead class="bg-gray-50 text-gray-600 uppercase text-xs">
               <tr>
@@ -160,11 +169,9 @@
                   </button>
                 </td>
               </tr>
-              <tr v-if="batchRelations.length === 0">
-                <td class="px-3 py-6 text-center text-gray-500" colspan="8">{{ t('common.noData') }}</td>
-              </tr>
             </tbody>
           </table>
+          </div>
         </div>
       </section>
 
@@ -519,6 +526,9 @@ const savingBatch = ref(false)
 const batchForm = reactive({
   batch_label: '',
   status: '',
+  product_name: '',
+  actual_yield: '',
+  actual_yield_uom: '',
   planned_start: '',
   planned_end: '',
   actual_start: '',
@@ -990,6 +1000,9 @@ async function fetchBatch() {
     if (data) {
       batchForm.batch_label = data.batch_label ?? resolveMetaLabel(data.meta) ?? ''
       batchForm.status = data.status ?? ''
+      batchForm.product_name = data.product_name ?? ''
+      batchForm.actual_yield = data.actual_yield != null ? String(data.actual_yield) : ''
+      batchForm.actual_yield_uom = data.actual_yield_uom ?? ''
       batchForm.planned_start = toInputDate(data.planned_start)
       batchForm.planned_end = toInputDate(data.planned_end)
       batchForm.actual_start = toInputDate(data.actual_start)
@@ -1425,6 +1438,9 @@ async function saveBatch() {
     const update: Record<string, any> = {
       status: batchForm.status || null,
       batch_label: trimmedBatchLabel || null,
+      product_name: batchForm.product_name.trim() || null,
+      actual_yield: toNumber(batchForm.actual_yield),
+      actual_yield_uom: batchForm.actual_yield_uom || null,
       planned_start: fromInputDate(batchForm.planned_start),
       planned_end: fromInputDate(batchForm.planned_end),
       actual_start: fromInputDate(batchForm.actual_start),
@@ -2115,6 +2131,11 @@ function siteLabel(siteId?: string | null) {
 
 function resolveBatchVolume(source: any): number | null {
   if (!source) return null
+  if (source.actual_yield != null) {
+    const uomCode = resolveUomCode(source.actual_yield_uom)
+    const liters = convertToLiters(Number(source.actual_yield), uomCode)
+    if (liters != null) return liters
+  }
   const kpiRows = parseKpiArray(source.kpi)
   const actual = findKpiValue(kpiRows, 'volume', 'actual') ?? findKpiValue(kpiRows, 'volume_l', 'actual')
   if (actual != null) return actual

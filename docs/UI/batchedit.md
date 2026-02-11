@@ -17,10 +17,9 @@
 ### Body: 
 - There are 5 sections
   1. basic information
-  2. batch relation (new)
-  3. material information (not needed in this phase)
-  4. step edit (not needed in this phase)
-  5. filling 
+  2. material information (not needed in this phase)
+  3. step edit (not needed in this phase)
+  4. filling 
 
 
   
@@ -46,8 +45,12 @@
       fields in entity_attr_set in domain "batch". 
         field name should be choose according to system language setting
         field text and input method should follow the attr_def rule
+
+    a horizontal line 
+      batch relation list 
+      #if there is no related with current batch show "nothing exist"       
   　 
-### batch relation section (new)
+### batch relation list 
     purpose: manage lineage between batches (mes_batch_relation)
     layout:
       - table list of relations for current batch

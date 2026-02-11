@@ -87,6 +87,11 @@ Defaults:
 
 ### Filling Section (Filling only)
 Components:
+- Tank Fill Start Volume
+- Tank Left Volume
+- Tank Loss Volume
+- Tank Filling End button
+a horizontal line 
 - Add Filling button
 - Filling lines table
 
@@ -102,6 +107,7 @@ Table actions:
 Derived values (optional):
 - Volume per unit
 - Total line volume
+- Loss = Fill Start Volume - Left Volume - Total Volume
 
 Totals:
 - Total units

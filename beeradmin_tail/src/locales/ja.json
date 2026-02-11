@@ -200,6 +200,9 @@
       "actualStart": "実績開始",
       "actualEnd": "実績終了",
       "batchName": "バッチ名",
+      "productName": "製品名",
+      "actualYield": "実績生産量",
+      "actualYieldUom": "実績生産単位",
       "relatedBatch": "関連バッチ",
       "fillingTitle": "詰口",
       "fillingSubtitle": "移動・詰口情報のサマリーです。",
@@ -257,8 +260,8 @@
       "parentBatchQuantity": "数量 (L)"
     },
     "relation": {
-      "title": "バッチ関係",
-      "subtitle": "バッチの分割・統合などの関係を記録します。",
+      "title": "関連バッチ",
+      "subtitle": "このバッチに関連するバッチを説明します。",
       "actions": {
         "add": "関係を追加",
         "edit": "編集",
@@ -296,6 +299,7 @@
         "editTitle": "バッチ関係の編集",
         "subtitle": "関係種別と対象バッチを設定してください。"
       },
+      "empty": "nothing exist",
       "errors": {
         "typeRequired": "関係種別は必須です。",
         "srcRequired": "元バッチは必須です。",

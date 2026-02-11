@@ -200,6 +200,9 @@
       "actualStart": "Actual start",
       "actualEnd": "Actual end",
       "batchName": "Batch name",
+      "productName": "Product name",
+      "actualYield": "Actual yield",
+      "actualYieldUom": "Actual yield UOM",
       "relatedBatch": "Related batch",
       "fillingTitle": "Filling",
       "fillingSubtitle": "Summary of move and filling information.",
@@ -257,8 +260,8 @@
       "parentBatchQuantity": "Quantity (L)"
     },
     "relation": {
-      "title": "Batch Relations",
-      "subtitle": "Track splits, merges, and other batch lineage.",
+      "title": "Related Batches",
+      "subtitle": "Describe the batches related to this batch.",
       "actions": {
         "add": "Add relation",
         "edit": "Edit",
@@ -296,6 +299,7 @@
         "editTitle": "Edit Batch Relation",
         "subtitle": "Set the relation type and related batches."
       },
+      "empty": "nothing exist",
       "errors": {
         "typeRequired": "Relation type is required.",
         "srcRequired": "Source batch is required.",

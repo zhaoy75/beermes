@@ -4,8 +4,6 @@
 
   "enums": {
     "movement_intent": [
-      "BREW_PRODUCE",
-      "PACKAGE_FILL",
       "INTERNAL_TRANSFER",
       "SHIP_DOMESTIC",
       "SHIP_EXPORT",
@@ -50,6 +48,17 @@
       "EXPORT_EXEMPT",
       "RETURN_TO_FACTORY"
     ]
+  },
+
+  "movement_intent_labels": {
+    "BREW_PRODUCE": { "ja": "生成（製造）", "en": "Produce (Brew)" },
+    "PACKAGE_FILL": { "ja": "詰口（充填）", "en": "Package Fill" },
+    "INTERNAL_TRANSFER": { "ja": "社内移動", "en": "Internal Transfer" },
+    "SHIP_DOMESTIC": { "ja": "国内出荷", "en": "Domestic Shipment" },
+    "SHIP_EXPORT": { "ja": "輸出（免税）", "en": "Export (Exempt)" },
+    "RETURN_FROM_CUSTOMER": { "ja": "返品（戻入）", "en": "Return from Customer" },
+    "LOSS": { "ja": "滅失（事故・破損）", "en": "Loss" },
+    "DISPOSE": { "ja": "廃棄", "en": "Dispose" }
   },
 
   "tax_decision_definitions": [
@@ -270,10 +279,25 @@
       "lot_tax_type": "TAX_SUSPENDED",
       "allowed_tax_decisions": [
         {
-          "tax_decision_code": "NONE",
-          "tax_event": "NONE",
+          "tax_decision_code": "NON_TAXABLE_REMOVAL",
+          "tax_event": "NON_TAXABLE_REMOVAL",
           "result_lot_tax_type": "TAX_SUSPENDED",
           "default": true,
+          "lines_rules": {
+            "allow_partial_quantity": true,
+            "require_full_lot": false,
+            "allow_multiple_lots": true,
+            "lot_split_required": false,
+            "approval_required": false,
+            "require_reference_document": false,
+            "require_reason_code": false
+          }
+        },
+        {
+          "tax_decision_code": "TAXABLE_REMOVAL",
+          "tax_event": "TAXABLE_REMOVAL",
+          "result_lot_tax_type": "TAX_PAID",
+          "default": false,
           "lines_rules": {
             "allow_partial_quantity": true,
             "require_full_lot": false,

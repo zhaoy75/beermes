@@ -37,44 +37,56 @@ Step 4 → fill necessary information
 Step 5 → confirmation
 
 --------------------------------------------------
-Step 1: Select movement_intent
+Step 1: Select movement_intent(移動目的)
 --------------------------------------------------
 UI:
-- List movement intents from `movement_intent_rules` with i18n labels.
+- List movement intents from `movement_intent` with labels read from `movement_intent_labels`
 - Show short rule summary (allowed site types, edge types).
 
 System behavior:
-- Loads `movement_intent_rules[<intent>]`
+- Loads movementrule.jsonc
 - Initializes default tax decision code if rule has choices.
 
 --------------------------------------------------
-Step 2: Select src/dst site
+Step 2: Select src/dst site（移動元先酒税情報入力）
 --------------------------------------------------
 UI:
 - Select Source Site (required)
+  - select source site type (dropdown list including allowed site types got from step 1)
+  - select source site (dropdown list)
+
 - Select Destination Site (required if `dst_required=true`)
+  - select destination site type (dropdown list including allowed site types got from step 1)
+  - select destination site (dropdown list)
+
+- Tax Decision Code 
+  - set default Tax Decision Code from tax_transformation_rules based on movement_intent, src site type and dst site type
+  - if user want to choose other allowed_tax_decision. user need to input reason 
 
 System behavior:
-- Derive `src_site_type`, `dst_site_type` based on site master data.
 - Validate against allowed site types in the rule.
 - Compute default tax decision code (if rule requires a decision).
 - Preview derived tax event using `tax_transformation_rules`.
 
 --------------------------------------------------
-Step 3: Select product/lot
+Step 3: Select lot　（移動商品選択）
 --------------------------------------------------
 UI:
-- Select Product
-- Select Lot(s) from inventory for Source Site
+- Select Lot(s) from inventory (inv_movement and inv_movement_lines) for Source Site
+  - lot code
+  - related batch code
+  - batch info
+  - package info (volume, uom )
+  - quantity
 - If multiple lots have different `lot_tax_type`, show tax preview changes.
 
 System behavior:
-- Determine `src_lot_tax_type` from selected lot.
+- find `src_lot_tax_type` from selected lot.
 - If destination lot is created/selected, determine `dst_lot_tax_type`.
 - If multiple candidates change tax event, highlight options.
 
 --------------------------------------------------
-Step 4: Fill necessary information
+Step 4: Fill necessary information（詳細情報入力）
 --------------------------------------------------
 UI:
 - Date/time

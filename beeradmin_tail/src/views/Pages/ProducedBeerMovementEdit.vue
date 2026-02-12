@@ -4,21 +4,19 @@
     <div class="min-h-screen bg-white text-gray-900 p-4 max-w-6xl mx-auto space-y-6">
       <header class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 class="text-xl font-semibold">{{ t('producedBeer.taxEvent.title') }}</h1>
-          <p class="text-sm text-gray-500">{{ t('producedBeer.taxEvent.subtitle') }}</p>
+          <h1 class="text-xl font-semibold">酒税関連登録</h1>
+          <p class="text-sm text-gray-500">movementrule.jsonc に基づいて動的にルールを適用します。</p>
         </div>
         <div class="flex flex-wrap items-center gap-2">
-          <button class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-50" @click="goBack">
-            {{ t('producedBeer.taxEvent.back') }}
-          </button>
+          <button class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-50" @click="goBack">戻る</button>
         </div>
       </header>
 
       <section class="border border-gray-200 rounded-xl shadow-sm p-4 bg-white space-y-4">
         <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 class="text-lg font-semibold">{{ t('producedBeer.taxEvent.wizardTitle') }}</h2>
-            <p class="text-sm text-gray-500">{{ t('producedBeer.taxEvent.wizardSubtitle') }}</p>
+            <h2 class="text-lg font-semibold">酒税関連登録ウィザード</h2>
+            <p class="text-sm text-gray-500">Step 1〜5 を順に入力してください。</p>
           </div>
           <div class="inline-flex rounded-lg border border-gray-300 bg-white p-0.5">
             <button
@@ -38,231 +36,150 @@
           <div class="lg:col-span-2 space-y-6">
             <section v-if="currentStep === 1" class="space-y-4">
               <header>
-                <h3 class="text-base font-semibold">{{ t('producedBeer.taxEvent.steps.intent.title') }}</h3>
-                <p class="text-sm text-gray-500">{{ t('producedBeer.taxEvent.steps.intent.subtitle') }}</p>
+                <h3 class="text-base font-semibold">Step 1: movement_intent</h3>
+                <p class="text-sm text-gray-500">ルールファイルから intent を読み込みます。</p>
               </header>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <button
                   v-for="option in intentOptions"
                   :key="option.value"
                   class="p-4 rounded-lg border text-left"
-                  :class="taxEvent.intent === option.value ? 'border-blue-600 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'"
+                  :class="movementForm.intent === option.value ? 'border-blue-600 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'"
                   type="button"
-                  @click="selectIntent(option.value)"
+                  @click="movementForm.intent = option.value"
                 >
                   <div class="text-sm font-semibold text-gray-900">{{ option.label }}</div>
-                  <div class="text-xs text-gray-500">{{ option.note }}</div>
+                  <div class="text-xs text-gray-500">{{ option.value }}</div>
                 </button>
-              </div>
-              <div v-if="taxEvent.intent === 'return'" class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                {{ t('producedBeer.taxEvent.steps.intent.returnHint') }}
-              </div>
-              <div class="rounded-lg border border-gray-200 p-3 text-sm text-gray-600 space-y-2">
-                <label class="block text-xs uppercase text-gray-500">{{ t('producedBeer.taxEvent.panel.taxTreatment') }}</label>
-                <select
-                  v-model="taxEvent.taxTreatment"
-                  class="w-full h-[40px] border rounded px-3 bg-white"
-                  :disabled="!taxEvent.intent"
-                >
-                  <option value="" disabled>{{ t('producedBeer.taxEvent.treatments.unselected') }}</option>
-                  <option v-for="option in taxTreatmentOptions" :key="option.value" :value="option.value">
-                    {{ option.label }}
-                  </option>
-                </select>
-                <p class="text-xs text-gray-500">{{ t('producedBeer.taxEvent.panel.taxTreatmentHint', { auto: autoTaxTreatmentLabel }) }}</p>
               </div>
             </section>
 
             <section v-if="currentStep === 2" class="space-y-4">
               <header>
-                <h3 class="text-base font-semibold">{{ t('producedBeer.taxEvent.steps.parties.title') }}</h3>
-                <p class="text-sm text-gray-500">{{ t('producedBeer.taxEvent.steps.parties.subtitle') }}</p>
+                <h3 class="text-base font-semibold">Step 2: src/dst site</h3>
+                <p class="text-sm text-gray-500">Site type と default tax を system が導出します。</p>
               </header>
-
-              <div v-if="taxEvent.intent === 'domestic'" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.taxEvent.fields.shipFrom') }}</label>
-                  <input v-model.trim="taxEvent.shipFromSite" class="w-full h-[40px] border rounded px-3" />
+                  <label class="block text-sm text-gray-600 mb-1">Source Site</label>
+                  <input v-model.trim="movementForm.srcSite" class="w-full h-[40px] border rounded px-3" />
                 </div>
                 <div>
-                  <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.taxEvent.fields.shipToParty') }}</label>
-                  <input v-model.trim="taxEvent.shipToParty" class="w-full h-[40px] border rounded px-3" />
+                  <label class="block text-sm text-gray-600 mb-1">Destination Site</label>
+                  <input v-model.trim="movementForm.dstSite" class="w-full h-[40px] border rounded px-3" />
                 </div>
                 <div>
-                  <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.taxEvent.fields.shipDate') }}</label>
-                  <input v-model="taxEvent.shipDate" type="date" class="w-full h-[40px] border rounded px-3" />
-                </div>
-              </div>
-
-              <div v-else-if="taxEvent.intent === 'export'" class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.taxEvent.fields.shipFrom') }}</label>
-                  <input v-model.trim="taxEvent.shipFromSite" class="w-full h-[40px] border rounded px-3" />
-                </div>
-                <div>
-                  <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.taxEvent.fields.exportMode') }}</label>
-                  <select v-model="taxEvent.exportMode" class="w-full h-[40px] border rounded px-3 bg-white">
-                    <option value="">{{ t('common.select') }}</option>
-                    <option value="direct">{{ t('producedBeer.taxEvent.exportModes.direct') }}</option>
-                    <option value="forwarder">{{ t('producedBeer.taxEvent.exportModes.forwarder') }}</option>
+                  <label class="block text-sm text-gray-600 mb-1">Source Site Type (derived)</label>
+                  <select v-model="movementForm.srcSiteType" class="w-full h-[40px] border rounded px-3 bg-white">
+                    <option value="">Select</option>
+                    <option v-for="site in siteTypeOptions" :key="site" :value="site">{{ site }}</option>
                   </select>
                 </div>
                 <div>
-                  <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.taxEvent.fields.destinationCountry') }}</label>
-                  <input v-model.trim="taxEvent.destinationCountry" class="w-full h-[40px] border rounded px-3" />
-                </div>
-                <div>
-                  <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.taxEvent.fields.plannedShipDate') }}</label>
-                  <input v-model="taxEvent.plannedShipDate" type="date" class="w-full h-[40px] border rounded px-3" />
-                </div>
-              </div>
-
-              <div v-else-if="taxEvent.intent === 'inbound'" class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.taxEvent.fields.receivingSite') }}</label>
-                  <input v-model.trim="taxEvent.receivingSite" class="w-full h-[40px] border rounded px-3" />
-                </div>
-                <div>
-                  <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.taxEvent.fields.sourceType') }}</label>
-                  <input v-model.trim="taxEvent.sourceType" class="w-full h-[40px] border rounded px-3" />
-                </div>
-                <div>
-                  <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.taxEvent.fields.sourceParty') }}</label>
-                  <input v-model.trim="taxEvent.sourceParty" class="w-full h-[40px] border rounded px-3" />
-                </div>
-                <div>
-                  <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.taxEvent.fields.receiptDate') }}</label>
-                  <input v-model="taxEvent.receiptDate" type="date" class="w-full h-[40px] border rounded px-3" />
+                  <label class="block text-sm text-gray-600 mb-1">Destination Site Type (derived)</label>
+                  <select v-model="movementForm.dstSiteType" class="w-full h-[40px] border rounded px-3 bg-white">
+                    <option value="">Select</option>
+                    <option v-for="site in siteTypeOptions" :key="site" :value="site">{{ site }}</option>
+                  </select>
                 </div>
               </div>
 
-              <div v-else-if="taxEvent.intent === 'nontax_other'" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div v-if="taxDecisionOptions.length" class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.taxEvent.fields.removalSite') }}</label>
-                  <input v-model.trim="taxEvent.removalSite" class="w-full h-[40px] border rounded px-3" />
-                </div>
-                <div>
-                  <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.taxEvent.fields.reasonCode') }}</label>
-                  <input v-model.trim="taxEvent.reasonCode" class="w-full h-[40px] border rounded px-3" />
-                </div>
-                <div>
-                  <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.taxEvent.fields.plannedDate') }}</label>
-                  <input v-model="taxEvent.plannedDate" type="date" class="w-full h-[40px] border rounded px-3" />
+                  <label class="block text-sm text-gray-600 mb-1">Tax Decision Code</label>
+                  <select v-model="movementForm.taxDecisionCode" class="w-full h-[40px] border rounded px-3 bg-white">
+                    <option value="">Select</option>
+                    <option v-for="option in taxDecisionOptions" :key="option.value" :value="option.value">
+                      {{ option.label }}
+                    </option>
+                  </select>
                 </div>
               </div>
-
-              <div v-else class="text-sm text-gray-500">{{ t('producedBeer.taxEvent.steps.parties.intentFirst') }}</div>
             </section>
 
             <section v-if="currentStep === 3" class="space-y-4">
               <header>
-                <h3 class="text-base font-semibold">{{ t('producedBeer.taxEvent.steps.items.title') }}</h3>
-                <p class="text-sm text-gray-500">{{ t('producedBeer.taxEvent.steps.items.subtitle') }}</p>
+                <h3 class="text-base font-semibold">Step 3: product / lot</h3>
+                <p class="text-sm text-gray-500">Lot 種別により tax が変わる場合があります。</p>
               </header>
-              <div class="overflow-x-auto border border-gray-200 rounded-lg">
-                <table class="min-w-full text-sm">
-                  <thead class="bg-gray-50 text-xs uppercase text-gray-600">
-                    <tr>
-                      <th class="px-3 py-2 text-left">{{ t('producedBeer.taxEvent.items.product') }}</th>
-                      <th class="px-3 py-2 text-left">{{ t('producedBeer.taxEvent.items.batch') }}</th>
-                      <th class="px-3 py-2 text-right">{{ t('producedBeer.taxEvent.items.qty') }}</th>
-                      <th class="px-3 py-2 text-left">{{ t('producedBeer.taxEvent.items.uom') }}</th>
-                      <th class="px-3 py-2 text-left">{{ t('producedBeer.taxEvent.items.abv') }}</th>
-                      <th class="px-3 py-2 text-left">{{ t('producedBeer.taxEvent.items.taxCategory') }}</th>
-                      <th class="px-3 py-2 text-left">{{ t('common.actions') }}</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-gray-100">
-                    <tr v-for="(line, index) in taxEvent.items" :key="line.id">
-                      <td class="px-3 py-2"><input v-model.trim="line.product" class="w-full h-[32px] border rounded px-2" /></td>
-                      <td class="px-3 py-2"><input v-model.trim="line.batch" class="w-full h-[32px] border rounded px-2" /></td>
-                      <td class="px-3 py-2"><input v-model="line.qty" type="number" min="0" step="0.001" class="w-full h-[32px] border rounded px-2 text-right" /></td>
-                      <td class="px-3 py-2"><input v-model.trim="line.uom" class="w-full h-[32px] border rounded px-2" /></td>
-                      <td class="px-3 py-2"><input v-model.trim="line.abv" class="w-full h-[32px] border rounded px-2" /></td>
-                      <td class="px-3 py-2"><input v-model.trim="line.taxCategory" class="w-full h-[32px] border rounded px-2" /></td>
-                      <td class="px-3 py-2">
-                        <button class="px-2 py-1 text-xs rounded border hover:bg-gray-50" @click="removeItem(index)">{{ t('common.delete') }}</button>
-                      </td>
-                    </tr>
-                    <tr v-if="taxEvent.items.length === 0">
-                      <td colspan="7" class="px-3 py-6 text-center text-gray-500">{{ t('common.noData') }}</td>
-                    </tr>
-                  </tbody>
-                </table>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-sm text-gray-600 mb-1">Product</label>
+                  <input v-model.trim="movementForm.product" class="w-full h-[40px] border rounded px-3" />
+                </div>
+                <div>
+                  <label class="block text-sm text-gray-600 mb-1">Source Lot</label>
+                  <input v-model.trim="movementForm.srcLot" class="w-full h-[40px] border rounded px-3" />
+                </div>
+                <div>
+                  <label class="block text-sm text-gray-600 mb-1">Source Lot Tax Type</label>
+                  <select v-model="movementForm.srcLotTaxType" class="w-full h-[40px] border rounded px-3 bg-white">
+                    <option value="">Select</option>
+                    <option v-for="lotType in lotTaxTypeOptions" :key="lotType" :value="lotType">{{ lotType }}</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-sm text-gray-600 mb-1">Destination Lot Tax Type</label>
+                  <select v-model="movementForm.dstLotTaxType" class="w-full h-[40px] border rounded px-3 bg-white">
+                    <option value="">Select</option>
+                    <option v-for="lotType in lotTaxTypeOptions" :key="lotType" :value="lotType">{{ lotType }}</option>
+                  </select>
+                </div>
               </div>
-              <button class="px-3 py-2 rounded border hover:bg-gray-50" type="button" @click="addItem">
-                {{ t('producedBeer.taxEvent.items.addLine') }}
-              </button>
             </section>
 
             <section v-if="currentStep === 4" class="space-y-4">
               <header>
-                <h3 class="text-base font-semibold">{{ t('producedBeer.taxEvent.steps.evidence.title') }}</h3>
-                <p class="text-sm text-gray-500">{{ t('producedBeer.taxEvent.steps.evidence.subtitle') }}</p>
+                <h3 class="text-base font-semibold">Step 4: 必要情報</h3>
+                <p class="text-sm text-gray-500">数量・日付・理由などを入力します。</p>
               </header>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.taxEvent.evidence.invoiceNo') }}</label>
-                  <input v-model.trim="taxEvent.invoiceNo" class="w-full h-[40px] border rounded px-3" />
+                  <label class="block text-sm text-gray-600 mb-1">Date</label>
+                  <input v-model="movementForm.eventDate" type="date" class="w-full h-[40px] border rounded px-3" />
                 </div>
                 <div>
-                  <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.taxEvent.evidence.blNo') }}</label>
-                  <input v-model.trim="taxEvent.blNo" class="w-full h-[40px] border rounded px-3" />
+                  <label class="block text-sm text-gray-600 mb-1">Quantity</label>
+                  <input v-model="movementForm.quantity" type="number" step="0.001" class="w-full h-[40px] border rounded px-3 text-right" />
                 </div>
-              </div>
-              <div class="rounded-lg border border-dashed border-gray-300 p-4 text-sm text-gray-500">
-                {{ t('producedBeer.taxEvent.evidence.attachmentsHint') }}
+                <div>
+                  <label class="block text-sm text-gray-600 mb-1">UOM</label>
+                  <input v-model.trim="movementForm.uom" class="w-full h-[40px] border rounded px-3" />
+                </div>
+                <div>
+                  <label class="block text-sm text-gray-600 mb-1">Notes</label>
+                  <input v-model.trim="movementForm.notes" class="w-full h-[40px] border rounded px-3" />
+                </div>
               </div>
             </section>
 
             <section v-if="currentStep === 5" class="space-y-4">
               <header>
-                <h3 class="text-base font-semibold">{{ t('producedBeer.taxEvent.steps.review.title') }}</h3>
-                <p class="text-sm text-gray-500">{{ t('producedBeer.taxEvent.steps.review.subtitle') }}</p>
+                <h3 class="text-base font-semibold">Step 5: 確認</h3>
+                <p class="text-sm text-gray-500">導出された税イベントとルールを確認します。</p>
               </header>
               <div class="rounded-lg border border-gray-200 p-4 space-y-2 text-sm text-gray-600">
-                <div>{{ t('producedBeer.taxEvent.review.intent') }}: <span class="text-gray-900">{{ intentLabel }}</span></div>
-                <div>{{ t('producedBeer.taxEvent.review.taxTreatment') }}: <span class="text-gray-900">{{ taxTreatmentLabel }}</span></div>
-                <div>{{ t('producedBeer.taxEvent.review.items') }}: <span class="text-gray-900">{{ taxEvent.items.length }}</span></div>
-                <div>{{ t('producedBeer.taxEvent.review.evidence') }}: <span class="text-gray-900">{{ evidenceStatus }}</span></div>
-              </div>
-              <div class="rounded-lg border border-gray-200 p-4 space-y-2 text-sm text-gray-600">
-                <h4 class="text-sm font-semibold text-gray-800">{{ t('producedBeer.taxEvent.review.warningsTitle') }}</h4>
-                <ul class="list-disc pl-5">
-                  <li>{{ t('producedBeer.taxEvent.review.warningIntentLocked') }}</li>
-                  <li>{{ t('producedBeer.taxEvent.review.warningPostValidation') }}</li>
-                </ul>
+                <div>movement_intent: <span class="text-gray-900">{{ movementForm.intent || '—' }}</span></div>
+                <div>src_site_type: <span class="text-gray-900">{{ movementForm.srcSiteType || '—' }}</span></div>
+                <div>dst_site_type: <span class="text-gray-900">{{ movementForm.dstSiteType || '—' }}</span></div>
+                <div>tax_decision_code: <span class="text-gray-900">{{ movementForm.taxDecisionCode || '—' }}</span></div>
+                <div>tax_event: <span class="text-gray-900">{{ derivedTaxEvent || '—' }}</span></div>
+                <div>rule_id: <span class="text-gray-900">{{ derivedRuleId || '—' }}</span></div>
               </div>
             </section>
           </div>
 
           <aside class="space-y-4">
             <div class="border border-gray-200 rounded-lg p-4 space-y-3">
-              <h3 class="text-sm font-semibold text-gray-700">{{ t('producedBeer.taxEvent.panel.title') }}</h3>
+              <h3 class="text-sm font-semibold text-gray-700">Derived Tax</h3>
               <div class="text-sm text-gray-600">
-                <div class="text-xs uppercase text-gray-500">{{ t('producedBeer.taxEvent.panel.taxTreatment') }}</div>
-                <div class="text-base font-semibold text-gray-900">{{ taxTreatmentLabel }}</div>
-                <div class="text-xs text-gray-500">{{ t('producedBeer.taxEvent.panel.taxTreatmentAuto', { auto: autoTaxTreatmentLabel }) }}</div>
+                <div class="text-xs uppercase text-gray-500">Tax Event</div>
+                <div class="text-base font-semibold text-gray-900">{{ derivedTaxEvent || '—' }}</div>
               </div>
               <div class="text-sm text-gray-600">
-                <div class="text-xs uppercase text-gray-500">{{ t('producedBeer.taxEvent.panel.status') }}</div>
-                <div class="text-base font-semibold text-gray-900">{{ taxEvent.status }}</div>
+                <div class="text-xs uppercase text-gray-500">Rule</div>
+                <div class="text-base font-semibold text-gray-900">{{ derivedRuleId || '—' }}</div>
               </div>
-            </div>
-
-            <div class="border border-gray-200 rounded-lg p-4 space-y-2">
-              <h3 class="text-sm font-semibold text-gray-700">{{ t('producedBeer.taxEvent.panel.checklistTitle') }}</h3>
-              <ul class="text-sm text-gray-600 space-y-1">
-                <li>• {{ t('producedBeer.taxEvent.panel.checkIntent') }}</li>
-                <li>• {{ t('producedBeer.taxEvent.panel.checkParties') }}</li>
-                <li>• {{ t('producedBeer.taxEvent.panel.checkItems') }}</li>
-                <li>• {{ t('producedBeer.taxEvent.panel.checkEvidence') }}</li>
-              </ul>
-            </div>
-
-            <div class="border border-gray-200 rounded-lg p-4 space-y-2 text-sm text-gray-600">
-              <h3 class="text-sm font-semibold text-gray-700">{{ t('producedBeer.taxEvent.panel.taxPreview') }}</h3>
-              <p>{{ t('producedBeer.taxEvent.panel.taxPreviewHint') }}</p>
             </div>
           </aside>
         </div>
@@ -270,19 +187,15 @@
         <footer class="flex flex-wrap items-center justify-between gap-3">
           <div class="flex items-center gap-2">
             <button class="px-3 py-2 rounded border hover:bg-gray-50" type="button" @click="prevStep" :disabled="currentStep === 1">
-              {{ t('producedBeer.taxEvent.actions.prev') }}
+              戻る
             </button>
             <button class="px-3 py-2 rounded border hover:bg-gray-50" type="button" @click="nextStep" :disabled="currentStep === wizardSteps.length">
-              {{ t('producedBeer.taxEvent.actions.next') }}
+              次へ
             </button>
           </div>
           <div class="flex items-center gap-2">
-            <button class="px-3 py-2 rounded border hover:bg-gray-50" type="button">
-              {{ t('producedBeer.taxEvent.actions.saveDraft') }}
-            </button>
-            <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" type="button">
-              {{ t('producedBeer.taxEvent.actions.post') }}
-            </button>
+            <button class="px-3 py-2 rounded border hover:bg-gray-50" type="button">下書き保存</button>
+            <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" type="button">確定</button>
           </div>
         </footer>
       </section>
@@ -291,158 +204,95 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import movementRuleRaw from '../../../../docs/data/movementrule.jsonc?raw'
 
-const { t } = useI18n()
+type MovementRules = {
+  enums?: Record<string, string[]>
+  movement_intent_rules?: Record<string, any>
+  tax_decision_definitions?: Record<string, { label?: { ja?: string; en?: string } }>
+  tax_transformation_rules?: Array<Record<string, any>>
+}
+
 const router = useRouter()
-const pageTitle = computed(() => t('producedBeer.taxEvent.breadcrumb'))
+const pageTitle = computed(() => '酒税関連登録')
 
 const currentStep = ref(1)
-
 const wizardSteps = computed(() => ([
-  { key: 'intent', label: t('producedBeer.taxEvent.steps.intent.label'), index: 1 },
-  { key: 'parties', label: t('producedBeer.taxEvent.steps.parties.label'), index: 2 },
-  { key: 'items', label: t('producedBeer.taxEvent.steps.items.label'), index: 3 },
-  { key: 'evidence', label: t('producedBeer.taxEvent.steps.evidence.label'), index: 4 },
-  { key: 'review', label: t('producedBeer.taxEvent.steps.review.label'), index: 5 },
+  { key: 'intent', label: 'Step 1', index: 1 },
+  { key: 'sites', label: 'Step 2', index: 2 },
+  { key: 'lot', label: 'Step 3', index: 3 },
+  { key: 'info', label: 'Step 4', index: 4 },
+  { key: 'confirm', label: 'Step 5', index: 5 },
 ]))
 
-const intentOptions = computed(() => ([
-  {
-    value: 'domestic',
-    label: t('producedBeer.taxEvent.intents.domestic'),
-    note: t('producedBeer.taxEvent.intents.domesticNote'),
-  },
-  {
-    value: 'export',
-    label: t('producedBeer.taxEvent.intents.export'),
-    note: t('producedBeer.taxEvent.intents.exportNote'),
-  },
-  {
-    value: 'return',
-    label: t('producedBeer.taxEvent.intents.return'),
-    note: t('producedBeer.taxEvent.intents.returnNote'),
-  },
-  {
-    value: 'inbound',
-    label: t('producedBeer.taxEvent.intents.inbound'),
-    note: t('producedBeer.taxEvent.intents.inboundNote'),
-  },
-  {
-    value: 'nontax_other',
-    label: t('producedBeer.taxEvent.intents.nontaxOther'),
-    note: t('producedBeer.taxEvent.intents.nontaxOtherNote'),
-  },
-]))
+const rules = ref<MovementRules | null>(null)
 
-const taxEvent = reactive({
+const movementForm = reactive({
   intent: '',
-  taxTreatment: '',
-  status: 'draft',
-  shipFromSite: '',
-  shipToParty: '',
-  shipDate: '',
-  exportMode: '',
-  destinationCountry: '',
-  plannedShipDate: '',
-  receivingSite: '',
-  sourceType: '',
-  sourceParty: '',
-  receiptDate: '',
-  removalSite: '',
-  reasonCode: '',
-  plannedDate: '',
-  items: [] as Array<{
-    id: string
-    product: string
-    batch: string
-    qty: string
-    uom: string
-    abv: string
-    taxCategory: string
-  }>,
-  invoiceNo: '',
-  blNo: '',
+  srcSite: '',
+  dstSite: '',
+  srcSiteType: '',
+  dstSiteType: '',
+  taxDecisionCode: '',
+  product: '',
+  srcLot: '',
+  srcLotTaxType: '',
+  dstLotTaxType: '',
+  eventDate: '',
+  quantity: '',
+  uom: '',
+  notes: '',
 })
 
-const taxTreatmentOptions = computed(() => ([
-  { value: 'taxed', label: t('producedBeer.taxEvent.treatments.taxed') },
-  { value: 'export', label: t('producedBeer.taxEvent.treatments.export') },
-  { value: 'return', label: t('producedBeer.taxEvent.treatments.return') },
-  { value: 'inbound', label: t('producedBeer.taxEvent.treatments.inbound') },
-  { value: 'nontaxOther', label: t('producedBeer.taxEvent.treatments.nontaxOther') },
-]))
-
-const autoTaxTreatment = computed(() => {
-  switch (taxEvent.intent) {
-    case 'domestic':
-      return 'taxed'
-    case 'export':
-      return 'export'
-    case 'return':
-      return 'return'
-    case 'inbound':
-      return 'inbound'
-    case 'nontax_other':
-      return 'nontaxOther'
-    default:
-      return ''
-  }
-})
-
-const autoTaxTreatmentLabel = computed(() => {
-  const match = taxTreatmentOptions.value.find((option) => option.value === autoTaxTreatment.value)
-  return match?.label ?? t('producedBeer.taxEvent.treatments.unselected')
-})
-
-const taxTreatmentLabel = computed(() => {
-  const selected = taxTreatmentOptions.value.find((option) => option.value === taxEvent.taxTreatment)
-  if (selected) return selected.label
-  if (!taxEvent.intent) return t('producedBeer.taxEvent.treatments.unselected')
-  return autoTaxTreatmentLabel.value
-})
-
-const intentLabel = computed(() => {
-  const match = intentOptions.value.find((option) => option.value === taxEvent.intent)
-  return match?.label ?? t('producedBeer.taxEvent.intents.unselected')
-})
-
-const evidenceStatus = computed(() => {
-  if (taxEvent.intent === 'export') {
-    return taxEvent.invoiceNo || taxEvent.blNo
-      ? t('producedBeer.taxEvent.review.evidenceProvided')
-      : t('producedBeer.taxEvent.review.evidenceMissing')
-  }
-  return t('producedBeer.taxEvent.review.evidenceOptional')
-})
-
-function selectIntent(value: string) {
-  if (taxEvent.intent && taxEvent.intent !== value) {
-    const confirmed = window.confirm(t('producedBeer.taxEvent.confirmIntentChange'))
-    if (!confirmed) return
-  }
-  taxEvent.intent = value
-  taxEvent.taxTreatment = autoTaxTreatment.value
-}
-
-function addItem() {
-  taxEvent.items.push({
-    id: `${Date.now()}-${Math.random().toString(16).slice(2, 6)}`,
-    product: '',
-    batch: '',
-    qty: '',
-    uom: '',
-    abv: '',
-    taxCategory: '',
+const intentOptions = computed(() => {
+  const ruleMap = rules.value?.movement_intent_rules ?? {}
+  return Object.keys(ruleMap).map((key) => {
+    const label = ruleMap[key]?.label?.ja ?? ruleMap[key]?.label?.en ?? key
+    return { value: key, label }
   })
-}
+})
 
-function removeItem(index: number) {
-  taxEvent.items.splice(index, 1)
+const siteTypeOptions = computed(() => rules.value?.enums?.site_type ?? [])
+const lotTaxTypeOptions = computed(() => rules.value?.enums?.lot_tax_type ?? [])
+
+const selectedIntentRule = computed(() => {
+  if (!movementForm.intent) return null
+  return rules.value?.movement_intent_rules?.[movementForm.intent] ?? null
+})
+
+const taxDecisionOptions = computed(() => {
+  const codes = selectedIntentRule.value?.allowed_tax_decision_codes ?? []
+  const defs = rules.value?.tax_decision_definitions ?? {}
+  return codes.map((code: string) => {
+    const label = defs?.[code]?.label?.ja ?? defs?.[code]?.label?.en ?? code
+    return { value: code, label }
+  })
+})
+
+const derivedTaxRule = computed(() => {
+  const ruleset = rules.value?.tax_transformation_rules ?? []
+  if (!movementForm.intent || !movementForm.srcSiteType || !movementForm.dstSiteType || !movementForm.srcLotTaxType) return null
+  return ruleset.find((rule: any) =>
+    rule.movement_intent === movementForm.intent &&
+    (rule.tax_decision_code ?? null) === (movementForm.taxDecisionCode || null) &&
+    rule.src_site_type === movementForm.srcSiteType &&
+    rule.dst_site_type === movementForm.dstSiteType &&
+    rule.src_lot_tax_type === movementForm.srcLotTaxType &&
+    (movementForm.dstLotTaxType ? rule.dst_lot_tax_type === movementForm.dstLotTaxType : true)
+  ) ?? null
+})
+
+const derivedTaxEvent = computed(() => derivedTaxRule.value?.tax_event ?? '')
+const derivedRuleId = computed(() => derivedTaxRule.value?.rule_id ?? '')
+
+function parseJsonc(raw: string) {
+  const noBlock = raw.replace(/\/\*[\s\S]*?\*\//g, '')
+  const noLine = noBlock.replace(/^\s*\/\/.*$/gm, '')
+  return JSON.parse(noLine)
 }
 
 function nextStep() {
@@ -456,4 +306,8 @@ function prevStep() {
 function goBack() {
   router.back()
 }
+
+onMounted(() => {
+  rules.value = parseJsonc(movementRuleRaw) as MovementRules
+})
 </script>

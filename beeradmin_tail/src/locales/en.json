@@ -402,10 +402,15 @@
         "movementQty": "Quantity",
         "movementMemo": "Memo (optional)",
         "fillingSection": "Filling",
+        "tankFillStart": "Tank fill start volume",
+        "tankLeft": "Tank left volume",
+        "tankLoss": "Tank loss volume",
+        "tankFillEnd": "Tank filling end",
         "addFilling": "Add Filling",
         "noFillingLines": "No filling lines added.",
         "fillingTable": {
           "packageType": "Package type",
+          "lotCode": "Lot code",
           "qty": "Quantity",
           "unitVolume": "Volume per unit",
           "totalVolume": "Total volume"

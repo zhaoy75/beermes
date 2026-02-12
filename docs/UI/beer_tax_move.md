@@ -1,242 +1,135 @@
-for producedBeer vue page, please replace 移出登録 dialog with following UI Specification: 酒税 Event (Liquor Tax Event)
+酒税関連登録 Dialog UI Specification (Dynamic Rules)
 =================================================
 
-# 移出登録　Dialog UI Specification
-
 ## Purpose
-----------
-This UI specification defines a guided user interface for handling liquor tax
-(酒税) related events. The design goal is to prevent mis-operations by ensuring
-that users select business intent first, while the system automatically
-determines tax treatment.
+This specification defines the UI flow for 酒税関連登録 (Tax Movement Register).
+The UI must read rules dynamically from `docs/data/movementrule.jsonc` and never
+hardcode movement intents, tax decisions, or site type mappings.
 
 Key principles:
-- System will automatically determine tax treatment. but user still have a chance to select tax treatment.
-- Legal constraints, required evidence, and auditability are enforced by the UI.
-- Posting an event updates inventory, tax ledger, and reporting consistently.
+- Movement intent is chosen first.
+- Site types and default tax are derived by the system from the rules file.
+- Product/Lot selection can change tax results when multiple candidates exist.
+- Final confirmation must explain derived tax event and rule source.
 
-## Entry Points
--移出記録(producedBeer page) -> button:　"Tax Movement Regist..." (japanese text: "酒税関連登録")
+## Entry Point
+- ProducedBeer page -> button: "酒税関連登録" (Tax Movement Regist...)
 
-
-## Scope
---------
-Supported user-facing intents and corresponding tax treatments:
-
-1. Domestic Shipment (国内出荷 / 国内販売)
-   -> Tax treatment: 課税移出
-2. Export Shipment (輸出 / 国外向け)
-   -> Tax treatment: 輸出免税（非課税移出：輸出）
-3. Return Acceptance (返品受入 / 回収)
-   -> Tax treatment: 戻入
-4. Inbound Receipt (受入 / 他製造場等から搬入)
-   -> Tax treatment: 移入
-5. Non-taxable Removal – Other (非納税移出：その他)
-   -> Tax treatment: 非納税移出（理由コード必須）
-
-## Users and Permissions
-------------------------
-Roles:
-- Operator: Create and edit Draft events
-- Supervisor: Post (confirm) events, create reversals
-- Auditor: Read-only access, export evidence and logs
-
-Rules:
-- Only Supervisors can POST (確定).
-- Draft events are editable; Posted events are immutable.
-- Corrections are handled by reversal or adjustment events.
+## Rule Source (Dynamic)
+- Rules are stored in `docs/data/movementrule.jsonc`.
+- UI must load and interpret:
+  - `movement_intent_rules`
+  - `tax_decision_definitions`
+  - `tax_transformation_rules`
+  - `enums` (movement_intent, site_type, lot_tax_type, tax_event, tax_decision_code)
 
 ## Terminology
---------------
-UI terminology:
-- Intent (目的): Business purpose selected by user
-- Tax Treatment (税区分): System-determined, read-only
-- Evidence (証憑): Documents or references required for compliance
+- movement_intent: user-selected business intent
+- src/dst site_type: derived from selected sites
+- tax decision code: a rule-specific decision (optional)
+- tax event: derived final tax event shown in confirmation
 
-System fields (recommended):
-- movement_intent
-- tax_treatment
-- status (draft / posted / reversed)
-
- Entry Points
----------------
-- Batch Edit Page: "Add 酒税 Event"
-- Shipment/Receipt Module
-- Returns Module (always starts from original shipment)
-
-## Screens
-----------
-S1. Create Tax Event Wizard
-S2. Return Acceptance (Start from Original Shipment)
-S3. Tax Event Detail
-S4. Reversal / Adjustment
+## Flow Overview (Wizard)
+Step 1 → movement_intent  
+Step 2 → select src/dst site (system derives site_type + default tax)  
+Step 3 → select product/lot (tax may be adjusted if multiple candidates)  
+Step 4 → fill necessary information  
+Step 5 → confirmation
 
 --------------------------------------------------
-S1. Create Tax Event Wizard
+Step 1: Select movement_intent
 --------------------------------------------------
-
-Layout:
-- Header: 酒税イベント作成
-- Stepper:
-  1) Intent
-  2) Parties / Route
-  3) Items / Quantity
-  4) Evidence
-  5) Review & Save
-- Right-side panel:
-  - Computed tax treatment (read-only)
-  - Tax preview (optional)
-  - Validation checklist
-
-Step 1: Select Intent
----------------------
-User selects one of the following:
-- Domestic Shipment (国内出荷)
-- Export Shipment (輸出)
-- Return Acceptance (返品受入) -> goes to S2
-- Inbound Receipt (受入)
-- Non-taxable Removal – Other (非課税移出：その他)
+UI:
+- List movement intents from `movement_intent_rules` with i18n labels.
+- Show short rule summary (allowed site types, edge types).
 
 System behavior:
-- movement_intent is set
-- tax_treatment is computed and locked
+- Loads `movement_intent_rules[<intent>]`
+- Initializes default tax decision code if rule has choices.
 
-Step 2: Parties and Route
--------------------------
-Fields vary by intent.
+--------------------------------------------------
+Step 2: Select src/dst site
+--------------------------------------------------
+UI:
+- Select Source Site (required)
+- Select Destination Site (required if `dst_required=true`)
 
-Domestic Shipment:
-- Ship-from site (required)
-- Ship-to party (required, domestic only)
-- Ship date (required)
+System behavior:
+- Derive `src_site_type`, `dst_site_type` based on site master data.
+- Validate against allowed site types in the rule.
+- Compute default tax decision code (if rule requires a decision).
+- Preview derived tax event using `tax_transformation_rules`.
 
-Export Shipment:
-- Ship-from site (required)
-- Export mode (direct / forwarder)
-- Destination country (required, non-JP)
-- Planned ship date
-- Export evidence required before POST
+--------------------------------------------------
+Step 3: Select product/lot
+--------------------------------------------------
+UI:
+- Select Product
+- Select Lot(s) from inventory for Source Site
+- If multiple lots have different `lot_tax_type`, show tax preview changes.
 
-Inbound Receipt:
-- Receiving site (required)
-- Source type and source party (required)
-- Receipt date
+System behavior:
+- Determine `src_lot_tax_type` from selected lot.
+- If destination lot is created/selected, determine `dst_lot_tax_type`.
+- If multiple candidates change tax event, highlight options.
 
-Non-taxable Removal – Other:
-- Removal site
-- Reason code (required)
-- Planned date
+--------------------------------------------------
+Step 4: Fill necessary information
+--------------------------------------------------
+UI:
+- Date/time
+- Quantity / UOM
+- Reason or evidence fields (conditional by rule)
+- Notes (optional)
 
-Step 3: Items and Quantity
---------------------------
-Line items table:
-- Product
-- Lot / Batch
-- Quantity
-- Unit of Measure
-- ABV (optional)
-- Tax category (read-only)
+System behavior:
+- Validate required fields per selected rule.
+- Ensure quantities and UOM are consistent.
 
-Validations:
-- Quantity > 0
-- Inventory sufficiency for removals
-- Proper UoM conversion
-
-Step 4: Evidence
-----------------
-Conditional by intent.
-
-Export Shipment (required):
-- Invoice number
-- B/L or AWB number
-- Optional file attachments
-
-Other intents:
-- Evidence optional or conditional depending on configuration
-
-Step 5: Review and Save
------------------------
-Summary includes:
-- Intent
-- Tax treatment
-- Parties and route
-- Item totals
-- Evidence status
-- Warnings and blockers
+--------------------------------------------------
+Step 5: Confirmation
+--------------------------------------------------
+UI shows:
+- movement_intent label
+- src/dst site + derived site_type
+- selected product/lot
+- derived tax decision code + tax event
+- selected rule id(s) used for decision
 
 Actions:
 - Save Draft
-- Post (Supervisor only, validation required)
+- Post (requires validation)
 
 --------------------------------------------------
-S2. Return Acceptance (戻入)
+Validation Rules (Dynamic)
 --------------------------------------------------
-Flow:
-1. Search original posted shipment (課税移出)
-2. Select original event
-3. Create return draft with prefilled data
-4. Enter return quantities and date
-5. Save Draft or Post
-
-Rules:
-- Original event reference is mandatory
-- Return quantity cannot exceed remaining eligible quantity
+- movement_intent must be selected.
+- src/dst site types must match rule.
+- lot requirements follow `line_rules`:
+  - require_src_lot
+  - require_dst_lot_or_new_lot
+  - allow_new_lot
+  - allow_same_lot
+- tax decision code must be selected when multiple options exist.
 
 --------------------------------------------------
-S3. Tax Event Detail
+Data Handling
 --------------------------------------------------
-- Header: Event No., Status, Intent, Tax treatment
-- Tabs:
-  - Summary
-  - Lines
-  - Evidence
-  - Audit Log
-  - Related Events
+Primary fields:
+- movement_intent
+- src_site_id / dst_site_id
+- src_site_type / dst_site_type (derived)
+- product_id
+- lot_id (source) / lot_id (destination or new lot)
+- tax_decision_code
+- tax_event
+- status (draft/posted)
 
-Draft: editable
-Posted: read-only, reversal only
-
---------------------------------------------------
-S4. Reversal / Adjustment
---------------------------------------------------
-- Used to correct posted events
-- Creates a reversal event referencing the original
-- Original event marked as reversed
+All derived fields must be traceable to:
+- `movementrule.jsonc` + selected rule id
 
 --------------------------------------------------
-Global Mis-operation Prevention Rules
+Notes
 --------------------------------------------------
-- System will automatically determine tax treatment. but user still have a chance to select tax treatment.
-- Intent change requires creating a new event
-- Hard validation on POST
-- Draft and Posted states are clearly separated
-- Full audit trail for all events
-
---------------------------------------------------
-Intent and Tax Treatment Matrix
---------------------------------------------------
-Intent: Domestic Shipment
-Tax treatment: 課税移出
-Evidence required: No
-Original reference: No
-
-Intent: Export Shipment
-Tax treatment: 輸出免税
-Evidence required: Yes
-Original reference: No
-
-Intent: Return Acceptance
-Tax treatment: 戻入
-Evidence required: Optional
-Original reference: Yes
-
-Intent: Inbound Receipt
-Tax treatment: 移入
-Evidence required: Optional
-Original reference: No
-
-Intent: Non-taxable Removal – Other
-Tax treatment: 非課税移出
-Evidence required: Conditional
-Original reference: No
-for producedBeer vue page, please replace 移出登録 dialog with following UI Specification: 酒税 Event (Liquor Tax Event)
+- UI must re-evaluate tax event when any of steps 1-3 change.
+- If rule changes invalidate current selection, prompt user to reselect.

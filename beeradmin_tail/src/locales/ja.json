@@ -402,10 +402,15 @@
         "movementQty": "数量",
         "movementMemo": "メモ（任意）",
         "fillingSection": "詰口",
+        "tankFillStart": "タンク充填開始量",
+        "tankLeft": "タンク残量",
+        "tankLoss": "タンクロス",
+        "tankFillEnd": "タンク充填終了",
         "addFilling": "詰口を追加",
         "noFillingLines": "詰口明細がありません。",
         "fillingTable": {
           "packageType": "詰口種別",
+          "lotCode": "ロットコード",
           "qty": "数量",
           "unitVolume": "単位容量",
           "totalVolume": "総容量"

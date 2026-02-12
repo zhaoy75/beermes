@@ -37,6 +37,7 @@ Responsibilities:
    the movement intent includes 
     BREW_PRODUCE 
     PACKAGE_FILL
+    REFILL
     INTERNAL_TRANSFER
     SHIP_DOMESTIC
     SHIP_EXPORT
@@ -45,4 +46,17 @@ Responsibilities:
     DISPOSE
 
 
+
+enums
+  movement_intent
+  site_type
+  lot_tax_type
+  tax_event
+  edge_type
+movement_intent
+allowed_site_types
+  array of src_site_types
+  array of dst_site_types
+tax_transformation_rules
+  array of {src_site_type, dst_site_type, src_lot_tax_type, dst_lot_tax_type, tax_event}
 

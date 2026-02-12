@@ -99,6 +99,7 @@ Filling line fields:
 - Package type (dropdown, from mst_package table)
   when a package type is chosen, please use the proper uom 
 - Quantity (integer, >= 1)
+- lot_code
 
 Table actions:
 - Edit filling line
@@ -107,7 +108,8 @@ Table actions:
 Derived values (optional):
 - Volume per unit
 - Total line volume
-- Loss = Fill Start Volume - Left Volume - Total Volume
+- Loss = Fill Start Volume - Left Volume - Total Filling Volume
+- Loss need to count to Processed volume of the batch
 
 Totals:
 - Total units

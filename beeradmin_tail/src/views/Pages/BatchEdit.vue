@@ -334,16 +334,39 @@
           <div v-if="showPackingFillingSection" class="border border-gray-200 rounded-lg p-3 space-y-3">
             <div class="flex items-center justify-between">
               <h4 class="text-sm font-semibold text-gray-700">{{ t('batch.packaging.dialog.fillingSection') }}</h4>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <div>
+                <label class="block text-sm text-gray-600 mb-1" for="tankFillStart">{{ t('batch.packaging.dialog.tankFillStart') }}</label>
+                <input id="tankFillStart" v-model="packingDialog.form.tank_fill_start_volume" type="number" step="0.001" class="w-full h-[36px] border rounded px-2 text-right" />
+              </div>
+              <div>
+                <label class="block text-sm text-gray-600 mb-1" for="tankLeft">{{ t('batch.packaging.dialog.tankLeft') }}</label>
+                <input id="tankLeft" v-model="packingDialog.form.tank_left_volume" type="number" step="0.001" class="w-full h-[36px] border rounded px-2 text-right" />
+              </div>
+              <div>
+                <label class="block text-sm text-gray-600 mb-1">{{ t('batch.packaging.dialog.tankLoss') }}</label>
+                <input :value="tankLossVolumeText" type="text" class="w-full h-[36px] border rounded px-2 text-right bg-gray-50 text-gray-600" readonly />
+              </div>
+              <div class="flex items-end">
+                <button class="w-full text-xs px-2 py-2 rounded border border-gray-300 hover:bg-gray-100" type="button" @click="markTankFillingEnd">
+                  {{ t('batch.packaging.dialog.tankFillEnd') }}
+                </button>
+              </div>
+            </div>
+            <hr class="border-gray-200" />
+            <div v-if="packingDialog.errors.filling_lines" class="text-xs text-red-600">{{ packingDialog.errors.filling_lines }}</div>
+            <div class="flex items-center justify-end">
               <button class="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-100" type="button" @click="addFillingLine">
                 {{ t('batch.packaging.dialog.addFilling') }}
               </button>
             </div>
-            <div v-if="packingDialog.errors.filling_lines" class="text-xs text-red-600">{{ packingDialog.errors.filling_lines }}</div>
             <div class="overflow-x-auto border border-gray-200 rounded-lg">
               <table class="min-w-full text-sm divide-y divide-gray-200">
                 <thead class="bg-gray-50 text-gray-600 uppercase text-xs">
                   <tr>
                     <th class="px-3 py-2 text-left">{{ t('batch.packaging.dialog.fillingTable.packageType') }}</th>
+                    <th class="px-3 py-2 text-left">{{ t('batch.packaging.dialog.fillingTable.lotCode') }}</th>
                     <th class="px-3 py-2 text-right">{{ t('batch.packaging.dialog.fillingTable.qty') }}</th>
                     <th class="px-3 py-2 text-right">{{ t('batch.packaging.dialog.fillingTable.unitVolume') }}</th>
                     <th class="px-3 py-2 text-right">{{ t('batch.packaging.dialog.fillingTable.totalVolume') }}</th>
@@ -357,6 +380,9 @@
                         <option value="">{{ t('common.select') }}</option>
                         <option v-for="option in packageCategoryOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
                       </select>
+                    </td>
+                    <td class="px-3 py-2">
+                      <input v-model.trim="line.lot_code" type="text" class="w-full h-[36px] border rounded px-2" />
                     </td>
                     <td class="px-3 py-2 text-right">
                       <input v-model="line.qty" type="number" min="1" step="1" class="w-full h-[36px] border rounded px-2 text-right" />
@@ -623,6 +649,7 @@ type PackingFillingLine = {
   id: string
   package_type_id: string
   qty: number
+  lot_code?: string | null
 }
 
 type PackingEvent = {
@@ -635,12 +662,15 @@ type PackingEvent = {
   movement: { site_id: string | null, qty: number | null, memo: string | null } | null
   filling_lines: PackingFillingLine[]
   reason: string | null
+  tank_fill_start_volume: number | null
+  tank_left_volume: number | null
 }
 
 type PackingFillingLineForm = {
   id: string
   package_type_id: string
   qty: string
+  lot_code: string
 }
 
 type PackingFormState = {
@@ -655,6 +685,8 @@ type PackingFormState = {
   movement_memo: string
   filling_lines: PackingFillingLineForm[]
   reason: string
+  tank_fill_start_volume: string
+  tank_left_volume: string
 }
 
 const packageCategories = ref<PackageCategoryOption[]>([])
@@ -861,6 +893,14 @@ const packingProcessedVolume = computed(() => {
     if (event.packing_type === 'filling') {
       const qty = event.movement?.qty
       if (qty != null) total += qty
+      if (event.tank_fill_start_volume != null && event.tank_left_volume != null) {
+        const loss = event.tank_fill_start_volume - event.tank_left_volume - (event.filling_lines.reduce((sum, line) => {
+          const unit = resolvePackageUnitVolume(line.package_type_id)
+          if (unit == null) return sum
+          return sum + line.qty * unit
+        }, 0))
+        if (Number.isFinite(loss)) total += loss
+      }
       return
     }
     const volume = eventVolumeInLiters(event)
@@ -918,6 +958,20 @@ const showPackingReason = computed(() => {
 const packingFillingTotals = computed(() => {
   const lines = packingDialog.form?.filling_lines ?? []
   return computeFillingTotals(lines)
+})
+
+const tankLossVolume = computed(() => {
+  if (!packingDialog.form) return null
+  const start = toNumber(packingDialog.form.tank_fill_start_volume)
+  const left = toNumber(packingDialog.form.tank_left_volume)
+  const total = packingFillingTotals.value.totalVolume
+  if (start == null || left == null || total == null) return null
+  return start - left - total
+})
+
+const tankLossVolumeText = computed(() => {
+  if (tankLossVolume.value == null) return '—'
+  return formatVolumeValue(tankLossVolume.value)
 })
 
 const reviewVolumeText = computed(() => {
@@ -1385,6 +1439,7 @@ async function loadPackingEvents() {
           id: String(line?.id ?? generateLocalId()),
           package_type_id: String(line?.package_type_id ?? ''),
           qty: toNumber(line?.qty) ?? 0,
+          lot_code: typeof line?.lot_code === 'string' ? line.lot_code : '',
         }))
         : []
       return {
@@ -1401,6 +1456,8 @@ async function loadPackingEvents() {
         },
         filling_lines: fillingLines,
         reason: meta.reason != null ? String(meta.reason) : row.reason ?? null,
+        tank_fill_start_volume: meta.tank_fill_start_volume != null ? toNumber(meta.tank_fill_start_volume) : null,
+        tank_left_volume: meta.tank_left_volume != null ? toNumber(meta.tank_left_volume) : null,
       } as PackingEvent
     })
   } catch (err) {
@@ -1519,8 +1576,11 @@ function openPackingEdit(event: PackingEvent) {
       id: line.id ?? generateLocalId(),
       package_type_id: line.package_type_id,
       qty: String(line.qty ?? ''),
+      lot_code: line.lot_code ?? '',
     })),
     reason: event.reason ?? '',
+    tank_fill_start_volume: event.tank_fill_start_volume != null ? String(event.tank_fill_start_volume) : '',
+    tank_left_volume: event.tank_left_volume != null ? String(event.tank_left_volume) : '',
   }
   packingMovementQtyTouched.value = true
 }
@@ -1594,6 +1654,10 @@ function resetPackingFormForType(form: PackingFormState, prevType: PackingType) 
   if (!(form.packing_type === 'loss' || form.packing_type === 'dispose')) {
     form.reason = ''
   }
+  if (form.packing_type !== 'filling') {
+    form.tank_fill_start_volume = ''
+    form.tank_left_volume = ''
+  }
 }
 
 function isVolumeType(type: PackingType) {
@@ -1610,7 +1674,15 @@ function addFillingLine() {
     id: generateLocalId(),
     package_type_id: '',
     qty: '',
+    lot_code: '',
   })
+}
+
+function markTankFillingEnd() {
+  if (!packingDialog.form) return
+  if (!packingDialog.form.tank_left_volume) {
+    packingDialog.form.tank_left_volume = '0'
+  }
 }
 
 function removeFillingLine(index: number) {
@@ -1789,7 +1861,11 @@ async function persistPackingEvent(form: PackingFormState, isEditing: boolean) {
         id: line.id,
         package_type_id: line.package_type_id,
         qty: toNumber(line.qty),
+        lot_code: line.lot_code ? line.lot_code.trim() : null,
       })),
+      tank_fill_start_volume: toNumber(form.tank_fill_start_volume),
+      tank_left_volume: toNumber(form.tank_left_volume),
+      tank_loss_volume: tankLossVolume.value,
       note: 'TODO: adjust mapping for src/dest sites and package/material usage.',
     },
   }
@@ -2298,6 +2374,8 @@ function newPackingForm(type: PackingType): PackingFormState {
     movement_memo: '',
     filling_lines: [],
     reason: '',
+    tank_fill_start_volume: '',
+    tank_left_volume: '',
   }
 }
 

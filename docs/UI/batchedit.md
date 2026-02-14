@@ -93,12 +93,16 @@
     a summary of move and filling information
     a button to edit filling information (a click will launch packageing dialog)
     the packaging dialog should follow the specification defined in batch_packing.md
+    for filling (詰口) save, UI must call stored function public.product_filling(p_doc jsonb)
 
 ## Action
-    - add a button to input actual yield, when the button is click, show the input actual yield and uom (select from mst_uom by volume).
-    - when 　actual yield is saved, please update the total product volume in filling section 
+    - add a button to input actual yield, when the button is click, show the input actual yield and uom (select from mst_uom by volume) and site (select form mst_sites).
+    - when 　actual yield is saved, please update the total product volume in filling section and call stored function product_produce.
 
 ## Business Rules
+  ・
+  ・
+
 
 ## Data Handling
 - batch basic information stored in mes_batches

@@ -169,6 +169,10 @@ Warnings:
   - Show success message
 - On error:
   - Show inline and global error
+- Filling (詰口) save rule:
+  - `from_lot_id` must always be the root lot (the lot with no parent), identified in `lot_edge` as the row where `from_lot_id` is `null`.
+  - UI must not insert/update `inv_movements`, `inv_movement_lines`, `lot`, `lot_edge` directly.
+  - UI must call stored function `public.product_filling(p_doc jsonb)`.
 
 ### Suggested Payload Structure
 
@@ -197,24 +201,22 @@ Warnings:
 ### tables
 - mst_package for package
 - mst_equipment_tank for tank
-- inv_movement for record movement
-- inv_movement_line for movement line 
+- inv_movements for record movement
+- inv_movement_lines for movement line 
 - lot for lot master
-- lot_event for lot event header
-- lot_event_line for lot event lines
+- lot_edge for lot lineage relation
 
 ### data usage
-- Saves packing events via inv_movements + inv_movement_lines.
+- For Filling (詰口): save by calling `public.product_filling(p_doc jsonb)`.
+- For non-filling types (ship/transfer/loss/dispose): save via `inv_movements` + `inv_movement_lines`.
 - Loads packing events from inv_movements where meta.source = 'packing' and meta.batch_id = <batchId>.
 - Soft-deletes by setting inv_movements.status = 'void'.
 - Uses UOM conversions for both package and volume calculations.
 - Stores UI detail in inv_movements.meta (e.g., packing_type, volume_qty, volume_uom, filling_lines, etc.) for display/edit.
 - Lot handling (new):
-  - Create lot_event for each packing dialog submission.
-  - Create lot_event_line records that mirror movement lines (same quantities/uom).
-  - Link inv_movements.lot_event_id to lot_event.id.
-  - Link inv_movement_lines.lot_id to the affected lot (if known).
-  - Soft-delete: set lot_event.status = 'void' when inv_movements.status = 'void'.
+  - Filling function creates destination packed lots.
+  - Filling function creates `lot_edge` rows from source lot to destination packed lots.
+  - Filling function updates inventory atomically (source decrement + destination increment).
 
 ### doc_type mapping:
 - Movement
@@ -228,6 +230,18 @@ Warnings:
 
 Filling: line per package; qty = unit_count * unit_volume(L); uom_id = liters UOM.
 Volume-only (ship/transfer/loss/dispose): a single line using a default package (currently first package in mst_package — TODO in code).
+
+### Filling function payload (UI → DB)
+- `doc_no`
+- `movement_at`
+- `src_site_id`
+- `dest_site_id`
+- `batch_id`
+- `from_lot_id`
+- `uom_id`
+- `lines[]`:
+  - required per line: `qty`
+  - optional per line: `line_no`, `lot_no`, `package_id`, `meta`
 
 
 ### Suggested UI Components

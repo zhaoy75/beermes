@@ -224,7 +224,12 @@
                 <td class="px-3 py-2 text-gray-700">{{ formatPackingFilling(event) }}</td>
                 <td class="px-3 py-2 text-gray-600">{{ event.memo || '—' }}</td>
                 <td class="px-3 py-2 space-x-2">
-                  <button class="px-2 py-1 text-xs rounded border hover:bg-gray-100" type="button" @click="openPackingEdit(event)">
+                  <button
+                    class="px-2 py-1 text-xs rounded border hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    type="button"
+                    :disabled="!canEditPackingEvent(event)"
+                    @click="openPackingEdit(event)"
+                  >
                     {{ t('batch.packaging.actions.edit') }}
                   </button>
                   <button class="px-2 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700" type="button" @click="deletePackingEvent(event)">
@@ -533,12 +538,13 @@
             <h3 class="text-lg font-semibold text-gray-800">{{ t('batch.edit.actualYieldDialogTitle') }}</h3>
             <p class="text-xs text-gray-500">{{ t('batch.edit.actualYieldDialogSubtitle') }}</p>
           </div>
-          <button class="text-sm px-2 py-1 rounded border hover:bg-gray-100" type="button" @click="closeActualYieldDialog">
+          <button class="text-sm px-2 py-1 rounded border hover:bg-gray-100 disabled:opacity-50" type="button" :disabled="actualYieldDialog.loading" @click="closeActualYieldDialog">
             {{ t('common.close') }}
           </button>
         </header>
         <div class="p-4 space-y-4">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div v-if="actualYieldDialog.globalError" class="text-sm text-red-600">{{ actualYieldDialog.globalError }}</div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div>
               <label class="block text-sm text-gray-600 mb-1" for="actualYieldDialogQty">{{ t('batch.edit.actualYield') }}</label>
               <input id="actualYieldDialogQty" v-model="actualYieldDialog.form.actual_yield" type="number" min="0" step="0.000001" class="w-full h-[40px] border rounded px-3 text-right" />
@@ -552,14 +558,22 @@
               </select>
               <p v-if="actualYieldDialog.errors.actual_yield_uom" class="mt-1 text-xs text-red-600">{{ actualYieldDialog.errors.actual_yield_uom }}</p>
             </div>
+            <div>
+              <label class="block text-sm text-gray-600 mb-1" for="actualYieldDialogSite">{{ t('batch.edit.actualYieldSite') }}</label>
+              <select id="actualYieldDialogSite" v-model="actualYieldDialog.form.site_id" class="w-full h-[40px] border rounded px-3 bg-white">
+                <option value="">{{ t('common.select') }}</option>
+                <option v-for="option in siteOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+              </select>
+              <p v-if="actualYieldDialog.errors.site_id" class="mt-1 text-xs text-red-600">{{ actualYieldDialog.errors.site_id }}</p>
+            </div>
           </div>
         </div>
         <footer class="flex items-center justify-end gap-2 px-4 py-3 border-t">
-          <button class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-100" type="button" @click="closeActualYieldDialog">
+          <button class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-50" type="button" :disabled="actualYieldDialog.loading" @click="closeActualYieldDialog">
             {{ t('common.cancel') }}
           </button>
-          <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" type="button" @click="saveActualYieldDialog">
-            {{ t('common.save') }}
+          <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50" type="button" :disabled="actualYieldDialog.loading" @click="saveActualYieldDialog">
+            {{ actualYieldDialog.loading ? t('common.saving') : t('common.save') }}
           </button>
         </footer>
       </div>
@@ -580,6 +594,7 @@ const { t, locale } = useI18n()
 
 const batchId = computed(() => route.params.batchId as string | undefined)
 const pageTitle = computed(() => t('batch.edit.title'))
+const ZERO_UUID = '00000000-0000-0000-0000-000000000000'
 
 const tenantId = ref<string | null>(null)
 const batch = ref<any>(null)
@@ -744,10 +759,13 @@ const packingDialog = reactive({
 
 const actualYieldDialog = reactive({
   open: false,
+  loading: false,
+  globalError: '',
   errors: {} as Record<string, string>,
   form: {
     actual_yield: '',
     actual_yield_uom: '',
+    site_id: '',
   },
 })
 
@@ -853,23 +871,6 @@ function mapPackingDocType(type: PackingType) {
   switch (type) {
     case 'filling':
       return 'production_receipt'
-    case 'ship':
-      return 'sale'
-    case 'transfer':
-      return 'transfer'
-    case 'loss':
-      return 'adjustment'
-    case 'dispose':
-      return 'waste'
-    default:
-      return 'adjustment'
-  }
-}
-
-function mapPackingLotEventType(type: PackingType) {
-  switch (type) {
-    case 'filling':
-      return 'production'
     case 'ship':
       return 'sale'
     case 'transfer':
@@ -1612,29 +1613,112 @@ function openRelationDialog(row?: BatchRelationRow) {
 
 function openActualYieldDialog() {
   actualYieldDialog.open = true
+  actualYieldDialog.loading = false
+  actualYieldDialog.globalError = ''
   actualYieldDialog.errors = {}
   actualYieldDialog.form.actual_yield = batchForm.actual_yield
   actualYieldDialog.form.actual_yield_uom = batchForm.actual_yield_uom || defaultVolumeUomId()
+  actualYieldDialog.form.site_id = resolveProduceSiteId(batch.value) || ''
 }
 
 function closeActualYieldDialog() {
+  if (actualYieldDialog.loading) return
   actualYieldDialog.open = false
+  actualYieldDialog.globalError = ''
   actualYieldDialog.errors = {}
 }
 
-function saveActualYieldDialog() {
+async function saveActualYieldDialog() {
   const errors: Record<string, string> = {}
   const qty = toNumber(actualYieldDialog.form.actual_yield)
+  const uomId = actualYieldDialog.form.actual_yield_uom
+  const siteId = actualYieldDialog.form.site_id
   if (qty == null || qty <= 0) errors.actual_yield = t('batch.edit.actualYieldRequired')
-  if (!actualYieldDialog.form.actual_yield_uom) errors.actual_yield_uom = t('batch.edit.actualYieldUomRequired')
+  if (!uomId) errors.actual_yield_uom = t('batch.edit.actualYieldUomRequired')
+  if (!siteId) errors.site_id = t('batch.edit.actualYieldSiteRequired')
   if (Object.keys(errors).length) {
     actualYieldDialog.errors = errors
     return
   }
-  batchForm.actual_yield = String(qty)
-  batchForm.actual_yield_uom = actualYieldDialog.form.actual_yield_uom
-  actualYieldDialog.open = false
-  actualYieldDialog.errors = {}
+  if (!batchId.value || !batch.value) {
+    actualYieldDialog.globalError = t('batch.edit.actualYieldSaveFailed')
+    return
+  }
+
+  actualYieldDialog.loading = true
+  actualYieldDialog.globalError = ''
+  try {
+    const patch: Record<string, any> = {
+      actual_yield: qty,
+      actual_yield_uom: uomId,
+      meta: {
+        ...(batch.value?.meta && typeof batch.value.meta === 'object' && !Array.isArray(batch.value.meta) ? batch.value.meta : {}),
+        manufacturing_site_id: siteId,
+      },
+    }
+    const { error: batchSaveError } = await supabase.rpc('batch_save', {
+      p_batch_id: batchId.value,
+      p_patch: patch,
+    })
+    if (batchSaveError) throw batchSaveError
+
+    batchForm.actual_yield = String(qty)
+    batchForm.actual_yield_uom = uomId
+    batch.value.actual_yield = qty
+    batch.value.actual_yield_uom = uomId
+    batch.value.meta = patch.meta
+
+    const movementAt = batch.value.actual_end
+      ? new Date(batch.value.actual_end).toISOString()
+      : new Date().toISOString()
+    const batchCode = String(batch.value.batch_code ?? 'BATCH')
+    const normalizedQty = Number(qty).toFixed(6)
+    const idempotencyKey = `batch_actual_yield:${batchId.value}:${normalizedQty}:${uomId}`
+    const produceDoc = {
+      doc_no: `BP-${batchCode}-${Date.now()}`,
+      movement_at: movementAt,
+      src_site_id: siteId,
+      dest_site_id: siteId,
+      material_id: ZERO_UUID,
+      batch_id: batchId.value,
+      qty,
+      uom_id: uomId,
+      produced_at: movementAt,
+      meta: {
+        source: 'batch_actual_yield',
+        batch_id: batchId.value,
+        batch_code: batchCode,
+        movement_intent: 'BREW_PRODUCE',
+        idempotency_key: idempotencyKey,
+      },
+      line_meta: {
+        source: 'batch_actual_yield',
+      },
+    }
+
+    const { error: produceError } = await supabase.rpc('product_produce', {
+      p_doc: produceDoc,
+    })
+    if (produceError) {
+      const detail = extractErrorMessage(produceError)
+      actualYieldDialog.globalError = detail
+        ? `${t('batch.edit.actualYieldProduceFailed')} (${detail})`
+        : t('batch.edit.actualYieldProduceFailed')
+      return
+    }
+
+    actualYieldDialog.open = false
+    actualYieldDialog.errors = {}
+    actualYieldDialog.globalError = ''
+    showPackingNotice(t('batch.edit.actualYieldSaved'))
+  } catch (err) {
+    const detail = extractErrorMessage(err)
+    actualYieldDialog.globalError = detail
+      ? `${t('batch.edit.actualYieldSaveFailed')} (${detail})`
+      : t('batch.edit.actualYieldSaveFailed')
+  } finally {
+    actualYieldDialog.loading = false
+  }
 }
 
 function closeRelationDialog() {
@@ -1653,7 +1737,12 @@ function openPackingDialog() {
   packingMovementQtyTouched.value = false
 }
 
+function canEditPackingEvent(event: PackingEvent) {
+  return event.packing_type !== 'filling'
+}
+
 function openPackingEdit(event: PackingEvent) {
+  if (!canEditPackingEvent(event)) return
   packingDialog.open = true
   packingDialog.editing = true
   packingDialog.loading = false
@@ -1816,7 +1905,10 @@ async function savePackingEvent(addAnother: boolean) {
     }
   } catch (err) {
     console.error(err)
-    packingDialog.globalError = t('batch.packaging.errors.saveFailed')
+    const detail = extractErrorMessage(err)
+    packingDialog.globalError = detail
+      ? `${t('batch.packaging.errors.saveFailed')} (${detail})`
+      : t('batch.packaging.errors.saveFailed')
   } finally {
     packingDialog.loading = false
   }
@@ -1898,30 +1990,63 @@ async function deleteRelation(row: BatchRelationRow) {
 async function deletePackingEvent(event: PackingEvent) {
   if (!window.confirm(t('batch.packaging.confirmDelete'))) return
   try {
-    const { data: movementRow, error: movementError } = await supabase
-      .from('inv_movements')
-      .select('lot_event_id')
-      .eq('id', event.id)
-      .maybeSingle()
-    if (movementError) throw movementError
     const { error } = await supabase
       .from('inv_movements')
       .update({ status: 'void' })
       .eq('id', event.id)
     if (error) throw error
-    if (movementRow?.lot_event_id) {
-      const { error: lotError } = await supabase
-        .from('lot_event')
-        .update({ status: 'void' })
-        .eq('id', movementRow.lot_event_id)
-      if (lotError) throw lotError
-    }
     await loadPackingEvents()
     showPackingNotice(t('batch.packaging.toast.deleted'))
   } catch (err) {
     console.error(err)
     packingDialog.globalError = t('batch.packaging.errors.deleteFailed')
   }
+}
+
+async function resolveFillingSourceLot(batchIdValue: string, siteId: string) {
+  const { data: candidates, error: candidateError } = await supabase
+    .from('lot')
+    .select('id, uom_id')
+    .eq('batch_id', batchIdValue)
+    .eq('site_id', siteId)
+    .neq('status', 'void')
+    .gt('qty', 0)
+    .order('produced_at', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(50)
+  if (candidateError) throw candidateError
+  if (!candidates?.length) return null
+
+  const candidateIds = candidates
+    .map((row) => row.id)
+    .filter((value): value is string => typeof value === 'string' && !!value)
+  if (!candidateIds.length) return null
+
+  const { data: roots, error: rootError } = await supabase
+    .from('lot_edge')
+    .select('to_lot_id')
+    .is('from_lot_id', null)
+    .eq('edge_type', 'PRODUCE')
+    .in('to_lot_id', candidateIds)
+  if (rootError) throw rootError
+  if (!roots?.length) return null
+
+  const rootLotIds = new Set(
+    roots
+      .map((row) => row.to_lot_id)
+      .filter((value): value is string => typeof value === 'string' && !!value),
+  )
+  for (const candidate of candidates) {
+    if (rootLotIds.has(candidate.id) && candidate.uom_id) {
+      return { id: candidate.id, uom_id: candidate.uom_id as string }
+    }
+  }
+  return null
+}
+
+async function callProductFilling(payload: Record<string, any>) {
+  const { error } = await supabase.rpc('product_filling', { p_doc: payload })
+  if (error) throw error
 }
 
 async function persistPackingEvent(form: PackingFormState, isEditing: boolean) {
@@ -1931,95 +2056,107 @@ async function persistPackingEvent(form: PackingFormState, isEditing: boolean) {
   const volumeUomId = resolveUomId(form.volume_uom)
   const lineUomId = resolveLitersUomId()
   const packingId = form.id ?? generateLocalId()
+  const movementAt = fromInputDateTime(form.event_time) ?? new Date().toISOString()
   const docNo = `PACK-${batchCode}-${Date.now()}`
+  const fillingLinesMeta = form.filling_lines.map((line) => ({
+    id: line.id,
+    package_type_id: line.package_type_id,
+    qty: toNumber(line.qty),
+    lot_code: line.lot_code ? line.lot_code.trim() : null,
+  }))
+  const packingMeta = {
+    source: 'packing',
+    batch_id: batchId.value,
+    batch_code: batchCode,
+    packing_id: packingId,
+    packing_type: form.packing_type,
+    memo: form.memo ? form.memo.trim() : null,
+    volume_qty: volumeQty,
+    volume_uom: volumeUomId || null,
+    movement_site_id: form.movement_site_id || null,
+    movement_qty: form.movement_qty ? toNumber(form.movement_qty) : null,
+    movement_memo: form.movement_memo ? form.movement_memo.trim() : null,
+    filling_lines: fillingLinesMeta,
+    tank_fill_start_volume: toNumber(form.tank_fill_start_volume),
+    tank_left_volume: toNumber(form.tank_left_volume),
+    tank_loss_volume: tankLossVolume.value,
+  }
+
+  if (form.packing_type === 'filling') {
+    if (isEditing) {
+      throw new Error('Editing Filling events is not supported. Delete and re-create the event.')
+    }
+    const siteId = form.movement_site_id || null
+    if (!siteId) throw new Error(t('batch.packaging.errors.siteRequired'))
+
+    const sourceLot = await resolveFillingSourceLot(batchId.value, siteId)
+    if (!sourceLot) {
+      throw new Error('Root source lot for filling is not found (lot_edge.from_lot_id is null). Run product_produce first.')
+    }
+    const sourceUomId = sourceLot.uom_id
+    const sourceUomCode = resolveUomCode(sourceUomId)
+
+    const lines = form.filling_lines
+      .map((line, index) => {
+        const qtyUnits = toNumber(line.qty)
+        const unitVolume = resolvePackageUnitVolume(line.package_type_id)
+        if (qtyUnits == null || unitVolume == null || qtyUnits <= 0) return null
+        const qtyLiters = qtyUnits * unitVolume
+        return {
+          line_no: index + 1,
+          lot_no: line.lot_code ? line.lot_code.trim() : null,
+          package_id: line.package_type_id || null,
+          qty: convertFromLiters(qtyLiters, sourceUomCode) ?? qtyLiters,
+          meta: { unit_count: qtyUnits },
+        }
+      })
+      .filter((line): line is { line_no: number, lot_no: string | null, package_id: string | null, qty: number, meta: Record<string, any> } => line !== null)
+    if (!lines.length) throw new Error(t('batch.packaging.errors.fillingRequired'))
+    const totalFillQty = form.filling_lines.reduce((sum, line) => {
+      const qtyUnits = toNumber(line.qty)
+      const unitVolume = resolvePackageUnitVolume(line.package_type_id)
+      if (qtyUnits == null || unitVolume == null || qtyUnits <= 0) return sum
+      return sum + (qtyUnits * unitVolume)
+    }, 0)
+
+    const fillPayload = {
+      doc_no: docNo,
+      movement_at: movementAt,
+      src_site_id: siteId,
+      dest_site_id: siteId,
+      batch_id: batchId.value,
+      from_lot_id: sourceLot.id,
+      uom_id: sourceUomId,
+      notes: form.memo ? form.memo.trim() : null,
+      meta: {
+        ...packingMeta,
+        movement_qty: totalFillQty,
+        movement_intent: 'PACKAGE_FILL',
+        idempotency_key: `packing_fill:${batchId.value}:${packingId}`,
+      },
+      lines,
+    }
+    await callProductFilling(fillPayload)
+    return
+  }
 
   const movementPayload = {
     doc_no: isEditing ? undefined : docNo,
     doc_type: mapPackingDocType(form.packing_type),
     status: 'posted',
-    movement_at: fromInputDateTime(form.event_time) ?? new Date().toISOString(),
+    movement_at: movementAt,
     src_site_id: null,
     dest_site_id: isMovementType(form.packing_type) ? (form.movement_site_id || null) : null,
     reason: form.reason ? form.reason.trim() : null,
     notes: form.memo ? form.memo.trim() : null,
-    meta: {
-      source: 'packing',
-      batch_id: batchId.value,
-      batch_code: batchCode,
-      packing_id: packingId,
-      packing_type: form.packing_type,
-      memo: form.memo ? form.memo.trim() : null,
-      volume_qty: volumeQty,
-      volume_uom: volumeUomId || null,
-      movement_site_id: form.movement_site_id || null,
-      movement_qty: form.movement_qty ? toNumber(form.movement_qty) : null,
-      movement_memo: form.movement_memo ? form.movement_memo.trim() : null,
-      filling_lines: form.filling_lines.map((line) => ({
-        id: line.id,
-        package_type_id: line.package_type_id,
-        qty: toNumber(line.qty),
-        lot_code: line.lot_code ? line.lot_code.trim() : null,
-      })),
-      tank_fill_start_volume: toNumber(form.tank_fill_start_volume),
-      tank_left_volume: toNumber(form.tank_left_volume),
-      tank_loss_volume: tankLossVolume.value,
-      note: 'TODO: adjust mapping for src/dest sites and package/material usage.',
-    },
+    meta: packingMeta,
   }
 
   let movementId = form.id ?? ''
-  let lotEventId: string | null = null
-
-  const lotEventPayload = {
-    event_no: isEditing ? undefined : docNo,
-    event_type: mapPackingLotEventType(form.packing_type),
-    status: 'posted',
-    event_at: fromInputDateTime(form.event_time) ?? new Date().toISOString(),
-    src_site_id: null,
-    dest_site_id: isMovementType(form.packing_type) ? (form.movement_site_id || null) : null,
-    reason: form.reason ? form.reason.trim() : null,
-    notes: form.memo ? form.memo.trim() : null,
-    meta: {
-      source: 'packing',
-      batch_id: batchId.value,
-      batch_code: batchCode,
-      packing_id: packingId,
-      packing_type: form.packing_type,
-    },
-  }
-
   if (isEditing && form.id) {
-    const { data: existing, error: existingError } = await supabase
-      .from('inv_movements')
-      .select('lot_event_id')
-      .eq('id', form.id)
-      .maybeSingle()
-    if (existingError) throw existingError
-    lotEventId = existing?.lot_event_id ?? null
-    if (lotEventId) {
-      const { error: lotError } = await supabase
-        .from('lot_event')
-        .update(lotEventPayload)
-        .eq('id', lotEventId)
-      if (lotError) throw lotError
-      const { error: lotLineDeleteError } = await supabase
-        .from('lot_event_line')
-        .delete()
-        .eq('lot_event_id', lotEventId)
-      if (lotLineDeleteError) throw lotLineDeleteError
-    } else {
-      const { data: lotData, error: lotInsertError } = await supabase
-        .from('lot_event')
-        .insert(lotEventPayload)
-        .select('id')
-        .single()
-      if (lotInsertError) throw lotInsertError
-      lotEventId = lotData.id
-    }
-
     const { error } = await supabase
       .from('inv_movements')
-      .update({ ...movementPayload, lot_event_id: lotEventId })
+      .update(movementPayload)
       .eq('id', form.id)
     if (error) throw error
     movementId = form.id
@@ -2029,17 +2166,9 @@ async function persistPackingEvent(form: PackingFormState, isEditing: boolean) {
       .eq('movement_id', movementId)
     if (deleteError) throw deleteError
   } else {
-    const { data: lotData, error: lotInsertError } = await supabase
-      .from('lot_event')
-      .insert(lotEventPayload)
-      .select('id')
-      .single()
-    if (lotInsertError) throw lotInsertError
-    lotEventId = lotData.id
-
     const { data, error } = await supabase
       .from('inv_movements')
-      .insert({ ...movementPayload, lot_event_id: lotEventId })
+      .insert(movementPayload)
       .select('id')
       .single()
     if (error) throw error
@@ -2047,36 +2176,7 @@ async function persistPackingEvent(form: PackingFormState, isEditing: boolean) {
   }
 
   const lines: Array<Record<string, any>> = []
-  const lotLines: Array<Record<string, any>> = []
-  if (form.packing_type === 'filling') {
-    form.filling_lines.forEach((line, index) => {
-      const qtyUnits = toNumber(line.qty)
-      const unitVolume = resolvePackageUnitVolume(line.package_type_id)
-      if (qtyUnits == null || unitVolume == null) return
-      const volumeLiters = qtyUnits * unitVolume
-      lines.push({
-        movement_id: movementId,
-        line_no: index + 1,
-        package_id: line.package_type_id,
-        batch_id: batchId.value,
-        qty: volumeLiters,
-        uom_id: lineUomId,
-        notes: null,
-        meta: { unit_count: qtyUnits },
-      })
-      lotLines.push({
-        lot_event_id: lotEventId,
-        line_no: index + 1,
-        lot_id: null,
-        package_id: line.package_type_id,
-        batch_id: batchId.value,
-        qty: volumeLiters,
-        uom_id: lineUomId,
-        notes: null,
-        meta: { unit_count: qtyUnits },
-      })
-    })
-  } else if (volumeQty != null) {
+  if (volumeQty != null) {
     const packageId = defaultPackageId()
     if (!packageId) {
       throw new Error('No package configured for volume-only movement.')
@@ -2092,26 +2192,11 @@ async function persistPackingEvent(form: PackingFormState, isEditing: boolean) {
       notes: null,
       meta: { volume_uom_id: volumeUomId || null },
     })
-    lotLines.push({
-      lot_event_id: lotEventId,
-      line_no: 1,
-      lot_id: null,
-      package_id: packageId,
-      batch_id: batchId.value,
-      qty: volumeLiters ?? volumeQty,
-      uom_id: lineUomId,
-      notes: null,
-      meta: { volume_uom_id: volumeUomId || null },
-    })
   }
 
   if (lines.length) {
     const { error: lineError } = await supabase.from('inv_movement_lines').insert(lines)
     if (lineError) throw lineError
-  }
-  if (lotLines.length && lotEventId) {
-    const { error: lotLineError } = await supabase.from('lot_event_line').insert(lotLines)
-    if (lotLineError) throw lotLineError
   }
 }
 
@@ -2361,6 +2446,39 @@ function resolveMetaNumber(meta: unknown, key: string) {
   return Number.isNaN(num) ? null : num
 }
 
+function resolveProduceSiteId(source: any) {
+  if (!source) return null
+  const meta = (source.meta && typeof source.meta === 'object' && !Array.isArray(source.meta))
+    ? source.meta as Record<string, any>
+    : {}
+  const candidates = [
+    meta.manufacturing_site_id,
+    meta.manufacture_site_id,
+    meta.brew_site_id,
+    meta.site_id,
+    meta.dest_site_id,
+    meta.movement_site_id,
+  ]
+  for (const value of candidates) {
+    if (typeof value === 'string' && value.trim()) return value.trim()
+  }
+  return null
+}
+
+function extractErrorMessage(err: unknown) {
+  if (!err) return ''
+  if (typeof err === 'string') return err
+  if (err instanceof Error) return err.message
+  const rec = err as Record<string, unknown>
+  const message = rec.message
+  if (typeof message === 'string' && message.trim()) return message
+  const details = rec.details
+  if (typeof details === 'string' && details.trim()) return details
+  const hint = rec.hint
+  if (typeof hint === 'string' && hint.trim()) return hint
+  return ''
+}
+
 function buildBatchMeta(meta: unknown) {
   const base = (meta && typeof meta === 'object' && !Array.isArray(meta))
     ? { ...(meta as Record<string, unknown>) }
@@ -2450,6 +2568,21 @@ function convertToLiters(size: number | null | undefined, uomCode: string | null
       return Number(size) * 3.78541
     default:
       return Number(size)
+  }
+}
+
+function convertFromLiters(sizeInLiters: number | null | undefined, uomCode: string | null | undefined) {
+  if (sizeInLiters == null || Number.isNaN(Number(sizeInLiters))) return null
+  if (!uomCode) return Number(sizeInLiters)
+  switch (uomCode) {
+    case 'L':
+      return Number(sizeInLiters)
+    case 'mL':
+      return Number(sizeInLiters) * 1000
+    case 'gal_us':
+      return Number(sizeInLiters) / 3.78541
+    default:
+      return Number(sizeInLiters)
   }
 }
 

@@ -28,7 +28,6 @@ Required fields:
 - `doc_no` text: business document number (tenant unique)
 - `movement_at` timestamptz: production timestamp
 - `dest_site_id` uuid: manufacturing site id
-- `material_id` uuid: produced beer material id
 - `batch_id` uuid: source manufacturing batch id
 - `qty` numeric: produced quantity, must be `> 0`
 - `uom_id` uuid: quantity UOM
@@ -46,6 +45,7 @@ Optional fields:
 - `inv_movements.doc_type = 'BREW_PRODUCE'` (or mapped enum value in your system)
 - `inv_movements.status = 'posted'`
 - `inv_movement_lines.line_no = 1`
+- `inv_movement_lines.material_id = '00000000-0000-0000-0000-000000000000'::uuid`
 - `lot_edge.edge_type = 'PRODUCE'`
 - `lot_edge.from_lot_id = NULL`
 - `lot_edge.to_lot_id = <new_lot_id>`
@@ -54,7 +54,7 @@ Optional fields:
 ## Validation
 - Tenant exists via `public._assert_tenant()`.
 - `qty > 0`.
-- `dest_site_id`, `material_id`, `batch_id`, `uom_id` are present.
+- `dest_site_id`, `batch_id`, `uom_id` are present.
 - `doc_no` unique per tenant in `inv_movements`.
 - `lot_no` unique per tenant in `lot` (if provided).
 - `src_site_id` is either `NULL` or same as `dest_site_id` for this intent.
@@ -69,11 +69,11 @@ Optional fields:
    - `status = posted`
 3. Insert one row into `inv_movement_lines`:
    - `movement_id = <inserted movement id>`
-   - `material_id = p_doc.material_id`
+   - `material_id = '00000000-0000-0000-0000-000000000000'::uuid`
    - `batch_id = p_doc.batch_id`
    - `qty = p_doc.qty`, `uom_id = p_doc.uom_id`
 4. Create one new lot in `lot`:
-   - `lot_no`, `material_id`, `batch_id`, `site_id = dest_site_id`
+   - `lot_no`, `material_id='00000000-0000-0000-0000-000000000000'::uuid`, `batch_id`, `site_id = dest_site_id`
    - `produced_at`, `expires_at`, `qty`, `uom_id`, `status = active`
 5. Create one `lot_edge` row:
    - `movement_id`, `movement_line_id`
@@ -94,7 +94,7 @@ Return `movement_id uuid`.
 - `PP003`: duplicate `doc_no`
 - `PP004`: duplicate `lot_no`
 - `PP005`: invalid `src_site_id`/`dest_site_id` combination for produce intent
-- `PP006`: FK/reference not found (`material_id`, `batch_id`, `uom_id`, `site_id`)
+- `PP006`: FK/reference not found (`batch_id`, `uom_id`, `site_id`)
 
 ## Idempotency Recommendation
 Support optional `idempotency_key` in `p_doc.meta`:
@@ -108,7 +108,6 @@ Support optional `idempotency_key` in `p_doc.meta`:
   "movement_at": "2026-02-14T09:00:00Z",
   "src_site_id": null,
   "dest_site_id": "11111111-1111-1111-1111-111111111111",
-  "material_id": "22222222-2222-2222-2222-222222222222",
   "batch_id": "33333333-3333-3333-3333-333333333333",
   "qty": 1200,
   "uom_id": "44444444-4444-4444-4444-444444444444",

@@ -286,7 +286,7 @@ const searchConditions = computed(() => {
   if (search.start) conditions.push({ key: 'start', label: t('batch.list.startDate'), value: search.start })
   if (search.end) conditions.push({ key: 'end', label: t('batch.list.endDate'), value: search.end })
   attrSearchFields.value.forEach((field) => {
-    const value = search.attr[String(field.attr_id)]
+    const value = normalizeSearchText(search.attr[String(field.attr_id)])
     if (value) {
       conditions.push({ key: `attr-${field.attr_id}`, label: attrLabel(field), value })
     }
@@ -549,7 +549,7 @@ const filteredBatches = computed(() => {
     const endSource = batch.planned_end ?? batch.planned_start
     const endOk = !search.end || (!!endSource && safeTimestamp(endSource) <= safeTimestamp(search.end, true))
     const attrMatch = attrSearchFields.value.every((field) => {
-      const query = (search.attr[String(field.attr_id)] ?? '').trim()
+      const query = normalizeSearchText(search.attr[String(field.attr_id)])
       if (!query) return true
       const raw = attrValueFor(batch.id, field.attr_id)
       return matchAttrValue(raw, query)
@@ -678,6 +678,14 @@ function normalizeAttrValue(raw: unknown) {
     return (raw as any).def_id
   }
   return raw
+}
+
+function normalizeSearchText(value: unknown) {
+  if (value == null) return ''
+  if (typeof value === 'string') return value.trim()
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value).trim()
+  if (value instanceof Date) return value.toISOString().trim()
+  return String(value).trim()
 }
 
 function formatAttrValueForField(value: unknown, field: AttrField) {

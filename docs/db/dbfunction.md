@@ -1,7 +1,7 @@
 # Stored Function List (Based on Current DDL)
 
 This list is aligned to current tables in:
-- `mes_batches`, `mes_batch_steps`, `mes_batch_relation`
+- `mes_batches`, `mes_batch_relation`
 - `inv_inventory`
 - `inv_movements`, `inv_movement_lines`
 - `lot`, `lot_event`, `lot_event_line`
@@ -12,13 +12,13 @@ All functions are expected in `public` schema and tenant-aware via existing RLS/
 ## 1) Batch: create/save/search
 
 1. `public.batch_create(p_doc jsonb) returns uuid`
-- Purpose: create a new batch header and optional steps.
-- Main tables: `mes_batches`, `mes_batch_steps`.
-- Notes: `p_doc` should include `batch_code`, optional `recipe_id`, dates, and step array.
+- Purpose: create a new batch header.
+- Main tables: `mes_batches`.
+- Notes: `p_doc` should include `batch_code`, optional `recipe_id`, dates.
 
 2. `public.batch_save(p_batch_id uuid, p_patch jsonb) returns uuid`
-- Purpose: update existing batch data (header, KPI, notes, status, optional step updates).
-- Main tables: `mes_batches`, `mes_batch_steps`.
+- Purpose: update existing batch data (header, KPI, notes, status).
+- Main tables: `mes_batches`.
 - Notes: patch-style update for UI edit screens.
 
 3. `public.batch_search(p_filter jsonb) returns table (id uuid, batch_code text, status mes_batch_status, recipe_id uuid, planned_start timestamptz, planned_end timestamptz, actual_start timestamptz, actual_end timestamptz, created_at timestamptz)`
@@ -27,8 +27,8 @@ All functions are expected in `public` schema and tenant-aware via existing RLS/
 - Notes: filter keys like `status`, date range, `recipe_id`, keyword (`batch_code`/`batch_label`).
 
 4. `public.batch_get_detail(p_batch_id uuid) returns jsonb`
-- Purpose: retrieve one batch with steps and lineage summary.
-- Main tables: `mes_batches`, `mes_batch_steps`, `mes_batch_relation`.
+- Purpose: retrieve one batch with lineage summary.
+- Main tables: `mes_batches`, `mes_batch_relation`.
 
 ## 2) Filling + inventory retrieve
 

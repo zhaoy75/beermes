@@ -1044,27 +1044,36 @@ async function fetchBatch() {
     loadingBatch.value = true
     await ensureTenant()
     await Promise.all([loadBatchOptions(), loadBatchStatusOptions(), loadSites(), fetchPackageCategories(), loadUoms()])
-    const { data, error } = await supabase
-      .from('mes_batches')
-      .select('*')
-      .eq('id', batchId.value)
-      .maybeSingle()
+    const { data, error } = await supabase.rpc('batch_get_detail', {
+      p_batch_id: batchId.value,
+    })
     if (error) throw error
-    batch.value = data
-    if (data) {
-      batchForm.batch_label = data.batch_label ?? resolveMetaLabel(data.meta) ?? ''
-      batchForm.status = data.status ?? ''
-      batchForm.product_name = data.product_name ?? ''
-      batchForm.actual_yield = data.actual_yield != null ? String(data.actual_yield) : ''
-      batchForm.actual_yield_uom = data.actual_yield_uom ?? ''
-      batchForm.planned_start = toInputDate(data.planned_start)
-      batchForm.planned_end = toInputDate(data.planned_end)
-      batchForm.actual_start = toInputDate(data.actual_start)
-      batchForm.actual_end = toInputDate(data.actual_end)
-      batchForm.related_batch_id = resolveMetaString(data.meta, 'related_batch_id') ?? ''
-      await loadBatchRelations()
+    const detail = (data ?? null) as any
+    const header = detail?.batch ?? null
+    batch.value = header
+    if (header) {
+      batchForm.batch_label = header.batch_label ?? resolveMetaLabel(header.meta) ?? ''
+      batchForm.status = header.status ?? ''
+      batchForm.product_name = header.product_name ?? ''
+      batchForm.actual_yield = header.actual_yield != null ? String(header.actual_yield) : ''
+      batchForm.actual_yield_uom = header.actual_yield_uom ?? ''
+      batchForm.planned_start = toInputDate(header.planned_start)
+      batchForm.planned_end = toInputDate(header.planned_end)
+      batchForm.actual_start = toInputDate(header.actual_start)
+      batchForm.actual_end = toInputDate(header.actual_end)
+      batchForm.related_batch_id = resolveMetaString(header.meta, 'related_batch_id') ?? ''
+      batchRelations.value = (Array.isArray(detail?.relations) ? detail.relations : []).map((row: any) => ({
+        id: row.id,
+        src_batch_id: row.src_batch_id,
+        dst_batch_id: row.dst_batch_id,
+        relation_type: row.relation_type,
+        quantity: row.quantity != null ? Number(row.quantity) : null,
+        uom_id: row.uom_id ?? null,
+        ratio: row.ratio != null ? Number(row.ratio) : null,
+        effective_at: row.effective_at ?? null,
+      }))
       await loadPackingEvents()
-      await loadBatchAttributes(data.id)
+      await loadBatchAttributes(header.id)
     } else {
       attrFields.value = []
       packingEvents.value = []
@@ -1277,12 +1286,12 @@ async function loadBatchOptions() {
   if (batchOptionsLoading.value) return
   try {
     batchOptionsLoading.value = true
-    const tenant = await ensureTenant()
-    const { data, error } = await supabase
-      .from('mes_batches')
-      .select('id, batch_code')
-      .eq('tenant_id', tenant)
-      .order('batch_code')
+    const { data, error } = await supabase.rpc('batch_search', {
+      p_filter: {
+        limit: 1000,
+        offset: 0,
+      },
+    })
     if (error) throw error
     const all = (data ?? []).map((row: any) => ({ value: row.id, label: row.batch_code }))
     batchAllOptions.value = all
@@ -1504,10 +1513,10 @@ async function saveBatch() {
       actual_end: fromInputDate(batchForm.actual_end),
       meta,
     }
-    const { error } = await supabase
-      .from('mes_batches')
-      .update(update)
-      .eq('id', batchId.value)
+    const { error } = await supabase.rpc('batch_save', {
+      p_batch_id: batchId.value,
+      p_patch: update,
+    })
     if (error) throw error
     await saveBatchAttributes(batchId.value)
     await fetchBatch()

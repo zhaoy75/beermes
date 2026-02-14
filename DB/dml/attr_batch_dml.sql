@@ -57,6 +57,57 @@ values
     true,
     'Target alcohol by volume (%)',
     20
+  ),
+  (
+    '00000000-0000-0000-0000-000000000000',
+    'batch',
+    'system',
+    null,
+    '00000000-0000-0000-0000-000000000000',
+    'liquid_name',
+    'Liquid Name',
+    '{"ja":"液種名","en":"Liquid Name"}',
+    'string',
+    null,
+    null,
+    null,
+    false,
+    'Liquid name for the batch',
+    30
+  ),
+  (
+    '00000000-0000-0000-0000-000000000000',
+    'batch',
+    'system',
+    null,
+    '00000000-0000-0000-0000-000000000000',
+    'style_name',
+    'Style Name',
+    '{"ja":"スタイル名","en":"Style Name"}',
+    'string',
+    null,
+    null,
+    null,
+    false,
+    'Style name for the batch',
+    40
+  ),
+  (
+    '00000000-0000-0000-0000-000000000000',
+    'batch',
+    'system',
+    null,
+    '00000000-0000-0000-0000-000000000000',
+    'customer_name',
+    'Customer Name',
+    '{"ja":"顧客名","en":"Customer Name"}',
+    'string',
+    null,
+    null,
+    null,
+    false,
+    'Customer name for the batch',
+    50
   )
 on conflict do nothing;
 
@@ -101,16 +152,26 @@ select
   '00000000-0000-0000-0000-000000000000',
   s.attr_set_id,
   d.attr_id,
-  true,
+  case d.code
+    when 'beer_category' then true
+    when 'target_abv' then true
+    else false
+  end,
   'Tax',
   case d.code
     when 'beer_category' then 'select'
     when 'target_abv' then 'number'
+    when 'liquid_name' then 'text'
+    when 'style_name' then 'text'
+    when 'customer_name' then 'text'
     else null
   end,
   case d.code
     when 'beer_category' then 10
     when 'target_abv' then 20
+    when 'liquid_name' then 30
+    when 'style_name' then 40
+    when 'customer_name' then 50
     else 0
   end
 from attr_set s
@@ -121,7 +182,7 @@ join attr_def d
 where s.tenant_id = '00000000-0000-0000-0000-000000000000'
   and s.domain = 'batch'
   and s.code = 'batch_alcohol'
-  and d.code in ('beer_category', 'target_abv')
+  and d.code in ('beer_category', 'target_abv', 'liquid_name', 'style_name', 'customer_name')
 on conflict do nothing;
 
 -- 4) entity_attr_set / entity_attr

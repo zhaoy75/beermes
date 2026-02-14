@@ -26,7 +26,8 @@
 ### Modal Dialog
 -  material input dialog
 -  beer_tax_move dialog
--  batch relation dialog (new)
+-  batch relation dialog
+-  batch actual yield dialog (new)
 
 
 ## Field Definitions
@@ -94,7 +95,8 @@
     the packaging dialog should follow the specification defined in batch_packing.md
 
 ## Action
-    when 　actual_yield is saved, please update the total product volume in filling section 
+    - add a button to input actual yield, when the button is click, show the input actual yield and uom (select from mst_uom by volume).
+    - when 　actual yield is saved, please update the total product volume in filling section 
 
 ## Business Rules
 

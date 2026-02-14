@@ -12,6 +12,9 @@
             <p class="text-xs text-gray-500">{{ t('batch.edit.infoSubtitle') }}</p>
           </div>
           <div class="flex items-center gap-2">
+            <button class="px-3 py-2 rounded border hover:bg-gray-50" type="button" @click="openActualYieldDialog">
+              {{ t('batch.edit.actualYieldDialogButton') }}
+            </button>
             <button class="px-3 py-2 rounded border hover:bg-gray-50" type="button" @click="openRelationDialog()">
               {{ t('batch.relation.actions.add') }}
             </button>
@@ -49,15 +52,10 @@
             <input id="batchProductName" v-model.trim="batchForm.product_name" type="text" class="w-full h-[40px] border rounded px-3" />
           </div>
           <div>
-            <label class="block text-sm text-gray-600 mb-1" for="batchActualYield">{{ t('batch.edit.actualYield') }}</label>
-            <input id="batchActualYield" v-model="batchForm.actual_yield" type="number" step="0.000001" class="w-full h-[40px] border rounded px-3 text-right" />
-          </div>
-          <div>
-            <label class="block text-sm text-gray-600 mb-1" for="batchActualYieldUom">{{ t('batch.edit.actualYieldUom') }}</label>
-            <select id="batchActualYieldUom" v-model="batchForm.actual_yield_uom" class="w-full h-[40px] border rounded px-3 bg-white">
-              <option value="">{{ t('common.select') }}</option>
-              <option v-for="option in volumeUomOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-            </select>
+            <label class="block text-sm text-gray-600 mb-1">{{ t('batch.edit.actualYield') }}</label>
+            <div class="w-full h-[40px] border rounded px-3 bg-gray-50 text-gray-700 flex items-center justify-end">
+              {{ batchActualYieldText }}
+            </div>
           </div>
           <div>
             <label class="block text-sm text-gray-600 mb-1" for="batchPlannedStart">{{ t('batch.edit.plannedStart') }}</label>
@@ -527,6 +525,45 @@
         </footer>
       </div>
     </div>
+
+    <div v-if="actualYieldDialog.open" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div class="w-full max-w-lg bg-white rounded-xl shadow-lg border border-gray-200">
+        <header class="flex items-start justify-between px-4 py-3 border-b gap-4">
+          <div>
+            <h3 class="text-lg font-semibold text-gray-800">{{ t('batch.edit.actualYieldDialogTitle') }}</h3>
+            <p class="text-xs text-gray-500">{{ t('batch.edit.actualYieldDialogSubtitle') }}</p>
+          </div>
+          <button class="text-sm px-2 py-1 rounded border hover:bg-gray-100" type="button" @click="closeActualYieldDialog">
+            {{ t('common.close') }}
+          </button>
+        </header>
+        <div class="p-4 space-y-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-sm text-gray-600 mb-1" for="actualYieldDialogQty">{{ t('batch.edit.actualYield') }}</label>
+              <input id="actualYieldDialogQty" v-model="actualYieldDialog.form.actual_yield" type="number" min="0" step="0.000001" class="w-full h-[40px] border rounded px-3 text-right" />
+              <p v-if="actualYieldDialog.errors.actual_yield" class="mt-1 text-xs text-red-600">{{ actualYieldDialog.errors.actual_yield }}</p>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-600 mb-1" for="actualYieldDialogUom">{{ t('batch.edit.actualYieldUom') }}</label>
+              <select id="actualYieldDialogUom" v-model="actualYieldDialog.form.actual_yield_uom" class="w-full h-[40px] border rounded px-3 bg-white">
+                <option value="">{{ t('common.select') }}</option>
+                <option v-for="option in volumeUomOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+              </select>
+              <p v-if="actualYieldDialog.errors.actual_yield_uom" class="mt-1 text-xs text-red-600">{{ actualYieldDialog.errors.actual_yield_uom }}</p>
+            </div>
+          </div>
+        </div>
+        <footer class="flex items-center justify-end gap-2 px-4 py-3 border-t">
+          <button class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-100" type="button" @click="closeActualYieldDialog">
+            {{ t('common.cancel') }}
+          </button>
+          <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" type="button" @click="saveActualYieldDialog">
+            {{ t('common.save') }}
+          </button>
+        </footer>
+      </div>
+    </div>
   </AdminLayout>
 </template>
 
@@ -703,6 +740,15 @@ const packingDialog = reactive({
   globalError: '',
   errors: {} as Record<string, string>,
   form: null as PackingFormState | null,
+})
+
+const actualYieldDialog = reactive({
+  open: false,
+  errors: {} as Record<string, string>,
+  form: {
+    actual_yield: '',
+    actual_yield_uom: '',
+  },
 })
 
 type BatchRelationRow = {
@@ -884,7 +930,22 @@ function formatPackageLabel(row: PackageCategoryOption) {
   return `${row.package_code}${namePart}${sizePart}`
 }
 
-const totalProductVolume = computed(() => resolveBatchVolume(batch.value))
+const batchActualYieldLiters = computed(() => {
+  const qty = toNumber(batchForm.actual_yield)
+  if (qty == null) return null
+  return convertToLiters(qty, resolveUomCode(batchForm.actual_yield_uom))
+})
+
+const batchActualYieldText = computed(() => {
+  const liters = batchActualYieldLiters.value
+  if (liters == null) return '—'
+  return formatVolumeValue(liters)
+})
+
+const totalProductVolume = computed(() => {
+  if (batchActualYieldLiters.value != null) return batchActualYieldLiters.value
+  return resolveBatchVolume(batch.value)
+})
 
 const packingProcessedVolume = computed(() => {
   if (!packingEvents.value.length) return 0
@@ -1547,6 +1608,33 @@ function openRelationDialog(row?: BatchRelationRow) {
     ratio: row?.ratio != null ? String(row.ratio) : '',
     effective_at: toInputDateTime(row?.effective_at ?? new Date().toISOString()),
   }
+}
+
+function openActualYieldDialog() {
+  actualYieldDialog.open = true
+  actualYieldDialog.errors = {}
+  actualYieldDialog.form.actual_yield = batchForm.actual_yield
+  actualYieldDialog.form.actual_yield_uom = batchForm.actual_yield_uom || defaultVolumeUomId()
+}
+
+function closeActualYieldDialog() {
+  actualYieldDialog.open = false
+  actualYieldDialog.errors = {}
+}
+
+function saveActualYieldDialog() {
+  const errors: Record<string, string> = {}
+  const qty = toNumber(actualYieldDialog.form.actual_yield)
+  if (qty == null || qty <= 0) errors.actual_yield = t('batch.edit.actualYieldRequired')
+  if (!actualYieldDialog.form.actual_yield_uom) errors.actual_yield_uom = t('batch.edit.actualYieldUomRequired')
+  if (Object.keys(errors).length) {
+    actualYieldDialog.errors = errors
+    return
+  }
+  batchForm.actual_yield = String(qty)
+  batchForm.actual_yield_uom = actualYieldDialog.form.actual_yield_uom
+  actualYieldDialog.open = false
+  actualYieldDialog.errors = {}
 }
 
 function closeRelationDialog() {

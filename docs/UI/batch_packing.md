@@ -31,8 +31,9 @@ For Filling type, multiple filling lines may be created.
 
 2) Packing Type Selector
    - UI: segmented control or radio cards
-   - Values: Fillin(japanese text: 詰口)，Ship(外部製造場移動), Transfer(社内
+   - Values: Filling(japanese text: 詰口)，Ship(外部製造場移動), Transfer(社内
    移動), Loss, Dispose
+     Filling will be default card when the dialog is loaded
 
 3) Common Fields
    - Event time (default now)
@@ -173,6 +174,11 @@ Warnings:
   - `from_lot_id` must always be the root lot (the lot with no parent), identified in `lot_edge` as the row where `from_lot_id` is `null`.
   - UI must not insert/update `inv_movements`, `inv_movement_lines`, `lot`, `lot_edge` directly.
   - UI must call stored function `public.product_filling(p_doc jsonb)`.
+- Transferred (社内非納税移出) save rule:
+  - UI must call stored function `public.product_move(p_doc jsonb)`.
+  - `movement_intent` must be `INTERNAL_TRANSFER`.
+  - UI must not insert/update `inv_movements`, `inv_movement_lines`, `lot`, `lot_edge` directly.
+    
 
 ### Suggested Payload Structure
 
@@ -208,7 +214,8 @@ Warnings:
 
 ### data usage
 - For Filling (詰口): save by calling `public.product_filling(p_doc jsonb)`.
-- For non-filling types (ship/transfer/loss/dispose): save via `inv_movements` + `inv_movement_lines`.
+- For Transfer (社内非納税移出): save by calling `public.product_move(p_doc jsonb)` with `movement_intent = INTERNAL_TRANSFER`.
+- For other non-filling types (ship/loss/dispose): save via `inv_movements` + `inv_movement_lines` (until dedicated stored functions are introduced).
 - Loads packing events from inv_movements where meta.source = 'packing' and meta.batch_id = <batchId>.
 - Soft-deletes by setting inv_movements.status = 'void'.
 - Uses UOM conversions for both package and volume calculations.

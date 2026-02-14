@@ -27,7 +27,7 @@
           <button
             class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
             :disabled="inventoryLoading"
-            @click="loadInventoryFromMovements"
+            @click="loadInventoryFromInventory"
           >
             {{ t('common.refresh') }}
           </button>
@@ -711,28 +711,48 @@ async function loadSites() {
   siteOptions.value = (data ?? []).map((row) => ({ value: row.id, label: `${row.code} — ${row.name}` }))
 }
 
-async function loadInventoryFromMovements() {
+async function loadInventoryFromInventory() {
   try {
     inventoryLoading.value = true
     const tenant = await ensureTenant()
     const { data, error } = await supabase
-      .from('inv_movement_lines')
-      .select(
-        'id, movement_id, package_id, batch_id, qty, uom_id, meta, movement:movement_id ( movement_at, status, src_site_id, dest_site_id, doc_type )'
-      )
+      .from('inv_inventory')
+      .select('id, site_id, lot_id, qty, uom_id')
       .eq('tenant_id', tenant)
-      .or('package_id.not.is.null,batch_id.not.is.null')
-      .order('movement_id', { ascending: true })
+      .gt('qty', 0)
+      .order('created_at', { ascending: false })
     if (error) throw error
 
-    const lines = (data ?? []).filter((row: any) => row.movement?.status !== 'void')
-    if (!lines.length) {
+    const inventory = data ?? []
+    if (!inventory.length) {
       inventoryRows.value = []
       return
     }
 
-    const packageIds = Array.from(new Set(lines.map((row: any) => row.package_id).filter(Boolean)))
-    const batchIds = Array.from(new Set(lines.map((row: any) => row.batch_id).filter(Boolean)))
+    const lotIds = Array.from(new Set(inventory.map((row: any) => row.lot_id).filter(Boolean)))
+    if (!lotIds.length) {
+      inventoryRows.value = []
+      return
+    }
+
+    const { data: lots, error: lotError } = await supabase
+      .from('lot')
+      .select('id, batch_id, package_id, produced_at, status')
+      .eq('tenant_id', tenant)
+      .in('id', lotIds)
+    if (lotError) throw lotError
+
+    const lotMap = new Map<string, any>()
+    ;(lots ?? []).forEach((row: any) => {
+      if (row.status !== 'void') lotMap.set(row.id, row)
+    })
+    if (lotMap.size === 0) {
+      inventoryRows.value = []
+      return
+    }
+
+    const packageIds = Array.from(new Set(Array.from(lotMap.values()).map((row: any) => row.package_id).filter(Boolean)))
+    const batchIds = Array.from(new Set(Array.from(lotMap.values()).map((row: any) => row.batch_id).filter(Boolean)))
 
     const packageInfoMap = await loadPackageInfo(packageIds)
     const batchInfoMap = await loadBatchInfo(batchIds)
@@ -752,28 +772,36 @@ async function loadInventoryFromMovements() {
 
     const accum = new Map<string, InventoryAccumulator>()
 
-    const applyDelta = (siteId: string | null, delta: number, row: any) => {
-      if (!siteId) return
-      const pkgInfo = row.package_id ? packageInfoMap.get(row.package_id) : undefined
-      const batchInfo = row.batch_id ? batchInfoMap.get(row.batch_id) : undefined
-      const unitSizeLiters = pkgInfo?.unitSizeLiters ?? null
-      const qtyLiters = toNumber(row.qty) ?? 0
-      const packageQty = toNumber(row.meta?.package_qty)
-      const derivedPackages = packageQty != null
-        ? packageQty
-        : (unitSizeLiters && qtyLiters ? qtyLiters / unitSizeLiters : 0)
+    inventory.forEach((row: any) => {
+      const lot = lotMap.get(row.lot_id)
+      if (!lot) return
 
-      const key = `${siteId}__${row.package_id ?? ''}__${row.batch_id ?? ''}`
+      const siteId = row.site_id as string | null
+      if (!siteId) return
+
+      const pkgInfo = lot.package_id ? packageInfoMap.get(lot.package_id) : undefined
+      const batchInfo = lot.batch_id ? batchInfoMap.get(lot.batch_id) : undefined
+      const inventoryQty = toNumber(row.qty)
+      if (inventoryQty == null || inventoryQty <= 0) return
+
+      const inventoryUomCode = row.uom_id ? (uomMap.value.get(row.uom_id) ?? null) : null
+      const qtyLiters = convertToLiters(inventoryQty, inventoryUomCode) ?? 0
+      const unitSizeLiters = pkgInfo?.unitSizeLiters ?? null
+      const qtyPackages = (unitSizeLiters != null && unitSizeLiters > 0)
+        ? qtyLiters / unitSizeLiters
+        : 0
+
+      const key = `${siteId}__${lot.package_id ?? ''}__${lot.batch_id ?? ''}`
       if (!accum.has(key)) {
         accum.set(key, {
           key,
           siteId,
-          packageId: row.package_id ?? null,
-          batchId: row.batch_id ?? pkgInfo?.batchId ?? null,
+          packageId: lot.package_id ?? null,
+          batchId: lot.batch_id ?? null,
           beerName: pkgInfo?.beerName ?? batchInfo?.beerName ?? null,
           packageTypeLabel: pkgInfo?.packageTypeLabel ?? null,
           batchCode: pkgInfo?.batchCode ?? batchInfo?.batchCode ?? null,
-          productionDate: pkgInfo?.productionDate ?? row.movement?.movement_at ?? null,
+          productionDate: lot.produced_at ?? null,
           qtyPackages: 0,
           qtyLiters: 0,
         })
@@ -781,15 +809,9 @@ async function loadInventoryFromMovements() {
 
       const entry = accum.get(key)
       if (!entry) return
-      entry.qtyLiters += qtyLiters * delta
-      entry.qtyPackages += derivedPackages * delta
-    }
-
-    lines.forEach((row: any) => {
-      const movement = row.movement ?? null
-      if (!movement) return
-      applyDelta(movement.dest_site_id ?? null, 1, row)
-      applyDelta(movement.src_site_id ?? null, -1, row)
+      entry.qtyLiters += qtyLiters
+      entry.qtyPackages += qtyPackages
+      if (!entry.productionDate && lot.produced_at) entry.productionDate = lot.produced_at
     })
 
     inventoryRows.value = Array.from(accum.values())
@@ -969,7 +991,7 @@ function openMovementEdit(card: MovementCard) {
 }
 
 async function refreshAll() {
-  await Promise.all([loadInventoryFromMovements(), fetchMovements()])
+  await Promise.all([loadInventoryFromInventory(), fetchMovements()])
 }
 
 watch(
@@ -987,7 +1009,7 @@ onMounted(async () => {
   try {
     await ensureTenant()
     await Promise.all([loadSites(), loadCategories(), loadPackageCategories(), loadUoms()])
-    await loadInventoryFromMovements()
+    await loadInventoryFromInventory()
     await fetchMovements()
   } catch (err) {
     console.error(err)

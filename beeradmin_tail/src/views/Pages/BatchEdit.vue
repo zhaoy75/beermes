@@ -1733,12 +1733,12 @@ function openPackingDialog() {
   packingDialog.loading = false
   packingDialog.globalError = ''
   packingDialog.errors = {}
-  packingDialog.form = newPackingForm('ship')
+  packingDialog.form = newPackingForm('filling')
   packingMovementQtyTouched.value = false
 }
 
 function canEditPackingEvent(event: PackingEvent) {
-  return event.packing_type !== 'filling'
+  return event.packing_type !== 'filling' && event.packing_type !== 'transfer'
 }
 
 function openPackingEdit(event: PackingEvent) {
@@ -2003,21 +2003,30 @@ async function deletePackingEvent(event: PackingEvent) {
   }
 }
 
-async function resolveFillingSourceLot(batchIdValue: string, siteId: string) {
+type RootSourceLot = {
+  id: string
+  uom_id: string
+  site_id: string
+}
+
+async function resolveRootSourceLot(batchIdValue: string, preferredSiteId?: string | null): Promise<RootSourceLot | null> {
   const { data: candidates, error: candidateError } = await supabase
     .from('lot')
-    .select('id, uom_id')
+    .select('id, uom_id, site_id')
     .eq('batch_id', batchIdValue)
-    .eq('site_id', siteId)
     .neq('status', 'void')
     .gt('qty', 0)
     .order('produced_at', { ascending: false })
     .order('created_at', { ascending: false })
     .limit(50)
+  let filteredCandidates = candidates
+  if (!candidateError && preferredSiteId) {
+    filteredCandidates = (candidates ?? []).filter((row: any) => row.site_id === preferredSiteId)
+  }
   if (candidateError) throw candidateError
-  if (!candidates?.length) return null
+  if (!filteredCandidates?.length) return null
 
-  const candidateIds = candidates
+  const candidateIds = filteredCandidates
     .map((row) => row.id)
     .filter((value): value is string => typeof value === 'string' && !!value)
   if (!candidateIds.length) return null
@@ -2036,16 +2045,29 @@ async function resolveFillingSourceLot(batchIdValue: string, siteId: string) {
       .map((row) => row.to_lot_id)
       .filter((value): value is string => typeof value === 'string' && !!value),
   )
-  for (const candidate of candidates) {
-    if (rootLotIds.has(candidate.id) && candidate.uom_id) {
-      return { id: candidate.id, uom_id: candidate.uom_id as string }
+  for (const candidate of filteredCandidates) {
+    if (rootLotIds.has(candidate.id) && candidate.uom_id && candidate.site_id) {
+      return {
+        id: candidate.id as string,
+        uom_id: candidate.uom_id as string,
+        site_id: candidate.site_id as string,
+      }
     }
   }
   return null
 }
 
+async function resolveFillingSourceLot(batchIdValue: string, siteId: string) {
+  return resolveRootSourceLot(batchIdValue, siteId)
+}
+
 async function callProductFilling(payload: Record<string, any>) {
   const { error } = await supabase.rpc('product_filling', { p_doc: payload })
+  if (error) throw error
+}
+
+async function callProductMove(payload: Record<string, any>) {
+  const { error } = await supabase.rpc('product_move', { p_doc: payload })
   if (error) throw error
 }
 
@@ -2137,6 +2159,53 @@ async function persistPackingEvent(form: PackingFormState, isEditing: boolean) {
       lines,
     }
     await callProductFilling(fillPayload)
+    return
+  }
+
+  if (form.packing_type === 'transfer') {
+    if (isEditing) {
+      throw new Error('Editing Transfer events is not supported. Delete and re-create the event.')
+    }
+
+    const dstSiteId = form.movement_site_id || null
+    if (!dstSiteId) throw new Error(t('batch.packaging.errors.siteRequired'))
+
+    const preferredSrcSiteId = resolveProduceSiteId(batch.value)
+    const sourceLot = await resolveRootSourceLot(batchId.value, preferredSrcSiteId)
+      ?? await resolveRootSourceLot(batchId.value, null)
+    if (!sourceLot) {
+      throw new Error('Root source lot for transfer is not found. Run product_produce first.')
+    }
+
+    const movementQty = toNumber(form.movement_qty)
+    if (movementQty == null || movementQty <= 0) {
+      throw new Error(t('batch.packaging.errors.movementQtyRequired'))
+    }
+
+    const movementQtyLiters = convertToLiters(movementQty, resolveUomCode(volumeUomId)) ?? movementQty
+    const sourceUomCode = resolveUomCode(sourceLot.uom_id)
+    const sourceQty = convertFromLiters(movementQtyLiters, sourceUomCode) ?? movementQtyLiters
+
+    const movePayload = {
+      doc_no: docNo,
+      movement_at: movementAt,
+      movement_intent: 'INTERNAL_TRANSFER',
+      src_site: sourceLot.site_id,
+      dst_site: dstSiteId,
+      src_lot_id: sourceLot.id,
+      qty: sourceQty,
+      uom_id: sourceLot.uom_id,
+      tax_decision_code: 'NON_TAXABLE_REMOVAL',
+      reason: form.reason ? form.reason.trim() : null,
+      notes: form.memo ? form.memo.trim() : null,
+      meta: {
+        ...packingMeta,
+        movement_intent: 'INTERNAL_TRANSFER',
+        idempotency_key: `packing_transfer:${batchId.value}:${packingId}`,
+      },
+    }
+
+    await callProductMove(movePayload)
     return
   }
 

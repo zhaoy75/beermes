@@ -39,8 +39,9 @@
   - Quantity (L)
   - Quantity (packages)
   - Site location
-
   
+  retrieve data from inv_inventory and related table
+
 
 ### Movements section
 - Section title: `producedBeer.sections.movements`
@@ -84,7 +85,7 @@
 - Refresh all:
   - reload inventory and movement list in parallel.
 - Refresh inventory:
-  - rebuild inventory rows from movement data.
+  - reload inventory rows from `inv_inventory` and related lot/master tables.
 - Refresh movements:
   - reload movement headers and lines.
 - Reset filters:
@@ -101,12 +102,10 @@
 - Tenant isolation:
   - all reads are restricted by current session `tenant_id`.
 - Inventory aggregation:
-  - source from `inv_movement_lines` + related `inv_movements`.
-  - ignore rows where movement status is `void`.
-  - net quantity per `(site, package, batch)`:
-    - add to destination site
-    - subtract from source site
-  - show only rows where net liters or net packages is positive.
+  - source from `inv_inventory`, linked by `lot_id`.
+  - join `lot` to obtain `batch_id`, `package_id`, and `produced_at`.
+  - aggregate by `(site, package, batch)` for display.
+  - show only rows where quantity is positive.
 - Movement type filter logic:
   - `taxed`: `doc_type = sale` and `meta.tax_type = tax`
   - `notax`: `doc_type = sale` and `meta.tax_type = notax`
@@ -133,13 +132,15 @@
   - `mst_package` (package master and unit volume)
   - `mst_uom` (uom code mapping)
 - Transactional data:
+  - `inv_inventory` (on-hand balance by site/lot/uom)
+  - `lot` (batch/package/produced date)
   - `inv_movements` (movement header)
   - `inv_movement_lines` (movement lines)
   - `mes_batches` (batch code + product label from `meta.label`)
 - Derived fields:
   - movement card totals from filtered lines.
   - movement type label from `doc_type` + `meta.tax_type`.
-  - inventory package qty from `meta.package_qty` or liters/unit-size fallback.
+  - inventory package qty from inventory liters divided by package unit liters.
 
 ## Error Handling
 - On fetch error:

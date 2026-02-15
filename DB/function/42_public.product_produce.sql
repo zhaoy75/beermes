@@ -139,13 +139,14 @@ begin
   returning id into v_movement_line_id;
 
   insert into public.lot (
-    tenant_id, lot_no, material_id, batch_id, site_id,
+    tenant_id, lot_no, material_id, batch_id, lot_tax_type, site_id,
     produced_at, expires_at, qty, uom_id, status, meta, notes
   ) values (
     v_tenant,
     v_lot_no,
     v_material_id,
     v_batch_id,
+    'TAX_SUSPENDED',
     v_dest_site_id,
     v_produced_at,
     v_expires_at,

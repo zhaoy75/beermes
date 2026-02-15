@@ -73,7 +73,7 @@ Optional fields:
    - `batch_id = p_doc.batch_id`
    - `qty = p_doc.qty`, `uom_id = p_doc.uom_id`
 4. Create one new lot in `lot`:
-   - `lot_no`, `material_id='00000000-0000-0000-0000-000000000000'::uuid`, `batch_id`, `site_id = dest_site_id`
+   - `lot_no`, `material_id='00000000-0000-0000-0000-000000000000'::uuid`, `batch_id`, `site_id = dest_site_id`,`lot_tax_type = TAX_SUSPENDED`
    - `produced_at`, `expires_at`, `qty`, `uom_id`, `status = active`
 5. Create one `lot_edge` row:
    - `movement_id`, `movement_line_id`

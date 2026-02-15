@@ -1162,7 +1162,7 @@
       },
       "info": {
         "title": "ステップ4：必要情報の入力",
-        "subtitle": "数量・日付・理由などを入力します。"
+        "subtitle": "単価・価格・摘要を入力します。"
       },
       "confirm": {
         "title": "ステップ5：確認",
@@ -1179,10 +1179,12 @@
         "reasonNonDefaultHint": "既定値以外を選択した場合は理由の入力が必要です。",
         "product": "製品",
         "sourceLotTaxType": "移動元ロット税区分",
+        "unitPrice": "単価",
+        "price": "価格",
         "date": "日付",
         "quantity": "数量",
         "uom": "単位",
-        "notes": "備考"
+        "notes": "摘要"
       },
       "table": {
         "select": "選択",

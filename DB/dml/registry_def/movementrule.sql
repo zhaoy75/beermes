@@ -76,7 +76,7 @@ VALUES (
     "OVERSEA_CUSTOMER": { "ja": "海外の得意先/輸出業者", "en": "Overseas Customer" },
     "OTHER_BREWERY": { "ja": "他の酒類製造者の製造場", "en": "Other Brewery" },
     "DISPOSAL_FACILITY": { "ja": "廃棄施設", "en": "Disposal Facility" },
-    "DIRECT_SALES_SHOP": { "ja": "直営所", "en": "Direct Sales Shop" }
+    "DIRECT_SALES_SHOP": { "ja": "直営販売店", "en": "Direct Sales Shop" }
   },
 
   "lot_tax_type_labels": {

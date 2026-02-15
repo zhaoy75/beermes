@@ -3,8 +3,7 @@
 
 ## Purpose
 This specification defines the UI flow for 製品ビール移動登録 (Tax Movement Register).
-The UI must read rules dynamically from  `registry_def`  and never
-hardcode movement intents, tax decisions, or site type mappings.
+The UI must get rules from server call and never hardcode movement intents, tax decisions, or site type mappings.
 
 Key principles:
 - Movement intent is chosen first.
@@ -102,10 +101,10 @@ System behavior:
 Step 4: Fill necessary information（詳細情報入力）
 --------------------------------------------------
 UI:
-- Date/time
-- Quantity / UOM
+- Unit Price (単価)
+- Price（価格）
 - Reason or evidence fields (conditional by rule)
-- Notes (optional)
+- Notes (摘要)
 
 System behavior:
 - Validate required fields per selected rule.
@@ -122,13 +121,12 @@ UI shows:
 - selected rule id(s) used for decision
 
 Actions:
-- Save Draft
 - Post (requires validation)
 
 --------------------------------------------------
 Validation Rules (Dynamic)
 --------------------------------------------------
-- movement_intent must be selected.
+- movement_intent must be selected.^[]
 - src/dst site types must match rule.
 - lot requirements follow `line_rules`:
   - require_src_lot
@@ -140,16 +138,7 @@ Validation Rules (Dynamic)
 --------------------------------------------------
 Data Handling
 --------------------------------------------------
-Primary fields:
-- movement_intent
-- src_site_id / dst_site_id
-- src_site_type / dst_site_type (derived)
-- product_id
-- lot_id (source) / lot_id (destination or new lot)
-- tax_decision_code
-- tax_event
-- status (draft/posted)
-
+when Post button is clicked, call rpc public.product_move
 
 
 --------------------------------------------------

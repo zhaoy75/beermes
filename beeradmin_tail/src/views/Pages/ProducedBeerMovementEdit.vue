@@ -32,8 +32,8 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div class="lg:col-span-2 space-y-6">
+        <div class="space-y-6">
+          <div class="space-y-6">
             <section v-if="currentStep === 1" class="space-y-4">
               <header>
                 <h3 class="text-base font-semibold">{{ t('producedBeer.movementWizard.intent.title') }}</h3>
@@ -201,16 +201,12 @@
               </header>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.movementWizard.fields.date') }}</label>
-                  <input v-model="movementForm.eventDate" type="date" class="w-full h-[40px] border rounded px-3" />
+                  <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.movementWizard.fields.unitPrice') }}</label>
+                  <input v-model="movementForm.unitPrice" type="number" step="0.01" min="0" class="w-full h-[40px] border rounded px-3 text-right" />
                 </div>
                 <div>
-                  <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.movementWizard.fields.quantity') }}</label>
-                  <input v-model="movementForm.quantity" type="number" step="0.001" class="w-full h-[40px] border rounded px-3 text-right" />
-                </div>
-                <div>
-                  <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.movementWizard.fields.uom') }}</label>
-                  <input v-model.trim="movementForm.uom" class="w-full h-[40px] border rounded px-3" />
+                  <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.movementWizard.fields.price') }}</label>
+                  <input v-model="movementForm.price" type="number" step="0.01" min="0" class="w-full h-[40px] border rounded px-3 text-right" />
                 </div>
                 <div>
                   <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.movementWizard.fields.notes') }}</label>
@@ -235,19 +231,6 @@
             </section>
           </div>
 
-          <aside class="space-y-4">
-            <div class="border border-gray-200 rounded-lg p-4 space-y-3">
-              <h3 class="text-sm font-semibold text-gray-700">{{ t('producedBeer.movementWizard.panel.title') }}</h3>
-              <div class="text-sm text-gray-600">
-                <div class="text-xs uppercase text-gray-500">{{ t('producedBeer.movementWizard.panel.taxEvent') }}</div>
-                <div class="text-base font-semibold text-gray-900">{{ taxEventLabel(derivedTaxEvent) }}</div>
-              </div>
-              <div class="text-sm text-gray-600">
-                <div class="text-xs uppercase text-gray-500">{{ t('producedBeer.movementWizard.panel.rule') }}</div>
-                <div class="text-base font-semibold text-gray-900">{{ derivedRuleId || '—' }}</div>
-              </div>
-            </div>
-          </aside>
         </div>
 
         <footer class="flex flex-wrap items-center justify-between gap-3">
@@ -260,8 +243,14 @@
             </button>
           </div>
           <div class="flex items-center gap-2">
-            <button class="px-3 py-2 rounded border hover:bg-gray-50" type="button">{{ t('producedBeer.movementWizard.actions.saveDraft') }}</button>
-            <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" type="button">{{ t('producedBeer.movementWizard.actions.post') }}</button>
+            <button
+              class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+              type="button"
+              :disabled="saving || currentStep !== wizardSteps.length"
+              @click="saveMovement"
+            >
+              {{ t('producedBeer.movementWizard.actions.post') }}
+            </button>
           </div>
         </footer>
       </section>
@@ -276,6 +265,8 @@ import { useI18n } from 'vue-i18n'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { supabase } from '@/lib/supabase'
+import { toast } from 'vue3-toastify'
+import 'vue3-toastify/dist/index.css'
 
 type RuleLabel = { ja?: string; en?: string }
 
@@ -330,12 +321,14 @@ type LotOption = {
   packageVolume: number | null
   packageUom: string | null
   quantity: number | null
+  uomId: string | null
   uomCode: string | null
 }
 
 const siteOptions = ref<SiteOption[]>([])
 const lotOptions = ref<LotOption[]>([])
 const alcoholTypeLabels = ref<Record<string, string>>({})
+const saving = ref(false)
 
 const movementForm = reactive({
   intent: '',
@@ -349,9 +342,8 @@ const movementForm = reactive({
   srcLots: [] as string[],
   srcLotMoveQty: {} as Record<string, string>,
   srcLotTaxType: '',
-  eventDate: '',
-  quantity: '',
-  uom: '',
+  unitPrice: '',
+  price: '',
   notes: '',
 })
 
@@ -413,7 +405,7 @@ function formatAbv(value: number | null | undefined) {
 }
 
 function toNumber(value: any): number | null {
-  if (value == null) return null
+  if (value == null || value === '') return null
   const num = Number(value)
   return Number.isFinite(num) ? num : null
 }
@@ -435,6 +427,66 @@ function resolveMetaNumber(meta: Record<string, any> | null | undefined, key: st
 function alcoholTypeLabel(code: string | null | undefined) {
   if (!code) return '—'
   return alcoholTypeLabels.value[code] ?? code
+}
+
+async function saveMovement() {
+  if (saving.value) return
+  try {
+    if (!movementForm.intent) throw new Error('movement_intent is required')
+    if (!movementForm.srcSite || !movementForm.dstSite) throw new Error('src/dst site is required')
+    if (!movementForm.taxDecisionCode) throw new Error('tax_decision_code is required')
+    if (!movementForm.srcLots.length) throw new Error('select at least one lot')
+    if (movementForm.taxDecisionCode !== defaultTaxDecisionCode.value && !movementForm.taxDecisionReason.trim()) {
+      throw new Error('reason is required for non-default tax decision')
+    }
+
+    const selectedRows = lotOptions.value.filter((lot) => movementForm.srcLots.includes(lot.id))
+    if (!selectedRows.length) throw new Error('selected lot rows not found')
+
+    const errors: string[] = []
+    const rows = selectedRows.map((lot) => {
+      const rawQty = movementForm.srcLotMoveQty[lot.id]
+      const qty = toNumber(rawQty)
+      if (qty == null || qty <= 0) errors.push(`invalid movement quantity for lot ${lot.lotCode || lot.id}`)
+      if (!lot.uomId) errors.push(`uom is missing for lot ${lot.lotCode || lot.id}`)
+      return { lot, qty: qty ?? 0 }
+    })
+    if (errors.length) throw new Error(errors[0])
+
+    saving.value = true
+    const baseKey = `produced_beer_move:${Date.now()}`
+    const createdIds: string[] = []
+    for (let i = 0; i < rows.length; i += 1) {
+      const row = rows[i]
+      const payload = {
+        movement_intent: movementForm.intent,
+        src_site: movementForm.srcSite,
+        dst_site: movementForm.dstSite,
+        src_lot_id: row.lot.id,
+        qty: row.qty,
+        uom_id: row.lot.uomId,
+        tax_decision_code: movementForm.taxDecisionCode,
+        reason: movementForm.taxDecisionReason.trim() || null,
+        notes: movementForm.notes.trim() || null,
+        meta: {
+          source: 'produced_beer_movement_ui',
+          unit_price: toNumber(movementForm.unitPrice),
+          price: toNumber(movementForm.price),
+          idempotency_key: `${baseKey}:${i + 1}:${row.lot.id}`,
+        },
+      }
+      const { data, error } = await supabase.rpc('product_move', { p_doc: payload })
+      if (error) throw error
+      if (data) createdIds.push(String(data))
+    }
+    toast.success(`Posted ${createdIds.length} movement(s).`)
+    router.push({ path: '/producedBeer' })
+  } catch (err: any) {
+    console.error(err)
+    toast.error(err?.message ?? 'Failed to save movement')
+  } finally {
+    saving.value = false
+  }
 }
 
 const lotTaxTypeOptions = computed(() => rules.value?.enums?.lot_tax_type ?? [])
@@ -946,6 +998,7 @@ async function loadLotsForSite(siteId: string) {
       packageVolume: lotRow?.package_id ? packageVolumeMap.get(lotRow.package_id) ?? null : null,
       packageUom: lotRow?.package_id ? packageUomMap.get(lotRow.package_id) ?? null : null,
       quantity: qty,
+      uomId: row.uom_id ? String(row.uom_id) : null,
       uomCode: row.uom_id ? uomMap.get(row.uom_id) ?? null : null,
     })
   })

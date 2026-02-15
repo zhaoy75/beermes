@@ -1162,7 +1162,7 @@
       },
       "info": {
         "title": "Step 4: Input Details",
-        "subtitle": "Enter quantity, date, reason, and notes."
+        "subtitle": "Enter unit price, price, and notes."
       },
       "confirm": {
         "title": "Step 5: Confirm",
@@ -1179,10 +1179,12 @@
         "reasonNonDefaultHint": "Reason is required when selecting a non-default code.",
         "product": "Product",
         "sourceLotTaxType": "Source Lot Tax Type",
+        "unitPrice": "Unit Price",
+        "price": "Price",
         "date": "Date",
         "quantity": "Quantity",
         "uom": "UOM",
-        "notes": "Notes"
+        "notes": "Description"
       },
       "table": {
         "select": "Select",

@@ -47,6 +47,7 @@
 
 ### Movements section
 - Section title: `producedBeer.sections.movements`
+- Default view: List view (table)
 - Actions:
   - List/Card view toggle
   - Export CSV

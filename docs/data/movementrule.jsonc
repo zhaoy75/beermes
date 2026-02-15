@@ -62,12 +62,12 @@
   },
 
   "site_type_labels": {
-    "BREWERY_MANUFACTUR": { "ja": "醸造所（製造）", "en": "Brewery (Manufacturing)" },
-    "BREWERY_STORAGE": { "ja": "醸造所（製品倉庫）", "en": "Brewery Storage" },
-    "TAX_STORAGE": { "ja": "税務保税蔵置場", "en": "Tax Warehouse" },
-    "DOMESTIC_CUSTOMER": { "ja": "国内顧客", "en": "Domestic Customer" },
-    "OVERSEA_CUSTOMER": { "ja": "海外顧客", "en": "Overseas Customer" },
-    "OTHER_BREWERY": { "ja": "他社醸造所", "en": "Other Brewery" },
+    "BREWERY_MANUFACTUR": { "ja": "製造場", "en": "Brewery (Manufacturing)" },
+    "BREWERY_STORAGE": { "ja": "蔵置場", "en": "Brewery Storage" },
+    "TAX_STORAGE": { "ja": "蔵置所", "en": "Tax Warehouse" },
+    "DOMESTIC_CUSTOMER": { "ja": "国内の得意先", "en": "Domestic Customer" },
+    "OVERSEA_CUSTOMER": { "ja": "海外の得意先/輸出業者", "en": "Overseas Customer" },
+    "OTHER_BREWERY": { "ja": "他の酒類製造者の製造場", "en": "Other Brewery" },
     "DISPOSAL_FACILITY": { "ja": "廃棄施設", "en": "Disposal Facility" },
     "DIRECT_SALES_SHOP": { "ja": "直営販売店", "en": "Direct Sales Shop" }
   },

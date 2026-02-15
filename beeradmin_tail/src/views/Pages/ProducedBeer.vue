@@ -405,7 +405,7 @@ const siteOptions = ref<SiteOption[]>([])
 const inventoryRows = ref<InventoryRow[]>([])
 
 const movementCards = ref<MovementCard[]>([])
-const movementView = ref<'list' | 'card'>('card')
+const movementView = ref<'list' | 'card'>('list')
 
 const movementFilters = reactive({
   beerName: '',

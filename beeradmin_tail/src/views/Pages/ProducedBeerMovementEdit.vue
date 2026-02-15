@@ -4,8 +4,8 @@
     <div class="min-h-screen bg-white text-gray-900 p-4 max-w-6xl mx-auto space-y-6">
       <header class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 class="text-xl font-semibold">酒税関連登録</h1>
-          <p class="text-sm text-gray-500">movementrule.jsonc に基づいて動的にルールを適用します。</p>
+          <h1 class="text-xl font-semibold">製品ビール移動登録</h1>
+          <p class="text-sm text-gray-500">registry_def のルールを動的に読み込んで適用します。</p>
         </div>
         <div class="flex flex-wrap items-center gap-2">
           <button class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-50" @click="goBack">戻る</button>
@@ -15,7 +15,7 @@
       <section class="border border-gray-200 rounded-xl shadow-sm p-4 bg-white space-y-4">
         <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 class="text-lg font-semibold">酒税関連登録ウィザード</h2>
+            <h2 class="text-lg font-semibold">製品ビール移動登録ウィザード</h2>
             <p class="text-sm text-gray-500">ステップ1〜5を順に入力してください。</p>
           </div>
           <div class="inline-flex rounded-lg border border-gray-300 bg-white p-0.5">
@@ -37,8 +37,10 @@
             <section v-if="currentStep === 1" class="space-y-4">
               <header>
                 <h3 class="text-base font-semibold">ステップ1：移動目的（movement_intent）</h3>
-                <p class="text-sm text-gray-500">ルールファイルから移動目的を読み込みます。</p>
+                <p class="text-sm text-gray-500">movement_get_movement_ui_intent で移動目的一覧を読み込みます。</p>
               </header>
+              <p v-if="intentLoadError" class="text-xs text-red-600">{{ intentLoadError }}</p>
+              <p v-else-if="intentsLoading" class="text-xs text-gray-500">Loading movement intents...</p>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <button
                   v-for="option in intentOptions"
@@ -52,18 +54,15 @@
                   <div class="text-xs text-gray-500">{{ option.value }}</div>
                   </button>
                 </div>
-              <div v-if="intentRuleSummary" class="rounded-lg border border-gray-200 p-3 text-sm text-gray-600 space-y-1">
-                <div><span class="text-xs uppercase text-gray-500">Allowed Src Site</span> {{ intentRuleSummary.src }}</div>
-                <div><span class="text-xs uppercase text-gray-500">Allowed Dst Site</span> {{ intentRuleSummary.dst }}</div>
-                <div><span class="text-xs uppercase text-gray-500">Edge Type</span> {{ intentRuleSummary.edgeType }}</div>
-              </div>
             </section>
 
             <section v-if="currentStep === 2" class="space-y-4">
               <header>
                 <h3 class="text-base font-semibold">ステップ2：移動元/移動先の選択</h3>
-                <p class="text-sm text-gray-500">サイト種別とデフォルト税区分をシステムが導出します。</p>
+                <p class="text-sm text-gray-500">movement_get_rules で選択した移動目的のルールを取得します。</p>
               </header>
+              <p v-if="rulesLoadError" class="text-xs text-red-600">{{ rulesLoadError }}</p>
+              <p v-else-if="rulesLoading" class="text-xs text-gray-500">Loading movement rules...</p>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                   <label class="block text-sm text-gray-600 mb-1">Source Site Type</label>
@@ -259,19 +258,17 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
-import movementRuleRaw from '../../../../docs/data/movementrule.jsonc?raw'
 import { supabase } from '@/lib/supabase'
 
 type MovementRules = {
   enums?: Record<string, string[]>
-  movement_intent_labels?: Record<string, { ja?: string; en?: string }>
   movement_intent_rules?: Array<Record<string, any>>
   tax_decision_definitions?: Array<Record<string, any>>
   tax_transformation_rules?: Array<Record<string, any>>
 }
 
 const router = useRouter()
-const pageTitle = computed(() => '酒税関連登録')
+const pageTitle = computed(() => '製品ビール移動登録')
 
 const currentStep = ref(1)
 const wizardSteps = computed(() => ([
@@ -284,6 +281,11 @@ const wizardSteps = computed(() => ([
 
 const rules = ref<MovementRules | null>(null)
 const tenantId = ref<string | null>(null)
+const intentsLoading = ref(false)
+const rulesLoading = ref(false)
+const intentLoadError = ref('')
+const rulesLoadError = ref('')
+const intentOptions = ref<Array<{ value: string; label: string }>>([])
 
 type SiteOption = {
   id: string
@@ -324,16 +326,6 @@ const movementForm = reactive({
   notes: '',
 })
 
-const intentOptions = computed(() => {
-  const intents = rules.value?.enums?.movement_intent ?? []
-  const labels = rules.value?.movement_intent_labels ?? {}
-  return intents.map((key) => ({
-    value: key,
-    label: labels?.[key]?.ja ?? labels?.[key]?.en ?? key,
-  }))
-})
-
-const siteTypeOptions = computed(() => rules.value?.enums?.site_type ?? [])
 const lotTaxTypeOptions = computed(() => rules.value?.enums?.lot_tax_type ?? [])
 
 const selectedIntentRule = computed(() => {
@@ -403,15 +395,6 @@ const derivedTaxDecision = computed(() => {
 const derivedTaxEvent = computed(() => derivedTaxDecision.value?.tax_event ?? '')
 const derivedRuleId = computed(() => derivedTaxRule.value?.movement_intent ? `${derivedTaxRule.value.movement_intent}` : '')
 
-const intentRuleSummary = computed(() => {
-  if (!selectedIntentRule.value) return null
-  return {
-    edgeType: selectedIntentRule.value.edge_type ?? '—',
-    src: (selectedIntentRule.value.allowed_src_site_types ?? []).join(', ') || '—',
-    dst: (selectedIntentRule.value.allowed_dst_site_types ?? []).join(', ') || '—',
-  }
-})
-
 const srcSiteTypeOptions = computed(() => allowedSrcSiteTypes.value)
 const dstSiteTypeOptions = computed(() => allowedDstSiteTypes.value)
 
@@ -434,6 +417,30 @@ const selectedLotTaxTypeSet = computed(() => {
   })
   return Array.from(set)
 })
+
+watch(
+  () => movementForm.intent,
+  async (value, oldValue) => {
+    if (value === oldValue) return
+    movementForm.srcSite = ''
+    movementForm.dstSite = ''
+    movementForm.srcSiteType = ''
+    movementForm.dstSiteType = ''
+    movementForm.taxDecisionCode = ''
+    movementForm.taxDecisionReason = ''
+    movementForm.srcLots = []
+    movementForm.srcLotTaxType = ''
+    movementForm.dstLotTaxType = ''
+    lotOptions.value = []
+
+    if (!value) {
+      rules.value = null
+      return
+    }
+
+    await loadRulesForIntent(value)
+  }
+)
 
 watch(
   () => [movementForm.intent, movementForm.srcSiteType, movementForm.dstSiteType, movementForm.srcLotTaxType],
@@ -474,12 +481,6 @@ watch(
   { deep: true }
 )
 
-function parseJsonc(raw: string) {
-  const noBlock = raw.replace(/\/\*[\s\S]*?\*\//g, '')
-  const noLine = noBlock.replace(/^\s*\/\/.*$/gm, '')
-  return JSON.parse(noLine)
-}
-
 async function ensureTenant() {
   if (tenantId.value) return tenantId.value
   const { data, error } = await supabase.auth.getUser()
@@ -488,6 +489,45 @@ async function ensureTenant() {
   if (!id) throw new Error('Tenant not resolved')
   tenantId.value = id
   return id
+}
+
+async function loadMovementIntents() {
+  intentLoadError.value = ''
+  intentsLoading.value = true
+  try {
+    const { data, error } = await supabase.rpc('movement_get_movement_ui_intent')
+    if (error) throw error
+    intentOptions.value = (data ?? [])
+      .map((row: any) => ({
+        value: String(row?.movement_intent ?? ''),
+        label: String(row?.name_ja ?? row?.name_en ?? row?.movement_intent ?? ''),
+      }))
+      .filter((row: { value: string }) => !!row.value)
+  } catch (err: any) {
+    console.error(err)
+    intentOptions.value = []
+    intentLoadError.value = err?.message ?? 'Failed to load movement intents'
+  } finally {
+    intentsLoading.value = false
+  }
+}
+
+async function loadRulesForIntent(movementIntent: string) {
+  rulesLoadError.value = ''
+  rulesLoading.value = true
+  try {
+    const { data, error } = await supabase.rpc('movement_get_rules', {
+      p_movement_intent: movementIntent,
+    })
+    if (error) throw error
+    rules.value = ((Array.isArray(data) ? data[0] : data) ?? null) as MovementRules | null
+  } catch (err: any) {
+    console.error(err)
+    rules.value = null
+    rulesLoadError.value = err?.message ?? 'Failed to load movement rules'
+  } finally {
+    rulesLoading.value = false
+  }
 }
 
 const defKeyToRuleKey: Record<string, string> = {
@@ -626,7 +666,7 @@ function goBack() {
 }
 
 onMounted(() => {
-  rules.value = parseJsonc(movementRuleRaw) as MovementRules
+  loadMovementIntents().catch((err) => console.error(err))
   loadSites().catch((err) => console.error(err))
 })
 </script>

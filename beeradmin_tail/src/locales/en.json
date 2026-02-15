@@ -1040,7 +1040,7 @@
         "waste": "Disposal"
       },
       "actions": {
-        "new": "Tax Movement Regist...",
+        "new": "Produced Beer Movement Regist...",
         "edit": "Edit movement",
         "exportCsv": "Export CSV"
       },

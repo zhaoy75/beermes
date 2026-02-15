@@ -1,9 +1,9 @@
-酒税関連登録 Dialog UI Specification (Dynamic Rules)
+製品ビール移動登録 Dialog UI Specification (Dynamic Rules)
 =================================================
 
 ## Purpose
-This specification defines the UI flow for 酒税関連登録 (Tax Movement Register).
-The UI must read rules dynamically from `docs/data/movementrule.jsonc` and never
+This specification defines the UI flow for 製品ビール移動登録 (Tax Movement Register).
+The UI must read rules dynamically from  `registry_def`  and never
 hardcode movement intents, tax decisions, or site type mappings.
 
 Key principles:
@@ -13,15 +13,22 @@ Key principles:
 - Final confirmation must explain derived tax event and rule source.
 
 ## Entry Point
-- ProducedBeer page -> button: "酒税関連登録" (Tax Movement Regist...)
+- ProducedBeer page -> button: "製品ビール移動登録" (Tax Movement Regist...)
 
 ## Rule Source (Dynamic)
-- Rules are stored in `docs/data/movementrule.jsonc`.
-- UI must load and interpret:
-  - `movement_intent_rules`
-  - `tax_decision_definitions`
-  - `tax_transformation_rules`
-  - `enums` (movement_intent, site_type, lot_tax_type, tax_event, tax_decision_code)
+- Rules are stored in - Table: `public.registry_def`
+  - Selector:
+    - `kind = 'ruleengine'`
+    - `def_key = 'beer_movement_rule'`
+    - `is_active = true`
+- UI will call rpc to 
+    -  movement_get_movement_UI_intent to get movement_list shown in UI
+    -  movement_get_UI_rules to get rules for the movement intent
+- UI must load and interpret rules:
+    - `movement_intent_rules`
+    - `tax_decision_definitions`
+    - `tax_transformation_rules`
+    - `enums` (movement_intent, site_type, lot_tax_type, tax_event, tax_decision_code)
 
 ## Terminology
 - movement_intent: user-selected business intent
@@ -40,12 +47,11 @@ Step 5 → confirmation
 Step 1: Select movement_intent(移動目的)
 --------------------------------------------------
 UI:
-- List movement intents from `movement_intent` with labels read from `movement_intent_labels`
-- Show short rule summary (allowed site types, edge types).
+- List movement intents 
 
 System behavior:
-- Loads movementrule.jsonc
-- Initializes default tax decision code if rule has choices.
+- movement_get_movement_UI_intent
+- list the movement intents in return json
 
 --------------------------------------------------
 Step 2: Select src/dst site（移動元先酒税情報入力）
@@ -64,7 +70,7 @@ UI:
   - if user want to choose other allowed_tax_decision. user need to input reason 
 
 System behavior:
-- Validate against allowed site types in the rule.
+- call movement_get_rules to get rules for the movement intent which user input in Step 1
 - Compute default tax decision code (if rule requires a decision).
 - Preview derived tax event using `tax_transformation_rules`.
 
@@ -137,8 +143,7 @@ Primary fields:
 - tax_event
 - status (draft/posted)
 
-All derived fields must be traceable to:
-- `movementrule.jsonc` + selected rule id
+
 
 --------------------------------------------------
 Notes

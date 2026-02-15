@@ -58,14 +58,14 @@ VALUES (
   },
 
   "movement_intent_labels": {
-    "BREW_PRODUCE": { "ja": "生成（製造）", "en": "Produce (Brew)" },
-    "PACKAGE_FILL": { "ja": "詰口（充填）", "en": "Package Fill" },
-    "INTERNAL_TRANSFER": { "ja": "社内移動", "en": "Internal Transfer" },
-    "SHIP_DOMESTIC": { "ja": "国内出荷", "en": "Domestic Shipment" },
-    "SHIP_EXPORT": { "ja": "輸出（免税）", "en": "Export (Exempt)" },
-    "RETURN_FROM_CUSTOMER": { "ja": "返品（戻入）", "en": "Return from Customer" },
-    "LOSS": { "ja": "滅失（事故・破損）", "en": "Loss" },
-    "DISPOSE": { "ja": "廃棄", "en": "Dispose" }
+    "BREW_PRODUCE": { "ja": "生成（製造）", "en": "Produce (Brew)" , "show_in_movement_wizard": false},
+    "PACKAGE_FILL": { "ja": "詰口（充填）", "en": "Package Fill" , "show_in_movement_wizard": false },
+    "INTERNAL_TRANSFER": { "ja": "社内移動", "en": "Internal Transfer", "show_in_movement_wizard": true },
+    "SHIP_DOMESTIC": { "ja": "国内出荷", "en": "Domestic Shipment" , "show_in_movement_wizard": true },
+    "SHIP_EXPORT": { "ja": "輸出（免税）", "en": "Export (Exempt)" , "show_in_movement_wizard": true },
+    "RETURN_FROM_CUSTOMER": { "ja": "返品（戻入）", "en": "Return from Customer" , "show_in_movement_wizard": true },
+    "LOSS": { "ja": "滅失（事故・破損）", "en": "Loss" , "show_in_movement_wizard": true },
+    "DISPOSE": { "ja": "廃棄", "en": "Dispose" , "show_in_movement_wizard": true }
   },
 
   "tax_decision_definitions": [

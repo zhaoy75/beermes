@@ -34,6 +34,13 @@ begin
     return jsonb_build_object(
       'enums', '{}'::jsonb,
       'tax_decision_code', '[]'::jsonb,
+      'movement_intent_labels', '{}'::jsonb,
+      'site_type_labels', '{}'::jsonb,
+      'lot_tax_type_labels', '{}'::jsonb,
+      'tax_event_labels', '{}'::jsonb,
+      'edge_type_labels', '{}'::jsonb,
+      'tax_decision_code_labels', '{}'::jsonb,
+      'tax_decision_definitions', '[]'::jsonb,
       'movement_intent_rules', '[]'::jsonb,
       'tax_transformation_rules', '[]'::jsonb
     );
@@ -63,6 +70,13 @@ begin
   return jsonb_build_object(
     'enums', coalesce(v_rules -> 'enums', '{}'::jsonb),
     'tax_decision_code', coalesce(v_rules -> 'enums' -> 'tax_decision_code', '[]'::jsonb),
+    'movement_intent_labels', coalesce(v_rules -> 'movement_intent_labels', '{}'::jsonb),
+    'site_type_labels', coalesce(v_rules -> 'site_type_labels', '{}'::jsonb),
+    'lot_tax_type_labels', coalesce(v_rules -> 'lot_tax_type_labels', '{}'::jsonb),
+    'tax_event_labels', coalesce(v_rules -> 'tax_event_labels', '{}'::jsonb),
+    'edge_type_labels', coalesce(v_rules -> 'edge_type_labels', '{}'::jsonb),
+    'tax_decision_code_labels', coalesce(v_rules -> 'tax_decision_code_labels', '{}'::jsonb),
+    'tax_decision_definitions', coalesce(v_rules -> 'tax_decision_definitions', '[]'::jsonb),
     'movement_intent_rules', coalesce(v_movement_intent_rules, '[]'::jsonb),
     'tax_transformation_rules', coalesce(v_tax_transformation_rules, '[]'::jsonb)
   );

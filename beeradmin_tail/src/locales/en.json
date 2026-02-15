@@ -1000,8 +1000,12 @@
       "movements": "Movements"
     },
     "inventory": {
-      "subtitle": "Inventory of produced craft beer by batch and package.",
+      "subtitle": "Inventory of produced craft beer by lot and batch.",
       "table": {
+        "lotNo": "Lot no",
+        "beerCategory": "Beer category",
+        "targetAbv": "Target ABV",
+        "styleName": "Style name",
         "beerName": "Beer name",
         "category": "Category",
         "packageType": "Package type",
@@ -1125,6 +1129,101 @@
       },
       "toast": {
         "saved": "Movement saved."
+      }
+    },
+    "movementWizard": {
+      "title": "Produced Beer Movement Registration",
+      "subtitle": "Apply rules loaded dynamically from registry_def.",
+      "back": "Back",
+      "wizardTitle": "Produced Beer Movement Wizard",
+      "wizardSubtitle": "Complete steps 1 through 5.",
+      "steps": {
+        "step1": "Step 1",
+        "step2": "Step 2",
+        "step3": "Step 3",
+        "step4": "Step 4",
+        "step5": "Step 5"
+      },
+      "intent": {
+        "title": "Step 1: Movement Intent",
+        "subtitle": "Load movement intents using movement_get_movement_ui_intent.",
+        "loading": "Loading movement intents..."
+      },
+      "sites": {
+        "title": "Step 2: Source / Destination",
+        "subtitle": "Load rules for the selected intent using movement_get_rules.",
+        "loading": "Loading movement rules..."
+      },
+      "lots": {
+        "title": "Step 3: Select Lots",
+        "subtitle": "Tax result may change depending on lot tax type.",
+        "multiTaxTypeWarning": "Multiple lot tax types are selected. Tax event may change by selection.",
+        "multiEventWarning": "Different lot candidates produce different tax event previews"
+      },
+      "info": {
+        "title": "Step 4: Input Details",
+        "subtitle": "Enter quantity, date, reason, and notes."
+      },
+      "confirm": {
+        "title": "Step 5: Confirm",
+        "subtitle": "Review derived tax event and applied rule."
+      },
+      "fields": {
+        "sourceSiteType": "Source Site Type",
+        "destinationSiteType": "Destination Site Type",
+        "sourceSite": "Source Site",
+        "destinationSite": "Destination Site",
+        "taxDecisionCode": "Tax Decision Code",
+        "defaultTaxDecision": "Default",
+        "reasonNonDefault": "Reason (required for non-default)",
+        "reasonNonDefaultHint": "Reason is required when selecting a non-default code.",
+        "product": "Product",
+        "sourceLotTaxType": "Source Lot Tax Type",
+        "date": "Date",
+        "quantity": "Quantity",
+        "uom": "UOM",
+        "notes": "Notes"
+      },
+      "table": {
+        "select": "Select",
+        "lotCode": "Lot Code",
+        "beerCategory": "Beer Category",
+        "targetAbv": "Target ABV",
+        "styleName": "Style Name",
+        "batchCode": "Batch Code",
+        "packageVolume": "Package Volume",
+        "packageUom": "Package UOM",
+        "relatedBatch": "Related Batch",
+        "batchInfo": "Batch Info",
+        "package": "Package",
+        "quantity": "Quantity",
+        "movementQuantity": "Movement Quantity",
+        "uom": "UOM",
+        "lotTaxType": "Lot Tax Type",
+        "noLotsFound": "No lots found."
+      },
+      "confirmRows": {
+        "movementIntent": "movement_intent",
+        "srcSiteType": "src_site_type",
+        "dstSiteType": "dst_site_type",
+        "taxDecisionCode": "tax_decision_code",
+        "taxEvent": "tax_event",
+        "ruleId": "rule_id"
+      },
+      "panel": {
+        "title": "Derived Tax",
+        "taxEvent": "Tax Event",
+        "rule": "Rule"
+      },
+      "actions": {
+        "prev": "Back",
+        "next": "Next",
+        "saveDraft": "Save Draft",
+        "post": "Post"
+      },
+      "errors": {
+        "loadIntents": "Failed to load movement intents.",
+        "loadRules": "Failed to load movement rules."
       }
     },
     "taxEvent": {

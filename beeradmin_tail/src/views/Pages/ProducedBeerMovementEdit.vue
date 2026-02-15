@@ -4,19 +4,19 @@
     <div class="min-h-screen bg-white text-gray-900 p-4 max-w-6xl mx-auto space-y-6">
       <header class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 class="text-xl font-semibold">製品ビール移動登録</h1>
-          <p class="text-sm text-gray-500">registry_def のルールを動的に読み込んで適用します。</p>
+          <h1 class="text-xl font-semibold">{{ t('producedBeer.movementWizard.title') }}</h1>
+          <p class="text-sm text-gray-500">{{ t('producedBeer.movementWizard.subtitle') }}</p>
         </div>
         <div class="flex flex-wrap items-center gap-2">
-          <button class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-50" @click="goBack">戻る</button>
+          <button class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-50" @click="goBack">{{ t('producedBeer.movementWizard.back') }}</button>
         </div>
       </header>
 
       <section class="border border-gray-200 rounded-xl shadow-sm p-4 bg-white space-y-4">
         <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 class="text-lg font-semibold">製品ビール移動登録ウィザード</h2>
-            <p class="text-sm text-gray-500">ステップ1〜5を順に入力してください。</p>
+            <h2 class="text-lg font-semibold">{{ t('producedBeer.movementWizard.wizardTitle') }}</h2>
+            <p class="text-sm text-gray-500">{{ t('producedBeer.movementWizard.wizardSubtitle') }}</p>
           </div>
           <div class="inline-flex rounded-lg border border-gray-300 bg-white p-0.5">
             <button
@@ -36,11 +36,11 @@
           <div class="lg:col-span-2 space-y-6">
             <section v-if="currentStep === 1" class="space-y-4">
               <header>
-                <h3 class="text-base font-semibold">ステップ1：移動目的（movement_intent）</h3>
-                <p class="text-sm text-gray-500">movement_get_movement_ui_intent で移動目的一覧を読み込みます。</p>
+                <h3 class="text-base font-semibold">{{ t('producedBeer.movementWizard.intent.title') }}</h3>
+                <p class="text-sm text-gray-500">{{ t('producedBeer.movementWizard.intent.subtitle') }}</p>
               </header>
               <p v-if="intentLoadError" class="text-xs text-red-600">{{ intentLoadError }}</p>
-              <p v-else-if="intentsLoading" class="text-xs text-gray-500">Loading movement intents...</p>
+              <p v-else-if="intentsLoading" class="text-xs text-gray-500">{{ t('producedBeer.movementWizard.intent.loading') }}</p>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <button
                   v-for="option in intentOptions"
@@ -58,85 +58,78 @@
 
             <section v-if="currentStep === 2" class="space-y-4">
               <header>
-                <h3 class="text-base font-semibold">ステップ2：移動元/移動先の選択</h3>
-                <p class="text-sm text-gray-500">movement_get_rules で選択した移動目的のルールを取得します。</p>
+                <h3 class="text-base font-semibold">{{ t('producedBeer.movementWizard.sites.title') }}</h3>
+                <p class="text-sm text-gray-500">{{ t('producedBeer.movementWizard.sites.subtitle') }}</p>
               </header>
               <p v-if="rulesLoadError" class="text-xs text-red-600">{{ rulesLoadError }}</p>
-              <p v-else-if="rulesLoading" class="text-xs text-gray-500">Loading movement rules...</p>
+              <p v-else-if="rulesLoading" class="text-xs text-gray-500">{{ t('producedBeer.movementWizard.sites.loading') }}</p>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-sm text-gray-600 mb-1">Source Site Type</label>
+                  <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.movementWizard.fields.sourceSiteType') }}</label>
                   <select v-model="movementForm.srcSiteType" class="w-full h-[40px] border rounded px-3 bg-white">
-                    <option value="">Select</option>
-                    <option v-for="site in srcSiteTypeOptions" :key="site" :value="site">{{ site }}</option>
+                    <option value="">{{ t('common.select') }}</option>
+                    <option v-for="site in srcSiteTypeOptions" :key="site" :value="site">{{ siteTypeLabel(site) }}</option>
                   </select>
                 </div>
                 <div>
-                  <label class="block text-sm text-gray-600 mb-1">Destination Site Type</label>
+                  <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.movementWizard.fields.destinationSiteType') }}</label>
                   <select v-model="movementForm.dstSiteType" class="w-full h-[40px] border rounded px-3 bg-white">
-                    <option value="">Select</option>
-                    <option v-for="site in dstSiteTypeOptions" :key="site" :value="site">{{ site }}</option>
+                    <option value="">{{ t('common.select') }}</option>
+                    <option v-for="site in dstSiteTypeOptions" :key="site" :value="site">{{ siteTypeLabel(site) }}</option>
                   </select>
                 </div>
                 <div>
-                  <label class="block text-sm text-gray-600 mb-1">Source Site</label>
+                  <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.movementWizard.fields.sourceSite') }}</label>
                   <select v-model="movementForm.srcSite" class="w-full h-[40px] border rounded px-3 bg-white">
-                    <option value="">Select</option>
-                    <option v-for="site in filteredSrcSiteOptions" :key="site.id" :value="site.id">{{ site.label }}</option>
+                    <option value="">{{ t('common.select') }}</option>
+                    <option v-for="site in filteredSrcSiteOptions" :key="site.id" :value="site.id">{{ siteOptionLabel(site) }}</option>
                   </select>
                 </div>
                 <div>
-                  <label class="block text-sm text-gray-600 mb-1">Destination Site</label>
+                  <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.movementWizard.fields.destinationSite') }}</label>
                   <select v-model="movementForm.dstSite" class="w-full h-[40px] border rounded px-3 bg-white">
-                    <option value="">Select</option>
-                    <option v-for="site in filteredDstSiteOptions" :key="site.id" :value="site.id">{{ site.label }}</option>
+                    <option value="">{{ t('common.select') }}</option>
+                    <option v-for="site in filteredDstSiteOptions" :key="site.id" :value="site.id">{{ siteOptionLabel(site) }}</option>
                   </select>
                 </div>
               </div>
 
               <div v-if="taxDecisionOptions.length" class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-sm text-gray-600 mb-1">Tax Decision Code</label>
+                  <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.movementWizard.fields.taxDecisionCode') }}</label>
                   <p class="text-xs text-gray-500 mb-2">
-                    default: {{ defaultTaxDecisionCode || '—' }}
+                    {{ t('producedBeer.movementWizard.fields.defaultTaxDecision') }}: {{ taxDecisionLabel(defaultTaxDecisionCode) }}
                   </p>
                   <select v-model="movementForm.taxDecisionCode" class="w-full h-[40px] border rounded px-3 bg-white">
-                    <option value="">Select</option>
+                    <option value="">{{ t('common.select') }}</option>
                     <option v-for="option in taxDecisionOptions" :key="option.value" :value="option.value">
                       {{ option.label }}
                     </option>
                   </select>
                 </div>
                 <div v-if="movementForm.taxDecisionCode && movementForm.taxDecisionCode !== defaultTaxDecisionCode">
-                  <label class="block text-sm text-gray-600 mb-1">Reason (required for non-default)</label>
+                  <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.movementWizard.fields.reasonNonDefault') }}</label>
                   <input v-model.trim="movementForm.taxDecisionReason" class="w-full h-[40px] border rounded px-3" />
-                  <p v-if="!movementForm.taxDecisionReason" class="mt-1 text-xs text-amber-600">Reason is required when selecting a non-default code.</p>
+                  <p v-if="!movementForm.taxDecisionReason" class="mt-1 text-xs text-amber-600">{{ t('producedBeer.movementWizard.fields.reasonNonDefaultHint') }}</p>
                 </div>
               </div>
             </section>
 
             <section v-if="currentStep === 3" class="space-y-4">
               <header>
-                <h3 class="text-base font-semibold">ステップ3：移動商品（Lot）選択</h3>
-                <p class="text-sm text-gray-500">ロット種別により税区分が変わる場合があります。</p>
+                <h3 class="text-base font-semibold">{{ t('producedBeer.movementWizard.lots.title') }}</h3>
+                <p class="text-sm text-gray-500">{{ t('producedBeer.movementWizard.lots.subtitle') }}</p>
               </header>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-sm text-gray-600 mb-1">Product</label>
+                  <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.movementWizard.fields.product') }}</label>
                   <input v-model.trim="movementForm.product" class="w-full h-[40px] border rounded px-3" />
                 </div>
                 <div>
-                  <label class="block text-sm text-gray-600 mb-1">Source Lot Tax Type</label>
+                  <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.movementWizard.fields.sourceLotTaxType') }}</label>
                   <select v-model="movementForm.srcLotTaxType" class="w-full h-[40px] border rounded px-3 bg-white">
-                    <option value="">Select</option>
-                    <option v-for="lotType in lotTaxTypeOptions" :key="lotType" :value="lotType">{{ lotType }}</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="block text-sm text-gray-600 mb-1">Destination Lot Tax Type</label>
-                  <select v-model="movementForm.dstLotTaxType" class="w-full h-[40px] border rounded px-3 bg-white">
-                    <option value="">Select</option>
-                    <option v-for="lotType in lotTaxTypeOptions" :key="lotType" :value="lotType">{{ lotType }}</option>
+                    <option value="">{{ t('common.select') }}</option>
+                    <option v-for="lotType in lotTaxTypeOptions" :key="lotType" :value="lotType">{{ lotTaxTypeLabel(lotType) }}</option>
                   </select>
                 </div>
               </div>
@@ -144,60 +137,83 @@
                 <table class="min-w-full text-sm divide-y divide-gray-200">
                   <thead class="bg-gray-50 text-xs uppercase text-gray-600">
                     <tr>
-                      <th class="px-3 py-2 text-left">Select</th>
-                      <th class="px-3 py-2 text-left">Lot Code</th>
-                      <th class="px-3 py-2 text-left">Related Batch</th>
-                      <th class="px-3 py-2 text-left">Batch Info</th>
-                      <th class="px-3 py-2 text-left">Package</th>
-                      <th class="px-3 py-2 text-right">Quantity</th>
-                      <th class="px-3 py-2 text-left">UOM</th>
-                      <th class="px-3 py-2 text-left">Lot Tax Type</th>
+                      <th class="px-3 py-2 text-left">{{ t('producedBeer.movementWizard.table.select') }}</th>
+                      <th class="px-3 py-2 text-left">{{ t('producedBeer.movementWizard.table.lotCode') }}</th>
+                      <th class="px-3 py-2 text-left">{{ t('producedBeer.movementWizard.table.beerCategory') }}</th>
+                      <th class="px-3 py-2 text-right">{{ t('producedBeer.movementWizard.table.targetAbv') }}</th>
+                      <th class="px-3 py-2 text-left">{{ t('producedBeer.movementWizard.table.styleName') }}</th>
+                      <th class="px-3 py-2 text-left">{{ t('producedBeer.movementWizard.table.batchCode') }}</th>
+                      <th class="px-3 py-2 text-right">{{ t('producedBeer.movementWizard.table.packageVolume') }}</th>
+                      <th class="px-3 py-2 text-left">{{ t('producedBeer.movementWizard.table.packageUom') }}</th>
+                      <th class="px-3 py-2 text-right">{{ t('producedBeer.movementWizard.table.quantity') }}</th>
+                      <th class="px-3 py-2 text-right">{{ t('producedBeer.movementWizard.table.movementQuantity') }}</th>
+                      <th class="px-3 py-2 text-left">{{ t('producedBeer.movementWizard.table.uom') }}</th>
                     </tr>
                   </thead>
                   <tbody class="divide-y divide-gray-100">
-                    <tr v-for="lot in lotOptions" :key="lot.id" class="hover:bg-gray-50">
+                    <tr
+                      v-for="lot in lotOptions"
+                      :key="lot.id"
+                      :class="['hover:bg-gray-50', isLotEventDivergent(lot) ? 'bg-amber-50' : '']"
+                    >
                       <td class="px-3 py-2">
                         <input v-model="movementForm.srcLots" type="checkbox" :value="lot.id" />
                       </td>
                       <td class="px-3 py-2 text-gray-700">{{ lot.lotCode || lot.label }}</td>
-                      <td class="px-3 py-2 text-gray-700">{{ lot.relatedBatchCode || '—' }}</td>
-                      <td class="px-3 py-2 text-gray-700">{{ lot.batchLabel || '—' }}</td>
-                      <td class="px-3 py-2 text-gray-700">{{ lot.packageLabel || '—' }}</td>
+                      <td class="px-3 py-2 text-gray-700">{{ alcoholTypeLabel(lot.beerCategoryId) }}</td>
+                      <td class="px-3 py-2 text-right text-gray-700">{{ formatAbv(lot.targetAbv) }}</td>
+                      <td class="px-3 py-2 text-gray-700">{{ lot.styleName || '—' }}</td>
+                      <td class="px-3 py-2 text-gray-700">{{ lot.batchCode || '—' }}</td>
+                      <td class="px-3 py-2 text-right text-gray-700">{{ formatNumber(lot.packageVolume) }}</td>
+                      <td class="px-3 py-2 text-gray-700">{{ lot.packageUom || '—' }}</td>
                       <td class="px-3 py-2 text-right text-gray-700">{{ lot.quantity ?? '—' }}</td>
+                      <td class="px-3 py-2">
+                        <input
+                          v-model="movementForm.srcLotMoveQty[lot.id]"
+                          type="number"
+                          step="0.001"
+                          min="0"
+                          class="w-28 h-[34px] border rounded px-2 text-right disabled:bg-gray-100 disabled:text-gray-400"
+                          :disabled="!movementForm.srcLots.includes(lot.id)"
+                        />
+                      </td>
                       <td class="px-3 py-2 text-gray-700">{{ lot.uomCode || '—' }}</td>
-                      <td class="px-3 py-2 text-gray-700">{{ lot.lotTaxType || '—' }}</td>
                     </tr>
                     <tr v-if="lotOptions.length === 0">
-                      <td class="px-3 py-6 text-center text-gray-500" colspan="8">No lots found.</td>
+                      <td class="px-3 py-6 text-center text-gray-500" colspan="11">{{ t('producedBeer.movementWizard.table.noLotsFound') }}</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
               <p v-if="selectedLotTaxTypeSet.length > 1" class="text-xs text-amber-600">
-                複数の lot 税区分が選択されています。選択によって税イベントが変わる可能性があります。
+                {{ t('producedBeer.movementWizard.lots.multiTaxTypeWarning') }}
+              </p>
+              <p v-if="hasMultipleCandidateTaxEvents" class="text-xs text-amber-600">
+                {{ t('producedBeer.movementWizard.lots.multiEventWarning') }}:
+                {{ distinctCandidateTaxEvents.map((eventCode) => taxEventLabel(eventCode)).join(' / ') }}
               </p>
             </section>
 
             <section v-if="currentStep === 4" class="space-y-4">
               <header>
-                <h3 class="text-base font-semibold">ステップ4：必要情報の入力</h3>
-                <p class="text-sm text-gray-500">数量・日付・理由などを入力します。</p>
+                <h3 class="text-base font-semibold">{{ t('producedBeer.movementWizard.info.title') }}</h3>
+                <p class="text-sm text-gray-500">{{ t('producedBeer.movementWizard.info.subtitle') }}</p>
               </header>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-sm text-gray-600 mb-1">Date</label>
+                  <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.movementWizard.fields.date') }}</label>
                   <input v-model="movementForm.eventDate" type="date" class="w-full h-[40px] border rounded px-3" />
                 </div>
                 <div>
-                  <label class="block text-sm text-gray-600 mb-1">Quantity</label>
+                  <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.movementWizard.fields.quantity') }}</label>
                   <input v-model="movementForm.quantity" type="number" step="0.001" class="w-full h-[40px] border rounded px-3 text-right" />
                 </div>
                 <div>
-                  <label class="block text-sm text-gray-600 mb-1">UOM</label>
+                  <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.movementWizard.fields.uom') }}</label>
                   <input v-model.trim="movementForm.uom" class="w-full h-[40px] border rounded px-3" />
                 </div>
                 <div>
-                  <label class="block text-sm text-gray-600 mb-1">Notes</label>
+                  <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.movementWizard.fields.notes') }}</label>
                   <input v-model.trim="movementForm.notes" class="w-full h-[40px] border rounded px-3" />
                 </div>
               </div>
@@ -205,29 +221,29 @@
 
             <section v-if="currentStep === 5" class="space-y-4">
               <header>
-                <h3 class="text-base font-semibold">ステップ5：確認</h3>
-                <p class="text-sm text-gray-500">導出された税イベントとルールを確認します。</p>
+                <h3 class="text-base font-semibold">{{ t('producedBeer.movementWizard.confirm.title') }}</h3>
+                <p class="text-sm text-gray-500">{{ t('producedBeer.movementWizard.confirm.subtitle') }}</p>
               </header>
               <div class="rounded-lg border border-gray-200 p-4 space-y-2 text-sm text-gray-600">
-                <div>movement_intent: <span class="text-gray-900">{{ movementForm.intent || '—' }}</span></div>
-                <div>src_site_type: <span class="text-gray-900">{{ movementForm.srcSiteType || '—' }}</span></div>
-                <div>dst_site_type: <span class="text-gray-900">{{ movementForm.dstSiteType || '—' }}</span></div>
-                <div>tax_decision_code: <span class="text-gray-900">{{ movementForm.taxDecisionCode || '—' }}</span></div>
-                <div>tax_event: <span class="text-gray-900">{{ derivedTaxEvent || '—' }}</span></div>
-                <div>rule_id: <span class="text-gray-900">{{ derivedRuleId || '—' }}</span></div>
+                <div>{{ t('producedBeer.movementWizard.confirmRows.movementIntent') }}: <span class="text-gray-900">{{ intentLabel(movementForm.intent) }}</span></div>
+                <div>{{ t('producedBeer.movementWizard.confirmRows.srcSiteType') }}: <span class="text-gray-900">{{ siteTypeLabel(movementForm.srcSiteType) }}</span></div>
+                <div>{{ t('producedBeer.movementWizard.confirmRows.dstSiteType') }}: <span class="text-gray-900">{{ siteTypeLabel(movementForm.dstSiteType) }}</span></div>
+                <div>{{ t('producedBeer.movementWizard.confirmRows.taxDecisionCode') }}: <span class="text-gray-900">{{ taxDecisionLabel(movementForm.taxDecisionCode) }}</span></div>
+                <div>{{ t('producedBeer.movementWizard.confirmRows.taxEvent') }}: <span class="text-gray-900">{{ taxEventLabel(derivedTaxEvent) }}</span></div>
+                <div>{{ t('producedBeer.movementWizard.confirmRows.ruleId') }}: <span class="text-gray-900">{{ derivedRuleId || '—' }}</span></div>
               </div>
             </section>
           </div>
 
           <aside class="space-y-4">
             <div class="border border-gray-200 rounded-lg p-4 space-y-3">
-              <h3 class="text-sm font-semibold text-gray-700">Derived Tax</h3>
+              <h3 class="text-sm font-semibold text-gray-700">{{ t('producedBeer.movementWizard.panel.title') }}</h3>
               <div class="text-sm text-gray-600">
-                <div class="text-xs uppercase text-gray-500">Tax Event</div>
-                <div class="text-base font-semibold text-gray-900">{{ derivedTaxEvent || '—' }}</div>
+                <div class="text-xs uppercase text-gray-500">{{ t('producedBeer.movementWizard.panel.taxEvent') }}</div>
+                <div class="text-base font-semibold text-gray-900">{{ taxEventLabel(derivedTaxEvent) }}</div>
               </div>
               <div class="text-sm text-gray-600">
-                <div class="text-xs uppercase text-gray-500">Rule</div>
+                <div class="text-xs uppercase text-gray-500">{{ t('producedBeer.movementWizard.panel.rule') }}</div>
                 <div class="text-base font-semibold text-gray-900">{{ derivedRuleId || '—' }}</div>
               </div>
             </div>
@@ -237,15 +253,15 @@
         <footer class="flex flex-wrap items-center justify-between gap-3">
           <div class="flex items-center gap-2">
             <button class="px-3 py-2 rounded border hover:bg-gray-50" type="button" @click="prevStep" :disabled="currentStep === 1">
-              戻る
+              {{ t('producedBeer.movementWizard.actions.prev') }}
             </button>
             <button class="px-3 py-2 rounded border hover:bg-gray-50" type="button" @click="nextStep" :disabled="currentStep === wizardSteps.length">
-              次へ
+              {{ t('producedBeer.movementWizard.actions.next') }}
             </button>
           </div>
           <div class="flex items-center gap-2">
-            <button class="px-3 py-2 rounded border hover:bg-gray-50" type="button">下書き保存</button>
-            <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" type="button">確定</button>
+            <button class="px-3 py-2 rounded border hover:bg-gray-50" type="button">{{ t('producedBeer.movementWizard.actions.saveDraft') }}</button>
+            <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" type="button">{{ t('producedBeer.movementWizard.actions.post') }}</button>
           </div>
         </footer>
       </section>
@@ -256,27 +272,36 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { supabase } from '@/lib/supabase'
 
+type RuleLabel = { ja?: string; en?: string }
+
 type MovementRules = {
   enums?: Record<string, string[]>
+  site_type_labels?: Record<string, RuleLabel>
+  lot_tax_type_labels?: Record<string, RuleLabel>
+  tax_event_labels?: Record<string, RuleLabel>
+  edge_type_labels?: Record<string, RuleLabel>
+  tax_decision_code_labels?: Record<string, RuleLabel>
   movement_intent_rules?: Array<Record<string, any>>
   tax_decision_definitions?: Array<Record<string, any>>
   tax_transformation_rules?: Array<Record<string, any>>
 }
 
 const router = useRouter()
-const pageTitle = computed(() => '製品ビール移動登録')
+const { t, locale } = useI18n()
+const pageTitle = computed(() => t('producedBeer.movementWizard.title'))
 
 const currentStep = ref(1)
 const wizardSteps = computed(() => ([
-  { key: 'intent', label: 'ステップ1', index: 1 },
-  { key: 'sites', label: 'ステップ2', index: 2 },
-  { key: 'lot', label: 'ステップ3', index: 3 },
-  { key: 'info', label: 'ステップ4', index: 4 },
-  { key: 'confirm', label: 'ステップ5', index: 5 },
+  { key: 'intent', label: t('producedBeer.movementWizard.steps.step1'), index: 1 },
+  { key: 'sites', label: t('producedBeer.movementWizard.steps.step2'), index: 2 },
+  { key: 'lot', label: t('producedBeer.movementWizard.steps.step3'), index: 3 },
+  { key: 'info', label: t('producedBeer.movementWizard.steps.step4'), index: 4 },
+  { key: 'confirm', label: t('producedBeer.movementWizard.steps.step5'), index: 5 },
 ]))
 
 const rules = ref<MovementRules | null>(null)
@@ -289,7 +314,7 @@ const intentOptions = ref<Array<{ value: string; label: string }>>([])
 
 type SiteOption = {
   id: string
-  label: string
+  name: string
   siteTypeKey: string | null
 }
 
@@ -298,15 +323,19 @@ type LotOption = {
   label: string
   lotTaxType: string | null
   lotCode: string | null
-  relatedBatchCode: string | null
-  batchLabel: string | null
-  packageLabel: string | null
+  batchCode: string | null
+  beerCategoryId: string | null
+  targetAbv: number | null
+  styleName: string | null
+  packageVolume: number | null
+  packageUom: string | null
   quantity: number | null
   uomCode: string | null
 }
 
 const siteOptions = ref<SiteOption[]>([])
 const lotOptions = ref<LotOption[]>([])
+const alcoholTypeLabels = ref<Record<string, string>>({})
 
 const movementForm = reactive({
   intent: '',
@@ -318,13 +347,95 @@ const movementForm = reactive({
   taxDecisionReason: '',
   product: '',
   srcLots: [] as string[],
+  srcLotMoveQty: {} as Record<string, string>,
   srcLotTaxType: '',
-  dstLotTaxType: '',
   eventDate: '',
   quantity: '',
   uom: '',
   notes: '',
 })
+
+function pickLabel(label: RuleLabel | null | undefined, fallback: string) {
+  if (!label) return fallback
+  const isJa = String(locale.value || '').toLowerCase().startsWith('ja')
+  if (isJa) return label.ja || label.en || fallback
+  return label.en || label.ja || fallback
+}
+
+function mapLabel(map: Record<string, RuleLabel> | undefined, code: string | null | undefined) {
+  if (!code) return '—'
+  return pickLabel(map?.[code], code)
+}
+
+function intentLabel(code: string | null | undefined) {
+  if (!code) return '—'
+  const row = intentOptions.value.find((item) => item.value === code)
+  return row?.label || code
+}
+
+function siteTypeLabel(code: string | null | undefined) {
+  return mapLabel(rules.value?.site_type_labels, code)
+}
+
+function siteOptionLabel(site: SiteOption) {
+  const base = site.name || site.id
+  if (!site.siteTypeKey) return base
+  const typeLabel = siteTypeLabel(site.siteTypeKey)
+  if (!typeLabel || typeLabel === site.siteTypeKey) return base
+  return `${base} (${typeLabel})`
+}
+
+function lotTaxTypeLabel(code: string | null | undefined) {
+  return mapLabel(rules.value?.lot_tax_type_labels, code)
+}
+
+function taxEventLabel(code: string | null | undefined) {
+  return mapLabel(rules.value?.tax_event_labels, code)
+}
+
+function taxDecisionLabel(code: string | null | undefined) {
+  if (!code) return '—'
+  const option = taxDecisionOptions.value.find((item) => item.value === code)
+  if (option?.label) return option.label
+  return mapLabel(rules.value?.tax_decision_code_labels, code)
+}
+
+const numberFormatter = computed(() => new Intl.NumberFormat(locale.value, { maximumFractionDigits: 3 }))
+
+function formatNumber(value: number | null | undefined) {
+  if (value == null || Number.isNaN(value)) return '—'
+  return numberFormatter.value.format(value)
+}
+
+function formatAbv(value: number | null | undefined) {
+  if (value == null || Number.isNaN(value)) return '—'
+  return `${numberFormatter.value.format(value)}%`
+}
+
+function toNumber(value: any): number | null {
+  if (value == null) return null
+  const num = Number(value)
+  return Number.isFinite(num) ? num : null
+}
+
+function resolveMetaString(meta: Record<string, any> | null | undefined, key: string) {
+  const value = meta?.[key]
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  return trimmed.length ? trimmed : null
+}
+
+function resolveMetaNumber(meta: Record<string, any> | null | undefined, key: string) {
+  const value = meta?.[key]
+  if (value == null) return null
+  const num = Number(value)
+  return Number.isFinite(num) ? num : null
+}
+
+function alcoholTypeLabel(code: string | null | undefined) {
+  if (!code) return '—'
+  return alcoholTypeLabels.value[code] ?? code
+}
 
 const lotTaxTypeOptions = computed(() => rules.value?.enums?.lot_tax_type ?? [])
 
@@ -356,7 +467,10 @@ const taxDecisionOptions = computed(() => {
   })
   return Array.from(codes).map((code) => {
     const def = defs.get(code)
-    const label = def?.name_ja ?? def?.name_en ?? code
+    const isJa = String(locale.value || '').toLowerCase().startsWith('ja')
+    const label = isJa
+      ? (def?.name_ja ?? def?.name_en ?? mapLabel(rules.value?.tax_decision_code_labels, code))
+      : (def?.name_en ?? def?.name_ja ?? mapLabel(rules.value?.tax_decision_code_labels, code))
     return { value: code, label }
   })
 })
@@ -418,6 +532,53 @@ const selectedLotTaxTypeSet = computed(() => {
   return Array.from(set)
 })
 
+function previewTaxEventForLotType(lotTaxType: string | null | undefined) {
+  if (!lotTaxType) return ''
+  const ruleset = rules.value?.tax_transformation_rules ?? []
+  if (!movementForm.intent || !movementForm.srcSiteType || !movementForm.dstSiteType) return ''
+  const rule = ruleset.find((item: any) =>
+    item.movement_intent === movementForm.intent &&
+    item.src_site_type === movementForm.srcSiteType &&
+    item.dst_site_type === movementForm.dstSiteType &&
+    item.lot_tax_type === lotTaxType
+  )
+  if (!rule) return ''
+  const decisions = rule.allowed_tax_decisions ?? []
+  if (!decisions.length) return ''
+  const selected = decisions.find((d: any) => d.tax_decision_code === movementForm.taxDecisionCode)
+  const decision = selected ?? decisions.find((d: any) => d.default) ?? decisions[0]
+  return decision?.tax_event ?? ''
+}
+
+const candidateTaxEventByLotId = computed(() => {
+  const result = new Map<string, string>()
+  lotOptions.value.forEach((lot) => {
+    const eventCode = previewTaxEventForLotType(lot.lotTaxType)
+    if (eventCode) result.set(lot.id, eventCode)
+  })
+  return result
+})
+
+const distinctCandidateTaxEvents = computed(() =>
+  Array.from(new Set(Array.from(candidateTaxEventByLotId.value.values()).filter(Boolean)))
+)
+
+const hasMultipleCandidateTaxEvents = computed(() => distinctCandidateTaxEvents.value.length > 1)
+
+const baseCandidateTaxEvent = computed(() => {
+  if (movementForm.srcLotTaxType) return previewTaxEventForLotType(movementForm.srcLotTaxType)
+  return distinctCandidateTaxEvents.value[0] ?? ''
+})
+
+function isLotEventDivergent(lot: LotOption) {
+  if (!hasMultipleCandidateTaxEvents.value) return false
+  const eventCode = candidateTaxEventByLotId.value.get(lot.id) ?? ''
+  if (!eventCode) return false
+  const base = baseCandidateTaxEvent.value
+  if (!base) return false
+  return eventCode !== base
+}
+
 watch(
   () => movementForm.intent,
   async (value, oldValue) => {
@@ -429,8 +590,8 @@ watch(
     movementForm.taxDecisionCode = ''
     movementForm.taxDecisionReason = ''
     movementForm.srcLots = []
+    movementForm.srcLotMoveQty = {}
     movementForm.srcLotTaxType = ''
-    movementForm.dstLotTaxType = ''
     lotOptions.value = []
 
     if (!value) {
@@ -461,6 +622,7 @@ watch(
     if (!value) {
       lotOptions.value = []
       movementForm.srcLots = []
+      movementForm.srcLotMoveQty = {}
       movementForm.srcLotTaxType = ''
       return
     }
@@ -471,6 +633,10 @@ watch(
 watch(
   () => movementForm.srcLots,
   () => {
+    const selected = new Set(movementForm.srcLots)
+    Object.keys(movementForm.srcLotMoveQty).forEach((lotId) => {
+      if (!selected.has(lotId)) delete movementForm.srcLotMoveQty[lotId]
+    })
     const types = selectedLotTaxTypeSet.value
     if (types.length === 1) {
       movementForm.srcLotTaxType = types[0]
@@ -479,6 +645,14 @@ watch(
     }
   },
   { deep: true }
+)
+
+watch(
+  () => locale.value,
+  () => {
+    loadMovementIntents().catch((err) => console.error(err))
+    loadAlcoholTypes().catch((err) => console.error(err))
+  }
 )
 
 async function ensureTenant() {
@@ -500,13 +674,17 @@ async function loadMovementIntents() {
     intentOptions.value = (data ?? [])
       .map((row: any) => ({
         value: String(row?.movement_intent ?? ''),
-        label: String(row?.name_ja ?? row?.name_en ?? row?.movement_intent ?? ''),
+        label: String(
+          String(locale.value || '').toLowerCase().startsWith('ja')
+            ? (row?.name_ja ?? row?.name_en ?? row?.movement_intent ?? '')
+            : (row?.name_en ?? row?.name_ja ?? row?.movement_intent ?? '')
+        ),
       }))
       .filter((row: { value: string }) => !!row.value)
   } catch (err: any) {
     console.error(err)
     intentOptions.value = []
-    intentLoadError.value = err?.message ?? 'Failed to load movement intents'
+    intentLoadError.value = err?.message ?? t('producedBeer.movementWizard.errors.loadIntents')
   } finally {
     intentsLoading.value = false
   }
@@ -524,7 +702,7 @@ async function loadRulesForIntent(movementIntent: string) {
   } catch (err: any) {
     console.error(err)
     rules.value = null
-    rulesLoadError.value = err?.message ?? 'Failed to load movement rules'
+    rulesLoadError.value = err?.message ?? t('producedBeer.movementWizard.errors.loadRules')
   } finally {
     rulesLoading.value = false
   }
@@ -565,52 +743,158 @@ async function loadSites() {
     const ruleKey = defKey ? defKeyToRuleKey[defKey] ?? null : null
     return {
       id: row.id,
-      label: `${row.code} — ${row.name}`,
+      name: row.name ?? row.code ?? row.id,
       siteTypeKey: ruleKey,
     }
   })
 }
 
+async function loadAlcoholTypes() {
+  const { data, error } = await supabase
+    .from('registry_def')
+    .select('def_id, def_key, spec')
+    .eq('kind', 'alcohol_type')
+    .eq('is_active', true)
+  if (error) throw error
+  const map: Record<string, string> = {}
+  ;(data ?? []).forEach((row: any) => {
+    const label = typeof row?.spec?.name === 'string' ? row.spec.name : row.def_key
+    if (row?.def_id) map[String(row.def_id)] = String(label || row.def_id)
+  })
+  alcoholTypeLabels.value = map
+}
+
 async function loadLotsForSite(siteId: string) {
   const tenant = await ensureTenant()
-  const { data: lineRows, error } = await supabase
-    .from('inv_movement_lines')
-    .select('id, batch_id, meta, movement:movement_id ( src_site_id )')
+  const { data: inventoryRows, error } = await supabase
+    .from('inv_inventory')
+    .select('id, lot_id, qty, uom_id, lot:lot_id ( id, lot_no, batch_id, package_id, lot_tax_type, status )')
     .eq('tenant_id', tenant)
-    .eq('movement.src_site_id', siteId)
+    .eq('site_id', siteId)
+    .gt('qty', 0)
   if (error) throw error
-  const batchIds = Array.from(new Set((lineRows ?? []).map((row: any) => row.batch_id).filter(Boolean)))
-  const uomIds = Array.from(new Set((lineRows ?? []).map((row: any) => row.meta?.uom_id).filter(Boolean)))
-  const packageIds = Array.from(new Set((lineRows ?? []).map((row: any) => row.meta?.package_id).filter(Boolean)))
 
-  const batchMap = new Map<string, string>()
-  const batchLabelMap = new Map<string, string>()
-  const relatedBatchMap = new Map<string, string | null>()
+  const activeRows = (inventoryRows ?? []).filter((row: any) => {
+    const lotRow = Array.isArray(row.lot) ? row.lot[0] : row.lot
+    return !lotRow || lotRow.status !== 'void'
+  })
+
+  const batchIds = Array.from(new Set(activeRows
+    .map((row: any) => (Array.isArray(row.lot) ? row.lot[0] : row.lot)?.batch_id)
+    .filter(Boolean)))
+  const uomIds = Array.from(new Set(activeRows.map((row: any) => row.uom_id).filter(Boolean)))
+  const packageIds = Array.from(new Set(activeRows
+    .map((row: any) => (Array.isArray(row.lot) ? row.lot[0] : row.lot)?.package_id)
+    .filter(Boolean)))
+
+  const batchMap = new Map<string, string | null>()
+  const batchCategoryMap = new Map<string, string | null>()
+  const batchTargetAbvMap = new Map<string, number | null>()
+  const batchStyleMap = new Map<string, string | null>()
   if (batchIds.length) {
+    const attrIdToCode = new Map<string, string>()
+    const attrIds: number[] = []
+    const attrValueByBatch = new Map<string, {
+      beerCategoryId: string | null
+      targetAbv: number | null
+      styleName: string | null
+    }>()
+
+    try {
+      const { data: attrDefs, error: attrDefError } = await supabase
+        .from('attr_def')
+        .select('attr_id, code')
+        .eq('domain', 'batch')
+        .in('code', ['beer_category', 'target_abv', 'style_name'])
+        .eq('is_active', true)
+      if (attrDefError) throw attrDefError
+
+      ;(attrDefs ?? []).forEach((row: any) => {
+        const id = Number(row.attr_id)
+        if (!Number.isFinite(id)) return
+        attrIds.push(id)
+        attrIdToCode.set(String(row.attr_id), String(row.code))
+      })
+
+      if (attrIds.length) {
+        const { data: attrValues, error: attrValueError } = await supabase
+          .from('entity_attr')
+          .select('entity_id, attr_id, value_text, value_num, value_ref_type_id, value_json')
+          .eq('entity_type', 'batch')
+          .in('entity_id', batchIds)
+          .in('attr_id', attrIds)
+        if (attrValueError) throw attrValueError
+
+        ;(attrValues ?? []).forEach((row: any) => {
+          const batchId = String(row.entity_id ?? '')
+          if (!batchId) return
+          if (!attrValueByBatch.has(batchId)) {
+            attrValueByBatch.set(batchId, {
+              beerCategoryId: null,
+              targetAbv: null,
+              styleName: null,
+            })
+          }
+          const entry = attrValueByBatch.get(batchId)
+          if (!entry) return
+          const code = attrIdToCode.get(String(row.attr_id))
+          if (!code) return
+
+          if (code === 'beer_category') {
+            const jsonDefId = row.value_json?.def_id
+            if (typeof jsonDefId === 'string' && jsonDefId.trim()) entry.beerCategoryId = jsonDefId.trim()
+            else if (typeof row.value_text === 'string' && row.value_text.trim()) entry.beerCategoryId = row.value_text.trim()
+            else if (row.value_ref_type_id != null) entry.beerCategoryId = String(row.value_ref_type_id)
+          }
+          if (code === 'target_abv') {
+            const num = toNumber(row.value_num)
+            if (num != null) entry.targetAbv = num
+          }
+          if (code === 'style_name') {
+            if (typeof row.value_text === 'string' && row.value_text.trim()) entry.styleName = row.value_text.trim()
+          }
+        })
+      }
+    } catch (err) {
+      console.warn('Failed to load batch attributes for lot table', err)
+    }
+
     const { data: batchRows, error: batchError } = await supabase
       .from('mes_batches')
-      .select('id, batch_code, batch_label, meta')
+      .select('id, batch_code, meta, recipe:recipe_id ( category, target_abv, style )')
       .eq('tenant_id', tenant)
       .in('id', batchIds)
     if (batchError) throw batchError
     ;(batchRows ?? []).forEach((row: any) => {
-      batchMap.set(row.id, row.batch_code)
-      batchLabelMap.set(row.id, row.batch_label ?? '')
-      const related = row.meta?.related_batch_id
-      relatedBatchMap.set(row.id, typeof related === 'string' ? related : null)
-    })
-  }
+      const attr = attrValueByBatch.get(row.id)
+      const recipe = Array.isArray(row.recipe) ? row.recipe[0] : row.recipe
+      const meta = (row.meta && typeof row.meta === 'object' && !Array.isArray(row.meta)) ? row.meta as Record<string, any> : null
 
-  const relatedIds = Array.from(new Set(Array.from(relatedBatchMap.values()).filter(Boolean))) as string[]
-  const relatedCodeMap = new Map<string, string>()
-  if (relatedIds.length) {
-    const { data: relatedRows, error: relatedError } = await supabase
-      .from('mes_batches')
-      .select('id, batch_code')
-      .eq('tenant_id', tenant)
-      .in('id', relatedIds)
-    if (relatedError) throw relatedError
-    ;(relatedRows ?? []).forEach((row: any) => relatedCodeMap.set(row.id, row.batch_code))
+      batchMap.set(row.id, row.batch_code ?? null)
+      batchCategoryMap.set(
+        row.id,
+        attr?.beerCategoryId
+          ?? (typeof recipe?.category === 'string' ? recipe.category : null)
+          ?? resolveMetaString(meta, 'beer_category')
+          ?? resolveMetaString(meta, 'category')
+          ?? null
+      )
+      batchTargetAbvMap.set(
+        row.id,
+        attr?.targetAbv
+          ?? toNumber(recipe?.target_abv)
+          ?? resolveMetaNumber(meta, 'target_abv')
+          ?? null
+      )
+      batchStyleMap.set(
+        row.id,
+        attr?.styleName
+          ?? (typeof recipe?.style === 'string' ? recipe.style : null)
+          ?? resolveMetaString(meta, 'style_name')
+          ?? resolveMetaString(meta, 'style')
+          ?? null
+      )
+    })
   }
 
   const uomMap = new Map<string, string>()
@@ -623,34 +907,50 @@ async function loadLotsForSite(siteId: string) {
     ;(uomRows ?? []).forEach((row: any) => uomMap.set(row.id, row.code))
   }
 
-  const packageMap = new Map<string, string>()
+  const packageVolumeMap = new Map<string, number | null>()
+  const packageUomMap = new Map<string, string | null>()
   if (packageIds.length) {
     const { data: pkgRows, error: pkgError } = await supabase
       .from('mst_package')
-      .select('id, package_code, name_i18n, unit_volume, volume_uom')
+      .select('id, unit_volume, volume_uom')
       .in('id', packageIds)
     if (pkgError) throw pkgError
     ;(pkgRows ?? []).forEach((row: any) => {
-      const name = row.name_i18n ? Object.values(row.name_i18n)[0] : ''
-      const size = row.unit_volume != null ? `${row.unit_volume}${row.volume_uom ? ` ${row.volume_uom}` : ''}` : ''
-      const label = [row.package_code, name, size].filter(Boolean).join(' / ')
-      packageMap.set(row.id, label)
+      packageVolumeMap.set(row.id, toNumber(row.unit_volume))
+      packageUomMap.set(row.id, typeof row.volume_uom === 'string' ? row.volume_uom : null)
     })
   }
 
-  lotOptions.value = (lineRows ?? []).map((row: any) => ({
-    id: row.batch_id ?? row.id,
-    label: batchMap.get(row.batch_id) ?? row.batch_id ?? row.id,
-    lotTaxType: typeof row.meta?.lot_tax_type === 'string' ? row.meta.lot_tax_type : null,
-    lotCode: batchMap.get(row.batch_id) ?? null,
-    relatedBatchCode: row.batch_id && relatedBatchMap.get(row.batch_id)
-      ? relatedCodeMap.get(relatedBatchMap.get(row.batch_id) as string) ?? null
-      : null,
-    batchLabel: row.batch_id ? batchLabelMap.get(row.batch_id) ?? null : null,
-    packageLabel: row.meta?.package_id ? packageMap.get(row.meta.package_id) ?? null : null,
-    quantity: typeof row.meta?.quantity === 'number' ? row.meta.quantity : null,
-    uomCode: row.meta?.uom_id ? uomMap.get(row.meta.uom_id) ?? null : null,
-  }))
+  const optionMap = new Map<string, LotOption>()
+  activeRows.forEach((row: any) => {
+    const lotRow = Array.isArray(row.lot) ? row.lot[0] : row.lot
+    const lotId = lotRow?.id ?? row.lot_id ?? row.id
+    if (!lotId) return
+    const batchId = lotRow?.batch_id ?? null
+    const qtyValue = Number(row.qty)
+    const qty = Number.isFinite(qtyValue) ? qtyValue : 0
+    const existing = optionMap.get(lotId)
+    if (existing) {
+      existing.quantity = (existing.quantity ?? 0) + qty
+      return
+    }
+    optionMap.set(lotId, {
+      id: lotId,
+      label: lotRow?.lot_no ?? lotId,
+      lotTaxType: typeof lotRow?.lot_tax_type === 'string' ? lotRow.lot_tax_type : null,
+      lotCode: lotRow?.lot_no ?? null,
+      batchCode: batchId ? batchMap.get(batchId) ?? null : null,
+      beerCategoryId: batchId ? batchCategoryMap.get(batchId) ?? null : null,
+      targetAbv: batchId ? batchTargetAbvMap.get(batchId) ?? null : null,
+      styleName: batchId ? batchStyleMap.get(batchId) ?? null : null,
+      packageVolume: lotRow?.package_id ? packageVolumeMap.get(lotRow.package_id) ?? null : null,
+      packageUom: lotRow?.package_id ? packageUomMap.get(lotRow.package_id) ?? null : null,
+      quantity: qty,
+      uomCode: row.uom_id ? uomMap.get(row.uom_id) ?? null : null,
+    })
+  })
+
+  lotOptions.value = Array.from(optionMap.values()).sort((a, b) => (a.lotCode ?? '').localeCompare(b.lotCode ?? ''))
 }
 
 function nextStep() {
@@ -668,5 +968,6 @@ function goBack() {
 onMounted(() => {
   loadMovementIntents().catch((err) => console.error(err))
   loadSites().catch((err) => console.error(err))
+  loadAlcoholTypes().catch((err) => console.error(err))
 })
 </script>

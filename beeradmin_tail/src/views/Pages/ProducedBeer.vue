@@ -37,10 +37,12 @@
           <table class="min-w-full divide-y divide-gray-200 text-sm">
             <thead class="bg-gray-50 text-xs uppercase text-gray-600">
               <tr>
-                <th class="px-3 py-2 text-left">{{ t('producedBeer.inventory.table.beerName') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('producedBeer.inventory.table.category') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('producedBeer.inventory.table.packageType') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('producedBeer.inventory.table.lotNo') }}</th>
                 <th class="px-3 py-2 text-left">{{ t('producedBeer.inventory.table.batchNo') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('producedBeer.inventory.table.beerCategory') }}</th>
+                <th class="px-3 py-2 text-right">{{ t('producedBeer.inventory.table.targetAbv') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('producedBeer.inventory.table.styleName') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('producedBeer.inventory.table.packageType') }}</th>
                 <th class="px-3 py-2 text-left">{{ t('producedBeer.inventory.table.productionDate') }}</th>
                 <th class="px-3 py-2 text-right">{{ t('producedBeer.inventory.table.qtyLiters') }}</th>
                 <th class="px-3 py-2 text-right">{{ t('producedBeer.inventory.table.qtyPackages') }}</th>
@@ -49,19 +51,19 @@
             </thead>
             <tbody class="divide-y divide-gray-100">
               <tr v-for="row in inventoryRows" :key="row.id" class="hover:bg-gray-50">
-                <td class="px-3 py-2">
-                  <div class="font-medium text-gray-900">{{ row.beerName || '—' }}</div>
-                </td>
-                <td class="px-3 py-2">{{ categoryLabel(row.categoryId) }}</td>
-                <td class="px-3 py-2">{{ row.packageTypeLabel || '—' }}</td>
+                <td class="px-3 py-2 font-mono text-xs text-gray-600">{{ row.lotNo || '—' }}</td>
                 <td class="px-3 py-2 font-mono text-xs text-gray-600">{{ row.batchCode || '—' }}</td>
+                <td class="px-3 py-2">{{ categoryLabel(row.beerCategoryId) }}</td>
+                <td class="px-3 py-2 text-right">{{ formatAbv(row.targetAbv) }}</td>
+                <td class="px-3 py-2">{{ row.styleName || '—' }}</td>
+                <td class="px-3 py-2">{{ row.packageTypeLabel || '—' }}</td>
                 <td class="px-3 py-2 text-xs text-gray-500">{{ formatDate(row.productionDate) }}</td>
                 <td class="px-3 py-2 text-right">{{ formatNumber(row.qtyLiters) }}</td>
                 <td class="px-3 py-2 text-right">{{ formatNumber(row.qtyPackages) }}</td>
                 <td class="px-3 py-2">{{ siteLabel(row.siteId) }}</td>
               </tr>
               <tr v-if="!inventoryLoading && inventoryRows.length === 0">
-                <td colspan="8" class="px-3 py-8 text-center text-gray-500">{{ t('common.noData') }}</td>
+                <td colspan="10" class="px-3 py-8 text-center text-gray-500">{{ t('common.noData') }}</td>
               </tr>
             </tbody>
           </table>
@@ -313,10 +315,12 @@ interface PackageCategoryRow {
 
 interface InventoryRow {
   id: string
-  beerName: string | null
-  categoryId: string | null
-  packageTypeLabel: string | null
+  lotNo: string | null
   batchCode: string | null
+  beerCategoryId: string | null
+  targetAbv: number | null
+  styleName: string | null
+  packageTypeLabel: string | null
   productionDate: string | null
   qtyPackages: number | null
   qtyLiters: number | null
@@ -487,6 +491,11 @@ function formatNumber(value: number | null | undefined) {
   return numberFormatter.value.format(value)
 }
 
+function formatAbv(value: number | null | undefined) {
+  if (value == null || Number.isNaN(value)) return '—'
+  return `${numberFormatter.value.format(value)}%`
+}
+
 function formatDate(value: string | null | undefined) {
   if (!value) return '—'
   try {
@@ -528,6 +537,20 @@ function resolveBatchLabel(meta: Record<string, any> | null | undefined) {
   if (typeof label !== 'string') return null
   const trimmed = label.trim()
   return trimmed.length ? trimmed : null
+}
+
+function resolveMetaString(meta: Record<string, any> | null | undefined, key: string) {
+  const value = meta?.[key]
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  return trimmed.length ? trimmed : null
+}
+
+function resolveMetaNumber(meta: Record<string, any> | null | undefined, key: string) {
+  const value = meta?.[key]
+  if (value == null) return null
+  const num = Number(value)
+  return Number.isFinite(num) ? num : null
 }
 
 function siteLabel(siteId: string | null | undefined) {
@@ -737,7 +760,7 @@ async function loadInventoryFromInventory() {
 
     const { data: lots, error: lotError } = await supabase
       .from('lot')
-      .select('id, batch_id, package_id, produced_at, status')
+      .select('id, lot_no, batch_id, package_id, produced_at, status')
       .eq('tenant_id', tenant)
       .in('id', lotIds)
     if (lotError) throw lotError
@@ -760,11 +783,12 @@ async function loadInventoryFromInventory() {
     type InventoryAccumulator = {
       key: string
       siteId: string
-      packageId: string | null
-      batchId: string | null
-      beerName: string | null
-      packageTypeLabel: string | null
+      lotNo: string | null
       batchCode: string | null
+      beerCategoryId: string | null
+      targetAbv: number | null
+      styleName: string | null
+      packageTypeLabel: string | null
       productionDate: string | null
       qtyPackages: number
       qtyLiters: number
@@ -791,16 +815,17 @@ async function loadInventoryFromInventory() {
         ? qtyLiters / unitSizeLiters
         : 0
 
-      const key = `${siteId}__${lot.package_id ?? ''}__${lot.batch_id ?? ''}`
+      const key = `${siteId}__${lot.id}`
       if (!accum.has(key)) {
         accum.set(key, {
           key,
           siteId,
-          packageId: lot.package_id ?? null,
-          batchId: lot.batch_id ?? null,
-          beerName: pkgInfo?.beerName ?? batchInfo?.beerName ?? null,
-          packageTypeLabel: pkgInfo?.packageTypeLabel ?? null,
+          lotNo: lot.lot_no ?? null,
           batchCode: pkgInfo?.batchCode ?? batchInfo?.batchCode ?? null,
+          beerCategoryId: batchInfo?.beerCategoryId ?? null,
+          targetAbv: batchInfo?.targetAbv ?? null,
+          styleName: batchInfo?.styleName ?? null,
+          packageTypeLabel: pkgInfo?.packageTypeLabel ?? null,
           productionDate: lot.produced_at ?? null,
           qtyPackages: 0,
           qtyLiters: 0,
@@ -818,10 +843,12 @@ async function loadInventoryFromInventory() {
       .filter((row) => row.qtyLiters > 0 || row.qtyPackages > 0)
       .map((row) => ({
         id: row.key,
-        beerName: row.beerName,
-        categoryId: null,
-        packageTypeLabel: row.packageTypeLabel,
+        lotNo: row.lotNo,
         batchCode: row.batchCode,
+        beerCategoryId: row.beerCategoryId,
+        targetAbv: row.targetAbv,
+        styleName: row.styleName,
+        packageTypeLabel: row.packageTypeLabel,
         productionDate: row.productionDate,
         qtyPackages: row.qtyPackages > 0 ? row.qtyPackages : null,
         qtyLiters: row.qtyLiters > 0 ? row.qtyLiters : null,
@@ -952,21 +979,115 @@ async function loadPackageInfo(packageIds: string[]) {
 }
 
 async function loadBatchInfo(batchIds: string[]) {
-  const infoMap = new Map<string, { batchCode: string | null; beerName: string | null }>()
+  const infoMap = new Map<string, {
+    batchCode: string | null
+    beerName: string | null
+    beerCategoryId: string | null
+    targetAbv: number | null
+    styleName: string | null
+  }>()
   if (batchIds.length === 0) return infoMap
 
   const tenant = await ensureTenant()
+  const uniqueIds = Array.from(new Set(batchIds))
+
+  const attrIdToCode = new Map<string, string>()
+  const attrIds: number[] = []
+  const attrValueByBatch = new Map<string, {
+    beerCategoryId: string | null
+    targetAbv: number | null
+    styleName: string | null
+  }>()
+
+  try {
+    const { data: attrDefs, error: attrDefError } = await supabase
+      .from('attr_def')
+      .select('attr_id, code')
+      .eq('domain', 'batch')
+      .in('code', ['beer_category', 'target_abv', 'style_name'])
+      .eq('is_active', true)
+    if (attrDefError) throw attrDefError
+
+    ;(attrDefs ?? []).forEach((row: any) => {
+      const id = Number(row.attr_id)
+      if (!Number.isFinite(id)) return
+      attrIds.push(id)
+      attrIdToCode.set(String(row.attr_id), String(row.code))
+    })
+
+    if (attrIds.length) {
+      const { data: attrValues, error: attrValueError } = await supabase
+        .from('entity_attr')
+        .select('entity_id, attr_id, value_text, value_num, value_ref_type_id, value_json')
+        .eq('entity_type', 'batch')
+        .in('entity_id', uniqueIds)
+        .in('attr_id', attrIds)
+      if (attrValueError) throw attrValueError
+
+      ;(attrValues ?? []).forEach((row: any) => {
+        const batchId = String(row.entity_id ?? '')
+        if (!batchId) return
+        if (!attrValueByBatch.has(batchId)) {
+          attrValueByBatch.set(batchId, {
+            beerCategoryId: null,
+            targetAbv: null,
+            styleName: null,
+          })
+        }
+        const entry = attrValueByBatch.get(batchId)
+        if (!entry) return
+
+        const code = attrIdToCode.get(String(row.attr_id))
+        if (!code) return
+
+        if (code === 'beer_category') {
+          const jsonDefId = row.value_json?.def_id
+          if (typeof jsonDefId === 'string' && jsonDefId.trim()) entry.beerCategoryId = jsonDefId.trim()
+          else if (typeof row.value_text === 'string' && row.value_text.trim()) entry.beerCategoryId = row.value_text.trim()
+          else if (row.value_ref_type_id != null) entry.beerCategoryId = String(row.value_ref_type_id)
+        }
+        if (code === 'target_abv') {
+          const num = toNumber(row.value_num)
+          if (num != null) entry.targetAbv = num
+        }
+        if (code === 'style_name') {
+          if (typeof row.value_text === 'string' && row.value_text.trim()) entry.styleName = row.value_text.trim()
+        }
+      })
+    }
+  } catch (err) {
+    console.warn('Failed to load batch attr values, fallback to recipe/meta only', err)
+  }
+
   const { data, error } = await supabase
     .from('mes_batches')
-    .select('id, batch_code, meta')
+    .select('id, batch_code, batch_label, product_name, meta, recipe_id, recipe:recipe_id ( category, target_abv, style )')
     .eq('tenant_id', tenant)
-    .in('id', batchIds)
+    .in('id', uniqueIds)
   if (error) throw error
 
   ;(data ?? []).forEach((row: any) => {
+    const attr = attrValueByBatch.get(row.id)
+    const recipe = Array.isArray(row.recipe) ? row.recipe[0] : row.recipe
+    const meta = (row.meta && typeof row.meta === 'object' && !Array.isArray(row.meta)) ? row.meta as Record<string, any> : null
+
     infoMap.set(row.id, {
       batchCode: row.batch_code ?? null,
-      beerName: resolveBatchLabel(row.meta) ?? null,
+      beerName: row.product_name ?? row.batch_label ?? resolveBatchLabel(meta) ?? null,
+      beerCategoryId: attr?.beerCategoryId
+        ?? (typeof recipe?.category === 'string' ? recipe.category : null)
+        ?? resolveMetaString(meta, 'beer_category')
+        ?? resolveMetaString(meta, 'category')
+        ?? null,
+      targetAbv: attr?.targetAbv
+        ?? toNumber(recipe?.target_abv)
+        ?? resolveMetaNumber(meta, 'target_abv')
+        ?? null,
+      styleName: attr?.styleName
+        ?? (typeof recipe?.style === 'string' ? recipe.style : null)
+        ?? resolveMetaString(meta, 'style_name')
+        ?? resolveMetaString(meta, 'style')
+        ?? null,
     })
   })
   return infoMap

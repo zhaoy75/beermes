@@ -21,6 +21,7 @@ get movement intent list from following table
 - Retrieve rule json file. Read it and return following json
 - return 
     enums
+    enum labels
     tax_decision_code 
     movement_intents_rules only march with input movement intent
     tax_transformation_rules only march with input movement intent

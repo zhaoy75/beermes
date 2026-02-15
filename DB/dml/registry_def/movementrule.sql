@@ -68,6 +68,48 @@ VALUES (
     "DISPOSE": { "ja": "廃棄", "en": "Dispose" , "show_in_movement_wizard": true }
   },
 
+  "site_type_labels": {
+    "BREWERY_MANUFACTUR": { "ja": "製造場", "en": "Brewery (Manufacturing)" },
+    "BREWERY_STORAGE": { "ja": "蔵置場", "en": "Brewery Storage" },
+    "TAX_STORAGE": { "ja": "蔵置所", "en": "Tax Warehouse" },
+    "DOMESTIC_CUSTOMER": { "ja": "国内の得意先", "en": "Domestic Customer" },
+    "OVERSEA_CUSTOMER": { "ja": "海外の得意先/輸出業者", "en": "Overseas Customer" },
+    "OTHER_BREWERY": { "ja": "他の酒類製造者の製造場", "en": "Other Brewery" },
+    "DISPOSAL_FACILITY": { "ja": "廃棄施設", "en": "Disposal Facility" },
+    "DIRECT_SALES_SHOP": { "ja": "直営所", "en": "Direct Sales Shop" }
+  },
+
+  "lot_tax_type_labels": {
+    "TAX_SUSPENDED": { "ja": "未納税", "en": "Tax Suspended" },
+    "TAX_PAID": { "ja": "納税済", "en": "Tax Paid" },
+    "EXPORT_EXEMPT": { "ja": "輸出免税", "en": "Export Exempt" },
+    "OUT_OF_SCOPE": { "ja": "対象外", "en": "Out of Scope" }
+  },
+
+  "tax_event_labels": {
+    "NONE": { "ja": "なし", "en": "None" },
+    "NON_TAXABLE_REMOVAL": { "ja": "非納税移出", "en": "Non-Taxable Removal" },
+    "TAXABLE_REMOVAL": { "ja": "課税移出", "en": "Taxable Removal" },
+    "EXPORT_EXEMPT": { "ja": "輸出免税", "en": "Export Exempt" },
+    "RETURN_TO_FACTORY": { "ja": "戻入", "en": "Return to Factory" }
+  },
+
+  "edge_type_labels": {
+    "PRODUCE": { "ja": "生成", "en": "Produce" },
+    "MOVE": { "ja": "移動", "en": "Move" },
+    "CONSUME": { "ja": "消費", "en": "Consume" },
+    "SPLIT": { "ja": "分割", "en": "Split" },
+    "MERGE": { "ja": "統合", "en": "Merge" }
+  },
+
+  "tax_decision_code_labels": {
+    "NONE": { "ja": "税務影響なし", "en": "No Tax Impact" },
+    "NON_TAXABLE_REMOVAL": { "ja": "非納税移出", "en": "Non-Taxable Removal" },
+    "TAXABLE_REMOVAL": { "ja": "課税移出", "en": "Taxable Removal" },
+    "EXPORT_EXEMPT": { "ja": "輸出免税", "en": "Export Exempt" },
+    "RETURN_TO_FACTORY": { "ja": "戻入", "en": "Return to Factory" }
+  },
+
   "tax_decision_definitions": [
     {
       "tax_decision_code": "NONE",

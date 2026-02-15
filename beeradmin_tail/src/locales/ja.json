@@ -1000,8 +1000,12 @@
       "movements": "移出"
     },
     "inventory": {
-      "subtitle": "バッチとパッケージ別の製品在庫。",
+      "subtitle": "ロット・バッチ別の製品在庫。",
       "table": {
+        "lotNo": "ロット番号",
+        "beerCategory": "ビール分類",
+        "targetAbv": "目標ABV",
+        "styleName": "スタイル名",
         "beerName": "ビール名",
         "category": "カテゴリ",
         "packageType": "パッケージ種別",
@@ -1125,6 +1129,101 @@
       },
       "toast": {
         "saved": "移動を保存しました。"
+      }
+    },
+    "movementWizard": {
+      "title": "製品ビール移動登録",
+      "subtitle": "registry_def からルールを動的に読み込みます。",
+      "back": "戻る",
+      "wizardTitle": "製品ビール移動登録ウィザード",
+      "wizardSubtitle": "ステップ1〜5を順に入力してください。",
+      "steps": {
+        "step1": "ステップ1",
+        "step2": "ステップ2",
+        "step3": "ステップ3",
+        "step4": "ステップ4",
+        "step5": "ステップ5"
+      },
+      "intent": {
+        "title": "ステップ1：移動目的",
+        "subtitle": "movement_get_movement_ui_intent で移動目的一覧を取得します。",
+        "loading": "移動目的を読み込み中..."
+      },
+      "sites": {
+        "title": "ステップ2：移動元/移動先の選択",
+        "subtitle": "movement_get_rules で選択した移動目的のルールを取得します。",
+        "loading": "移動ルールを読み込み中..."
+      },
+      "lots": {
+        "title": "ステップ3：移動商品（Lot）選択",
+        "subtitle": "ロット税区分により税イベントが変わる場合があります。",
+        "multiTaxTypeWarning": "複数のロット税区分が選択されています。選択により税イベントが変わる可能性があります。",
+        "multiEventWarning": "候補ロットにより税イベントのプレビューが変化します"
+      },
+      "info": {
+        "title": "ステップ4：必要情報の入力",
+        "subtitle": "数量・日付・理由などを入力します。"
+      },
+      "confirm": {
+        "title": "ステップ5：確認",
+        "subtitle": "導出された税イベントと適用ルールを確認します。"
+      },
+      "fields": {
+        "sourceSiteType": "移動元サイト種別",
+        "destinationSiteType": "移動先サイト種別",
+        "sourceSite": "移動元サイト",
+        "destinationSite": "移動先サイト",
+        "taxDecisionCode": "税務判定コード",
+        "defaultTaxDecision": "既定値",
+        "reasonNonDefault": "理由（既定値以外を選択した場合必須）",
+        "reasonNonDefaultHint": "既定値以外を選択した場合は理由の入力が必要です。",
+        "product": "製品",
+        "sourceLotTaxType": "移動元ロット税区分",
+        "date": "日付",
+        "quantity": "数量",
+        "uom": "単位",
+        "notes": "備考"
+      },
+      "table": {
+        "select": "選択",
+        "lotCode": "ロットコード",
+        "beerCategory": "ビール分類",
+        "targetAbv": "目標ABV",
+        "styleName": "スタイル名",
+        "batchCode": "バッチコード",
+        "packageVolume": "容量",
+        "packageUom": "容量単位",
+        "relatedBatch": "関連バッチ",
+        "batchInfo": "バッチ情報",
+        "package": "パッケージ",
+        "quantity": "数量",
+        "movementQuantity": "移動数量",
+        "uom": "単位",
+        "lotTaxType": "ロット税区分",
+        "noLotsFound": "ロットが見つかりません。"
+      },
+      "confirmRows": {
+        "movementIntent": "movement_intent",
+        "srcSiteType": "src_site_type",
+        "dstSiteType": "dst_site_type",
+        "taxDecisionCode": "tax_decision_code",
+        "taxEvent": "tax_event",
+        "ruleId": "rule_id"
+      },
+      "panel": {
+        "title": "税務導出結果",
+        "taxEvent": "税イベント",
+        "rule": "ルール"
+      },
+      "actions": {
+        "prev": "戻る",
+        "next": "次へ",
+        "saveDraft": "下書き保存",
+        "post": "確定"
+      },
+      "errors": {
+        "loadIntents": "移動目的一覧の取得に失敗しました。",
+        "loadRules": "移動ルールの取得に失敗しました。"
       }
     },
     "taxEvent": {

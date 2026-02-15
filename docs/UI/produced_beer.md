@@ -31,11 +31,13 @@
 - Section title: `producedBeer.sections.inventory`
 - Action: refresh inventory
 - Table columns:
-  - Beer name
-  - Category
-  - Package type
+  - Lot no
   - Production batch no
+  - ビール分類
+  - 目標ABV
+  - スタイル名
   - Production date
+  - package
   - Quantity (L)
   - Quantity (packages)
   - Site location
@@ -85,7 +87,7 @@
 - Refresh all:
   - reload inventory and movement list in parallel.
 - Refresh inventory:
-  - reload inventory rows from `inv_inventory` and related lot/master tables.
+  - reload inventory rows from `inv_inventory` and related lot/master/batch tables.
 - Refresh movements:
   - reload movement headers and lines.
 - Reset filters:

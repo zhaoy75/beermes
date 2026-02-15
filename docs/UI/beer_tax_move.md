@@ -23,8 +23,9 @@ Key principles:
     - `is_active = true`
 - UI will call rpc to 
     -  movement_get_movement_UI_intent to get movement_list shown in UI
-    -  movement_get_UI_rules to get rules for the movement intent
+    -  movement_get_rules to get rules for the movement intent
 - UI must load and interpret rules:
+    - enums with lables
     - `movement_intent_rules`
     - `tax_decision_definitions`
     - `tax_transformation_rules`
@@ -60,14 +61,17 @@ UI:
 - Select Source Site (required)
   - select source site type (dropdown list including allowed site types got from step 1)
   - select source site (dropdown list)
+  - source site name should be shown as the label (get from movement_get_rules) 
 
 - Select Destination Site (required if `dst_required=true`)
   - select destination site type (dropdown list including allowed site types got from step 1)
   - select destination site (dropdown list)
+  - destination site name should be shown as the label (get from movement_get_rules) 
 
 - Tax Decision Code 
   - set default Tax Decision Code from tax_transformation_rules based on movement_intent, src site type and dst site type
   - if user want to choose other allowed_tax_decision. user need to input reason 
+  - decision code should be shown as the label (get from movement_get_rules) 
 
 System behavior:
 - call movement_get_rules to get rules for the movement intent which user input in Step 1
@@ -78,17 +82,20 @@ System behavior:
 Step 3: Select lot　（移動商品選択）
 --------------------------------------------------
 UI:
-- Select Lot(s) from inventory (inv_movement and inv_movement_lines) for Source Site
+- Select Lot(s) from inventory (inv_inventory) for Source Site
   - lot code
-  - related batch code
-  - batch info
-  - package info (volume, uom )
+  - ビール分類
+  - 目標ABV
+  - スタイル名
+  - batch code
+  - package volume
+  - package uom
   - quantity
+  - movement quantity (for input)
 - If multiple lots have different `lot_tax_type`, show tax preview changes.
 
 System behavior:
 - find `src_lot_tax_type` from selected lot.
-- If destination lot is created/selected, determine `dst_lot_tax_type`.
 - If multiple candidates change tax event, highlight options.
 
 --------------------------------------------------
@@ -150,3 +157,4 @@ Notes
 --------------------------------------------------
 - UI must re-evaluate tax event when any of steps 1-3 change.
 - If rule changes invalidate current selection, prompt user to reselect.
+- the page should be multi-languaged

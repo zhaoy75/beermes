@@ -2007,45 +2007,6 @@ type RootSourceLot = {
   site_id: string
 }
 
-async function resolveSiteSourceLot(batchIdValue: string, siteId: string): Promise<RootSourceLot | null> {
-  const { data: edges, error: edgeError } = await supabase
-    .from('lot_edge')
-    .select('to_lot_id')
-    .is('from_lot_id', null)
-    .eq('edge_type', 'PRODUCE')
-    .limit(100)
-  if (edgeError) throw edgeError
-
-  const rootLotIds = Array.from(
-    new Set(
-      (edges ?? [])
-        .map((row: any) => row?.to_lot_id)
-        .filter((id: any): id is string => typeof id === 'string' && id.length > 0),
-    ),
-  )
-  if (!rootLotIds.length) return null
-
-  const { data: candidates, error: lotError } = await supabase
-    .from('lot')
-    .select('id, uom_id, site_id')
-    .in('id', rootLotIds)
-    .eq('batch_id', batchIdValue)
-    .neq('status', 'void')
-    .gt('qty', 0)
-    .order('produced_at', { ascending: false })
-    .order('created_at', { ascending: false })
-    .limit(1)
-  if (lotError) throw lotError
-
-  const candidate = candidates?.[0]
-  if (!candidate) return null
-  return {
-    id: String(candidate.id),
-    uom_id: String(candidate.uom_id),
-    site_id: String(candidate.site_id),
-  }
-}
-
 async function resolveRootSourceLot(batchIdValue: string, preferredSiteId?: string | null): Promise<RootSourceLot | null> {
   const { data: candidates, error: candidateError } = await supabase
     .from('lot')
@@ -2094,8 +2055,26 @@ async function resolveRootSourceLot(batchIdValue: string, preferredSiteId?: stri
   return null
 }
 
-async function resolveFillingSourceLot(batchIdValue: string, siteId: string) {
-  return resolveSiteSourceLot(batchIdValue, siteId)
+async function resolveFillingSourceLot(batchIdValue: string) {
+  const { data: sourceLotId, error: rpcError } = await supabase.rpc('get_packing_source_lotid', {
+    p_batch_id: batchIdValue,
+  })
+  if (rpcError) throw rpcError
+  if (!sourceLotId || typeof sourceLotId !== 'string') return null
+
+  const { data: lotRow, error: lotError } = await supabase
+    .from('lot')
+    .select('id, uom_id, site_id')
+    .eq('id', sourceLotId)
+    .maybeSingle()
+  if (lotError) throw lotError
+  if (!lotRow?.id || !lotRow?.uom_id || !lotRow?.site_id) return null
+
+  return {
+    id: String(lotRow.id),
+    uom_id: String(lotRow.uom_id),
+    site_id: String(lotRow.site_id),
+  }
 }
 
 async function callProductFilling(payload: Record<string, any>) {
@@ -2148,7 +2127,7 @@ async function persistPackingEvent(form: PackingFormState, isEditing: boolean) {
     const siteId = form.movement_site_id || null
     if (!siteId) throw new Error(t('batch.packaging.errors.siteRequired'))
 
-    const sourceLot = await resolveFillingSourceLot(batchId.value, siteId)
+    const sourceLot = await resolveFillingSourceLot(batchId.value)
     if (!sourceLot) {
       throw new Error('Source lot for filling is not found at the selected site. Run product_produce first, or transfer stock to the site.')
     }

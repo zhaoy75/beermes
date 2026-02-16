@@ -5,7 +5,7 @@
     <div v-if="loadingBatch" class="p-6 text-sm text-gray-500">{{ t('common.loading') }}</div>
     <div v-else-if="!batch" class="p-6 text-sm text-red-600">{{ t('batch.edit.notFound') }}</div>
     <div v-else class="space-y-6">
-      <section class="bg-white rounded-xl shadow border border-gray-200 px-4 py-5">
+      <section v-if="!isPackingPage" class="bg-white rounded-xl shadow border border-gray-200 px-4 py-5">
         <header class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-4">
           <div>
             <h2 class="text-lg font-semibold text-gray-800">{{ t('batch.edit.infoTitle') }}</h2>
@@ -179,8 +179,14 @@
       <section class="bg-white rounded-xl shadow border border-gray-200 px-4 py-5">
         <header class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
           <div>
-            <h2 class="text-lg font-semibold text-gray-800">{{ t('batch.edit.fillingTitle') }}</h2>
-            <p class="text-xs text-gray-500">{{ t('batch.edit.fillingSubtitle') }}</p>
+            <h2 class="text-lg font-semibold text-gray-800">{{ isPackingPage ? t('batch.packaging.dialog.title') : t('batch.edit.fillingTitle') }}</h2>
+            <p class="text-xs text-gray-500">
+              {{
+                isPackingPage
+                  ? t('batch.packaging.dialog.batchSummary', { code: batch?.batch_code ?? '—', name: batchForm.batch_label || '—' })
+                  : t('batch.edit.fillingSubtitle')
+              }}
+            </p>
           </div>
           <div class="flex items-center gap-2">
             <span v-if="packingNotice" class="text-xs text-green-600">{{ packingNotice }}</span>
@@ -192,7 +198,7 @@
             >
               {{ t('batch.edit.lotDagButton') }}
             </button>
-            <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50" type="button" :disabled="!batch" @click="openPackingDialog">
+            <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50" type="button" :disabled="packingDialog.loading || !batch" @click="openPackingDialog">
               {{ t('batch.packaging.openDialog') }}
             </button>
           </div>
@@ -255,6 +261,218 @@
           </table>
         </div>
       </section>
+    </div>
+
+    <div v-if="packingDialog.open && packingDialog.form" :class="isPackingPage ? 'mt-4' : 'fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4'">
+      <div :class="isPackingPage ? 'w-full bg-white rounded-xl shadow border border-gray-200' : 'w-full max-w-4xl bg-white rounded-xl shadow-lg border border-gray-200'">
+        <header class="flex items-start justify-between px-4 py-3 border-b gap-4">
+          <div>
+            <h3 class="text-lg font-semibold text-gray-800">{{ t('batch.packaging.dialog.title') }}</h3>
+            <p class="text-xs text-gray-500">
+              {{ t('batch.packaging.dialog.batchSummary', { code: batch?.batch_code ?? '—', name: batchForm.batch_label || '—' }) }}
+            </p>
+          </div>
+          <button class="text-sm px-2 py-1 rounded border hover:bg-gray-100" type="button" @click="closePackingDialog">
+            {{ t('common.close') }}
+          </button>
+        </header>
+        <div class="p-4 space-y-4">
+          <div v-if="packingDialog.globalError" class="text-sm text-red-600">{{ packingDialog.globalError }}</div>
+          <div class="border border-gray-200 rounded-lg p-3 space-y-3">
+            <h4 class="text-sm font-semibold text-gray-700">{{ t('batch.packaging.dialog.summaryTitle') }}</h4>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm text-gray-600">
+              <div class="space-y-1">
+                <div class="text-xs uppercase text-gray-500">{{ t('batch.packaging.dialog.summaryTotal') }}</div>
+                <div class="text-base font-semibold text-gray-800">{{ packingSummaryTotalText }}</div>
+              </div>
+              <div class="space-y-1">
+                <div class="text-xs uppercase text-gray-500">{{ t('batch.packaging.dialog.summaryProcessed') }}</div>
+                <div class="text-base font-semibold text-gray-800">{{ packingSummaryProcessedText }}</div>
+              </div>
+              <div class="space-y-1">
+                <div class="text-xs uppercase text-gray-500">{{ t('batch.packaging.dialog.summaryRemaining') }}</div>
+                <div class="text-base font-semibold" :class="packingRemainingVolumeClass">
+                  {{ packingSummaryRemainingText }}
+                </div>
+              </div>
+            </div>
+            <p class="text-xs text-gray-500">{{ t('batch.packaging.dialog.summaryHint') }}</p>
+          </div>
+          <div class="space-y-3">
+            <div>
+              <p class="text-xs uppercase text-gray-500 mb-2">{{ t('batch.packaging.dialog.packingType') }}</p>
+              <div class="grid grid-cols-1 sm:grid-cols-5 gap-2">
+                <button
+                  v-for="option in packingTypeOptions"
+                  :key="option.value"
+                  class="px-3 py-2 rounded border text-sm"
+                  :class="packingDialog.form?.packing_type === option.value ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'"
+                  type="button"
+                  @click="selectPackingType(option.value)"
+                >
+                  {{ option.label }}
+                </button>
+              </div>
+              <p v-if="packingDialog.errors.packing_type" class="mt-1 text-xs text-red-600">{{ packingDialog.errors.packing_type }}</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-sm text-gray-600 mb-1" for="packingEventTime">{{ t('batch.packaging.dialog.eventTime') }}</label>
+                <input id="packingEventTime" v-model="packingDialog.form.event_time" type="datetime-local" class="w-full h-[40px] border rounded px-3" />
+                <p v-if="packingDialog.errors.event_time" class="mt-1 text-xs text-red-600">{{ packingDialog.errors.event_time }}</p>
+              </div>
+              <div>
+                <label class="block text-sm text-gray-600 mb-1" for="packingMemo">{{ t('batch.packaging.dialog.memo') }}</label>
+                <input id="packingMemo" v-model.trim="packingDialog.form.memo" type="text" class="w-full h-[40px] border rounded px-3" />
+              </div>
+            </div>
+          </div>
+
+          <div v-if="showPackingVolumeSection" class="border border-gray-200 rounded-lg p-3 space-y-3">
+            <h4 class="text-sm font-semibold text-gray-700">{{ t('batch.packaging.dialog.volumeSection') }}</h4>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label class="block text-sm text-gray-600 mb-1" for="packingVolumeQty">{{ t('batch.packaging.dialog.volumeQty') }}</label>
+                <input id="packingVolumeQty" v-model="packingDialog.form.volume_qty" type="number" min="0" step="0.001" class="w-full h-[40px] border rounded px-3 text-right" />
+                <p v-if="packingDialog.errors.volume_qty" class="mt-1 text-xs text-red-600">{{ packingDialog.errors.volume_qty }}</p>
+              </div>
+              <div>
+                <label class="block text-sm text-gray-600 mb-1" for="packingVolumeUom">{{ t('batch.packaging.dialog.volumeUom') }}</label>
+                <select id="packingVolumeUom" v-model="packingDialog.form.volume_uom" class="w-full h-[40px] border rounded px-3 bg-white">
+                  <option value="">{{ t('common.select') }}</option>
+                  <option v-for="option in volumeUomOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+                </select>
+                <p v-if="packingDialog.errors.volume_uom" class="mt-1 text-xs text-red-600">{{ packingDialog.errors.volume_uom }}</p>
+              </div>
+              <div v-if="showPackingReason" class="md:col-span-2">
+                <label class="block text-sm text-gray-600 mb-1" for="packingReason">{{ t('batch.packaging.dialog.reason') }}</label>
+                <input id="packingReason" v-model.trim="packingDialog.form.reason" type="text" class="w-full h-[40px] border rounded px-3" />
+              </div>
+            </div>
+          </div>
+
+          <div v-if="showPackingFillingSection" class="border border-gray-200 rounded-lg p-3 space-y-3">
+            <div class="flex items-center justify-between">
+              <h4 class="text-sm font-semibold text-gray-700">{{ t('batch.packaging.dialog.fillingSection') }}</h4>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <div>
+                <label class="block text-sm text-gray-600 mb-1" for="tankFillStart">{{ t('batch.packaging.dialog.tankFillStart') }}</label>
+                <input id="tankFillStart" v-model="packingDialog.form.tank_fill_start_volume" type="number" step="0.001" class="w-full h-[36px] border rounded px-2 text-right" />
+              </div>
+              <div>
+                <label class="block text-sm text-gray-600 mb-1" for="tankLeft">{{ t('batch.packaging.dialog.tankLeft') }}</label>
+                <input id="tankLeft" v-model="packingDialog.form.tank_left_volume" type="number" step="0.001" class="w-full h-[36px] border rounded px-2 text-right" />
+              </div>
+              <div>
+                <label class="block text-sm text-gray-600 mb-1">{{ t('batch.packaging.dialog.tankLoss') }}</label>
+                <input :value="tankLossVolumeText" type="text" class="w-full h-[36px] border rounded px-2 text-right bg-gray-50 text-gray-600" readonly />
+              </div>
+              <div class="flex items-end">
+                <button class="w-full text-xs px-2 py-2 rounded border border-gray-300 hover:bg-gray-100" type="button" @click="markTankFillingEnd">
+                  {{ t('batch.packaging.dialog.tankFillEnd') }}
+                </button>
+              </div>
+            </div>
+            <hr class="border-gray-200" />
+            <div v-if="packingDialog.errors.filling_lines" class="text-xs text-red-600">{{ packingDialog.errors.filling_lines }}</div>
+            <div class="flex items-center justify-end">
+              <button class="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-100" type="button" @click="addFillingLine">
+                {{ t('batch.packaging.dialog.addFilling') }}
+              </button>
+            </div>
+            <div class="overflow-x-auto border border-gray-200 rounded-lg">
+              <table class="min-w-full text-sm divide-y divide-gray-200">
+                <thead class="bg-gray-50 text-gray-600 uppercase text-xs">
+                  <tr>
+                    <th class="px-3 py-2 text-left">{{ t('batch.packaging.dialog.fillingTable.packageType') }}</th>
+                    <th class="px-3 py-2 text-left">{{ t('batch.packaging.dialog.fillingTable.lotCode') }}</th>
+                    <th class="px-3 py-2 text-right">{{ t('batch.packaging.dialog.fillingTable.qty') }}</th>
+                    <th class="px-3 py-2 text-right">{{ t('batch.packaging.dialog.fillingTable.unitVolume') }}</th>
+                    <th class="px-3 py-2 text-right">{{ t('batch.packaging.dialog.fillingTable.totalVolume') }}</th>
+                    <th class="px-3 py-2 text-left">{{ t('common.actions') }}</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                  <tr v-for="(line, index) in packingDialog.form.filling_lines" :key="line.id">
+                    <td class="px-3 py-2">
+                      <select v-model="line.package_type_id" class="w-full h-[36px] border rounded px-2 bg-white">
+                        <option value="">{{ t('common.select') }}</option>
+                        <option v-for="option in packageCategoryOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+                      </select>
+                    </td>
+                    <td class="px-3 py-2">
+                      <input v-model.trim="line.lot_code" type="text" class="w-full h-[36px] border rounded px-2" />
+                    </td>
+                    <td class="px-3 py-2 text-right">
+                      <input v-model="line.qty" type="number" min="1" step="1" class="w-full h-[36px] border rounded px-2 text-right" />
+                    </td>
+                    <td class="px-3 py-2 text-right text-gray-600">{{ formatFillingUnitVolume(line.package_type_id) }}</td>
+                    <td class="px-3 py-2 text-right text-gray-600">{{ formatFillingLineTotal(line) }}</td>
+                    <td class="px-3 py-2">
+                      <button class="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-100" type="button" @click="removeFillingLine(index)">
+                        {{ t('batch.packaging.actions.delete') }}
+                      </button>
+                    </td>
+                  </tr>
+                  <tr v-if="packingDialog.form.filling_lines.length === 0">
+                    <td class="px-3 py-4 text-center text-gray-500" colspan="5">{{ t('batch.packaging.dialog.noFillingLines') }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-600">
+              <div>{{ t('batch.packaging.dialog.fillingTotals.units', { count: packingFillingTotals.totalUnits }) }}</div>
+              <div>{{ t('batch.packaging.dialog.fillingTotals.volume', { volume: formatVolumeValue(packingFillingTotals.totalVolume) }) }}</div>
+            </div>
+          </div>
+
+          <div v-if="showPackingMovementSection" class="border border-gray-200 rounded-lg p-3 space-y-3">
+            <h4 class="text-sm font-semibold text-gray-700">{{ t('batch.packaging.dialog.movementSection') }}</h4>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div class="md:col-span-2">
+                <label class="block text-sm text-gray-600 mb-1" for="packingMovementSite">{{ t('batch.packaging.dialog.movementSite') }}</label>
+                <select id="packingMovementSite" v-model="packingDialog.form.movement_site_id" class="w-full h-[40px] border rounded px-3 bg-white">
+                  <option value="">{{ t('common.select') }}</option>
+                  <option v-for="option in siteOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+                </select>
+                <p v-if="packingDialog.errors.movement_site_id" class="mt-1 text-xs text-red-600">{{ packingDialog.errors.movement_site_id }}</p>
+              </div>
+              <div>
+                <label class="block text-sm text-gray-600 mb-1" for="packingMovementQty">{{ t('batch.packaging.dialog.movementQty') }}</label>
+                <input id="packingMovementQty" v-model="packingDialog.form.movement_qty" type="number" min="0" step="0.001" class="w-full h-[40px] border rounded px-3 text-right" @input="markMovementQtyTouched" />
+                <p v-if="packingDialog.errors.movement_qty" class="mt-1 text-xs text-red-600">{{ packingDialog.errors.movement_qty }}</p>
+              </div>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-600 mb-1" for="packingMovementMemo">{{ t('batch.packaging.dialog.movementMemo') }}</label>
+              <input id="packingMovementMemo" v-model.trim="packingDialog.form.movement_memo" type="text" class="w-full h-[40px] border rounded px-3" />
+            </div>
+          </div>
+
+          <div class="border border-gray-200 rounded-lg p-3 space-y-2">
+            <h4 class="text-sm font-semibold text-gray-700">{{ t('batch.packaging.dialog.reviewTitle') }}</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-600">
+              <div>{{ t('batch.packaging.dialog.reviewType') }}: <span class="text-gray-800">{{ formatPackingType(packingDialog.form.packing_type) }}</span></div>
+              <div>{{ t('batch.packaging.dialog.reviewVolume') }}: <span class="text-gray-800">{{ reviewVolumeText }}</span></div>
+              <div>{{ t('batch.packaging.dialog.reviewMovement') }}: <span class="text-gray-800">{{ reviewMovementText }}</span></div>
+              <div>{{ t('batch.packaging.dialog.reviewFilling') }}: <span class="text-gray-800">{{ reviewFillingText }}</span></div>
+            </div>
+            <p v-if="packingMismatchWarning" class="text-xs text-amber-600">{{ packingMismatchWarning }}</p>
+          </div>
+        </div>
+        <footer class="flex items-center justify-end gap-2 px-4 py-3 border-t">
+          <button class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-100" type="button" :disabled="packingDialog.loading" @click="closePackingDialog">
+            {{ t('batch.packaging.dialog.cancel') }}
+          </button>
+          <button class="px-3 py-2 rounded border border-blue-600 text-blue-600 hover:bg-blue-50 disabled:opacity-50" type="button" :disabled="packingDialog.loading" @click="savePackingEvent(true)">
+            {{ t('batch.packaging.dialog.saveAndAdd') }}
+          </button>
+          <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50" type="button" :disabled="packingDialog.loading" @click="savePackingEvent(false)">
+            {{ packingDialog.loading ? t('common.saving') : t('batch.packaging.dialog.save') }}
+          </button>
+        </footer>
+      </div>
     </div>
 
     <div v-if="lotDagDialog.open" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
@@ -458,7 +676,8 @@ const router = useRouter()
 const { t, locale } = useI18n()
 
 const batchId = computed(() => route.params.batchId as string | undefined)
-const pageTitle = computed(() => t('batch.edit.title'))
+const isPackingPage = computed(() => route.name === 'batchPacking')
+const pageTitle = computed(() => (isPackingPage.value ? t('batch.packaging.dialog.title') : t('batch.edit.title')))
 const ZERO_UUID = '00000000-0000-0000-0000-000000000000'
 
 const tenantId = ref<string | null>(null)
@@ -582,6 +801,29 @@ type PackingEvent = {
   tank_left_volume: number | null
 }
 
+type PackingFillingLineForm = {
+  id: string
+  package_type_id: string
+  qty: string
+  lot_code: string
+}
+
+type PackingFormState = {
+  id?: string
+  packing_type: PackingType
+  event_time: string
+  memo: string
+  volume_qty: string
+  volume_uom: string
+  movement_site_id: string
+  movement_qty: string
+  movement_memo: string
+  filling_lines: PackingFillingLineForm[]
+  reason: string
+  tank_fill_start_volume: string
+  tank_left_volume: string
+}
+
 type LotDagNode = {
   id: string
   lot_no: string | null
@@ -621,6 +863,15 @@ const volumeUoms = ref<VolumeUomOption[]>([])
 const uomOptionsRaw = ref<UomOption[]>([])
 const packingEvents = ref<PackingEvent[]>([])
 const packingNotice = ref('')
+const packingMovementQtyTouched = ref(false)
+const packingDialog = reactive({
+  open: false,
+  editing: false,
+  loading: false,
+  globalError: '',
+  errors: {} as Record<string, string>,
+  form: null as PackingFormState | null,
+})
 
 const actualYieldDialog = reactive({
   open: false,
@@ -688,12 +939,33 @@ const relationDialog = reactive({
   } as RelationFormState,
 })
 
+function resolveLang() {
+  return String(locale.value ?? '').toLowerCase().startsWith('ja') ? 'ja' : 'en'
+}
+
+function resolveNameI18n(value: Record<string, string> | null | undefined) {
+  if (!value) return ''
+  const lang = resolveLang()
+  if (value[lang]) return value[lang]
+  const fallback = Object.values(value)[0]
+  return fallback ?? ''
+}
+
 function resolveUomCode(value: string | null | undefined) {
   if (!value) return null
   const byId = volumeUoms.value.find((row) => row.id === value)
   if (byId) return byId.code
   const byCode = volumeUoms.value.find((row) => row.code === value)
   if (byCode) return byCode.code
+  return value
+}
+
+function resolveUomId(value: string | null | undefined) {
+  if (!value) return ''
+  const byId = volumeUoms.value.find((row) => row.id === value)
+  if (byId) return byId.id
+  const byCode = volumeUoms.value.find((row) => row.code === value)
+  if (byCode) return byCode.id
   return value
 }
 
@@ -704,9 +976,41 @@ function defaultVolumeUomId() {
 
 
 
+function formVolumeInLiters(form: PackingFormState) {
+  const qty = toNumber(form.volume_qty)
+  if (qty == null) return null
+  return convertToLiters(qty, resolveUomCode(form.volume_uom))
+}
+
 function eventVolumeInLiters(event: PackingEvent) {
   if (event.volume_qty == null) return null
   return convertToLiters(event.volume_qty, resolveUomCode(event.volume_uom))
+}
+
+function defaultPackageId() {
+  // TODO: confirm mapping for volume-only events; fallback to first package for now.
+  return packageCategories.value[0]?.id ?? ''
+}
+
+function resolveLitersUomId() {
+  return volumeUoms.value.find((row) => row.code === 'L')?.id ?? defaultVolumeUomId()
+}
+
+function mapPackingDocType(type: PackingType) {
+  switch (type) {
+    case 'filling':
+      return 'production_receipt'
+    case 'ship':
+      return 'sale'
+    case 'transfer':
+      return 'transfer'
+    case 'loss':
+      return 'adjustment'
+    case 'dispose':
+      return 'waste'
+    default:
+      return 'adjustment'
+  }
 }
 
 const packingTypeOptions = computed(() => ([
@@ -716,6 +1020,13 @@ const packingTypeOptions = computed(() => ([
   { value: 'loss', label: t('batch.packaging.types.loss') },
   { value: 'dispose', label: t('batch.packaging.types.dispose') },
 ] as Array<{ value: PackingType, label: string }>))
+
+const packageCategoryOptions = computed(() =>
+  packageCategories.value.map((row) => ({
+    value: row.id,
+    label: formatPackageLabel(row),
+  }))
+)
 
 const volumeUomOptions = computed(() =>
   volumeUoms.value.map((row) => ({
@@ -740,6 +1051,14 @@ const relationTypeOptions = computed(() => ([
   { value: 'dilution', label: t('batch.relation.types.dilution') },
   { value: 'transfer', label: t('batch.relation.types.transfer') },
 ]))
+
+function formatPackageLabel(row: PackageCategoryOption) {
+  const name = resolveNameI18n(row.name_i18n)
+  const namePart = name ? ` — ${name}` : ''
+  const unitVolume = row.unit_volume != null ? convertToLiters(row.unit_volume, resolveUomCode(row.volume_uom)) : null
+  const sizePart = unitVolume != null ? ` (${unitVolume.toLocaleString(undefined, { maximumFractionDigits: 2 })} L)` : ''
+  return `${row.package_code}${namePart}${sizePart}`
+}
 
 const batchActualYieldLiters = computed(() => {
   const qty = toNumber(batchForm.actual_yield)
@@ -810,6 +1129,86 @@ const packingRemainingVolumeClass = computed(() => {
   return 'text-emerald-600'
 })
 
+const showPackingVolumeSection = computed(() => {
+  const type = packingDialog.form?.packing_type
+  return type === 'ship' || type === 'transfer' || type === 'loss' || type === 'dispose'
+})
+
+const showPackingMovementSection = computed(() => {
+  const type = packingDialog.form?.packing_type
+  return type === 'ship' || type === 'filling' || type === 'transfer'
+})
+
+const showPackingFillingSection = computed(() => packingDialog.form?.packing_type === 'filling')
+
+const showPackingReason = computed(() => {
+  const type = packingDialog.form?.packing_type
+  return type === 'loss' || type === 'dispose'
+})
+
+const packingFillingTotals = computed(() => {
+  const lines = packingDialog.form?.filling_lines ?? []
+  return computeFillingTotals(lines)
+})
+
+const tankLossVolume = computed(() => {
+  if (!packingDialog.form) return null
+  const start = toNumber(packingDialog.form.tank_fill_start_volume)
+  const left = toNumber(packingDialog.form.tank_left_volume)
+  const total = packingFillingTotals.value.totalVolume
+  if (start == null || left == null || total == null) return null
+  return start - left - total
+})
+
+const tankLossVolumeText = computed(() => {
+  if (tankLossVolume.value == null) return '—'
+  return formatVolumeValue(tankLossVolume.value)
+})
+
+const reviewVolumeText = computed(() => {
+  if (!packingDialog.form) return '—'
+  if (packingDialog.form.packing_type === 'filling') {
+    const total = packingFillingTotals.value.totalVolume
+    return total != null ? formatVolumeValue(total) : '—'
+  }
+  if (!showPackingVolumeSection.value) return '—'
+  const qty = formVolumeInLiters(packingDialog.form)
+  return qty != null ? formatVolumeValue(qty) : '—'
+})
+
+const reviewMovementText = computed(() => {
+  if (!packingDialog.form || !showPackingMovementSection.value) return '—'
+  const site = siteLabel(packingDialog.form.movement_site_id || null)
+  const qty = toNumber(packingDialog.form.movement_qty)
+  const qtyLabel = qty != null ? formatVolumeValue(qty) : '—'
+  return `${site} / ${qtyLabel}`
+})
+
+const reviewFillingText = computed(() => {
+  if (!showPackingFillingSection.value) return '—'
+  return formatFillingTotals(packingFillingTotals.value)
+})
+
+const packingMismatchWarning = computed(() => {
+  if (!packingDialog.form || !showPackingMovementSection.value) return ''
+  const movementQty = toNumber(packingDialog.form.movement_qty)
+  if (movementQty == null) return ''
+  if (packingDialog.form.packing_type === 'filling') {
+    const total = packingFillingTotals.value.totalVolume
+    if (total != null && Math.abs(movementQty - total) > 0.0001) {
+      return t('batch.packaging.warnings.movementMismatch')
+    }
+    return ''
+  }
+  if (showPackingVolumeSection.value) {
+    const volumeQty = formVolumeInLiters(packingDialog.form)
+    if (volumeQty != null && Math.abs(movementQty - volumeQty) > 0.0001) {
+      return t('batch.packaging.warnings.movementMismatch')
+    }
+  }
+  return ''
+})
+
 function attrLabel(field: AttrField) {
   const lang = locale.value?.toString().toLowerCase().startsWith('ja') ? 'ja' : 'en'
   const label = field.name_i18n?.[lang]
@@ -829,6 +1228,26 @@ async function ensureTenant() {
 watch(batchId, (val) => {
   if (val) fetchBatch()
 }, { immediate: true })
+
+watch(isPackingPage, (enabled) => {
+  if (enabled) {
+    syncPackingPageEditor()
+    return
+  }
+  if (packingDialog.open) {
+    packingDialog.open = false
+    packingDialog.form = null
+    packingDialog.errors = {}
+    packingDialog.globalError = ''
+  }
+})
+
+watch(
+  () => route.query.eventId,
+  () => {
+    if (isPackingPage.value) syncPackingPageEditor()
+  }
+)
 
 async function fetchBatch() {
   if (!batchId.value) return
@@ -1217,6 +1636,7 @@ async function loadPackingEvents() {
     const rows = (movementRows ?? []) as any[]
     if (!rows.length) {
       packingEvents.value = []
+      syncPackingPageEditor()
       return
     }
     const movementIds = rows.map((row) => row.id)
@@ -1260,9 +1680,11 @@ async function loadPackingEvents() {
         tank_left_volume: meta.tank_left_volume != null ? toNumber(meta.tank_left_volume) : null,
       } as PackingEvent
     })
+    syncPackingPageEditor()
   } catch (err) {
     console.error(err)
     packingEvents.value = []
+    syncPackingPageEditor()
   }
 }
 
@@ -1645,17 +2067,240 @@ async function goToPackingPage(eventId?: string) {
   })
 }
 
+async function goToBatchEditPage() {
+  if (!batchId.value) return
+  await router.push({
+    name: 'batchEdit',
+    params: { batchId: batchId.value },
+  })
+}
+
+function openPackingDialogInternal(type: PackingType) {
+  packingDialog.open = true
+  packingDialog.editing = false
+  packingDialog.loading = false
+  packingDialog.globalError = ''
+  packingDialog.errors = {}
+  packingDialog.form = newPackingForm(type)
+  packingMovementQtyTouched.value = false
+}
+
 function openPackingDialog() {
-  void goToPackingPage()
+  if (!isPackingPage.value) {
+    void goToPackingPage()
+    return
+  }
+  if (packingDialog.form && isPackingFormDirty(packingDialog.form)) {
+    if (!window.confirm(t('batch.packaging.dialog.typeChangeConfirm'))) return
+  }
+  openPackingDialogInternal('filling')
 }
 
 function canEditPackingEvent(event: PackingEvent) {
   return event.packing_type !== 'filling' && event.packing_type !== 'transfer'
 }
 
+function openPackingEditInternal(event: PackingEvent) {
+  packingDialog.open = true
+  packingDialog.editing = true
+  packingDialog.loading = false
+  packingDialog.globalError = ''
+  packingDialog.errors = {}
+  packingDialog.form = {
+    id: event.id,
+    packing_type: event.packing_type,
+    event_time: toInputDateTime(event.event_time),
+    memo: event.memo ?? '',
+    volume_qty: event.volume_qty != null ? String(event.volume_qty) : '',
+    volume_uom: resolveUomId(event.volume_uom) || defaultVolumeUomId(),
+    movement_site_id: event.movement?.site_id ?? '',
+    movement_qty: event.movement?.qty != null ? String(event.movement.qty) : '',
+    movement_memo: event.movement?.memo ?? '',
+    filling_lines: event.filling_lines.map((line) => ({
+      id: line.id ?? generateLocalId(),
+      package_type_id: line.package_type_id,
+      qty: String(line.qty ?? ''),
+      lot_code: line.lot_code ?? '',
+    })),
+    reason: event.reason ?? '',
+    tank_fill_start_volume: event.tank_fill_start_volume != null ? String(event.tank_fill_start_volume) : '',
+    tank_left_volume: event.tank_left_volume != null ? String(event.tank_left_volume) : '',
+  }
+  packingMovementQtyTouched.value = true
+}
+
 function openPackingEdit(event: PackingEvent) {
   if (!canEditPackingEvent(event)) return
-  void goToPackingPage(event.id)
+  if (!isPackingPage.value) {
+    void goToPackingPage(event.id)
+    return
+  }
+  openPackingEditInternal(event)
+}
+
+function closePackingDialog() {
+  if (!packingDialog.form) {
+    packingDialog.open = false
+    if (isPackingPage.value) void goToBatchEditPage()
+    return
+  }
+  if (isPackingFormDirty(packingDialog.form)) {
+    if (!window.confirm(t('batch.packaging.dialog.closeConfirm'))) return
+  }
+  packingDialog.open = false
+  packingDialog.form = null
+  packingDialog.errors = {}
+  packingDialog.globalError = ''
+  if (isPackingPage.value) void goToBatchEditPage()
+}
+
+function isPackingFormDirty(form: PackingFormState) {
+  return Boolean(
+    form.memo ||
+    form.volume_qty ||
+    form.volume_uom ||
+    form.movement_site_id ||
+    form.movement_qty ||
+    form.movement_memo ||
+    form.reason ||
+    (form.filling_lines && form.filling_lines.length)
+  )
+}
+
+function routeEventId() {
+  const queryValue = route.query.eventId
+  return typeof queryValue === 'string' && queryValue ? queryValue : ''
+}
+
+function syncPackingPageEditor() {
+  if (!isPackingPage.value) return
+  const eventId = routeEventId()
+  if (eventId) {
+    const target = packingEvents.value.find((row) => row.id === eventId)
+    if (target && canEditPackingEvent(target)) {
+      openPackingEditInternal(target)
+      return
+    }
+  }
+  if (!packingDialog.open || !packingDialog.form) {
+    openPackingDialogInternal('filling')
+  }
+}
+
+function selectPackingType(value: PackingType) {
+  if (!packingDialog.form) return
+  if (packingDialog.form.packing_type === value) return
+  if (shouldConfirmPackingTypeChange(packingDialog.form, value)) {
+    if (!window.confirm(t('batch.packaging.dialog.typeChangeConfirm'))) return
+  }
+  const prevType = packingDialog.form.packing_type
+  packingDialog.form.packing_type = value
+  resetPackingFormForType(packingDialog.form, prevType)
+  packingMovementQtyTouched.value = false
+}
+
+function shouldConfirmPackingTypeChange(form: PackingFormState, next: PackingType) {
+  const wasFilling = form.packing_type === 'filling'
+  const willBeFilling = next === 'filling'
+  if (wasFilling && !willBeFilling && form.filling_lines.length) return true
+  const wasVolume = isVolumeType(form.packing_type)
+  const willVolume = isVolumeType(next)
+  if (wasVolume && !willVolume && form.volume_qty) return true
+  const wasMovement = isMovementType(form.packing_type)
+  const willMovement = isMovementType(next)
+  if (wasMovement && !willMovement && (form.movement_site_id || form.movement_qty || form.movement_memo)) return true
+  if ((form.packing_type === 'loss' || form.packing_type === 'dispose') && !(next === 'loss' || next === 'dispose') && form.reason) return true
+  return false
+}
+
+function resetPackingFormForType(form: PackingFormState, prevType: PackingType) {
+  if (!isVolumeType(form.packing_type) || !isVolumeType(prevType)) {
+    form.volume_qty = ''
+    form.volume_uom = defaultVolumeUomId()
+  }
+  if (!isMovementType(form.packing_type) || !isMovementType(prevType)) {
+    form.movement_site_id = ''
+    form.movement_qty = ''
+    form.movement_memo = ''
+  }
+  if (form.packing_type !== 'filling') {
+    form.filling_lines = []
+  }
+  if (!(form.packing_type === 'loss' || form.packing_type === 'dispose')) {
+    form.reason = ''
+  }
+  if (form.packing_type !== 'filling') {
+    form.tank_fill_start_volume = ''
+    form.tank_left_volume = ''
+  }
+}
+
+function isVolumeType(type: PackingType) {
+  return type === 'ship' || type === 'transfer' || type === 'loss' || type === 'dispose'
+}
+
+function isMovementType(type: PackingType) {
+  return type === 'ship' || type === 'filling' || type === 'transfer'
+}
+
+function addFillingLine() {
+  if (!packingDialog.form) return
+  packingDialog.form.filling_lines.push({
+    id: generateLocalId(),
+    package_type_id: '',
+    qty: '',
+    lot_code: '',
+  })
+}
+
+function markTankFillingEnd() {
+  if (!packingDialog.form) return
+  if (!packingDialog.form.tank_left_volume) {
+    packingDialog.form.tank_left_volume = '0'
+  }
+}
+
+function removeFillingLine(index: number) {
+  if (!packingDialog.form) return
+  packingDialog.form.filling_lines.splice(index, 1)
+}
+
+function markMovementQtyTouched() {
+  packingMovementQtyTouched.value = true
+}
+
+async function savePackingEvent(addAnother: boolean) {
+  if (!packingDialog.form || !batchId.value) return
+  packingDialog.errors = {}
+  packingDialog.globalError = ''
+  const errors = validatePackingForm(packingDialog.form)
+  if (Object.keys(errors).length) {
+    packingDialog.errors = errors
+    return
+  }
+  try {
+    packingDialog.loading = true
+    await persistPackingEvent(packingDialog.form, packingDialog.editing)
+    await loadPackingEvents()
+    showPackingNotice(t('batch.packaging.toast.saved'))
+    if (addAnother || isPackingPage.value) {
+      const nextType = packingDialog.form.packing_type
+      packingDialog.form = newPackingForm(nextType)
+      packingDialog.editing = false
+      packingMovementQtyTouched.value = false
+    } else {
+      packingDialog.open = false
+      packingDialog.form = null
+    }
+  } catch (err) {
+    console.error(err)
+    const detail = extractErrorMessage(err)
+    packingDialog.globalError = detail
+      ? `${t('batch.packaging.errors.saveFailed')} (${detail})`
+      : t('batch.packaging.errors.saveFailed')
+  } finally {
+    packingDialog.loading = false
+  }
 }
 
 function validateRelationForm(form: RelationFormState) {
@@ -1743,7 +2388,341 @@ async function deletePackingEvent(event: PackingEvent) {
     showPackingNotice(t('batch.packaging.toast.deleted'))
   } catch (err) {
     console.error(err)
-    showPackingNotice(t('batch.packaging.errors.deleteFailed'))
+    packingDialog.globalError = t('batch.packaging.errors.deleteFailed')
+  }
+}
+
+type RootSourceLot = {
+  id: string
+  uom_id: string
+  site_id: string
+}
+
+async function resolveRootSourceLot(batchIdValue: string, preferredSiteId?: string | null): Promise<RootSourceLot | null> {
+  const { data: candidates, error: candidateError } = await supabase
+    .from('lot')
+    .select('id, uom_id, site_id')
+    .eq('batch_id', batchIdValue)
+    .neq('status', 'void')
+    .gt('qty', 0)
+    .order('produced_at', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(50)
+  let filteredCandidates = candidates
+  if (!candidateError && preferredSiteId) {
+    filteredCandidates = (candidates ?? []).filter((row: any) => row.site_id === preferredSiteId)
+  }
+  if (candidateError) throw candidateError
+  if (!filteredCandidates?.length) return null
+
+  const candidateIds = filteredCandidates
+    .map((row) => row.id)
+    .filter((value): value is string => typeof value === 'string' && !!value)
+  if (!candidateIds.length) return null
+
+  const { data: roots, error: rootError } = await supabase
+    .from('lot_edge')
+    .select('to_lot_id')
+    .is('from_lot_id', null)
+    .eq('edge_type', 'PRODUCE')
+    .in('to_lot_id', candidateIds)
+  if (rootError) throw rootError
+  if (!roots?.length) return null
+
+  const rootLotIds = new Set(
+    roots
+      .map((row) => row.to_lot_id)
+      .filter((value): value is string => typeof value === 'string' && !!value),
+  )
+  for (const candidate of filteredCandidates) {
+    if (rootLotIds.has(candidate.id) && candidate.uom_id && candidate.site_id) {
+      return {
+        id: candidate.id as string,
+        uom_id: candidate.uom_id as string,
+        site_id: candidate.site_id as string,
+      }
+    }
+  }
+  return null
+}
+
+async function resolveFillingSourceLot(batchIdValue: string) {
+  const { data: sourceLotId, error: rpcError } = await supabase.rpc('get_packing_source_lotid', {
+    p_batch_id: batchIdValue,
+  })
+  if (rpcError) throw rpcError
+  if (!sourceLotId || typeof sourceLotId !== 'string') return null
+
+  const { data: lotRow, error: lotError } = await supabase
+    .from('lot')
+    .select('id, uom_id, site_id')
+    .eq('id', sourceLotId)
+    .maybeSingle()
+  if (lotError) throw lotError
+  if (!lotRow?.id || !lotRow?.uom_id || !lotRow?.site_id) return null
+
+  return {
+    id: String(lotRow.id),
+    uom_id: String(lotRow.uom_id),
+    site_id: String(lotRow.site_id),
+  }
+}
+
+async function callProductFilling(payload: Record<string, any>) {
+  const { error } = await supabase.rpc('product_filling', { p_doc: payload })
+  if (error) throw error
+}
+
+async function callProductMove(payload: Record<string, any>) {
+  const { error } = await supabase.rpc('product_move', { p_doc: payload })
+  if (error) throw error
+}
+
+async function persistPackingEvent(form: PackingFormState, isEditing: boolean) {
+  if (!batchId.value) return
+  const batchCode = batch.value?.batch_code ?? ''
+  const volumeQty = isVolumeType(form.packing_type) ? toNumber(form.volume_qty) : null
+  const volumeUomId = resolveUomId(form.volume_uom)
+  const lineUomId = resolveLitersUomId()
+  const packingId = form.id ?? generateLocalId()
+  const movementAt = fromInputDateTime(form.event_time) ?? new Date().toISOString()
+  const docNo = `PACK-${batchCode}-${Date.now()}`
+  const fillingLinesMeta = form.filling_lines.map((line) => ({
+    id: line.id,
+    package_type_id: line.package_type_id,
+    qty: toNumber(line.qty),
+    lot_code: line.lot_code ? line.lot_code.trim() : null,
+  }))
+  const packingMeta = {
+    source: 'packing',
+    batch_id: batchId.value,
+    batch_code: batchCode,
+    packing_id: packingId,
+    packing_type: form.packing_type,
+    memo: form.memo ? form.memo.trim() : null,
+    volume_qty: volumeQty,
+    volume_uom: volumeUomId || null,
+    movement_site_id: form.movement_site_id || null,
+    movement_qty: form.movement_qty ? toNumber(form.movement_qty) : null,
+    movement_memo: form.movement_memo ? form.movement_memo.trim() : null,
+    filling_lines: fillingLinesMeta,
+    tank_fill_start_volume: toNumber(form.tank_fill_start_volume),
+    tank_left_volume: toNumber(form.tank_left_volume),
+    tank_loss_volume: tankLossVolume.value,
+  }
+
+  if (form.packing_type === 'filling') {
+    if (isEditing) {
+      throw new Error('Editing Filling events is not supported. Delete and re-create the event.')
+    }
+    const siteId = form.movement_site_id || null
+    if (!siteId) throw new Error(t('batch.packaging.errors.siteRequired'))
+
+    const sourceLot = await resolveFillingSourceLot(batchId.value)
+    if (!sourceLot) {
+      throw new Error('Source lot for filling is not found. Run product_produce first.')
+    }
+    const sourceSiteId = sourceLot.site_id
+    const sourceUomId = sourceLot.uom_id
+    const sourceUomCode = resolveUomCode(sourceUomId)
+
+    const lines = form.filling_lines
+      .map((line, index) => {
+        const qtyUnits = toNumber(line.qty)
+        const unitVolume = resolvePackageUnitVolume(line.package_type_id)
+        if (qtyUnits == null || unitVolume == null || qtyUnits <= 0) return null
+        const qtyLiters = qtyUnits * unitVolume
+        return {
+          line_no: index + 1,
+          lot_no: line.lot_code ? line.lot_code.trim() : null,
+          package_id: line.package_type_id || null,
+          qty: convertFromLiters(qtyLiters, sourceUomCode) ?? qtyLiters,
+          meta: { unit_count: qtyUnits },
+        }
+      })
+      .filter((line): line is { line_no: number, lot_no: string | null, package_id: string | null, qty: number, meta: Record<string, any> } => line !== null)
+    if (!lines.length) throw new Error(t('batch.packaging.errors.fillingRequired'))
+    const totalFillQty = form.filling_lines.reduce((sum, line) => {
+      const qtyUnits = toNumber(line.qty)
+      const unitVolume = resolvePackageUnitVolume(line.package_type_id)
+      if (qtyUnits == null || unitVolume == null || qtyUnits <= 0) return sum
+      return sum + (qtyUnits * unitVolume)
+    }, 0)
+
+    const fillPayload = {
+      doc_no: docNo,
+      movement_at: movementAt,
+      src_site_id: sourceSiteId,
+      dest_site_id: siteId,
+      batch_id: batchId.value,
+      from_lot_id: sourceLot.id,
+      uom_id: sourceUomId,
+      notes: form.memo ? form.memo.trim() : null,
+      meta: {
+        ...packingMeta,
+        movement_qty: totalFillQty,
+        movement_intent: 'PACKAGE_FILL',
+        idempotency_key: `packing_fill:${batchId.value}:${packingId}`,
+      },
+      lines,
+    }
+    await callProductFilling(fillPayload)
+    return
+  }
+
+  if (form.packing_type === 'transfer') {
+    if (isEditing) {
+      throw new Error('Editing Transfer events is not supported. Delete and re-create the event.')
+    }
+
+    const dstSiteId = form.movement_site_id || null
+    if (!dstSiteId) throw new Error(t('batch.packaging.errors.siteRequired'))
+
+    const preferredSrcSiteId = resolveProduceSiteId(batch.value)
+    const sourceLot = await resolveRootSourceLot(batchId.value, preferredSrcSiteId)
+      ?? await resolveRootSourceLot(batchId.value, null)
+    if (!sourceLot) {
+      throw new Error('Root source lot for transfer is not found. Run product_produce first.')
+    }
+
+    const movementQty = toNumber(form.movement_qty)
+    if (movementQty == null || movementQty <= 0) {
+      throw new Error(t('batch.packaging.errors.movementQtyRequired'))
+    }
+
+    const movementQtyLiters = convertToLiters(movementQty, resolveUomCode(volumeUomId)) ?? movementQty
+    const sourceUomCode = resolveUomCode(sourceLot.uom_id)
+    const sourceQty = convertFromLiters(movementQtyLiters, sourceUomCode) ?? movementQtyLiters
+
+    const movePayload = {
+      doc_no: docNo,
+      movement_at: movementAt,
+      movement_intent: 'INTERNAL_TRANSFER',
+      src_site: sourceLot.site_id,
+      dst_site: dstSiteId,
+      src_lot_id: sourceLot.id,
+      qty: sourceQty,
+      uom_id: sourceLot.uom_id,
+      tax_decision_code: 'NON_TAXABLE_REMOVAL',
+      reason: form.reason ? form.reason.trim() : null,
+      notes: form.memo ? form.memo.trim() : null,
+      meta: {
+        ...packingMeta,
+        movement_intent: 'INTERNAL_TRANSFER',
+        idempotency_key: `packing_transfer:${batchId.value}:${packingId}`,
+      },
+    }
+
+    await callProductMove(movePayload)
+    return
+  }
+
+  const movementPayload = {
+    doc_no: isEditing ? undefined : docNo,
+    doc_type: mapPackingDocType(form.packing_type),
+    status: 'posted',
+    movement_at: movementAt,
+    src_site_id: null,
+    dest_site_id: isMovementType(form.packing_type) ? (form.movement_site_id || null) : null,
+    reason: form.reason ? form.reason.trim() : null,
+    notes: form.memo ? form.memo.trim() : null,
+    meta: packingMeta,
+  }
+
+  let movementId = form.id ?? ''
+  if (isEditing && form.id) {
+    const { error } = await supabase
+      .from('inv_movements')
+      .update(movementPayload)
+      .eq('id', form.id)
+    if (error) throw error
+    movementId = form.id
+    const { error: deleteError } = await supabase
+      .from('inv_movement_lines')
+      .delete()
+      .eq('movement_id', movementId)
+    if (deleteError) throw deleteError
+  } else {
+    const { data, error } = await supabase
+      .from('inv_movements')
+      .insert(movementPayload)
+      .select('id')
+      .single()
+    if (error) throw error
+    movementId = data.id
+  }
+
+  const lines: Array<Record<string, any>> = []
+  if (volumeQty != null) {
+    const packageId = defaultPackageId()
+    if (!packageId) {
+      throw new Error('No package configured for volume-only movement.')
+    }
+    const volumeLiters = convertToLiters(volumeQty, resolveUomCode(volumeUomId))
+    lines.push({
+      movement_id: movementId,
+      line_no: 1,
+      package_id: packageId,
+      batch_id: batchId.value,
+      qty: volumeLiters ?? volumeQty,
+      uom_id: lineUomId,
+      notes: null,
+      meta: { volume_uom_id: volumeUomId || null },
+    })
+  }
+
+  if (lines.length) {
+    const { error: lineError } = await supabase.from('inv_movement_lines').insert(lines)
+    if (lineError) throw lineError
+  }
+}
+
+function validatePackingForm(form: PackingFormState) {
+  const errors: Record<string, string> = {}
+  if (!form.packing_type) errors.packing_type = t('batch.packaging.errors.typeRequired')
+  if (!form.event_time) errors.event_time = t('batch.packaging.errors.eventTimeRequired')
+  if (isVolumeType(form.packing_type)) {
+    const qty = toNumber(form.volume_qty)
+    if (qty == null || qty <= 0) errors.volume_qty = t('batch.packaging.errors.volumeRequired')
+    if (!form.volume_uom) errors.volume_uom = t('batch.packaging.errors.volumeUomRequired')
+  }
+  if (isMovementType(form.packing_type)) {
+    if (!form.movement_site_id) errors.movement_site_id = t('batch.packaging.errors.siteRequired')
+    const qty = toNumber(form.movement_qty)
+    if (qty == null || qty <= 0) errors.movement_qty = t('batch.packaging.errors.movementQtyRequired')
+  }
+  if (form.packing_type === 'filling') {
+    if (!form.filling_lines.length) {
+      errors.filling_lines = t('batch.packaging.errors.fillingRequired')
+    } else {
+      const invalid = form.filling_lines.some((line) => {
+        const qty = toNumber(line.qty)
+        return !line.package_type_id || qty == null || qty < 1 || !Number.isInteger(qty)
+      })
+      if (invalid) errors.filling_lines = t('batch.packaging.errors.fillingLineInvalid')
+    }
+  }
+  return errors
+}
+
+function computeFillingTotals(lines: PackingFillingLineForm[]) {
+  let totalUnits = 0
+  let totalVolume = 0
+  let hasMissing = false
+  lines.forEach((line) => {
+    const qty = toNumber(line.qty)
+    if (qty == null) return
+    totalUnits += qty
+    const unitVolume = resolvePackageUnitVolume(line.package_type_id)
+    if (unitVolume == null) {
+      hasMissing = true
+      return
+    }
+    totalVolume += qty * unitVolume
+  })
+  return {
+    totalUnits,
+    totalVolume: hasMissing ? null : totalVolume,
   }
 }
 
@@ -1751,6 +2730,27 @@ function resolvePackageUnitVolume(packageTypeId: string) {
   const row = packageCategories.value.find((item) => item.id === packageTypeId)
   if (!row || row.unit_volume == null) return null
   return convertToLiters(row.unit_volume, resolveUomCode(row.volume_uom))
+}
+
+function formatFillingUnitVolume(packageTypeId: string) {
+  const row = packageCategories.value.find((item) => item.id === packageTypeId)
+  if (!row || row.unit_volume == null) return '—'
+  const uomCode = resolveUomCode(row.volume_uom)
+  const qty = Number(row.unit_volume)
+  const display = Number.isFinite(qty) ? qty.toLocaleString(undefined, { maximumFractionDigits: 3 }) : String(row.unit_volume)
+  return uomCode ? `${display} ${uomCode}` : display
+}
+
+function formatFillingLineTotal(line: PackingFillingLineForm) {
+  const qty = toNumber(line.qty)
+  const unit = resolvePackageUnitVolume(line.package_type_id)
+  if (qty == null || unit == null) return '—'
+  return formatVolumeValue(qty * unit)
+}
+
+function formatFillingTotals(totals: { totalUnits: number, totalVolume: number | null }) {
+  const volumeLabel = totals.totalVolume != null ? formatVolumeValue(totals.totalVolume) : '—'
+  return t('batch.packaging.dialog.fillingTotals.summary', { units: totals.totalUnits, volume: volumeLabel })
 }
 
 function formatPackingType(type: PackingType) {
@@ -1836,6 +2836,27 @@ function showPackingNotice(message: string) {
     if (packingNotice.value === message) packingNotice.value = ''
   }, 3000)
 }
+
+watch(
+  () => [packingDialog.form?.volume_qty, packingDialog.form?.packing_type],
+  () => {
+    if (!packingDialog.form || !showPackingMovementSection.value) return
+    if (packingMovementQtyTouched.value) return
+    if (packingDialog.form.packing_type === 'ship' || packingDialog.form.packing_type === 'transfer') {
+      packingDialog.form.movement_qty = packingDialog.form.volume_qty || ''
+    }
+  }
+)
+
+watch(
+  () => packingFillingTotals.value.totalVolume,
+  (total) => {
+    if (!packingDialog.form || packingDialog.form.packing_type !== 'filling') return
+    if (packingMovementQtyTouched.value) return
+    if (total == null) return
+    packingDialog.form.movement_qty = String(total)
+  }
+)
 
 function siteLabel(siteId?: string | null) {
   if (!siteId) return '—'
@@ -2027,10 +3048,42 @@ function convertToLiters(size: number | null | undefined, uomCode: string | null
   }
 }
 
+function convertFromLiters(sizeInLiters: number | null | undefined, uomCode: string | null | undefined) {
+  if (sizeInLiters == null || Number.isNaN(Number(sizeInLiters))) return null
+  if (!uomCode) return Number(sizeInLiters)
+  switch (uomCode) {
+    case 'L':
+      return Number(sizeInLiters)
+    case 'mL':
+      return Number(sizeInLiters) * 1000
+    case 'gal_us':
+      return Number(sizeInLiters) / 3.78541
+    default:
+      return Number(sizeInLiters)
+  }
+}
+
 function formatVolumeValue(value: number | null | undefined) {
   if (value == null || Number.isNaN(value)) return '—'
   const display = Number(value)
   return `${display.toLocaleString(undefined, { maximumFractionDigits: 2 })} L`
+}
+
+function newPackingForm(type: PackingType): PackingFormState {
+  return {
+    packing_type: type,
+    event_time: toInputDateTime(new Date().toISOString()),
+    memo: '',
+    volume_qty: '',
+    volume_uom: defaultVolumeUomId(),
+    movement_site_id: '',
+    movement_qty: '',
+    movement_memo: '',
+    filling_lines: [],
+    reason: '',
+    tank_fill_start_volume: '',
+    tank_left_volume: '',
+  }
 }
 
 onMounted(async () => {

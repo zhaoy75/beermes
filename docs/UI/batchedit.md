@@ -30,6 +30,9 @@
 -  batch actual yield dialog (new)
 -  lot dag dialog (new)
 
+### Navigation
+- Batch Packing button (移送詰口管理): navigate to Batch Packing page for current batch
+
 
 ## Field Definitions
 ### basic information section 
@@ -92,13 +95,13 @@
 
 ### filling section
     a summary of move and filling information
-    a button to edit filling information (a click will launch packageing dialog)
+    a button to edit filling information (a click will move to packing page, not launch a dialog)
     add a "Lot DAG" button at the left side of 移送詰口管理 button
     if click "Lot DAG" button, show lot dag dialog for current batch
     lot dag dialog data should be retrieved by rpc:
       - function: public.lot_dag_get_by_batch
       - parameter: p_batch_id = current batch id
-    the packaging dialog should follow the specification defined in batch_packing.md
+    the packing page should follow the specification defined in batchpacking.md
     for filling (詰口) save, UI must call stored function public.product_filling(p_doc jsonb)
     source lot for filling should be resolved by calling rpc:
       - function: public.get_packing_source_lotid

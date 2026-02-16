@@ -62,6 +62,15 @@ const router = createRouter({
       },
     },
     {
+      path: '/batches/:batchId/packing',
+      name: 'batchPacking',
+      component: () => import('../views/Pages/BatchPacking.vue'),
+      meta: {
+        title: 'Batch Packing',
+        requiresAuth: true ,
+      },
+    },
+    {
       path: '/waste',
       name: 'waste',
       component: () => import('../views/Pages/WasteList.vue'),

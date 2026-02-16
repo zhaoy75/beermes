@@ -28,6 +28,7 @@
 -  beer_tax_move dialog
 -  batch relation dialog
 -  batch actual yield dialog (new)
+-  lot dag dialog (new)
 
 
 ## Field Definitions
@@ -92,11 +93,18 @@
 ### filling section
     a summary of move and filling information
     a button to edit filling information (a click will launch packageing dialog)
+    add a "Lot DAG" button at the left side of 移送詰口管理 button
+    if click "Lot DAG" button, show lot dag dialog for current batch
+    lot dag dialog data should be retrieved by rpc:
+      - function: public.lot_dag_get_by_batch
+      - parameter: p_batch_id = current batch id
     the packaging dialog should follow the specification defined in batch_packing.md
     for filling (詰口) save, UI must call stored function public.product_filling(p_doc jsonb)
     source lot for filling should be resolved by calling rpc:
       - function: public.get_packing_source_lotid
       - parameter: p_batch_id = current batch id
+    source site id should be resolved by source lot
+    destination site id should be retrieved from destination site id input by user
     use returned source_lot_id as from_lot_id in product_filling payload
     if not found, show error: product_produce must be executed first
 

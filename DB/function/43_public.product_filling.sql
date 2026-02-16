@@ -70,8 +70,8 @@ begin
     raise exception 'PF001: lines[] is required';
   end if;
 
-  if v_src_site_id <> v_dest_site_id then
-    raise exception 'PF006: src_site_id and dest_site_id must be same for filling';
+  if v_src_site_id = v_dest_site_id then
+    raise exception 'PF006: src_site_id and dest_site_id must be not same for filling';
   end if;
 
   -- Map PACKAGE_FILL to enum value available in this DB.

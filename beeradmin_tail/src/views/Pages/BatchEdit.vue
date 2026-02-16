@@ -2129,8 +2129,9 @@ async function persistPackingEvent(form: PackingFormState, isEditing: boolean) {
 
     const sourceLot = await resolveFillingSourceLot(batchId.value)
     if (!sourceLot) {
-      throw new Error('Source lot for filling is not found at the selected site. Run product_produce first, or transfer stock to the site.')
+      throw new Error('Source lot for filling is not found. Run product_produce first.')
     }
+    const sourceSiteId = sourceLot.site_id
     const sourceUomId = sourceLot.uom_id
     const sourceUomCode = resolveUomCode(sourceUomId)
 
@@ -2160,7 +2161,7 @@ async function persistPackingEvent(form: PackingFormState, isEditing: boolean) {
     const fillPayload = {
       doc_no: docNo,
       movement_at: movementAt,
-      src_site_id: siteId,
+      src_site_id: sourceSiteId,
       dest_site_id: siteId,
       batch_id: batchId.value,
       from_lot_id: sourceLot.id,

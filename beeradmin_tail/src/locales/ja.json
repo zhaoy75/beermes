@@ -1736,7 +1736,8 @@
     "filters": {
       "namePlaceholder": "名称またはコードで絞り込み",
       "siteType": "サイト種別",
-      "codePlaceholder": "コードで検索"
+      "codePlaceholder": "コードで検索",
+      "ownerType": "所有区分"
     },
     "table": {
       "code": "コード",
@@ -1750,10 +1751,27 @@
       "codeRequired": "コードは必須です。",
       "nameRequired": "名称は必須です。",
       "siteTypeRequired": "サイト種別は必須です。",
+      "parentSite": "親サイト",
+      "nodeKind": "ノード種別",
+      "nodeKindRequired": "ノード種別は必須です。",
+      "ownerType": "所有区分",
+      "ownerTypeRequired": "所有区分は必須です。",
+      "ownerName": "所有者名",
+      "ownerNameRequired": "外部会社の場合は所有者名が必須です。",
+      "sortOrder": "表示順",
+      "sortOrderInvalid": "表示順は0以上の整数で入力してください。",
+      "parentInvalidSelf": "親サイトに同じサイトは指定できません。",
+      "parentInvalidCycle": "親サイトに配下サイトは指定できません。",
       "address": "住所 (JSON)",
       "contact": "連絡先 (JSON)",
       "notes": "備考",
       "active": "有効フラグ"
+    },
+    "ownerType": {
+      "own": "自社",
+      "outside": "外部会社",
+      "ownShort": "自社",
+      "outsideShort": "外部"
     },
     "errors": {
       "invalidAddress": "住所は正しいJSON形式で入力してください。",

@@ -19,7 +19,15 @@
           <path d="M10 4l2 2h6a2 2 0 012 2v8a3 3 0 01-3 3H7a3 3 0 01-3-3V6a2 2 0 012-2h4z"/>
         </svg>
       </span>
-      {{ node.name }} ({{ node.code }})
+      <span>{{ node.name }} ({{ node.code }})</span>
+      <span
+        class="ml-1 px-1.5 py-0.5 rounded text-[10px] font-medium border"
+        :class="node.owner_type === 'OUTSIDE'
+          ? 'bg-amber-50 text-amber-700 border-amber-200'
+          : 'bg-blue-50 text-blue-700 border-blue-200'"
+      >
+        {{ node.owner_type === 'OUTSIDE' ? t('site.ownerType.outsideShort') : t('site.ownerType.ownShort') }}
+      </span>
     </button>
     <ul v-if="hasChildren && expanded" class="ml-3 mt-1 space-y-1">
       <li v-for="child in node.children" :key="child.id">
@@ -31,11 +39,13 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 interface TreeNode {
   id: string
   code: string
   name: string
+  owner_type: string
   site_type_id: string
   parent_site_id: string | null
   row: any
@@ -45,6 +55,7 @@ interface TreeNode {
 defineEmits<{ (e: 'select', node: TreeNode): void }>()
 
 const props = defineProps<{ node: TreeNode; selectedId: string | null }>()
+const { t } = useI18n()
 
 const expanded = ref(true)
 const hasChildren = computed(() => Array.isArray(props.node.children) && props.node.children.length > 0)

@@ -1737,7 +1737,8 @@
     "filters": {
       "namePlaceholder": "Filter by name or code",
       "siteType": "Site type",
-      "codePlaceholder": "Search by code"
+      "codePlaceholder": "Search by code",
+      "ownerType": "Owner type"
     },
     "table": {
       "code": "Code",
@@ -1751,10 +1752,27 @@
       "codeRequired": "Code is required.",
       "nameRequired": "Name is required.",
       "siteTypeRequired": "Site type is required.",
+      "parentSite": "Parent site",
+      "nodeKind": "Node kind",
+      "nodeKindRequired": "Node kind is required.",
+      "ownerType": "Owner type",
+      "ownerTypeRequired": "Owner type is required.",
+      "ownerName": "Owner name",
+      "ownerNameRequired": "Owner name is required for outside company.",
+      "sortOrder": "Sort order",
+      "sortOrderInvalid": "Sort order must be an integer greater than or equal to 0.",
+      "parentInvalidSelf": "Parent site cannot be the site itself.",
+      "parentInvalidCycle": "Parent site cannot be a descendant of this site.",
       "address": "Address JSON",
       "contact": "Contact JSON",
       "notes": "Notes",
       "active": "Active"
+    },
+    "ownerType": {
+      "own": "Own company",
+      "outside": "Outside company",
+      "ownShort": "Own",
+      "outsideShort": "Outside"
     },
     "errors": {
       "invalidAddress": "Address must be valid JSON.",

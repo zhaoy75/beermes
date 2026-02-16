@@ -26,6 +26,13 @@
               <option v-for="option in siteTypeOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
             </select>
           </div>
+          <div>
+            <label class="block text-sm text-gray-600 mb-1" for="siteOwnerTypeSearch">{{ t('site.filters.ownerType') }}</label>
+            <select id="siteOwnerTypeSearch" v-model="filters.ownerType" class="w-full h-[36px] border rounded px-3 bg-white">
+              <option value="">{{ t('common.all') }}</option>
+              <option v-for="option in ownerTypeOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+            </select>
+          </div>
           <div class="flex items-center gap-2">
             <button class="px-3 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700" type="button" @click="startCreate">
               {{ t('common.add') }}
@@ -104,6 +111,36 @@
               <p v-if="errors.site_type_id" class="text-xs text-red-600 mt-1">{{ errors.site_type_id }}</p>
             </div>
             <div>
+              <label class="block text-sm text-gray-600 mb-1">{{ t('site.form.parentSite') }}</label>
+              <select v-model="form.parent_site_id" class="w-full h-[40px] border rounded px-3 bg-white">
+                <option v-for="option in parentSiteOptions" :key="option.value || '__root'" :value="option.value">{{ option.label }}</option>
+              </select>
+              <p v-if="errors.parent_site_id" class="text-xs text-red-600 mt-1">{{ errors.parent_site_id }}</p>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">{{ t('site.form.nodeKind') }}</label>
+              <input v-model.trim="form.node_kind" class="w-full h-[40px] border rounded px-3" />
+              <p v-if="errors.node_kind" class="text-xs text-red-600 mt-1">{{ errors.node_kind }}</p>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">{{ t('site.form.ownerType') }}</label>
+              <select v-model="form.owner_type" class="w-full h-[40px] border rounded px-3 bg-white">
+                <option value="">{{ t('common.select') }}</option>
+                <option v-for="option in ownerTypeOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+              </select>
+              <p v-if="errors.owner_type" class="text-xs text-red-600 mt-1">{{ errors.owner_type }}</p>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">{{ t('site.form.ownerName') }}</label>
+              <input v-model.trim="form.owner_name" class="w-full h-[40px] border rounded px-3" :disabled="form.owner_type !== 'OUTSIDE'" />
+              <p v-if="errors.owner_name" class="text-xs text-red-600 mt-1">{{ errors.owner_name }}</p>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">{{ t('site.form.sortOrder') }}</label>
+              <input v-model.number="form.sort_order" type="number" min="0" step="1" class="w-full h-[40px] border rounded px-3" />
+              <p v-if="errors.sort_order" class="text-xs text-red-600 mt-1">{{ errors.sort_order }}</p>
+            </div>
+            <div>
               <label class="block text-sm text-gray-600 mb-1">{{ t('site.form.address') }}</label>
               <div class="flex items-center gap-2">
                 <button
@@ -179,6 +216,10 @@ interface SiteRow {
   name: string
   site_type_id: string
   parent_site_id: string | null
+  node_kind: string
+  owner_type: string
+  owner_name: string | null
+  sort_order: number
   address: any
   contact: any
   notes: string | null
@@ -198,6 +239,8 @@ interface TreeNode {
   name: string
   site_type_id: string
   parent_site_id: string | null
+  owner_type: string
+  sort_order: number
   row: SiteRow
   children: TreeNode[]
 }
@@ -206,6 +249,8 @@ const { t, locale } = useI18n()
 const pageTitle = computed(() => t('site.title'))
 
 const TABLE = 'mst_sites'
+const OWNER_TYPE_OWN = 'OWN'
+const OWNER_TYPE_OUTSIDE = 'OUTSIDE'
 
 const rows = ref<SiteRow[]>([])
 const siteTypes = ref<RegistryDefRow[]>([])
@@ -222,6 +267,7 @@ const addressDraft = reactive<Record<string, string>>({})
 const filters = reactive({
   code: '',
   siteType: '',
+  ownerType: '',
 })
 
 const form = reactive({
@@ -230,6 +276,10 @@ const form = reactive({
   name: '',
   site_type_id: '',
   parent_site_id: '',
+  node_kind: 'SITE',
+  owner_type: OWNER_TYPE_OWN,
+  owner_name: '',
+  sort_order: 0,
   address: null as Record<string, any> | null,
   notes: '',
   contact: null as any,
@@ -246,16 +296,39 @@ const siteTypeOptions = computed(() =>
   }),
 )
 
+const ownerTypeOptions = computed(() => [
+  { value: OWNER_TYPE_OWN, label: t('site.ownerType.own') },
+  { value: OWNER_TYPE_OUTSIDE, label: t('site.ownerType.outside') },
+])
+
 const treeNodes = computed<TreeNode[]>(() => buildTree(rows.value))
+
+const parentSiteOptions = computed(() => {
+  const blockedIds = form.id ? new Set(collectDescendantIds(form.id)) : new Set<string>()
+  const options: Array<{ value: string; label: string }> = [{ value: '', label: t('site.tree.root') }]
+  const walk = (nodes: TreeNode[], depth: number) => {
+    nodes.forEach((node) => {
+      if (!blockedIds.has(node.id) && !isTempId(node.id)) {
+        const indent = '  '.repeat(depth)
+        options.push({ value: node.id, label: `${indent}${node.name} (${node.code})` })
+      }
+      walk(node.children, depth + 1)
+    })
+  }
+  walk(treeNodes.value, 0)
+  return options
+})
 
 const filteredTree = computed<TreeNode[]>(() => {
   const codeFilter = filters.code.trim().toLowerCase()
   const typeFilter = filters.siteType
-  if (!codeFilter && !typeFilter) return treeNodes.value
+  const ownerTypeFilter = filters.ownerType
+  if (!codeFilter && !typeFilter && !ownerTypeFilter) return treeNodes.value
   return filterTree(treeNodes.value, (node) => {
     const matchesCode = !codeFilter || node.code.toLowerCase().includes(codeFilter)
     const matchesType = !typeFilter || node.site_type_id === typeFilter
-    return matchesCode && matchesType
+    const matchesOwnerType = !ownerTypeFilter || node.owner_type === ownerTypeFilter
+    return matchesCode && matchesType && matchesOwnerType
   })
 })
 
@@ -296,6 +369,8 @@ function buildTree(list: SiteRow[]): TreeNode[] {
       name: row.name,
       site_type_id: row.site_type_id,
       parent_site_id: row.parent_site_id,
+      owner_type: row.owner_type,
+      sort_order: row.sort_order ?? 0,
       row,
       children: [],
     })
@@ -309,7 +384,7 @@ function buildTree(list: SiteRow[]): TreeNode[] {
     }
   })
   const sortNodes = (nodes: TreeNode[]) => {
-    nodes.sort((a, b) => a.code.localeCompare(b.code))
+    nodes.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.code.localeCompare(b.code))
     nodes.forEach((n) => sortNodes(n.children))
   }
   sortNodes(roots)
@@ -338,7 +413,7 @@ function selectRoot() {
 }
 
 function startCreate() {
-  const parentId = selectedId.value
+  const parentId = selectedId.value && !isTempId(selectedId.value) ? selectedId.value : null
   removeTempRow()
   resetForm()
   const tempRow = createTempRow(parentId)
@@ -354,6 +429,10 @@ function resetForm() {
   form.name = ''
   form.site_type_id = ''
   form.parent_site_id = ''
+  form.node_kind = 'SITE'
+  form.owner_type = OWNER_TYPE_OWN
+  form.owner_name = ''
+  form.sort_order = 0
   form.address = null
   form.notes = ''
   form.contact = null
@@ -369,6 +448,10 @@ function loadForm(row: SiteRow) {
   form.name = row.name
   form.site_type_id = row.site_type_id
   form.parent_site_id = row.parent_site_id ?? ''
+  form.node_kind = row.node_kind ?? 'SITE'
+  form.owner_type = row.owner_type ?? OWNER_TYPE_OWN
+  form.owner_name = row.owner_name ?? ''
+  form.sort_order = row.sort_order ?? 0
   form.address = row.address ?? null
   form.notes = row.notes ?? ''
   form.contact = row.contact ?? null
@@ -388,6 +471,10 @@ function createTempRow(parentId: string | null) {
     name: '',
     site_type_id: '',
     parent_site_id: parentId,
+    node_kind: 'SITE',
+    owner_type: OWNER_TYPE_OWN,
+    owner_name: null,
+    sort_order: 0,
     address: null,
     contact: null,
     notes: null,
@@ -432,6 +519,24 @@ function validate() {
   if (!form.code) errors.code = t('site.form.codeRequired')
   if (!form.name) errors.name = t('site.form.nameRequired')
   if (!form.site_type_id) errors.site_type_id = t('site.form.siteTypeRequired')
+  if (!form.node_kind.trim()) errors.node_kind = t('site.form.nodeKindRequired')
+  if (!form.owner_type) errors.owner_type = t('site.form.ownerTypeRequired')
+  if (form.owner_type === OWNER_TYPE_OUTSIDE && !form.owner_name.trim()) errors.owner_name = t('site.form.ownerNameRequired')
+
+  const sortOrder = Number(form.sort_order)
+  if (!Number.isInteger(sortOrder) || sortOrder < 0) {
+    errors.sort_order = t('site.form.sortOrderInvalid')
+  }
+
+  if (form.id && form.parent_site_id && form.parent_site_id === form.id) {
+    errors.parent_site_id = t('site.form.parentInvalidSelf')
+  }
+  if (form.id && form.parent_site_id) {
+    const descendants = collectDescendantIds(form.id)
+    if (descendants.includes(form.parent_site_id)) {
+      errors.parent_site_id = t('site.form.parentInvalidCycle')
+    }
+  }
   return Object.keys(errors).length === 0
 }
 
@@ -500,8 +605,9 @@ async function fetchSites() {
     const tenant = await ensureTenant()
     const { data, error } = await supabase
       .from(TABLE)
-      .select('id, tenant_id, code, name, site_type_id, parent_site_id, address, contact, notes, active, created_at')
+      .select('id, tenant_id, code, name, site_type_id, parent_site_id, node_kind, owner_type, owner_name, sort_order, address, contact, notes, active, created_at')
       .eq('tenant_id', tenant)
+      .order('sort_order', { ascending: true })
       .order('code', { ascending: true })
     if (error) throw error
     rows.value = (data ?? []) as SiteRow[]
@@ -527,6 +633,10 @@ async function saveRecord() {
       name: form.name.trim(),
       site_type_id: form.site_type_id,
       parent_site_id: form.parent_site_id || null,
+      node_kind: form.node_kind.trim(),
+      owner_type: form.owner_type,
+      owner_name: form.owner_type === OWNER_TYPE_OUTSIDE ? (form.owner_name.trim() || null) : null,
+      sort_order: Number(form.sort_order) || 0,
       address: form.address,
       contact: form.contact,
       notes: form.notes.trim() || null,

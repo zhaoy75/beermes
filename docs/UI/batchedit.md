@@ -94,6 +94,16 @@
     a button to edit filling information (a click will launch packageing dialog)
     the packaging dialog should follow the specification defined in batch_packing.md
     for filling (詰口) save, UI must call stored function public.product_filling(p_doc jsonb)
+    source lot for filling should be resolved by resolveSiteSourceLot with:
+      - join lot l and lot_edge e on e.to_lot_id = l.id
+      - l.batch_id = current batch id
+      - e.from_lot_id is null
+      - e.edge_type = 'PRODUCE'
+      - l.status != 'void' and l.qty > 0
+      - for filling, l.site_id = selected movement site
+      - choose latest one by l.produced_at desc, l.created_at desc
+    use resolved lot.id as from_lot_id and lot.uom_id as uom_id in product_filling payload
+    if not found, show error: product_produce must be executed first
 
 ## Action
     - add a button to input actual yield, when the button is click, show the input actual yield and uom (select from mst_uom by volume) and site (select form mst_sites).

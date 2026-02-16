@@ -727,11 +727,11 @@ async function loadSites() {
   const tenant = await ensureTenant()
   const { data, error } = await supabase
     .from('mst_sites')
-    .select('id, code, name')
+    .select('id, name')
     .eq('tenant_id', tenant)
-    .order('code', { ascending: true })
+    .order('name', { ascending: true })
   if (error) throw error
-  siteOptions.value = (data ?? []).map((row) => ({ value: row.id, label: `${row.code} — ${row.name}` }))
+  siteOptions.value = (data ?? []).map((row) => ({ value: row.id, label: row.name ?? row.id }))
 }
 
 async function loadInventoryFromInventory() {

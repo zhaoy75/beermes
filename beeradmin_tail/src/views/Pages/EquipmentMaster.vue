@@ -339,7 +339,6 @@ type TankRow = {
 
 type SiteRow = {
   id: string
-  code: string
   name: string
 }
 
@@ -438,7 +437,7 @@ const isTank = computed(() => form.equipment_kind === 'tank')
 const siteOptions = computed(() =>
   sites.value.map((site) => ({
     value: site.id,
-    label: `${site.code} - ${site.name}`,
+    label: site.name || site.id,
   }))
 )
 
@@ -485,7 +484,7 @@ function kindLabel(kind: string | null) {
 
 function siteLabel(siteId: string) {
   const match = sites.value.find((row) => row.id === siteId)
-  return match ? `${match.code} - ${match.name}` : t('common.noData')
+  return match?.name || t('common.noData')
 }
 
 function statusLabel(status: string) {
@@ -662,9 +661,9 @@ async function fetchSites() {
   try {
     const { data, error } = await supabase
       .from('mst_sites')
-      .select('id, code, name')
+      .select('id, name')
       .eq('active', true)
-      .order('code', { ascending: true })
+      .order('name', { ascending: true })
     if (error) throw error
     sites.value = (data ?? []) as SiteRow[]
   } catch (err) {

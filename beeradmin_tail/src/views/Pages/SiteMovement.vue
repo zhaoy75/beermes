@@ -498,11 +498,11 @@ async function loadSites() {
   const tenant = await ensureTenant()
   const { data, error } = await supabase
     .from('mst_sites')
-    .select('id, code, name')
+    .select('id, name')
     .eq('tenant_id', tenant)
-    .order('code', { ascending: true })
+    .order('name', { ascending: true })
   if (error) throw error
-  siteOptions.value = (data ?? []).map((row) => ({ value: row.id, label: `${row.code} — ${row.name}` }))
+  siteOptions.value = (data ?? []).map((row) => ({ value: row.id, label: row.name ?? row.id }))
 }
 
 async function loadMaterials() {
@@ -553,7 +553,7 @@ async function fetchMovements() {
     const tenant = await ensureTenant()
     let query = supabase
       .from('inv_movements')
-      .select('id, tenant_id, doc_no, doc_type, movement_at, status, src_site_id, dest_site_id, address, contact, notes, created_at, src:src_site_id(id, code, name), dest:dest_site_id(id, code, name)')
+      .select('id, tenant_id, doc_no, doc_type, movement_at, status, src_site_id, dest_site_id, address, contact, notes, created_at, src:src_site_id(id, name), dest:dest_site_id(id, name)')
       .eq('tenant_id', tenant)
       .order('movement_at', { ascending: false })
 
@@ -579,8 +579,8 @@ async function fetchMovements() {
       status: row.status,
       src_site_id: row.src_site_id,
       dest_site_id: row.dest_site_id,
-      source_name: row.src?.name || row.src?.code || null,
-      dest_name: row.dest?.name || row.dest?.code || null,
+      source_name: row.src?.name || row.src?.id || null,
+      dest_name: row.dest?.name || row.dest?.id || null,
       notes: row.notes ?? null,
       created_at: row.created_at ?? null,
       address: row.address ?? null,

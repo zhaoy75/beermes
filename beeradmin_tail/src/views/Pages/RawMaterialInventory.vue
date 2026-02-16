@@ -91,7 +91,6 @@ interface InventoryRow {
   material_name: string
   material_category: string
   warehouse_id: string
-  warehouse_code: string
   warehouse_name: string
   qty: number
   uom_id: string
@@ -100,7 +99,6 @@ interface InventoryRow {
 
 interface WarehouseOption {
   value: string
-  code: string
   name: string
   label: string
 }
@@ -158,15 +156,14 @@ const filteredRows = computed(() => {
 async function loadWarehouses() {
   const { data, error } = await supabase
     .from('v_sites')
-    .select('id, code, name, site_type_code')
+    .select('id, name, site_type_code')
     .eq('site_type_code', 'warehouse')
-    .order('code', { ascending: true })
+    .order('name', { ascending: true })
   if (error) throw error
   warehouseOptions.value = (data ?? []).map((row: any) => ({
     value: row.id,
-    code: row.code,
     name: row.name,
-    label: `${row.code} — ${row.name}`,
+    label: row.name ?? row.id,
   }))
 }
 
@@ -188,7 +185,6 @@ async function fetchInventory() {
           material_name: row.material?.name ?? '',
           material_category: row.material?.category ?? '',
           site_id: row.site_id ?? '',
-          warehouse_code: warehouseOption?.code ?? '',
           warehouse_name: warehouseOption?.name ?? '',
           qty: row.qty ?? 0,
           uom_id: row.uom_id ?? row.material?.uom_id ?? '',

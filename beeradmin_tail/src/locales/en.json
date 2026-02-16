@@ -1733,9 +1733,13 @@
     "newTitle": "New Site",
     "editTitle": "Edit Site",
     "deleteTitle": "Delete Site",
-    "deleteConfirm": "Delete site {code}? This cannot be undone.",
+    "deleteConfirm": "Delete site {name}? This cannot be undone.",
+    "actions": {
+      "addLocation": "Add Location",
+      "addSite": "Add Site"
+    },
     "filters": {
-      "namePlaceholder": "Filter by name or code",
+      "namePlaceholder": "Filter by name",
       "siteType": "Site type",
       "codePlaceholder": "Search by code",
       "ownerType": "Owner type"

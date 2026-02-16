@@ -1,12 +1,19 @@
 -- Update mst_sites tenant/type validation to use registry_def (site_type)
 -- Replaces trg_sites_same_tenant_type to reference registry_def instead of mst_site_types
 
-create or replace function public.trg_sites_same_tenant_type()
-returns trigger language plpgsql as $$
+-- DROP FUNCTION public.trg_sites_same_tenant_type();
+
+CREATE OR REPLACE FUNCTION public.trg_sites_same_tenant_type()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
 declare
   ok boolean;
 begin
-  if new.site_type_id is not null then
+  if new.site_type_id = '00000000-0000-0000-0000-000000000000'::uuid then
+    return new;
+  end if;
+  if new.site_type_id is not null or new.site_type_id<> '00000000-0000-0000-0000-000000000000'::uuid then
     select
       case
         when r.scope = 'system' then true
@@ -24,7 +31,9 @@ begin
     end if;
   end if;
   return new;
-end $$;
+end $function$
+;
+
 
 drop trigger if exists trg_sites_same_tenant_type on public.mst_sites;
 create trigger trg_sites_same_tenant_type

@@ -1,10 +1,9 @@
 WITH a_company AS (
   INSERT INTO public.mst_sites (
-    tenant_id, code, name, site_type_id, parent_site_id, address, contact, notes, active
+    tenant_id, name, site_type_id, parent_site_id, address, contact, notes, active
   )
   VALUES (
     '2a231822-aa8d-452a-aa5f-9f5e4293cdaa',
-    'AC_MAIN',
     'A社 本社・製造場',
     (SELECT def_id FROM registry_def
       WHERE kind = 'site_type' AND def_key = 'brewery' AND scope = 'system'
@@ -26,11 +25,10 @@ WITH a_company AS (
 ),
 external_company AS (
   INSERT INTO public.mst_sites (
-    tenant_id, code, name, site_type_id, parent_site_id, address, contact, notes, active
+    tenant_id, name, site_type_id, parent_site_id, address, contact, notes, active
   )
   VALUES (
     '2a231822-aa8d-452a-aa5f-9f5e4293cdaa',
-    'EXT_CO',
     '外部会社',
     (SELECT def_id FROM registry_def
       WHERE kind = 'site_type' AND def_key = 'other_brewery' AND scope = 'system'
@@ -51,11 +49,10 @@ external_company AS (
   RETURNING id
 )
 INSERT INTO public.mst_sites (
-  tenant_id, code, name, site_type_id, parent_site_id, address, contact, notes, active
+  tenant_id, name, site_type_id, parent_site_id, address, contact, notes, active
 )
 SELECT
   '2a231822-aa8d-452a-aa5f-9f5e4293cdaa',
-  s.code,
   s.name,
   r.def_id,
   s.parent_id,
@@ -66,7 +63,7 @@ SELECT
 FROM (
   VALUES
     -- A社 配下
-    ('AC_STORAGE',  'A社 蔵置場', 'brewery_storage',
+    ('A社 蔵置場', 'brewery_storage',
      (SELECT id FROM a_company),
      '{
         "postal_code": "210-0005",
@@ -79,7 +76,7 @@ FROM (
      '{"name":"蔵置場","phone":"044-111-2222","email":"storage@acompany.example"}'::jsonb,
      '蔵置場'),
 
-    ('AC_TAX',      'A社 蔵置所', 'tax_storage',
+    ('A社 蔵置所', 'tax_storage',
      (SELECT id FROM a_company),
      '{
         "postal_code": "060-0005",
@@ -92,7 +89,7 @@ FROM (
      '{"name":"蔵置所","phone":"011-111-2222","email":"tax@acompany.example"}'::jsonb,
      '蔵置所'),
 
-    ('AC_SHOP',     'A社 直売所', 'direct_sales_shop',
+    ('A社 直売所', 'direct_sales_shop',
      (SELECT id FROM a_company),
      '{
         "postal_code": "604-8006",
@@ -106,7 +103,7 @@ FROM (
      '直売所'),
 
     -- 外部会社 配下
-    ('EXT_SUPPLIER','外部会社 仕入先', 'supplier',
+    ('外部会社 仕入先', 'supplier',
      (SELECT id FROM external_company),
      '{
         "postal_code": "810-0001",
@@ -119,7 +116,7 @@ FROM (
      '{"name":"仕入先","phone":"092-111-2222","email":"supplier@external.example"}'::jsonb,
      '仕入先'),
 
-    ('EXT_CUSTOMER','外部会社 国内得意先','domestic_customer',
+    ('外部会社 国内得意先','domestic_customer',
      (SELECT id FROM external_company),
      '{
         "postal_code": "460-0008",
@@ -131,7 +128,7 @@ FROM (
       }'::jsonb,
      '{"name":"国内得意先","phone":"052-111-2222","email":"customer@external.example"}'::jsonb,
      '国内得意先')
-) AS s(code, name, site_type_key, parent_id, address, contact, notes)
+) AS s(name, site_type_key, parent_id, address, contact, notes)
 JOIN registry_def r
   ON r.kind = 'site_type'
  AND r.def_key = s.site_type_key

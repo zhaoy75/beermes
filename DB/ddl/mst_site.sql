@@ -4,12 +4,9 @@
 
 -- DROP TABLE public.mst_sites;
 
-
-
 CREATE TABLE public.mst_sites (
 	id uuid DEFAULT gen_random_uuid() NOT NULL,
 	tenant_id uuid DEFAULT ((auth.jwt() -> 'app_metadata'::text) ->> 'tenant_id'::text)::uuid NOT NULL,
-	code text NOT NULL,
 	"name" text NOT NULL,
 	site_type_id uuid NOT NULL,
 	parent_site_id uuid NULL,
@@ -23,13 +20,10 @@ CREATE TABLE public.mst_sites (
 	owner_name text NULL,
 	sort_order int4 DEFAULT 0 NOT NULL,
 	CONSTRAINT mst_sites_pkey PRIMARY KEY (id),
-	CONSTRAINT mst_sites_tenant_id_code_key UNIQUE (tenant_id, code),
 	CONSTRAINT mst_sites_parent_site_id_fkey FOREIGN KEY (parent_site_id) REFERENCES public.mst_sites(id)
 );
-CREATE INDEX idx_mst_sites_tenant_code ON public.mst_sites USING btree (tenant_id, code);
 CREATE INDEX idx_mst_sites_tenant_type ON public.mst_sites USING btree (tenant_id, site_type_id);
-CREATE INDEX idx_mst_sites_tenant_code ON public.mst_sites USING btree (tenant_id, code);
-CREATE INDEX idx_mst_sites_tenant_type ON public.mst_sites USING btree (tenant_id, site_type_id);
+
 
 -- Table Triggers
 

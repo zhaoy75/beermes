@@ -77,7 +77,6 @@ create or replace view public.v_sites as
 select
   s.id,
   s.tenant_id,
-  s.code,
   s.name,
   t.code as site_type_code,
   t.name as site_type_name,

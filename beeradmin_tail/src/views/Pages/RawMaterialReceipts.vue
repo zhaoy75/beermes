@@ -316,7 +316,6 @@ interface MaterialOption {
 
 interface WarehouseOption {
   value: string
-  code: string
   name: string
   label: string
 }
@@ -574,24 +573,23 @@ function validateForm() {
 async function loadSites() {
   const { data, error } = await supabase
     .from('mst_sites')
-    .select('id, code, name')
-    .order('code', { ascending: true })
+    .select('id, name')
+    .order('name', { ascending: true })
   if (error) throw error
-  siteOptions.value = (data ?? []).map((row) => ({ value: row.id, label: `${row.code} — ${row.name}` }))
+  siteOptions.value = (data ?? []).map((row) => ({ value: row.id, label: row.name ?? row.id }))
 }
 
 async function loadWarehouses() {
   const { data, error } = await supabase
     .from('v_sites')
-    .select('id, code, name, site_type_code')
+    .select('id, name, site_type_code')
     .eq('site_type_code', 'warehouse')
-    .order('code', { ascending: true })
+    .order('name', { ascending: true })
   if (error) throw error
   warehouseOptions.value = (data ?? []).map((row: any) => ({
     value: row.id,
-    code: row.code,
     name: row.name,
-    label: `${row.code} — ${row.name}`,
+    label: row.name ?? row.id,
   }))
 }
 
@@ -637,12 +635,12 @@ async function fetchReceipts() {
     loading.value = true
     const { data, error } = await supabase
       .from('inv_movements')
-      .select('id, doc_no, doc_type, status, movement_at, src_site_id, dest_site_id, meta, notes, created_at, supplier:src_site_id(code, name), dest:dest_site_id(code, name), lines:inv_movement_lines(qty)')
+      .select('id, doc_no, doc_type, status, movement_at, src_site_id, dest_site_id, meta, notes, created_at, supplier:src_site_id(id, name), dest:dest_site_id(id, name), lines:inv_movement_lines(qty)')
       .eq('doc_type', DOC_TYPE)
       .order('movement_at', { ascending: false })
     if (error) throw error
     rows.value = (data ?? []).map((row: any) => {
-      const supplierLabel = row.supplier ? `${row.supplier.code} — ${row.supplier.name}` : null
+      const supplierLabel = row.supplier ? (row.supplier.name ?? row.supplier.id ?? null) : null
       const qtyTotal = (row.lines ?? []).reduce((sum: number, line: any) => sum + (line.qty ?? 0), 0)
       return {
         id: row.id,

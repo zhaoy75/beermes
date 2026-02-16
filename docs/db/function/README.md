@@ -43,6 +43,8 @@ Source list: `docs/db/dbfunction.md`
 - `docs/db/function/public.lot_trace_upstream.md`
 - `docs/db/function/public.lot_trace_downstream.md`
 - `docs/db/function/public.lot_trace_full.md`
+- `docs/db/function/public.source_lot_get_by_batch.md`
+- `docs/db/function/public.get_packing_source_lotid.md`
 - `docs/db/function/public._assert_tenant.md`
 - `docs/db/function/public._lock_lots.md`
 - `docs/db/function/public._assert_non_negative_lot_qty.md`

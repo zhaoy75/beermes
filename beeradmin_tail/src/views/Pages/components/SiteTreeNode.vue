@@ -19,7 +19,7 @@
           <path d="M10 4l2 2h6a2 2 0 012 2v8a3 3 0 01-3 3H7a3 3 0 01-3-3V6a2 2 0 012-2h4z"/>
         </svg>
       </span>
-      <span>{{ node.name }} ({{ node.code }})</span>
+      <span>{{ node.name }}</span>
       <span
         class="ml-1 px-1.5 py-0.5 rounded text-[10px] font-medium border"
         :class="node.owner_type === 'OUTSIDE'
@@ -43,7 +43,6 @@ import { useI18n } from 'vue-i18n'
 
 interface TreeNode {
   id: string
-  code: string
   name: string
   owner_type: string
   site_type_id: string

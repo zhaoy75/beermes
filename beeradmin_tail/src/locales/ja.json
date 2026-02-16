@@ -1732,9 +1732,13 @@
     "newTitle": "サイトを追加",
     "editTitle": "サイトを編集",
     "deleteTitle": "サイトの削除",
-    "deleteConfirm": "サイト {code} を削除しますか？この操作は元に戻せません。",
+    "deleteConfirm": "サイト {name} を削除しますか？この操作は元に戻せません。",
+    "actions": {
+      "addLocation": "ロケーション追加",
+      "addSite": "サイト追加"
+    },
     "filters": {
-      "namePlaceholder": "名称またはコードで絞り込み",
+      "namePlaceholder": "名称で絞り込み",
       "siteType": "サイト種別",
       "codePlaceholder": "コードで検索",
       "ownerType": "所有区分"

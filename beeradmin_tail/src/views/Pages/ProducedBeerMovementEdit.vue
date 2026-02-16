@@ -785,17 +785,17 @@ async function loadSites() {
   })
   const { data: sites, error } = await supabase
     .from('mst_sites')
-    .select('id, code, name, site_type_id')
+    .select('id, name, site_type_id')
     .eq('tenant_id', tenant)
     .eq('active', true)
-    .order('code')
+    .order('name')
   if (error) throw error
   siteOptions.value = (sites ?? []).map((row: any) => {
     const defKey = typeMap.get(row.site_type_id) ?? null
     const ruleKey = defKey ? defKeyToRuleKey[defKey] ?? null : null
     return {
       id: row.id,
-      name: row.name ?? row.code ?? row.id,
+      name: row.name ?? row.id,
       siteTypeKey: ruleKey,
     }
   })

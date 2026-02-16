@@ -10,13 +10,13 @@
       <section class="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4">
         <aside class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 space-y-4">
           <div>
-            <label class="block text-sm text-gray-600 mb-1" for="siteCodeSearch">{{ t('site.table.code') }}</label>
+            <label class="block text-sm text-gray-600 mb-1" for="siteKeywordSearch">{{ t('common.search') }}</label>
             <input
-              id="siteCodeSearch"
-              v-model.trim="filters.code"
+              id="siteKeywordSearch"
+              v-model.trim="filters.keyword"
               type="search"
               class="w-full h-[36px] border rounded px-3"
-              :placeholder="t('site.filters.codePlaceholder')"
+              :placeholder="t('site.filters.namePlaceholder')"
             />
           </div>
           <div>
@@ -34,8 +34,11 @@
             </select>
           </div>
           <div class="flex items-center gap-2">
-            <button class="px-3 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700" type="button" @click="startCreate">
-              {{ t('common.add') }}
+            <button class="px-3 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700" type="button" @click="startCreateLocation">
+              {{ t('site.actions.addLocation') }}
+            </button>
+            <button class="px-3 py-2 text-sm rounded bg-emerald-600 text-white hover:bg-emerald-700" type="button" @click="startCreateSite">
+              {{ t('site.actions.addSite') }}
             </button>
             <button
               class="px-3 py-2 text-sm rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-50"
@@ -93,34 +96,17 @@
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label class="block text-sm text-gray-600 mb-1">{{ t('site.table.code') }}</label>
-              <input v-model.trim="form.code" class="w-full h-[40px] border rounded px-3" />
-              <p v-if="errors.code" class="text-xs text-red-600 mt-1">{{ errors.code }}</p>
-            </div>
-            <div>
               <label class="block text-sm text-gray-600 mb-1">{{ t('site.table.name') }}</label>
               <input v-model.trim="form.name" class="w-full h-[40px] border rounded px-3" />
               <p v-if="errors.name" class="text-xs text-red-600 mt-1">{{ errors.name }}</p>
             </div>
-            <div>
+            <div v-if="!isLocationNodeKind">
               <label class="block text-sm text-gray-600 mb-1">{{ t('site.table.siteType') }}</label>
               <select v-model="form.site_type_id" class="w-full h-[40px] border rounded px-3 bg-white">
                 <option value="">{{ t('common.select') }}</option>
                 <option v-for="option in siteTypeOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
               </select>
               <p v-if="errors.site_type_id" class="text-xs text-red-600 mt-1">{{ errors.site_type_id }}</p>
-            </div>
-            <div>
-              <label class="block text-sm text-gray-600 mb-1">{{ t('site.form.parentSite') }}</label>
-              <select v-model="form.parent_site_id" class="w-full h-[40px] border rounded px-3 bg-white">
-                <option v-for="option in parentSiteOptions" :key="option.value || '__root'" :value="option.value">{{ option.label }}</option>
-              </select>
-              <p v-if="errors.parent_site_id" class="text-xs text-red-600 mt-1">{{ errors.parent_site_id }}</p>
-            </div>
-            <div>
-              <label class="block text-sm text-gray-600 mb-1">{{ t('site.form.nodeKind') }}</label>
-              <input v-model.trim="form.node_kind" class="w-full h-[40px] border rounded px-3" />
-              <p v-if="errors.node_kind" class="text-xs text-red-600 mt-1">{{ errors.node_kind }}</p>
             </div>
             <div>
               <label class="block text-sm text-gray-600 mb-1">{{ t('site.form.ownerType') }}</label>
@@ -134,11 +120,6 @@
               <label class="block text-sm text-gray-600 mb-1">{{ t('site.form.ownerName') }}</label>
               <input v-model.trim="form.owner_name" class="w-full h-[40px] border rounded px-3" :disabled="form.owner_type !== 'OUTSIDE'" />
               <p v-if="errors.owner_name" class="text-xs text-red-600 mt-1">{{ errors.owner_name }}</p>
-            </div>
-            <div>
-              <label class="block text-sm text-gray-600 mb-1">{{ t('site.form.sortOrder') }}</label>
-              <input v-model.number="form.sort_order" type="number" min="0" step="1" class="w-full h-[40px] border rounded px-3" />
-              <p v-if="errors.sort_order" class="text-xs text-red-600 mt-1">{{ errors.sort_order }}</p>
             </div>
             <div>
               <label class="block text-sm text-gray-600 mb-1">{{ t('site.form.address') }}</label>
@@ -212,7 +193,6 @@ import SiteTreeNode from '@/views/Pages/components/SiteTreeNode.vue'
 interface SiteRow {
   id: string
   tenant_id?: string
-  code: string
   name: string
   site_type_id: string
   parent_site_id: string | null
@@ -235,7 +215,6 @@ interface RegistryDefRow {
 
 interface TreeNode {
   id: string
-  code: string
   name: string
   site_type_id: string
   parent_site_id: string | null
@@ -251,6 +230,9 @@ const pageTitle = computed(() => t('site.title'))
 const TABLE = 'mst_sites'
 const OWNER_TYPE_OWN = 'OWN'
 const OWNER_TYPE_OUTSIDE = 'OUTSIDE'
+const NODE_KIND_SITE = 'SITE'
+const NODE_KIND_LOCATION = 'LOCATION'
+const ZERO_UUID = '00000000-0000-0000-0000-000000000000'
 
 const rows = ref<SiteRow[]>([])
 const siteTypes = ref<RegistryDefRow[]>([])
@@ -265,18 +247,17 @@ const addressDialog = reactive({ open: false })
 const addressDraft = reactive<Record<string, string>>({})
 
 const filters = reactive({
-  code: '',
+  keyword: '',
   siteType: '',
   ownerType: '',
 })
 
 const form = reactive({
   id: '',
-  code: '',
   name: '',
   site_type_id: '',
   parent_site_id: '',
-  node_kind: 'SITE',
+  node_kind: NODE_KIND_SITE,
   owner_type: OWNER_TYPE_OWN,
   owner_name: '',
   sort_order: 0,
@@ -303,32 +284,18 @@ const ownerTypeOptions = computed(() => [
 
 const treeNodes = computed<TreeNode[]>(() => buildTree(rows.value))
 
-const parentSiteOptions = computed(() => {
-  const blockedIds = form.id ? new Set(collectDescendantIds(form.id)) : new Set<string>()
-  const options: Array<{ value: string; label: string }> = [{ value: '', label: t('site.tree.root') }]
-  const walk = (nodes: TreeNode[], depth: number) => {
-    nodes.forEach((node) => {
-      if (!blockedIds.has(node.id) && !isTempId(node.id)) {
-        const indent = '  '.repeat(depth)
-        options.push({ value: node.id, label: `${indent}${node.name} (${node.code})` })
-      }
-      walk(node.children, depth + 1)
-    })
-  }
-  walk(treeNodes.value, 0)
-  return options
-})
+const isLocationNodeKind = computed(() => isLocationKind(form.node_kind))
 
 const filteredTree = computed<TreeNode[]>(() => {
-  const codeFilter = filters.code.trim().toLowerCase()
+  const keywordFilter = filters.keyword.trim().toLowerCase()
   const typeFilter = filters.siteType
   const ownerTypeFilter = filters.ownerType
-  if (!codeFilter && !typeFilter && !ownerTypeFilter) return treeNodes.value
+  if (!keywordFilter && !typeFilter && !ownerTypeFilter) return treeNodes.value
   return filterTree(treeNodes.value, (node) => {
-    const matchesCode = !codeFilter || node.code.toLowerCase().includes(codeFilter)
+    const matchesKeyword = !keywordFilter || node.name.toLowerCase().includes(keywordFilter)
     const matchesType = !typeFilter || node.site_type_id === typeFilter
     const matchesOwnerType = !ownerTypeFilter || node.owner_type === ownerTypeFilter
-    return matchesCode && matchesType && matchesOwnerType
+    return matchesKeyword && matchesType && matchesOwnerType
   })
 })
 
@@ -336,7 +303,7 @@ const selectedSite = computed(() => rows.value.find((row) => row.id === selected
 
 const selectedPathLabel = computed(() => {
   if (!selectedSite.value) return t('site.tree.root')
-  return `${selectedSite.value.name} (${selectedSite.value.code})`
+  return selectedSite.value.name
 })
 
 const addressFields = computed(() => {
@@ -365,7 +332,6 @@ function buildTree(list: SiteRow[]): TreeNode[] {
   list.forEach((row) => {
     map.set(row.id, {
       id: row.id,
-      code: row.code,
       name: row.name,
       site_type_id: row.site_type_id,
       parent_site_id: row.parent_site_id,
@@ -384,7 +350,7 @@ function buildTree(list: SiteRow[]): TreeNode[] {
     }
   })
   const sortNodes = (nodes: TreeNode[]) => {
-    nodes.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.code.localeCompare(b.code))
+    nodes.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.name.localeCompare(b.name))
     nodes.forEach((n) => sortNodes(n.children))
   }
   sortNodes(roots)
@@ -412,11 +378,19 @@ function selectRoot() {
   resetForm()
 }
 
-function startCreate() {
+function startCreateSite() {
+  startCreateByKind(NODE_KIND_SITE)
+}
+
+function startCreateLocation() {
+  startCreateByKind(NODE_KIND_LOCATION)
+}
+
+function startCreateByKind(nodeKind: string) {
   const parentId = selectedId.value && !isTempId(selectedId.value) ? selectedId.value : null
   removeTempRow()
   resetForm()
-  const tempRow = createTempRow(parentId)
+  const tempRow = createTempRow(parentId, nodeKind)
   rows.value = [...rows.value, tempRow]
   selectedId.value = tempRow.id
   tempId.value = tempRow.id
@@ -425,11 +399,10 @@ function startCreate() {
 
 function resetForm() {
   form.id = ''
-  form.code = ''
   form.name = ''
   form.site_type_id = ''
   form.parent_site_id = ''
-  form.node_kind = 'SITE'
+  form.node_kind = NODE_KIND_SITE
   form.owner_type = OWNER_TYPE_OWN
   form.owner_name = ''
   form.sort_order = 0
@@ -444,11 +417,10 @@ function loadForm(row: SiteRow) {
   resetForm()
   const isTemp = isTempId(row.id)
   form.id = isTemp ? '' : row.id
-  form.code = row.code
   form.name = row.name
   form.site_type_id = row.site_type_id
   form.parent_site_id = row.parent_site_id ?? ''
-  form.node_kind = row.node_kind ?? 'SITE'
+  form.node_kind = normalizeNodeKind(row.node_kind)
   form.owner_type = row.owner_type ?? OWNER_TYPE_OWN
   form.owner_name = row.owner_name ?? ''
   form.sort_order = row.sort_order ?? 0
@@ -462,16 +434,16 @@ function isTempId(id: string) {
   return id.startsWith(TEMP_PREFIX)
 }
 
-function createTempRow(parentId: string | null) {
+function createTempRow(parentId: string | null, nodeKind: string) {
+  const normalizedNodeKind = normalizeNodeKind(nodeKind)
   const id = `${TEMP_PREFIX}${Date.now()}`
   return {
     id,
     tenant_id: tenantId.value ?? undefined,
-    code: '',
     name: '',
-    site_type_id: '',
+    site_type_id: defaultSiteTypeIdForNodeKind(normalizedNodeKind),
     parent_site_id: parentId,
-    node_kind: 'SITE',
+    node_kind: normalizedNodeKind,
     owner_type: OWNER_TYPE_OWN,
     owner_name: null,
     sort_order: 0,
@@ -481,6 +453,20 @@ function createTempRow(parentId: string | null) {
     active: true,
     created_at: null,
   } as SiteRow
+}
+
+function normalizeNodeKind(value: string | null | undefined) {
+  const raw = String(value ?? '').trim().toUpperCase()
+  if (raw === NODE_KIND_LOCATION) return NODE_KIND_LOCATION
+  return NODE_KIND_SITE
+}
+
+function isLocationKind(value: string | null | undefined) {
+  return normalizeNodeKind(value) === NODE_KIND_LOCATION
+}
+
+function defaultSiteTypeIdForNodeKind(nodeKind: string) {
+  return isLocationKind(nodeKind) ? ZERO_UUID : ''
 }
 
 function removeTempRow() {
@@ -516,27 +502,10 @@ function addressFieldLabel(field: { label: string; label_i18n: Record<string, st
 
 function validate() {
   Object.keys(errors).forEach((key) => delete errors[key])
-  if (!form.code) errors.code = t('site.form.codeRequired')
   if (!form.name) errors.name = t('site.form.nameRequired')
-  if (!form.site_type_id) errors.site_type_id = t('site.form.siteTypeRequired')
-  if (!form.node_kind.trim()) errors.node_kind = t('site.form.nodeKindRequired')
+  if (!isLocationKind(form.node_kind) && !form.site_type_id) errors.site_type_id = t('site.form.siteTypeRequired')
   if (!form.owner_type) errors.owner_type = t('site.form.ownerTypeRequired')
   if (form.owner_type === OWNER_TYPE_OUTSIDE && !form.owner_name.trim()) errors.owner_name = t('site.form.ownerNameRequired')
-
-  const sortOrder = Number(form.sort_order)
-  if (!Number.isInteger(sortOrder) || sortOrder < 0) {
-    errors.sort_order = t('site.form.sortOrderInvalid')
-  }
-
-  if (form.id && form.parent_site_id && form.parent_site_id === form.id) {
-    errors.parent_site_id = t('site.form.parentInvalidSelf')
-  }
-  if (form.id && form.parent_site_id) {
-    const descendants = collectDescendantIds(form.id)
-    if (descendants.includes(form.parent_site_id)) {
-      errors.parent_site_id = t('site.form.parentInvalidCycle')
-    }
-  }
   return Object.keys(errors).length === 0
 }
 
@@ -605,10 +574,10 @@ async function fetchSites() {
     const tenant = await ensureTenant()
     const { data, error } = await supabase
       .from(TABLE)
-      .select('id, tenant_id, code, name, site_type_id, parent_site_id, node_kind, owner_type, owner_name, sort_order, address, contact, notes, active, created_at')
+      .select('id, tenant_id, name, site_type_id, parent_site_id, node_kind, owner_type, owner_name, sort_order, address, contact, notes, active, created_at')
       .eq('tenant_id', tenant)
       .order('sort_order', { ascending: true })
-      .order('code', { ascending: true })
+      .order('name', { ascending: true })
     if (error) throw error
     rows.value = (data ?? []) as SiteRow[]
     removeTempRow()
@@ -626,14 +595,12 @@ async function saveRecord() {
     saving.value = true
     const tenant = await ensureTenant()
     const isUpdating = Boolean(form.id)
-    const targetCode = form.code.trim()
     const payload = {
       tenant_id: tenant,
-      code: targetCode,
       name: form.name.trim(),
-      site_type_id: form.site_type_id,
+      site_type_id: isLocationKind(form.node_kind) ? ZERO_UUID : form.site_type_id,
       parent_site_id: form.parent_site_id || null,
-      node_kind: form.node_kind.trim(),
+      node_kind: normalizeNodeKind(form.node_kind),
       owner_type: form.owner_type,
       owner_name: form.owner_type === OWNER_TYPE_OUTSIDE ? (form.owner_name.trim() || null) : null,
       sort_order: Number(form.sort_order) || 0,
@@ -647,8 +614,11 @@ async function saveRecord() {
       const { error } = await supabase.from(TABLE).update(payload).eq('id', form.id)
       if (error) throw error
     } else {
-      const { error } = await supabase.from(TABLE).insert(payload)
+      const { data, error } = await supabase.from(TABLE).insert(payload).select('id').single()
       if (error) throw error
+      if (data?.id) {
+        selectedId.value = data.id
+      }
     }
 
     await fetchSites()
@@ -656,7 +626,7 @@ async function saveRecord() {
       const updated = rows.value.find((row) => row.id === form.id)
       if (updated) loadForm(updated)
     } else {
-      const created = rows.value.find((row) => row.code === targetCode)
+      const created = rows.value.find((row) => row.id === selectedId.value)
       if (created) {
         selectedId.value = created.id
         loadForm(created)
@@ -699,7 +669,7 @@ async function deleteSelected() {
     resetForm()
     return
   }
-  if (!window.confirm(t('site.deleteConfirm', { code: selectedSite.value?.code ?? '' }))) return
+  if (!window.confirm(t('site.deleteConfirm', { name: selectedSite.value?.name ?? '' }))) return
   try {
     const ids = collectDescendantIds(selectedId.value)
     const { error } = await supabase.from(TABLE).delete().in('id', ids)

@@ -41,25 +41,32 @@
 ### Site information edit panel (right)
 - `code` (required, unique per tenant)
 - `name` (required)
-- `site_type_id` (required, dropdown from `registry_def.kind = 'site_type'`)
-- `parent_site_id` (not editable tree relationship parent; selected node is default parent)
-- `node_kind` (required, default `SITE`)
+- `site_type_id` (required if node_kind = "SITE", dropdown from `registry_def.kind = 'site_type'`, not shown if node_kind = "LOCATION")
+- `parent_site_id` (not shown, not editable)
+- `node_kind` (not shown, not editable)
 - `owner_type` (required, default `OWN`)
-- `OWN`: own company
-- `OUTSIDE`: outside company
+    - `OWN`: own company
+    - `OUTSIDE`: outside company
 - `owner_name` (text, outside company name)
-- `sort_order` (integer, required, default `0`)
+- `sort_order` (not shown, not editable)
 - `address` (edit by common address dialog)
 - `notes`
 
 ## Action
+### Add Location
+    - Add Location node under location folder of current select tree node
+    - For create mode defaults:  
+       - `node_kind = 'LOCATION'`
+       - `site_type_id = uuid 0'`
+       - `sort_order = 0`
+
 ### Add button
-- Add child node under currently selected tree node.
-- If virtual root is selected, create top-level node (`parent_site_id = null`).
-- For create mode defaults:
-- `node_kind = 'SITE'`
-- `owner_type = 'OWN'`
-- `sort_order = 0`
+    - Add child node under currently selected tree node.
+    - If virtual root is selected, create top-level node (`parent_site_id = null`).
+    - For create mode defaults:
+        - `node_kind = 'SITE'`
+        - `owner_type = 'OWN'`
+        - `sort_order = 0`
 
 ### Delete button
 - Delete selected node and descendant nodes.

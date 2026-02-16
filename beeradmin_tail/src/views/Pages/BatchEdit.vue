@@ -122,7 +122,7 @@
         <hr class="my-5 border-gray-200" />
 
         <div v-if="relationLoading" class="text-sm text-gray-500">{{ t('common.loading') }}</div>
-        <div v-else-if="batchRelations.length > 0">
+        <div v-else>
           <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
             <div>
               <h3 class="text-base font-semibold text-gray-800">{{ t('batch.relation.title') }}</h3>
@@ -167,6 +167,9 @@
                   </button>
                 </td>
               </tr>
+              <tr v-if="batchRelations.length === 0">
+                <td class="px-3 py-6 text-center text-gray-500" colspan="8">{{ t('batch.relation.empty') }}</td>
+              </tr>
             </tbody>
           </table>
           </div>
@@ -181,6 +184,14 @@
           </div>
           <div class="flex items-center gap-2">
             <span v-if="packingNotice" class="text-xs text-green-600">{{ packingNotice }}</span>
+            <button
+              class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-50"
+              type="button"
+              :disabled="lotDagDialog.loading || !batchId"
+              @click="openLotDagDialog"
+            >
+              {{ t('batch.edit.lotDagButton') }}
+            </button>
             <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50" type="button" :disabled="packingDialog.loading || !batch" @click="openPackingDialog">
               {{ t('batch.packaging.openDialog') }}
             </button>
@@ -455,6 +466,71 @@
             {{ packingDialog.loading ? t('common.saving') : t('batch.packaging.dialog.save') }}
           </button>
         </footer>
+      </div>
+    </div>
+
+    <div v-if="lotDagDialog.open" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div class="w-full max-w-6xl bg-white rounded-xl shadow-lg border border-gray-200">
+        <header class="flex items-start justify-between px-4 py-3 border-b gap-4">
+          <div>
+            <h3 class="text-lg font-semibold text-gray-800">{{ t('batch.edit.lotDagDialogTitle') }}</h3>
+            <p class="text-xs text-gray-500">{{ t('batch.edit.lotDagDialogSubtitle') }}</p>
+          </div>
+          <button class="text-sm px-2 py-1 rounded border hover:bg-gray-100" type="button" @click="closeLotDagDialog">
+            {{ t('common.close') }}
+          </button>
+        </header>
+        <div class="p-4 space-y-3">
+          <div v-if="lotDagDialog.globalError" class="text-sm text-red-600">{{ lotDagDialog.globalError }}</div>
+          <div v-else-if="lotDagDialog.loading" class="text-sm text-gray-600">{{ t('common.loading') }}</div>
+          <div v-else-if="lotDagDialog.renderNodes.length === 0" class="text-sm text-gray-500">{{ t('batch.edit.lotDagNoData') }}</div>
+          <div v-else class="border border-gray-200 rounded-lg overflow-auto" style="max-height: 70vh;">
+            <svg :width="lotDagDialog.canvasWidth" :height="lotDagDialog.canvasHeight" class="bg-white">
+              <g>
+                <line
+                  v-for="edge in lotDagDialog.renderEdges"
+                  :key="edge.id"
+                  :x1="edge.x1"
+                  :y1="edge.y1"
+                  :x2="edge.x2"
+                  :y2="edge.y2"
+                  stroke="#94a3b8"
+                  stroke-width="1.5"
+                />
+                <text
+                  v-for="edge in lotDagDialog.renderEdges"
+                  :key="`${edge.id}-label`"
+                  :x="(edge.x1 + edge.x2) / 2"
+                  :y="(edge.y1 + edge.y2) / 2 - 4"
+                  text-anchor="middle"
+                  font-size="10"
+                  fill="#475569"
+                >
+                  {{ edge.label }}
+                </text>
+              </g>
+              <g>
+                <g v-for="node in lotDagDialog.renderNodes" :key="node.id">
+                  <rect
+                    :x="node.x - 85"
+                    :y="node.y - 24"
+                    width="170"
+                    height="48"
+                    rx="8"
+                    :fill="node.id === lotDagDialog.sourceLotId ? '#dcfce7' : (node.virtual ? '#f8fafc' : '#eff6ff')"
+                    stroke="#64748b"
+                  />
+                  <text :x="node.x" :y="node.y - 4" text-anchor="middle" font-size="12" fill="#0f172a">
+                    {{ node.label }}
+                  </text>
+                  <text v-if="node.subLabel" :x="node.x" :y="node.y + 12" text-anchor="middle" font-size="10" fill="#475569">
+                    {{ node.subLabel }}
+                  </text>
+                </g>
+              </g>
+            </svg>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -740,6 +816,39 @@ type PackingFormState = {
   tank_left_volume: string
 }
 
+type LotDagNode = {
+  id: string
+  lot_no: string | null
+  qty: number | null
+  status: string | null
+}
+
+type LotDagEdge = {
+  id: string
+  source: string | null
+  target: string | null
+  edge_type: string | null
+  qty: number | null
+}
+
+type LotDagRenderNode = {
+  id: string
+  label: string
+  subLabel: string
+  x: number
+  y: number
+  virtual: boolean
+}
+
+type LotDagRenderEdge = {
+  id: string
+  x1: number
+  y1: number
+  x2: number
+  y2: number
+  label: string
+}
+
 const packageCategories = ref<PackageCategoryOption[]>([])
 const siteOptions = ref<SiteOption[]>([])
 const volumeUoms = ref<VolumeUomOption[]>([])
@@ -766,6 +875,19 @@ const actualYieldDialog = reactive({
     actual_yield_uom: '',
     site_id: '',
   },
+})
+
+const lotDagDialog = reactive({
+  open: false,
+  loading: false,
+  globalError: '',
+  sourceLotId: null as string | null,
+  nodes: [] as LotDagNode[],
+  edges: [] as LotDagEdge[],
+  renderNodes: [] as LotDagRenderNode[],
+  renderEdges: [] as LotDagRenderEdge[],
+  canvasWidth: 1200,
+  canvasHeight: 640,
 })
 
 type BatchRelationRow = {
@@ -1104,7 +1226,7 @@ async function fetchBatch() {
   try {
     loadingBatch.value = true
     await ensureTenant()
-    await Promise.all([loadBatchOptions(), loadBatchStatusOptions(), loadSites(), fetchPackageCategories(), loadUoms()])
+    await Promise.all([loadBatchOptions(), loadBatchStatusOptions(), loadSites(), fetchPackageCategories(), loadVolumeUoms(), loadUoms()])
     const { data, error } = await supabase.rpc('batch_get_detail', {
       p_batch_id: batchId.value,
     })
@@ -1723,6 +1845,185 @@ function closeRelationDialog() {
   relationDialog.open = false
   relationDialog.errors = {}
   relationDialog.globalError = ''
+}
+
+function buildLotDagLayout() {
+  const ROOT_ID = '__ROOT__'
+  const SINK_ID = '__SINK__'
+  const nodeGapX = 240
+  const nodeGapY = 96
+  const nodeStartX = 120
+  const nodeStartY = 90
+
+  const nodeMap = new Map<string, LotDagRenderNode>()
+  lotDagDialog.nodes.forEach((node) => {
+    const label = node.lot_no?.trim() || node.id.slice(0, 8)
+    const qtyLabel = node.qty != null && Number.isFinite(node.qty) ? `qty=${formatNumber(node.qty)}` : ''
+    nodeMap.set(node.id, {
+      id: node.id,
+      label,
+      subLabel: qtyLabel,
+      x: 0,
+      y: 0,
+      virtual: false,
+    })
+  })
+
+  const ensureVirtualNode = (id: string, label: string) => {
+    if (nodeMap.has(id)) return
+    nodeMap.set(id, {
+      id,
+      label,
+      subLabel: '',
+      x: 0,
+      y: 0,
+      virtual: true,
+    })
+  }
+
+  type NormalizedEdge = { id: string, sourceId: string, targetId: string, label: string }
+  const normalizedEdges: NormalizedEdge[] = []
+  ;(lotDagDialog.edges ?? []).forEach((edge) => {
+    const sourceId = edge.source || ROOT_ID
+    const targetId = edge.target || SINK_ID
+    if (sourceId === ROOT_ID) ensureVirtualNode(ROOT_ID, 'ROOT')
+    if (targetId === SINK_ID) ensureVirtualNode(SINK_ID, 'SINK')
+    if (!nodeMap.has(sourceId)) ensureVirtualNode(sourceId, sourceId.slice(0, 8))
+    if (!nodeMap.has(targetId)) ensureVirtualNode(targetId, targetId.slice(0, 8))
+
+    const qtyLabel = edge.qty != null && Number.isFinite(edge.qty) ? ` ${formatNumber(edge.qty)}` : ''
+    const edgeType = edge.edge_type ? edge.edge_type.trim() : ''
+    normalizedEdges.push({
+      id: edge.id,
+      sourceId,
+      targetId,
+      label: `${edgeType}${qtyLabel}`.trim(),
+    })
+  })
+
+  const inDegree = new Map<string, number>()
+  const outMap = new Map<string, string[]>()
+  nodeMap.forEach((_, id) => inDegree.set(id, 0))
+  normalizedEdges.forEach((edge) => {
+    outMap.set(edge.sourceId, [...(outMap.get(edge.sourceId) ?? []), edge.targetId])
+    inDegree.set(edge.targetId, (inDegree.get(edge.targetId) ?? 0) + 1)
+  })
+
+  const queue: string[] = [...inDegree.entries()]
+    .filter(([, degree]) => degree === 0)
+    .map(([id]) => id)
+    .sort()
+  const level = new Map<string, number>()
+  queue.forEach((id) => level.set(id, 0))
+  while (queue.length > 0) {
+    const current = queue.shift() as string
+    const nextList = outMap.get(current) ?? []
+    nextList.forEach((nextId) => {
+      const nextLevel = Math.max(level.get(nextId) ?? 0, (level.get(current) ?? 0) + 1)
+      level.set(nextId, nextLevel)
+      const deg = (inDegree.get(nextId) ?? 0) - 1
+      inDegree.set(nextId, deg)
+      if (deg === 0) queue.push(nextId)
+    })
+  }
+  nodeMap.forEach((_, id) => {
+    if (!level.has(id)) level.set(id, 0)
+  })
+
+  const groups = new Map<number, string[]>()
+  nodeMap.forEach((_, id) => {
+    const lv = level.get(id) ?? 0
+    groups.set(lv, [...(groups.get(lv) ?? []), id])
+  })
+
+  const sortedLevels = [...groups.keys()].sort((a, b) => a - b)
+  sortedLevels.forEach((lv) => {
+    const ids = (groups.get(lv) ?? []).sort((a, b) => {
+      if (a === lotDagDialog.sourceLotId) return -1
+      if (b === lotDagDialog.sourceLotId) return 1
+      return a.localeCompare(b)
+    })
+    ids.forEach((id, index) => {
+      const node = nodeMap.get(id)
+      if (!node) return
+      node.x = nodeStartX + (lv * nodeGapX)
+      node.y = nodeStartY + (index * nodeGapY)
+    })
+  })
+
+  const renderNodes = [...nodeMap.values()]
+  const renderEdges = normalizedEdges
+    .map((edge) => {
+      const source = nodeMap.get(edge.sourceId)
+      const target = nodeMap.get(edge.targetId)
+      if (!source || !target) return null
+      return {
+        id: edge.id,
+        x1: source.x + 85,
+        y1: source.y,
+        x2: target.x - 85,
+        y2: target.y,
+        label: edge.label,
+      } as LotDagRenderEdge
+    })
+    .filter((edge): edge is LotDagRenderEdge => edge !== null)
+
+  const maxX = renderNodes.reduce((acc, node) => Math.max(acc, node.x), nodeStartX) + 180
+  const maxY = renderNodes.reduce((acc, node) => Math.max(acc, node.y), nodeStartY) + 120
+  lotDagDialog.renderNodes = renderNodes
+  lotDagDialog.renderEdges = renderEdges
+  lotDagDialog.canvasWidth = Math.max(960, maxX)
+  lotDagDialog.canvasHeight = Math.max(420, maxY)
+}
+
+async function openLotDagDialog() {
+  if (!batchId.value) return
+  lotDagDialog.open = true
+  lotDagDialog.loading = true
+  lotDagDialog.globalError = ''
+  lotDagDialog.nodes = []
+  lotDagDialog.edges = []
+  lotDagDialog.renderNodes = []
+  lotDagDialog.renderEdges = []
+  lotDagDialog.sourceLotId = null
+  try {
+    const { data, error } = await supabase.rpc('lot_dag_get_by_batch', { p_batch_id: batchId.value })
+    if (error) throw error
+    const payload = Array.isArray(data)
+      ? ((data[0] && typeof data[0] === 'object') ? data[0] as Record<string, any> : {})
+      : ((data && typeof data === 'object') ? data as Record<string, any> : {})
+    lotDagDialog.sourceLotId = typeof payload.source_lot_id === 'string' ? payload.source_lot_id : null
+    lotDagDialog.nodes = Array.isArray(payload.nodes)
+      ? payload.nodes.map((row: any) => ({
+        id: String(row?.id ?? ''),
+        lot_no: row?.lot_no != null ? String(row.lot_no) : null,
+        qty: toNumber(row?.qty),
+        status: row?.status != null ? String(row.status) : null,
+      })).filter((row: LotDagNode) => row.id)
+      : []
+    lotDagDialog.edges = Array.isArray(payload.edges)
+      ? payload.edges.map((row: any) => ({
+        id: String(row?.id ?? generateLocalId()),
+        source: row?.source != null ? String(row.source) : null,
+        target: row?.target != null ? String(row.target) : null,
+        edge_type: row?.edge_type != null ? String(row.edge_type) : null,
+        qty: toNumber(row?.qty),
+      }))
+      : []
+    buildLotDagLayout()
+  } catch (err) {
+    console.error(err)
+    const detail = extractErrorMessage(err)
+    lotDagDialog.globalError = detail
+      ? `${t('batch.edit.lotDagLoadFailed')} (${detail})`
+      : t('batch.edit.lotDagLoadFailed')
+  } finally {
+    lotDagDialog.loading = false
+  }
+}
+
+function closeLotDagDialog() {
+  lotDagDialog.open = false
 }
 
 function openPackingDialog() {

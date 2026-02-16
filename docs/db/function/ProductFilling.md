@@ -40,7 +40,8 @@ Required line fields (`lines[]`):
 
 Optional line fields:
 - `line_no` int
-- `lot_no` text: destination filled lot number; generated if absent
+- `lot_no` text: destination filled lot number; generated if absent from root lot:
+  - `<ROOT_LOT_NO>_NNN` (increasing number)
 - `package_id` uuid
 - `expires_at` timestamptz
 - `notes` text
@@ -120,14 +121,14 @@ Support optional `idempotency_key` in `p_doc.meta`:
   "lines": [
     {
       "line_no": 1,
-      "lot_no": "PK-20260214-01",
+      "lot_no": "BATCH20260214_001",
       "package_id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
       "qty": 120,
       "meta": { "unit_count": 240 }
     },
     {
       "line_no": 2,
-      "lot_no": "PK-20260214-02",
+      "lot_no": "BATCH20260214_002",
       "package_id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
       "qty": 80,
       "meta": { "unit_count": 160 }

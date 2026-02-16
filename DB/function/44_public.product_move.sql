@@ -58,6 +58,8 @@ declare
   v_source_inv_qty numeric;
 
   v_dest_lot_no text;
+  v_root_lot_no text;
+  v_next_lot_seq int;
   v_zero_material_id uuid := '00000000-0000-0000-0000-000000000000'::uuid;
 begin
   if p_doc is null then
@@ -347,6 +349,34 @@ begin
     );
   end if;
 
+  with recursive upstream as (
+    select l.id, l.lot_no, 0 as depth
+    from public.lot l
+    where l.tenant_id = v_tenant
+      and l.id = v_src_lot_id
+    union all
+    select parent.id, parent.lot_no, u.depth + 1
+    from upstream u
+    join public.lot_edge e
+      on e.tenant_id = v_tenant
+     and e.to_lot_id = u.id
+     and e.from_lot_id is not null
+    join public.lot parent
+      on parent.tenant_id = v_tenant
+     and parent.id = e.from_lot_id
+  )
+  select u.lot_no
+    into v_root_lot_no
+  from upstream u
+  order by u.depth desc
+  limit 1;
+
+  if v_root_lot_no is null then
+    v_root_lot_no := coalesce(v_source_lot_no, 'LOT');
+  end if;
+
+  perform pg_advisory_xact_lock(hashtext(v_tenant::text), hashtext(v_root_lot_no));
+
   insert into public.inv_movements (
     tenant_id, doc_no, doc_type, status, movement_at,
     src_site_id, dest_site_id, reason, meta, notes
@@ -395,11 +425,20 @@ begin
   returning id into v_movement_line_id;
 
   if v_edge_type <> 'CONSUME' then
-    v_dest_lot_no := format(
-      '%s-MV-%s',
-      coalesce(v_source_lot_no, 'LOT'),
-      substr(replace(gen_random_uuid()::text, '-', ''), 1, 8)
-    );
+    select coalesce(max(sub.seq), 0) + 1
+      into v_next_lot_seq
+    from (
+      select case
+               when l.lot_no like v_root_lot_no || '\_%' escape '\'
+                    and substring(l.lot_no from char_length(v_root_lot_no) + 2) ~ '^[0-9]+$'
+                 then substring(l.lot_no from char_length(v_root_lot_no) + 2)::int
+               else null
+             end as seq
+      from public.lot l
+      where l.tenant_id = v_tenant
+    ) sub;
+
+    v_dest_lot_no := format('%s_%s', v_root_lot_no, lpad(v_next_lot_seq::text, 3, '0'));
 
     insert into public.lot (
       tenant_id, lot_no, material_id, package_id, batch_id, lot_tax_type, site_id,

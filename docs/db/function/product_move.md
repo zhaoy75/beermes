@@ -88,6 +88,7 @@ Recommended optional fields:
    - Decrease source lot qty.
    - If destination lot is required:
      - create destination lot or reuse mapped destination lot
+     - if auto-created, destination `lot_no` is `<ROOT_LOT_NO>_NNN` (increasing number)
      - set `lot_tax_type` to derived `result_lot_tax_type` when rule changes tax type.
 5. Insert `lot_edge`:
    - `edge_type = 'MOVE'` for lot-to-lot movement.

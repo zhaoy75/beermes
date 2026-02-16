@@ -34,7 +34,9 @@ Required fields:
 
 Optional fields:
 - `src_site_id` uuid: nullable, may be `NULL` or manufacturing site
-- `lot_no` text: explicit lot number; if absent, generate by rule
+- `lot_no` text: explicit lot number; if absent, auto-generated from `batch_code` (sanitized).
+  - first root lot: `<BATCH_CODE>`
+  - if duplicate exists: `<BATCH_CODE>_NNN` (increasing number)
 - `produced_at` timestamptz: defaults to `movement_at`
 - `expires_at` timestamptz
 - `notes` text
@@ -111,7 +113,7 @@ Support optional `idempotency_key` in `p_doc.meta`:
   "batch_id": "33333333-3333-3333-3333-333333333333",
   "qty": 1200,
   "uom_id": "44444444-4444-4444-4444-444444444444",
-  "lot_no": "LOT-20260214-01",
+  "lot_no": "BATCH20260214",
   "produced_at": "2026-02-14T08:30:00Z",
   "meta": { "movement_intent": "BREW_PRODUCE" }
 }

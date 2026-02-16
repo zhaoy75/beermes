@@ -24,6 +24,8 @@ declare
   v_meta jsonb;
   v_line_meta jsonb;
   v_idempotency_key text;
+  v_batch_code text;
+  v_next_lot_seq int;
 begin
   if p_doc is null then
     raise exception 'PP001: p_doc is required';
@@ -98,11 +100,42 @@ begin
   end if;
 
   if v_lot_no is null then
-    v_lot_no := format(
-      'LOT-%s-%s',
-      to_char(v_movement_at, 'YYYYMMDDHH24MISSMS'),
-      substr(replace(gen_random_uuid()::text, '-', ''), 1, 8)
-    );
+    select nullif(btrim(b.batch_code), '')
+      into v_batch_code
+    from public.mes_batches b
+    where b.tenant_id = v_tenant
+      and b.id = v_batch_id;
+
+    v_batch_code := coalesce(v_batch_code, 'BATCH');
+    v_batch_code := upper(regexp_replace(v_batch_code, '[^A-Za-z0-9]+', '_', 'g'));
+    v_batch_code := regexp_replace(v_batch_code, '^_+|_+$', '', 'g');
+    v_batch_code := coalesce(nullif(v_batch_code, ''), 'BATCH');
+
+    perform pg_advisory_xact_lock(hashtext(v_tenant::text), hashtext(v_batch_code));
+
+    v_lot_no := v_batch_code;
+
+    if exists (
+      select 1
+      from public.lot l
+      where l.tenant_id = v_tenant
+        and l.lot_no = v_lot_no
+    ) then
+      select coalesce(max(sub.seq), 0) + 1
+        into v_next_lot_seq
+      from (
+        select case
+                 when l.lot_no like v_batch_code || '\_%' escape '\'
+                      and substring(l.lot_no from char_length(v_batch_code) + 2) ~ '^[0-9]+$'
+                   then substring(l.lot_no from char_length(v_batch_code) + 2)::int
+                 else null
+               end as seq
+        from public.lot l
+        where l.tenant_id = v_tenant
+      ) sub;
+
+      v_lot_no := format('%s_%s', v_batch_code, lpad(v_next_lot_seq::text, 3, '0'));
+    end if;
   end if;
 
   insert into public.inv_movements (

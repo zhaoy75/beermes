@@ -38,6 +38,8 @@ declare
   v_line_expires_at timestamptz;
   v_line_notes text;
   v_line_meta jsonb;
+  v_root_lot_no text;
+  v_next_lot_seq int;
 begin
   if p_doc is null then
     raise exception 'PF001: p_doc is required';
@@ -159,6 +161,55 @@ begin
     raise exception 'PF005: source inventory insufficient quantity';
   end if;
 
+  with recursive upstream as (
+    select l.id, l.lot_no, 0 as depth
+    from public.lot l
+    where l.tenant_id = v_tenant
+      and l.id = v_from_lot_id
+    union all
+    select parent.id, parent.lot_no, u.depth + 1
+    from upstream u
+    join public.lot_edge e
+      on e.tenant_id = v_tenant
+     and e.to_lot_id = u.id
+     and e.from_lot_id is not null
+    join public.lot parent
+      on parent.tenant_id = v_tenant
+     and parent.id = e.from_lot_id
+  )
+  select u.lot_no
+    into v_root_lot_no
+  from upstream u
+  order by u.depth desc
+  limit 1;
+
+  if v_root_lot_no is null then
+    select l.lot_no
+      into v_root_lot_no
+    from public.lot l
+    where l.tenant_id = v_tenant
+      and l.id = v_from_lot_id;
+  end if;
+
+  if v_root_lot_no is null then
+    raise exception 'PF007: source lot not found';
+  end if;
+
+  perform pg_advisory_xact_lock(hashtext(v_tenant::text), hashtext(v_root_lot_no));
+
+  select coalesce(max(sub.seq), 0) + 1
+    into v_next_lot_seq
+  from (
+    select case
+             when l.lot_no like v_root_lot_no || '\_%' escape '\'
+                  and substring(l.lot_no from char_length(v_root_lot_no) + 2) ~ '^[0-9]+$'
+               then substring(l.lot_no from char_length(v_root_lot_no) + 2)::int
+             else null
+           end as seq
+    from public.lot l
+    where l.tenant_id = v_tenant
+  ) sub;
+
   insert into public.inv_movements (
     tenant_id, doc_no, doc_type, status, movement_at,
     src_site_id, dest_site_id, reason, meta, notes
@@ -190,12 +241,8 @@ begin
     v_line_meta := coalesce(v_line -> 'meta', '{}'::jsonb);
 
     if v_line_lot_no is null then
-      v_line_lot_no := format(
-        'PK-%s-%s-%s',
-        to_char(v_movement_at, 'YYYYMMDDHH24MISSMS'),
-        lpad(v_line_no::text, 3, '0'),
-        substr(replace(gen_random_uuid()::text, '-', ''), 1, 6)
-      );
+      v_line_lot_no := format('%s_%s', v_root_lot_no, lpad(v_next_lot_seq::text, 3, '0'));
+      v_next_lot_seq := v_next_lot_seq + 1;
     end if;
 
     insert into public.lot (

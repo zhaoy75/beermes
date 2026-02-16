@@ -631,3 +631,7 @@ I want you to rewrite the packaging section of batchedit.vue page
 http://localhost:54321/rest/v1/attr_set?select=attr_set_id%2Ccode%2Cname%2Cdomain%2C
 scope%2Cowner_id%2Cis_active%2Csort_order&domain=in.%28material%2Cmaterial_type%29
 &industry_id=eq.00000000-0000-0000-0000-000000000000&is_active=eq.true&order=sort_order.asc%2Ccode.asc
+
+
+
+{"source": "batch_actual_yield", "batch_id": "e4ddd26b-fb03-4a76-8d0f-f8efce89ccd6", "batch_code": "test1", "idempotency_key": "batch_actual_yield:e4ddd26b-fb03-4a76-8d0f-f8efce89ccd6:5000.000000:0b038b0e-d1d8-464b-8511-a7706e2b2b65", "movement_intent": "BREW_PRODUCE"}

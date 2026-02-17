@@ -224,12 +224,18 @@
             <thead class="bg-gray-50 text-gray-600 uppercase text-xs">
               <tr>
                 <th class="px-3 py-2 text-left">{{ t('batch.packaging.columns.date') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('batch.packaging.columns.tankNo') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('batch.packaging.columns.beerCategory') }}</th>
                 <th class="px-3 py-2 text-left">{{ t('batch.packaging.columns.packingType') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('batch.packaging.columns.tankNo') }}</th>
+                <th class="px-3 py-2 text-right">{{ t('batch.packaging.columns.tankFillStartVolume') }}</th>
+                <th class="px-3 py-2 text-right">{{ t('batch.packaging.columns.tankFillLeftVolume') }}</th>
+                <th class="px-3 py-2 text-right">{{ t('batch.packaging.columns.fillingPayoutQty') }}</th>
                 <th class="px-3 py-2 text-left">{{ t('batch.packaging.columns.packageInfo') }}</th>
                 <th class="px-3 py-2 text-right">{{ t('batch.packaging.columns.number') }}</th>
+                <th class="px-3 py-2 text-right">{{ t('batch.packaging.columns.totalLineVolume') }}</th>
+                <th class="px-3 py-2 text-right">{{ t('batch.packaging.columns.fillingRemainingQty') }}</th>
                 <th class="px-3 py-2 text-right">{{ t('batch.packaging.columns.loss') }}</th>
-                <th class="px-3 py-2 text-right">{{ t('batch.packaging.columns.totalVolume') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('batch.packaging.columns.memo') }}</th>
                 <th class="px-3 py-2 text-left">{{ t('common.actions') }}</th>
               </tr>
             </thead>
@@ -243,12 +249,18 @@
                 ]"
               >
                 <td class="px-3 py-2 text-gray-600">{{ formatPackingDate(event.event_time) }}</td>
-                <td class="px-3 py-2 text-gray-700">{{ formatPackingTankNo(event) }}</td>
+                <td class="px-3 py-2 text-gray-700">{{ formatPackingBeerCategory() }}</td>
                 <td class="px-3 py-2 font-medium text-gray-800">{{ formatPackingType(event.packing_type) }}</td>
+                <td class="px-3 py-2 text-gray-700">{{ formatPackingTankNo(event) }}</td>
+                <td class="px-3 py-2 text-right text-gray-700">{{ formatPackingTankStartVolume(event) }}</td>
+                <td class="px-3 py-2 text-right text-gray-700">{{ formatPackingTankLeftVolume(event) }}</td>
+                <td class="px-3 py-2 text-right text-gray-700">{{ formatPackingFillingPayout(event) }}</td>
                 <td class="px-3 py-2 text-gray-700">{{ formatPackingPackageInfo(event) }}</td>
                 <td class="px-3 py-2 text-right text-gray-700">{{ formatPackingNumber(event) }}</td>
+                <td class="px-3 py-2 text-right text-gray-700">{{ formatPackingTotalLineVolume(event) }}</td>
+                <td class="px-3 py-2 text-right text-gray-700">{{ formatPackingFillingRemaining(event) }}</td>
                 <td class="px-3 py-2 text-right text-gray-700">{{ formatPackingLoss(event) }}</td>
-                <td class="px-3 py-2 text-right text-gray-700">{{ formatPackingTotalVolume(event) }}</td>
+                <td class="px-3 py-2 text-gray-600">{{ event.memo || '—' }}</td>
                 <td class="px-3 py-2 space-x-2">
                   <button
                     class="px-2 py-1 text-xs rounded border hover:bg-gray-100"
@@ -263,7 +275,7 @@
                 </td>
               </tr>
               <tr v-if="packingEvents.length === 0">
-                <td class="px-3 py-6 text-center text-gray-500" colspan="8">{{ t('batch.packaging.noData') }}</td>
+                <td class="px-3 py-6 text-center text-gray-500" colspan="14">{{ t('batch.packaging.noData') }}</td>
               </tr>
             </tbody>
           </table>
@@ -2741,6 +2753,14 @@ function formatPackingDate(value: string) {
   }
 }
 
+function formatPackingBeerCategory() {
+  const fromForm = batchForm.product_name?.trim()
+  if (fromForm) return fromForm
+  const fromBatch = typeof batch.value?.product_name === 'string' ? batch.value.product_name.trim() : ''
+  if (fromBatch) return fromBatch
+  return '—'
+}
+
 function resolveTankCodeById(tankId: string | null | undefined) {
   if (!tankId) return ''
   const match = tankOptions.value.find((row) => row.value === tankId)
@@ -2773,6 +2793,70 @@ function formatPackingNumber(event: PackingEvent) {
   return totalUnits.toLocaleString(undefined, { maximumFractionDigits: 0 })
 }
 
+function packingTankStartVolumeFromEvent(event: PackingEvent) {
+  if (event.packing_type !== 'filling') return null
+  if (event.tank_fill_start_volume == null) return null
+  return Number.isFinite(event.tank_fill_start_volume) ? event.tank_fill_start_volume : null
+}
+
+function packingTankLeftVolumeFromEvent(event: PackingEvent) {
+  if (event.packing_type !== 'filling') return null
+  if (event.tank_left_volume == null) return null
+  return Number.isFinite(event.tank_left_volume) ? event.tank_left_volume : null
+}
+
+function packingFillingPayoutFromEvent(event: PackingEvent) {
+  const start = packingTankStartVolumeFromEvent(event)
+  const left = packingTankLeftVolumeFromEvent(event)
+  if (start == null || left == null) return null
+  const payout = start - left
+  return Number.isFinite(payout) ? payout : null
+}
+
+function packingTotalLineVolumeFromEvent(event: PackingEvent) {
+  if (event.packing_type !== 'filling') return null
+  const total = fillingLinesVolumeFromEvent(event.filling_lines)
+  return Number.isFinite(total) ? total : null
+}
+
+function packingFillingRemainingFromEvent(event: PackingEvent) {
+  const payout = packingFillingPayoutFromEvent(event)
+  const totalLine = packingTotalLineVolumeFromEvent(event)
+  if (payout == null || totalLine == null) return null
+  const remaining = payout - totalLine
+  return Number.isFinite(remaining) ? remaining : null
+}
+
+function formatPackingTankStartVolume(event: PackingEvent) {
+  const value = packingTankStartVolumeFromEvent(event)
+  if (value == null) return '—'
+  return formatVolumeValue(value)
+}
+
+function formatPackingTankLeftVolume(event: PackingEvent) {
+  const value = packingTankLeftVolumeFromEvent(event)
+  if (value == null) return '—'
+  return formatVolumeValue(value)
+}
+
+function formatPackingFillingPayout(event: PackingEvent) {
+  const value = packingFillingPayoutFromEvent(event)
+  if (value == null) return '—'
+  return formatVolumeValue(value)
+}
+
+function formatPackingTotalLineVolume(event: PackingEvent) {
+  const value = packingTotalLineVolumeFromEvent(event)
+  if (value == null) return '—'
+  return formatVolumeValue(value)
+}
+
+function formatPackingFillingRemaining(event: PackingEvent) {
+  const value = packingFillingRemainingFromEvent(event)
+  if (value == null) return '—'
+  return formatVolumeValue(value)
+}
+
 function packingLossFromEvent(event: PackingEvent) {
   if (event.packing_type !== 'filling') return null
   if (event.tank_fill_start_volume == null || event.tank_left_volume == null) return null
@@ -2786,23 +2870,6 @@ function formatPackingLoss(event: PackingEvent) {
   const loss = packingLossFromEvent(event)
   if (loss == null) return '—'
   return formatVolumeValue(loss)
-}
-
-function totalVolumeFromEvent(event: PackingEvent) {
-  if (event.packing_type === 'filling') {
-    const fillingVolume = fillingLinesVolumeFromEvent(event.filling_lines)
-    return Number.isFinite(fillingVolume) ? fillingVolume : null
-  }
-  const volume = eventVolumeInLiters(event)
-  if (volume != null) return volume
-  if (event.movement?.qty != null && Number.isFinite(event.movement.qty)) return event.movement.qty
-  return null
-}
-
-function formatPackingTotalVolume(event: PackingEvent) {
-  const total = totalVolumeFromEvent(event)
-  if (total == null) return '—'
-  return formatVolumeValue(total)
 }
 
 function relationTypeLabel(value: string) {

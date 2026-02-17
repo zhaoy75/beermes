@@ -56,12 +56,18 @@
 2) Packing Event List
    - event list table
    　 date
-      Tank No
+      beer category
       Packing Type
+      Tank No
+      Tank Fill Start Volume (樽詰め前 容量) 
+      Tank Fill Left Volume (タンク残)
+      詰口払出数量　= Tank Fill Start Volume - Tank Fill Left Volume
       package info
       number
+      Total line volume
+      詰口残数量 =  詰口払出数量 -Total line volume
       Loss
-      total volume
+      memo
    - actions: Edit / View / Delete
    - Edit switches to Edit mode with selected row values prefilled
    - View switches to read-only detail mode with selected row values prefilled

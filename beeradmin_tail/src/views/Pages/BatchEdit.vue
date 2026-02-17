@@ -214,11 +214,18 @@
           <table class="min-w-full text-sm divide-y divide-gray-200">
             <thead class="bg-gray-50 text-gray-600 uppercase text-xs">
               <tr>
-                <th class="px-3 py-2 text-left">{{ t('batch.packaging.columns.eventTime') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('batch.packaging.columns.type') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('batch.packaging.columns.volume') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('batch.packaging.columns.movement') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('batch.packaging.columns.filling') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('batch.packaging.columns.date') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('batch.packaging.columns.beerCategory') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('batch.packaging.columns.packingType') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('batch.packaging.columns.tankNo') }}</th>
+                <th class="px-3 py-2 text-right">{{ t('batch.packaging.columns.tankFillStartVolume') }}</th>
+                <th class="px-3 py-2 text-right">{{ t('batch.packaging.columns.tankFillLeftVolume') }}</th>
+                <th class="px-3 py-2 text-right">{{ t('batch.packaging.columns.fillingPayoutQty') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('batch.packaging.columns.packageInfo') }}</th>
+                <th class="px-3 py-2 text-right">{{ t('batch.packaging.columns.number') }}</th>
+                <th class="px-3 py-2 text-right">{{ t('batch.packaging.columns.totalLineVolume') }}</th>
+                <th class="px-3 py-2 text-right">{{ t('batch.packaging.columns.fillingRemainingQty') }}</th>
+                <th class="px-3 py-2 text-right">{{ t('batch.packaging.columns.loss') }}</th>
                 <th class="px-3 py-2 text-left">{{ t('batch.packaging.columns.memo') }}</th>
                 <th class="px-3 py-2 text-left">{{ t('common.actions') }}</th>
               </tr>
@@ -226,10 +233,17 @@
             <tbody class="divide-y divide-gray-100">
               <tr v-for="event in packingEvents" :key="event.id" class="hover:bg-gray-50">
                 <td class="px-3 py-2 text-gray-600">{{ formatPackingDate(event.event_time) }}</td>
+                <td class="px-3 py-2 text-gray-700">{{ formatPackingBeerCategory() }}</td>
                 <td class="px-3 py-2 font-medium text-gray-800">{{ formatPackingType(event.packing_type) }}</td>
-                <td class="px-3 py-2 text-gray-700">{{ formatPackingVolume(event) }}</td>
-                <td class="px-3 py-2 text-gray-700">{{ formatPackingMovement(event) }}</td>
-                <td class="px-3 py-2 text-gray-700">{{ formatPackingFilling(event) }}</td>
+                <td class="px-3 py-2 text-gray-700">{{ formatPackingTankNo(event) }}</td>
+                <td class="px-3 py-2 text-right text-gray-700">{{ formatPackingTankStartVolume(event) }}</td>
+                <td class="px-3 py-2 text-right text-gray-700">{{ formatPackingTankLeftVolume(event) }}</td>
+                <td class="px-3 py-2 text-right text-gray-700">{{ formatPackingFillingPayout(event) }}</td>
+                <td class="px-3 py-2 text-gray-700">{{ formatPackingPackageInfo(event) }}</td>
+                <td class="px-3 py-2 text-right text-gray-700">{{ formatPackingNumber(event) }}</td>
+                <td class="px-3 py-2 text-right text-gray-700">{{ formatPackingTotalLineVolume(event) }}</td>
+                <td class="px-3 py-2 text-right text-gray-700">{{ formatPackingFillingRemaining(event) }}</td>
+                <td class="px-3 py-2 text-right text-gray-700">{{ formatPackingLoss(event) }}</td>
                 <td class="px-3 py-2 text-gray-600">{{ event.memo || '—' }}</td>
                 <td class="px-3 py-2 space-x-2">
                   <button
@@ -246,7 +260,7 @@
                 </td>
               </tr>
               <tr v-if="packingEvents.length === 0">
-                <td class="px-3 py-6 text-center text-gray-500" colspan="7">{{ t('batch.packaging.noData') }}</td>
+                <td class="px-3 py-6 text-center text-gray-500" colspan="14">{{ t('batch.packaging.noData') }}</td>
               </tr>
             </tbody>
           </table>
@@ -510,8 +524,10 @@ type PackingEvent = {
   movement: { site_id: string | null, qty: number | null, memo: string | null } | null
   filling_lines: PackingFillingLine[]
   reason: string | null
+  tank_no: string | null
   tank_fill_start_volume: number | null
   tank_left_volume: number | null
+  sample_volume: number | null
 }
 
 const packageCategories = ref<PackageCategoryOption[]>([])
@@ -595,6 +611,33 @@ function eventVolumeInLiters(event: PackingEvent) {
   return convertToLiters(event.volume_qty, resolveUomCode(event.volume_uom))
 }
 
+function fillingLinesVolumeFromEvent(lines: PackingFillingLine[]) {
+  return lines.reduce((sum, line) => {
+    const unit = resolvePackageUnitVolume(line.package_type_id)
+    if (unit == null) return sum
+    return sum + line.qty * unit
+  }, 0)
+}
+
+function processedVolumeFromPackingEvent(event: PackingEvent) {
+  if (event.packing_type === 'filling') {
+    let total = 0
+    const qty = event.movement?.qty
+    if (qty != null && Number.isFinite(qty)) total += qty
+    const sample = event.sample_volume ?? 0
+    if (Number.isFinite(sample)) total += sample
+    if (event.tank_fill_start_volume != null && event.tank_left_volume != null) {
+      const loss = event.tank_fill_start_volume - event.tank_left_volume - fillingLinesVolumeFromEvent(event.filling_lines) - sample
+      if (Number.isFinite(loss)) total += loss
+    }
+    return total
+  }
+  const volume = eventVolumeInLiters(event)
+  if (volume != null) return volume
+  if (event.movement?.qty != null && Number.isFinite(event.movement.qty)) return event.movement.qty
+  return 0
+}
+
 const packingTypeOptions = computed(() => ([
   { value: 'filling', label: t('batch.packaging.types.filling') },
   { value: 'ship', label: t('batch.packaging.types.ship') },
@@ -646,29 +689,7 @@ const totalProductVolume = computed(() => {
 
 const packingProcessedVolume = computed(() => {
   if (!packingEvents.value.length) return 0
-  let total = 0
-  packingEvents.value.forEach((event) => {
-    if (event.packing_type === 'filling') {
-      const qty = event.movement?.qty
-      if (qty != null) total += qty
-      if (event.tank_fill_start_volume != null && event.tank_left_volume != null) {
-        const loss = event.tank_fill_start_volume - event.tank_left_volume - (event.filling_lines.reduce((sum, line) => {
-          const unit = resolvePackageUnitVolume(line.package_type_id)
-          if (unit == null) return sum
-          return sum + line.qty * unit
-        }, 0))
-        if (Number.isFinite(loss)) total += loss
-      }
-      return
-    }
-    const volume = eventVolumeInLiters(event)
-    if (volume != null) {
-      total += volume
-      return
-    }
-    if (event.movement?.qty != null) total += event.movement.qty
-  })
-  return total
+  return packingEvents.value.reduce((sum, event) => sum + processedVolumeFromPackingEvent(event), 0)
 })
 
 const packingRemainingVolume = computed(() => {
@@ -1142,8 +1163,10 @@ async function loadPackingEvents() {
         },
         filling_lines: fillingLines,
         reason: meta.reason != null ? String(meta.reason) : row.reason ?? null,
+        tank_no: meta.tank_no != null ? String(meta.tank_no) : null,
         tank_fill_start_volume: meta.tank_fill_start_volume != null ? toNumber(meta.tank_fill_start_volume) : null,
         tank_left_volume: meta.tank_left_volume != null ? toNumber(meta.tank_left_volume) : null,
+        sample_volume: meta.sample_volume != null ? toNumber(meta.sample_volume) : null,
       } as PackingEvent
     })
   } catch (err) {
@@ -1483,35 +1506,117 @@ function formatPackingDate(value: string) {
   }
 }
 
-function formatPackingVolume(event: PackingEvent) {
-  const volume = eventVolumeInLiters(event)
-  if (volume == null) return '—'
-  return formatVolumeValue(volume)
+function formatPackingBeerCategory() {
+  const fromForm = batchForm.product_name?.trim()
+  if (fromForm) return fromForm
+  const fromBatch = typeof batch.value?.product_name === 'string' ? batch.value.product_name.trim() : ''
+  if (fromBatch) return fromBatch
+  return '—'
 }
 
-function formatPackingMovement(event: PackingEvent) {
-  if (!event.movement) return '—'
-  const site = siteLabel(event.movement.site_id)
-  const qty = event.movement.qty != null ? formatVolumeValue(event.movement.qty) : '—'
-  return `${site} / ${qty}`
+function formatPackingTankNo(event: PackingEvent) {
+  const tankNo = event.tank_no?.trim()
+  return tankNo || '—'
 }
 
-function formatPackingFilling(event: PackingEvent) {
+function resolvePackageCode(packageTypeId: string) {
+  const row = packageCategories.value.find((item) => item.id === packageTypeId)
+  return row?.package_code ?? packageTypeId
+}
+
+function formatPackingPackageInfo(event: PackingEvent) {
   if (!event.filling_lines.length) return '—'
-  let totalUnits = 0
-  let totalVolume = 0
-  let hasMissing = false
-  event.filling_lines.forEach((line) => {
-    totalUnits += line.qty ?? 0
-    const unit = resolvePackageUnitVolume(line.package_type_id)
-    if (unit == null) {
-      hasMissing = true
-      return
-    }
-    totalVolume += line.qty * unit
-  })
-  const volumeLabel = hasMissing ? '—' : formatVolumeValue(totalVolume)
-  return `${totalUnits} / ${volumeLabel}`
+  const codes = event.filling_lines
+    .map((line) => resolvePackageCode(line.package_type_id))
+    .filter((value, index, arr) => value && arr.indexOf(value) === index)
+  if (!codes.length) return '—'
+  return codes.join(', ')
+}
+
+function formatPackingNumber(event: PackingEvent) {
+  if (!event.filling_lines.length) return '—'
+  const totalUnits = event.filling_lines.reduce((sum, line) => sum + (line.qty ?? 0), 0)
+  if (!Number.isFinite(totalUnits)) return '—'
+  return totalUnits.toLocaleString(undefined, { maximumFractionDigits: 0 })
+}
+
+function packingTankStartVolumeFromEvent(event: PackingEvent) {
+  if (event.packing_type !== 'filling') return null
+  if (event.tank_fill_start_volume == null) return null
+  return Number.isFinite(event.tank_fill_start_volume) ? event.tank_fill_start_volume : null
+}
+
+function packingTankLeftVolumeFromEvent(event: PackingEvent) {
+  if (event.packing_type !== 'filling') return null
+  if (event.tank_left_volume == null) return null
+  return Number.isFinite(event.tank_left_volume) ? event.tank_left_volume : null
+}
+
+function packingFillingPayoutFromEvent(event: PackingEvent) {
+  const start = packingTankStartVolumeFromEvent(event)
+  const left = packingTankLeftVolumeFromEvent(event)
+  if (start == null || left == null) return null
+  const payout = start - left
+  return Number.isFinite(payout) ? payout : null
+}
+
+function packingTotalLineVolumeFromEvent(event: PackingEvent) {
+  if (event.packing_type !== 'filling') return null
+  const total = fillingLinesVolumeFromEvent(event.filling_lines)
+  return Number.isFinite(total) ? total : null
+}
+
+function packingFillingRemainingFromEvent(event: PackingEvent) {
+  const payout = packingFillingPayoutFromEvent(event)
+  const totalLine = packingTotalLineVolumeFromEvent(event)
+  if (payout == null || totalLine == null) return null
+  const remaining = payout - totalLine
+  return Number.isFinite(remaining) ? remaining : null
+}
+
+function packingLossFromEvent(event: PackingEvent) {
+  if (event.packing_type !== 'filling') return null
+  if (event.tank_fill_start_volume == null || event.tank_left_volume == null) return null
+  const sample = event.sample_volume ?? 0
+  const fillingVolume = fillingLinesVolumeFromEvent(event.filling_lines)
+  const loss = event.tank_fill_start_volume - event.tank_left_volume - fillingVolume - sample
+  return Number.isFinite(loss) ? loss : null
+}
+
+function formatPackingTankStartVolume(event: PackingEvent) {
+  const value = packingTankStartVolumeFromEvent(event)
+  if (value == null) return '—'
+  return formatVolumeValue(value)
+}
+
+function formatPackingTankLeftVolume(event: PackingEvent) {
+  const value = packingTankLeftVolumeFromEvent(event)
+  if (value == null) return '—'
+  return formatVolumeValue(value)
+}
+
+function formatPackingFillingPayout(event: PackingEvent) {
+  const value = packingFillingPayoutFromEvent(event)
+  if (value == null) return '—'
+  return formatVolumeValue(value)
+}
+
+function formatPackingTotalLineVolume(event: PackingEvent) {
+  const value = packingTotalLineVolumeFromEvent(event)
+  if (value == null) return '—'
+  return formatVolumeValue(value)
+}
+
+function formatPackingFillingRemaining(event: PackingEvent) {
+  const value = packingFillingRemainingFromEvent(event)
+  if (value == null) return '—'
+  return formatVolumeValue(value)
+}
+
+function formatPackingLoss(event: PackingEvent) {
+  const value = packingLossFromEvent(event)
+  if (value == null) return '—'
+  return formatVolumeValue(value)
 }
 
 function relationTypeLabel(value: string) {

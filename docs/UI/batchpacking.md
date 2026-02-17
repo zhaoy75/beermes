@@ -10,6 +10,31 @@
 - Batch Edit page -> button: `移送詰口管理` (Batch Packing)
 - On click, navigate to Batch Packing page for current batch
 - Batch Edit page must not launch packing dialog
+- Lot DAG button (`移動履歴`) must navigate to dedicated page (`/batches/:batchId/lot-dag`)
+
+## UI Flow Line (Recommended)
+1. User clicks `移送詰口管理` on Batch Edit page.
+2. UI navigates to Batch Packing page (`/batches/:batchId/packing`).
+3. Initial view is History mode:
+   - show product summary and packing event list
+   - no modal opens
+4. User clicks `新規登録` to open in-page edit form (Edit mode).
+5. User clicks row action:
+   - `Edit` for editable events
+   - `View` for read-only events (at least Filling / Transfer)
+6. In View mode:
+   - same form layout is shown
+   - all fields are read-only
+   - Save actions are hidden
+   - Close returns to History mode
+7. User enters data and clicks Save.
+8. On success:
+   - return to History mode in same page
+   - refresh list and summary
+   - highlight saved row
+9. User clicks `移動履歴` when DAG is needed:
+   - navigate to Lot DAG page
+   - back button returns to Batch Packing page
 
 ## Users and Permissions
 - Operator: create packing events
@@ -21,32 +46,39 @@
 - Title: Packing
 - Batch summary (batch code / name)
 - Back button: return to Batch Edit page
+- `移動履歴` button: navigate to Lot DAG page
 
-### Body (top)
+### Body Mode A: History Mode (default)
 1) Product Volume Summary
    - Total product volume of the batch
    - Processed volume (filling, shipped, transferred, lost, disposed)
    - Remaining volume
+2) Packing Event List
+   - event list table
+   - actions: Edit / View / Delete
+   - Edit switches to Edit mode with selected row values prefilled
+   - View switches to read-only detail mode with selected row values prefilled
+3) Toolbar Actions
+   - `新規登録` (switch to Edit mode)
 
-2) Packing Type Selector
+### Body Mode B: Edit Mode (in-page form)
+1) Packing Type Selector
    - UI: segmented control or radio cards
    - Values: Filling(詰口), Ship(外部製造場移動), Transfer(社内移動), Loss, Dispose
    - Default: Filling
-
-3) Common Fields
+2) Common Fields
    - Event time (default now)
    - Memo (optional)
-
-### Dynamic Sections (order fixed)
-1) Volume Section
-2) Filling Section
-3) Movement Section
-4) Review Summary
-
-### Footer / Page Actions
-- Save Packing
-- Cancel (discard local input)
-- Optional: Save and Add Another
+3) Dynamic Sections (order fixed)
+   - Volume Section
+   - Filling Section
+   - Movement Section
+   - Review Summary
+4) Edit Actions
+   - Save Packing
+   - Cancel (discard local input and return to History mode)
+   - Optional: Save and Add Another
+   - In View mode, only Close is shown
 
 ## Field Definitions
 ### Product Summary Section
@@ -155,11 +187,16 @@ Warnings:
 ## Save Behavior
 - Disable Save during submission
 - On success:
-  - Stay on page
+  - Stay on Batch Packing page
+  - Switch from Edit mode to History mode
   - Refresh packing list/summary
+  - Highlight saved row
   - Show success message
 - On error:
   - Show inline and global error
+- In View mode:
+  - Save is not available
+  - No update is executed
 
 ### Filling (詰口) save rule
 - UI must call stored function `public.product_filling(p_doc jsonb)`

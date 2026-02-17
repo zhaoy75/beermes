@@ -390,6 +390,7 @@
       },
       "actions": {
         "edit": "Edit",
+        "view": "View",
         "delete": "Delete"
       },
       "confirmDelete": "Delete this packing event?",

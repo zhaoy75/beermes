@@ -199,7 +199,7 @@
               {{ t('batch.edit.lotDagButton') }}
             </button>
             <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50" type="button" :disabled="packingDialog.loading || !batch" @click="openPackingDialog">
-              {{ t('batch.packaging.openDialog') }}
+              {{ isPackingPage ? t('common.new') : t('batch.packaging.openDialog') }}
             </button>
           </div>
         </header>
@@ -233,7 +233,14 @@
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
-              <tr v-for="event in packingEvents" :key="event.id" class="hover:bg-gray-50">
+              <tr
+                v-for="event in packingEvents"
+                :key="event.id"
+                :class="[
+                  'hover:bg-gray-50',
+                  highlightedPackingEventId === event.id ? 'bg-emerald-50' : '',
+                ]"
+              >
                 <td class="px-3 py-2 text-gray-600">{{ formatPackingDate(event.event_time) }}</td>
                 <td class="px-3 py-2 font-medium text-gray-800">{{ formatPackingType(event.packing_type) }}</td>
                 <td class="px-3 py-2 text-gray-700">{{ formatPackingVolume(event) }}</td>
@@ -242,12 +249,11 @@
                 <td class="px-3 py-2 text-gray-600">{{ event.memo || '—' }}</td>
                 <td class="px-3 py-2 space-x-2">
                   <button
-                    class="px-2 py-1 text-xs rounded border hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    class="px-2 py-1 text-xs rounded border hover:bg-gray-100"
                     type="button"
-                    :disabled="!canEditPackingEvent(event)"
                     @click="openPackingEdit(event)"
                   >
-                    {{ t('batch.packaging.actions.edit') }}
+                    {{ canEditPackingEvent(event) ? t('batch.packaging.actions.edit') : t('batch.packaging.actions.view') }}
                   </button>
                   <button class="px-2 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700" type="button" @click="deletePackingEvent(event)">
                     {{ t('batch.packaging.actions.delete') }}
@@ -278,6 +284,7 @@
         </header>
         <div class="p-4 space-y-4">
           <div v-if="packingDialog.globalError" class="text-sm text-red-600">{{ packingDialog.globalError }}</div>
+          <fieldset :disabled="packingDialog.readOnly" class="space-y-4">
           <div class="border border-gray-200 rounded-lg p-3 space-y-3">
             <h4 class="text-sm font-semibold text-gray-700">{{ t('batch.packaging.dialog.summaryTitle') }}</h4>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm text-gray-600">
@@ -460,15 +467,16 @@
             </div>
             <p v-if="packingMismatchWarning" class="text-xs text-amber-600">{{ packingMismatchWarning }}</p>
           </div>
+          </fieldset>
         </div>
         <footer class="flex items-center justify-end gap-2 px-4 py-3 border-t">
           <button class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-100" type="button" :disabled="packingDialog.loading" @click="closePackingDialog">
-            {{ t('batch.packaging.dialog.cancel') }}
+            {{ packingDialog.readOnly ? t('common.close') : t('batch.packaging.dialog.cancel') }}
           </button>
-          <button class="px-3 py-2 rounded border border-blue-600 text-blue-600 hover:bg-blue-50 disabled:opacity-50" type="button" :disabled="packingDialog.loading" @click="savePackingEvent(true)">
+          <button v-if="!packingDialog.readOnly" class="px-3 py-2 rounded border border-blue-600 text-blue-600 hover:bg-blue-50 disabled:opacity-50" type="button" :disabled="packingDialog.loading" @click="savePackingEvent(true)">
             {{ t('batch.packaging.dialog.saveAndAdd') }}
           </button>
-          <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50" type="button" :disabled="packingDialog.loading" @click="savePackingEvent(false)">
+          <button v-if="!packingDialog.readOnly" class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50" type="button" :disabled="packingDialog.loading" @click="savePackingEvent(false)">
             {{ packingDialog.loading ? t('common.saving') : t('batch.packaging.dialog.save') }}
           </button>
         </footer>
@@ -599,7 +607,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
@@ -765,10 +773,13 @@ const volumeUoms = ref<VolumeUomOption[]>([])
 const uomOptionsRaw = ref<UomOption[]>([])
 const packingEvents = ref<PackingEvent[]>([])
 const packingNotice = ref('')
+const highlightedPackingEventId = ref('')
+let highlightedPackingTimer: number | null = null
 const packingMovementQtyTouched = ref(false)
 const packingDialog = reactive({
   open: false,
   editing: false,
+  readOnly: false,
   loading: false,
   globalError: '',
   errors: {} as Record<string, string>,
@@ -1126,6 +1137,7 @@ watch(isPackingPage, (enabled) => {
   if (packingDialog.open) {
     packingDialog.open = false
     packingDialog.form = null
+    packingDialog.readOnly = false
     packingDialog.errors = {}
     packingDialog.globalError = ''
   }
@@ -1786,17 +1798,10 @@ async function goToPackingPage(eventId?: string) {
   })
 }
 
-async function goToBatchEditPage() {
-  if (!batchId.value) return
-  await router.push({
-    name: 'batchEdit',
-    params: { batchId: batchId.value },
-  })
-}
-
 function openPackingDialogInternal(type: PackingType) {
   packingDialog.open = true
   packingDialog.editing = false
+  packingDialog.readOnly = false
   packingDialog.loading = false
   packingDialog.globalError = ''
   packingDialog.errors = {}
@@ -1804,14 +1809,15 @@ function openPackingDialogInternal(type: PackingType) {
   packingMovementQtyTouched.value = false
 }
 
-function openPackingDialog() {
+async function openPackingDialog() {
   if (!isPackingPage.value) {
-    void goToPackingPage()
+    await goToPackingPage()
     return
   }
-  if (packingDialog.form && isPackingFormDirty(packingDialog.form)) {
+  if (!packingDialog.readOnly && packingDialog.form && isPackingFormDirty(packingDialog.form)) {
     if (!window.confirm(t('batch.packaging.dialog.typeChangeConfirm'))) return
   }
+  if (routeEventId()) await clearPackingEventQuery()
   openPackingDialogInternal('filling')
 }
 
@@ -1819,9 +1825,10 @@ function canEditPackingEvent(event: PackingEvent) {
   return event.packing_type !== 'filling' && event.packing_type !== 'transfer'
 }
 
-function openPackingEditInternal(event: PackingEvent) {
+function openPackingEditInternal(event: PackingEvent, readOnly = false) {
   packingDialog.open = true
-  packingDialog.editing = true
+  packingDialog.editing = !readOnly
+  packingDialog.readOnly = readOnly
   packingDialog.loading = false
   packingDialog.globalError = ''
   packingDialog.errors = {}
@@ -1849,28 +1856,25 @@ function openPackingEditInternal(event: PackingEvent) {
 }
 
 function openPackingEdit(event: PackingEvent) {
-  if (!canEditPackingEvent(event)) return
   if (!isPackingPage.value) {
     void goToPackingPage(event.id)
     return
   }
-  openPackingEditInternal(event)
+  openPackingEditInternal(event, !canEditPackingEvent(event))
 }
 
 function closePackingDialog() {
-  if (!packingDialog.form) {
-    packingDialog.open = false
-    if (isPackingPage.value) void goToBatchEditPage()
-    return
-  }
-  if (isPackingFormDirty(packingDialog.form)) {
+  const form = packingDialog.form
+  if (!packingDialog.readOnly && form && isPackingFormDirty(form)) {
     if (!window.confirm(t('batch.packaging.dialog.closeConfirm'))) return
   }
   packingDialog.open = false
   packingDialog.form = null
+  packingDialog.editing = false
+  packingDialog.readOnly = false
   packingDialog.errors = {}
   packingDialog.globalError = ''
-  if (isPackingPage.value) void goToBatchEditPage()
+  if (isPackingPage.value && routeEventId()) void clearPackingEventQuery()
 }
 
 function isPackingFormDirty(form: PackingFormState) {
@@ -1891,19 +1895,35 @@ function routeEventId() {
   return typeof queryValue === 'string' && queryValue ? queryValue : ''
 }
 
+async function clearPackingEventQuery() {
+  if (!isPackingPage.value) return
+  if (!batchId.value) return
+  if (!route.query.eventId) return
+  const nextQuery = { ...route.query }
+  delete nextQuery.eventId
+  await router.replace({
+    name: 'batchPacking',
+    params: { batchId: batchId.value },
+    query: nextQuery,
+  })
+}
+
 function syncPackingPageEditor() {
   if (!isPackingPage.value) return
   const eventId = routeEventId()
   if (eventId) {
     const target = packingEvents.value.find((row) => row.id === eventId)
-    if (target && canEditPackingEvent(target)) {
-      openPackingEditInternal(target)
+    if (target) {
+      openPackingEditInternal(target, !canEditPackingEvent(target))
       return
     }
   }
-  if (!packingDialog.open || !packingDialog.form) {
-    openPackingDialogInternal('filling')
-  }
+  packingDialog.open = false
+  packingDialog.form = null
+  packingDialog.editing = false
+  packingDialog.readOnly = false
+  packingDialog.errors = {}
+  packingDialog.globalError = ''
 }
 
 function selectPackingType(value: PackingType) {
@@ -1989,6 +2009,7 @@ function markMovementQtyTouched() {
 }
 
 async function savePackingEvent(addAnother: boolean) {
+  if (packingDialog.readOnly) return
   if (!packingDialog.form || !batchId.value) return
   packingDialog.errors = {}
   packingDialog.globalError = ''
@@ -1998,18 +2019,29 @@ async function savePackingEvent(addAnother: boolean) {
     return
   }
   try {
+    const savedEventId = packingDialog.form.id ?? null
+    const savedType = packingDialog.form.packing_type
+    const wasEditing = packingDialog.editing
     packingDialog.loading = true
     await persistPackingEvent(packingDialog.form, packingDialog.editing)
     await loadPackingEvents()
     showPackingNotice(t('batch.packaging.toast.saved'))
-    if (addAnother || isPackingPage.value) {
-      const nextType = packingDialog.form.packing_type
-      packingDialog.form = newPackingForm(nextType)
+    const highlightId = wasEditing
+      ? savedEventId
+      : (packingEvents.value[packingEvents.value.length - 1]?.id ?? null)
+    if (highlightId) highlightPackingEvent(highlightId)
+    if (addAnother) {
+      packingDialog.open = true
+      packingDialog.form = newPackingForm(savedType)
       packingDialog.editing = false
+      packingDialog.readOnly = false
       packingMovementQtyTouched.value = false
     } else {
       packingDialog.open = false
       packingDialog.form = null
+      packingDialog.editing = false
+      packingDialog.readOnly = false
+      if (isPackingPage.value && routeEventId()) void clearPackingEventQuery()
     }
   } catch (err) {
     console.error(err)
@@ -2104,6 +2136,7 @@ async function deletePackingEvent(event: PackingEvent) {
       .eq('id', event.id)
     if (error) throw error
     await loadPackingEvents()
+    if (highlightedPackingEventId.value === event.id) clearHighlightedPackingEvent()
     showPackingNotice(t('batch.packaging.toast.deleted'))
   } catch (err) {
     console.error(err)
@@ -2556,6 +2589,25 @@ function showPackingNotice(message: string) {
   }, 3000)
 }
 
+function clearHighlightedPackingEvent() {
+  highlightedPackingEventId.value = ''
+  if (highlightedPackingTimer != null) {
+    window.clearTimeout(highlightedPackingTimer)
+    highlightedPackingTimer = null
+  }
+}
+
+function highlightPackingEvent(eventId: string) {
+  clearHighlightedPackingEvent()
+  highlightedPackingEventId.value = eventId
+  highlightedPackingTimer = window.setTimeout(() => {
+    if (highlightedPackingEventId.value === eventId) {
+      highlightedPackingEventId.value = ''
+    }
+    highlightedPackingTimer = null
+  }, 3000)
+}
+
 watch(
   () => [packingDialog.form?.volume_qty, packingDialog.form?.packing_type],
   () => {
@@ -2812,5 +2864,9 @@ onMounted(async () => {
   } catch (err) {
     console.error(err)
   }
+})
+
+onBeforeUnmount(() => {
+  clearHighlightedPackingEvent()
 })
 </script>

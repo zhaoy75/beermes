@@ -380,7 +380,14 @@
         "volume": "Volume",
         "movement": "Movement",
         "filling": "Filling",
-        "memo": "Memo"
+        "memo": "Memo",
+        "date": "Date",
+        "tankNo": "Tank No",
+        "packingType": "Packing Type",
+        "packageInfo": "Package Info",
+        "number": "Number",
+        "loss": "Loss",
+        "totalVolume": "Total Volume"
       },
       "types": {
         "ship": "Ship",
@@ -460,6 +467,9 @@
         "volumeRequired": "Volume quantity must be greater than 0.",
         "siteRequired": "Movement site is required.",
         "movementQtyRequired": "Movement quantity must be greater than 0.",
+        "tankRequired": "Tank is required for filling.",
+        "depthRequired": "Depth must be 0 or greater.",
+        "tankVolumeCalcFailed": "Failed to calculate tank volume from depth.",
         "fillingRequired": "Add at least one filling line.",
         "fillingLineInvalid": "Each filling line needs a package type and integer quantity.",
         "saveFailed": "Failed to save packing event.",

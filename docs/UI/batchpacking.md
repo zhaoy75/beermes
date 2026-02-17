@@ -55,6 +55,13 @@
    - Remaining volume
 2) Packing Event List
    - event list table
+   　 date
+      Tank No
+      Packing Type
+      package info
+      number
+      Loss
+      total volume
    - actions: Edit / View / Delete
    - Edit switches to Edit mode with selected row values prefilled
    - View switches to read-only detail mode with selected row values prefilled
@@ -77,7 +84,6 @@
 4) Edit Actions
    - Save Packing
    - Cancel (discard local input and return to History mode)
-   - Optional: Save and Add Another
    - In View mode, only Close is shown
 
 ## Field Definitions
@@ -120,12 +126,12 @@ Defaults:
 
 ### Filling Section (Filling only)
 Components:
-- Tank No (TextBox)
+- Tank No (dropdown list to choose tank from mst_equipment and mst_equipement_tank)
 
-- Tank Fill Start Depth (unabled not used now)
-- Tank Fill Start Volume (樽詰め前 容量)
-- Tank Fill Left Depth (unabled not used now)
-- Tank Fill Left Volume　 (タンク残)
+- Tank Fill Start Depth 
+- Tank Fill Start Volume (樽詰め前 容量)  autocaculated by can be modify
+- Tank Fill Left Depth 
+- Tank Fill Left Volume　 (タンク残) autocaculated by can be modify
 - Sample Volume (サンプル)
 - Tank Loss Volume (欠減)
 - Tank Filling End button
@@ -143,6 +149,8 @@ Table actions:
 - Delete filling line
 
 Derived values:
+- Tank Fill Start Volume = get_volume_by_tank (tank id, Tank Fill Start Depth )
+- Tank Fill Left Volume　= get_volume_by_tank (tank id, Tank Fill Left Depth )
 - Volume per unit
 - Total line volume
 - Loss = Fill Start Volume - Left Volume - Total Filling Volume　- Sample Volume

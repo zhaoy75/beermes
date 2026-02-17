@@ -120,9 +120,14 @@ Defaults:
 
 ### Filling Section (Filling only)
 Components:
-- Tank Fill Start Volume
-- Tank Left Volume
-- Tank Loss Volume
+- Tank No (TextBox)
+
+- Tank Fill Start Depth (unabled not used now)
+- Tank Fill Start Volume (樽詰め前 容量)
+- Tank Fill Left Depth (unabled not used now)
+- Tank Fill Left Volume　 (タンク残)
+- Sample Volume (サンプル)
+- Tank Loss Volume (欠減)
 - Tank Filling End button
 - horizontal line
 - Add Filling button
@@ -140,8 +145,8 @@ Table actions:
 Derived values:
 - Volume per unit
 - Total line volume
-- Loss = Fill Start Volume - Left Volume - Total Filling Volume
-- Loss must be included in Processed volume
+- Loss = Fill Start Volume - Left Volume - Total Filling Volume　- Sample Volume
+- Loss and Sample Volume must be included in Processed volume
 
 Totals:
 - Total units
@@ -219,6 +224,13 @@ Warnings:
   "packing_type": "filling",
   "event_time": "...",
   "memo": "...",
+　”Tank_No": "...",
+  "Tank_Fill_Start_Depth" : 0,
+  "Tank_Fill_Start_Volume" : 1000,
+  "Tank_Fill_Left_Depth" : 0,
+  "Tank_Fill_Left_Volume" : 500,
+  "Sample_Volume" : 1,
+  "Tank_Loss_Volume" : 10,
   "volume_qty": null,
   "movement": {
     "site_id": "...",

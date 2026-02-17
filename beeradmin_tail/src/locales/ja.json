@@ -86,7 +86,8 @@
       "pressurized": "加圧対応",
       "jacketed": "ジャケット付き",
       "cipSupported": "CIP対応",
-      "attributes": "タンク属性（JSON）"
+      "attributes": "タンク属性（JSON）",
+      "calibrationTable": "キャリブレーションテーブル（JSON）"
     },
     "maintenance": {
       "title": "メンテナンス"
@@ -419,9 +420,13 @@
         "movementQty": "数量",
         "movementMemo": "メモ（任意）",
         "fillingSection": "詰口",
-        "tankFillStart": "タンク充填開始量",
-        "tankLeft": "タンク残量",
-        "tankLoss": "タンクロス",
+        "tankNo": "タンクNo",
+        "tankFillStartDepth": "樽詰め前 深さ（未使用）",
+        "tankFillStart": "樽詰め前 容量",
+        "tankFillLeftDepth": "タンク残 深さ（未使用）",
+        "tankLeft": "タンク残 容量",
+        "sampleVolume": "サンプル容量",
+        "tankLoss": "欠減容量",
         "tankFillEnd": "タンク充填終了",
         "addFilling": "詰口を追加",
         "noFillingLines": "詰口明細がありません。",

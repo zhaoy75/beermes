@@ -86,7 +86,8 @@
       "pressurized": "Pressurized",
       "jacketed": "Jacketed",
       "cipSupported": "CIP supported",
-      "attributes": "Tank attributes (JSON)"
+      "attributes": "Tank attributes (JSON)",
+      "calibrationTable": "Calibration table (JSON)"
     },
     "maintenance": {
       "title": "Maintenance"
@@ -419,9 +420,13 @@
         "movementQty": "Quantity",
         "movementMemo": "Memo (optional)",
         "fillingSection": "Filling",
-        "tankFillStart": "Tank fill start volume",
-        "tankLeft": "Tank left volume",
-        "tankLoss": "Tank loss volume",
+        "tankNo": "Tank No",
+        "tankFillStartDepth": "Tank Fill Start Depth",
+        "tankFillStart": "Tank Fill Start Volume",
+        "tankFillLeftDepth": "Tank Fill Left Depth",
+        "tankLeft": "Tank Fill Left Volume",
+        "sampleVolume": "Sample Volume",
+        "tankLoss": "Tank Loss Volume",
         "tankFillEnd": "Tank filling end",
         "addFilling": "Add Filling",
         "noFillingLines": "No filling lines added.",

@@ -113,6 +113,7 @@ CREATE TABLE IF NOT EXISTS mst_equipment_tank (
 
   -- Tank-specific extension (ports, zones, ratings, etc.)
   tank_attr_doc      jsonb NOT NULL DEFAULT '{}'::jsonb,
+  calibration_table  jsonb NOT NULL DEFAULT '{}'::jsonb, -- depth/volume calibration map
 
   created_at         timestamptz NOT NULL DEFAULT now(),
   updated_at         timestamptz NOT NULL DEFAULT now(),
@@ -131,8 +132,14 @@ CREATE TABLE IF NOT EXISTS mst_equipment_tank (
     )
 );
 
+ALTER TABLE IF EXISTS mst_equipment_tank
+  ADD COLUMN IF NOT EXISTS calibration_table jsonb NOT NULL DEFAULT '{}'::jsonb;
+
 CREATE INDEX IF NOT EXISTS ix_mst_equipment_tank_attr_doc_gin
   ON mst_equipment_tank USING gin (tank_attr_doc);
+
+CREATE INDEX IF NOT EXISTS ix_mst_equipment_tank_calibration_table_gin
+  ON mst_equipment_tank USING gin (calibration_table);
 
 DROP TRIGGER IF EXISTS trg_mst_equipment_tank_updated_at ON mst_equipment_tank;
 CREATE TRIGGER trg_mst_equipment_tank_updated_at

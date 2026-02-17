@@ -93,6 +93,7 @@ Displayed only when Equipment Kind = Tank
 | Jacketed | No | Boolean |
 | CIP Supported | No | Boolean |
 | Tank Attributes | No | Advanced JSON |
+| Calibration Table | No | JSONB (depth/volume calibration map) |
 
 ## Action
 

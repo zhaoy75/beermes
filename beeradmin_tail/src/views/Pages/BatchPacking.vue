@@ -363,13 +363,29 @@
               <h4 class="text-sm font-semibold text-gray-700">{{ t('batch.packaging.dialog.fillingSection') }}</h4>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <div class="md:col-span-4 md:max-w-sm">
+                <label class="block text-sm text-gray-600 mb-1" for="tankNo">{{ t('batch.packaging.dialog.tankNo') }}</label>
+                <input id="tankNo" v-model.trim="packingDialog.form.tank_no" type="text" class="w-full h-[36px] border rounded px-2" />
+              </div>
+              <div>
+                <label class="block text-sm text-gray-600 mb-1" for="tankFillStartDepth">{{ t('batch.packaging.dialog.tankFillStartDepth') }}</label>
+                <input id="tankFillStartDepth" v-model="packingDialog.form.tank_fill_start_depth" type="number" step="0.001" disabled class="w-full h-[36px] border rounded px-2 text-right bg-gray-50 text-gray-500" />
+              </div>
               <div>
                 <label class="block text-sm text-gray-600 mb-1" for="tankFillStart">{{ t('batch.packaging.dialog.tankFillStart') }}</label>
                 <input id="tankFillStart" v-model="packingDialog.form.tank_fill_start_volume" type="number" step="0.001" class="w-full h-[36px] border rounded px-2 text-right" />
               </div>
               <div>
+                <label class="block text-sm text-gray-600 mb-1" for="tankFillLeftDepth">{{ t('batch.packaging.dialog.tankFillLeftDepth') }}</label>
+                <input id="tankFillLeftDepth" v-model="packingDialog.form.tank_fill_left_depth" type="number" step="0.001" disabled class="w-full h-[36px] border rounded px-2 text-right bg-gray-50 text-gray-500" />
+              </div>
+              <div>
                 <label class="block text-sm text-gray-600 mb-1" for="tankLeft">{{ t('batch.packaging.dialog.tankLeft') }}</label>
                 <input id="tankLeft" v-model="packingDialog.form.tank_left_volume" type="number" step="0.001" class="w-full h-[36px] border rounded px-2 text-right" />
+              </div>
+              <div>
+                <label class="block text-sm text-gray-600 mb-1" for="sampleVolume">{{ t('batch.packaging.dialog.sampleVolume') }}</label>
+                <input id="sampleVolume" v-model="packingDialog.form.sample_volume" type="number" min="0" step="0.001" class="w-full h-[36px] border rounded px-2 text-right" />
               </div>
               <div>
                 <label class="block text-sm text-gray-600 mb-1">{{ t('batch.packaging.dialog.tankLoss') }}</label>
@@ -740,8 +756,12 @@ type PackingEvent = {
   movement: { site_id: string | null, qty: number | null, memo: string | null } | null
   filling_lines: PackingFillingLine[]
   reason: string | null
+  tank_no: string | null
+  tank_fill_start_depth: number | null
   tank_fill_start_volume: number | null
+  tank_fill_left_depth: number | null
   tank_left_volume: number | null
+  sample_volume: number | null
 }
 
 type PackingFillingLineForm = {
@@ -763,8 +783,12 @@ type PackingFormState = {
   movement_memo: string
   filling_lines: PackingFillingLineForm[]
   reason: string
+  tank_no: string
+  tank_fill_start_depth: string
   tank_fill_start_volume: string
+  tank_fill_left_depth: string
   tank_left_volume: string
+  sample_volume: string
 }
 
 const packageCategories = ref<PackageCategoryOption[]>([])
@@ -984,12 +1008,14 @@ const packingProcessedVolume = computed(() => {
     if (event.packing_type === 'filling') {
       const qty = event.movement?.qty
       if (qty != null) total += qty
+      const sample = event.sample_volume ?? 0
+      if (Number.isFinite(sample)) total += sample
       if (event.tank_fill_start_volume != null && event.tank_left_volume != null) {
         const loss = event.tank_fill_start_volume - event.tank_left_volume - (event.filling_lines.reduce((sum, line) => {
           const unit = resolvePackageUnitVolume(line.package_type_id)
           if (unit == null) return sum
           return sum + line.qty * unit
-        }, 0))
+        }, 0)) - sample
         if (Number.isFinite(loss)) total += loss
       }
       return
@@ -1055,9 +1081,10 @@ const tankLossVolume = computed(() => {
   if (!packingDialog.form) return null
   const start = toNumber(packingDialog.form.tank_fill_start_volume)
   const left = toNumber(packingDialog.form.tank_left_volume)
+  const sample = toNumber(packingDialog.form.sample_volume) ?? 0
   const total = packingFillingTotals.value.totalVolume
   if (start == null || left == null || total == null) return null
-  return start - left - total
+  return start - left - total - sample
 })
 
 const tankLossVolumeText = computed(() => {
@@ -1577,8 +1604,12 @@ async function loadPackingEvents() {
         },
         filling_lines: fillingLines,
         reason: meta.reason != null ? String(meta.reason) : row.reason ?? null,
+        tank_no: meta.tank_no != null ? String(meta.tank_no) : null,
+        tank_fill_start_depth: meta.tank_fill_start_depth != null ? toNumber(meta.tank_fill_start_depth) : null,
         tank_fill_start_volume: meta.tank_fill_start_volume != null ? toNumber(meta.tank_fill_start_volume) : null,
+        tank_fill_left_depth: meta.tank_fill_left_depth != null ? toNumber(meta.tank_fill_left_depth) : null,
         tank_left_volume: meta.tank_left_volume != null ? toNumber(meta.tank_left_volume) : null,
+        sample_volume: meta.sample_volume != null ? toNumber(meta.sample_volume) : null,
       } as PackingEvent
     })
     syncPackingPageEditor()
@@ -1849,8 +1880,12 @@ function openPackingEditInternal(event: PackingEvent, readOnly = false) {
       lot_code: line.lot_code ?? '',
     })),
     reason: event.reason ?? '',
+    tank_no: event.tank_no ?? '',
+    tank_fill_start_depth: event.tank_fill_start_depth != null ? String(event.tank_fill_start_depth) : '0',
     tank_fill_start_volume: event.tank_fill_start_volume != null ? String(event.tank_fill_start_volume) : '',
+    tank_fill_left_depth: event.tank_fill_left_depth != null ? String(event.tank_fill_left_depth) : '0',
     tank_left_volume: event.tank_left_volume != null ? String(event.tank_left_volume) : '',
+    sample_volume: event.sample_volume != null ? String(event.sample_volume) : '',
   }
   packingMovementQtyTouched.value = true
 }
@@ -1886,6 +1921,10 @@ function isPackingFormDirty(form: PackingFormState) {
     form.movement_qty ||
     form.movement_memo ||
     form.reason ||
+    form.tank_no ||
+    form.tank_fill_start_volume ||
+    form.tank_left_volume ||
+    form.sample_volume ||
     (form.filling_lines && form.filling_lines.length)
   )
 }
@@ -1969,8 +2008,12 @@ function resetPackingFormForType(form: PackingFormState, prevType: PackingType) 
     form.reason = ''
   }
   if (form.packing_type !== 'filling') {
+    form.tank_no = ''
+    form.tank_fill_start_depth = '0'
     form.tank_fill_start_volume = ''
+    form.tank_fill_left_depth = '0'
     form.tank_left_volume = ''
+    form.sample_volume = ''
   }
 }
 
@@ -1994,6 +2037,9 @@ function addFillingLine() {
 
 function markTankFillingEnd() {
   if (!packingDialog.form) return
+  if (!packingDialog.form.tank_fill_left_depth) {
+    packingDialog.form.tank_fill_left_depth = '0'
+  }
   if (!packingDialog.form.tank_left_volume) {
     packingDialog.form.tank_left_volume = '0'
   }
@@ -2258,8 +2304,12 @@ async function persistPackingEvent(form: PackingFormState, isEditing: boolean) {
     movement_qty: form.movement_qty ? toNumber(form.movement_qty) : null,
     movement_memo: form.movement_memo ? form.movement_memo.trim() : null,
     filling_lines: fillingLinesMeta,
+    tank_no: form.tank_no ? form.tank_no.trim() : null,
+    tank_fill_start_depth: toNumber(form.tank_fill_start_depth),
     tank_fill_start_volume: toNumber(form.tank_fill_start_volume),
+    tank_fill_left_depth: toNumber(form.tank_fill_left_depth),
     tank_left_volume: toNumber(form.tank_left_volume),
+    sample_volume: toNumber(form.sample_volume),
     tank_loss_volume: tankLossVolume.value,
   }
 
@@ -2852,8 +2902,12 @@ function newPackingForm(type: PackingType): PackingFormState {
     movement_memo: '',
     filling_lines: [],
     reason: '',
+    tank_no: '',
+    tank_fill_start_depth: '0',
     tank_fill_start_volume: '',
+    tank_fill_left_depth: '0',
     tank_left_volume: '',
+    sample_volume: '',
   }
 }
 

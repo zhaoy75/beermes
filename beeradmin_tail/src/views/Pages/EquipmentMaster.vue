@@ -247,6 +247,11 @@
                 <textarea v-model.trim="tankForm.tank_attr_doc" rows="4" class="w-full border rounded px-3 py-2 font-mono text-xs"></textarea>
                 <p v-if="errors.tank_attr_doc" class="text-xs text-red-600 mt-1">{{ errors.tank_attr_doc }}</p>
               </div>
+              <div class="md:col-span-2">
+                <label class="block text-sm text-gray-600 mb-1">{{ t('equipment.tank.calibrationTable') }}</label>
+                <textarea v-model.trim="tankForm.calibration_table" rows="4" class="w-full border rounded px-3 py-2 font-mono text-xs"></textarea>
+                <p v-if="errors.calibration_table" class="text-xs text-red-600 mt-1">{{ errors.calibration_table }}</p>
+              </div>
             </div>
           </div>
         </section>
@@ -335,6 +340,7 @@ type TankRow = {
   is_jacketed: boolean
   cip_supported: boolean
   tank_attr_doc: Record<string, any> | null
+  calibration_table: Record<string, any> | null
 }
 
 type SiteRow = {
@@ -397,6 +403,7 @@ const tankForm = reactive({
   is_jacketed: false,
   cip_supported: true,
   tank_attr_doc: '',
+  calibration_table: '',
 })
 
 const maintenanceDialog = reactive({
@@ -526,6 +533,7 @@ function resetForm() {
     is_jacketed: false,
     cip_supported: true,
     tank_attr_doc: '',
+    calibration_table: '',
   })
   Object.keys(errors).forEach((key) => delete errors[key])
   tankLoaded.value = false
@@ -602,7 +610,7 @@ async function fetchTank(equipmentId: string) {
     tankLoaded.value = false
     const { data, error } = await supabase
       .from(TANK_TABLE)
-      .select('equipment_id, capacity_volume, volume_uom, max_work_volume, max_work_uom, is_pressurized, is_jacketed, cip_supported, tank_attr_doc')
+      .select('equipment_id, capacity_volume, volume_uom, max_work_volume, max_work_uom, is_pressurized, is_jacketed, cip_supported, tank_attr_doc, calibration_table')
       .eq('equipment_id', equipmentId)
       .maybeSingle()
     if (error) throw error
@@ -617,6 +625,7 @@ async function fetchTank(equipmentId: string) {
         is_jacketed: row.is_jacketed ?? false,
         cip_supported: row.cip_supported ?? true,
         tank_attr_doc: row.tank_attr_doc ? JSON.stringify(row.tank_attr_doc, null, 2) : '',
+        calibration_table: row.calibration_table ? JSON.stringify(row.calibration_table, null, 2) : '',
       })
       hasTankProfile.value = true
     } else {
@@ -729,6 +738,9 @@ function validateForm() {
     if (tankForm.tank_attr_doc.trim()) {
       parseJsonInput(tankForm.tank_attr_doc, 'tank_attr_doc')
     }
+    if (tankForm.calibration_table.trim()) {
+      parseJsonInput(tankForm.calibration_table, 'calibration_table')
+    }
   }
 
   return Object.keys(errors).length === 0
@@ -790,7 +802,9 @@ async function saveRecord() {
 
     if (isTank.value) {
       const tankAttrDoc = tankForm.tank_attr_doc.trim() ? parseJsonInput(tankForm.tank_attr_doc, 'tank_attr_doc') : null
+      const calibrationTable = tankForm.calibration_table.trim() ? parseJsonInput(tankForm.calibration_table, 'calibration_table') : null
       if (errors.tank_attr_doc) throw new Error(t('equipment.errors.jsonObject'))
+      if (errors.calibration_table) throw new Error(t('equipment.errors.jsonObject'))
       const tankPayload = {
         equipment_id: equipmentId,
         capacity_volume: parseNumber(tankForm.capacity_volume),
@@ -801,6 +815,7 @@ async function saveRecord() {
         is_jacketed: tankForm.is_jacketed,
         cip_supported: tankForm.cip_supported,
         tank_attr_doc: tankAttrDoc ?? {},
+        calibration_table: calibrationTable ?? {},
       }
       const { error: tankError } = await supabase
         .from(TANK_TABLE)

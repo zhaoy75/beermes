@@ -219,6 +219,7 @@
       "lotDagButton": "移動履歴",
       "lotDagDialogTitle": "Lot DAG",
       "lotDagDialogSubtitle": "Lot DAG diagram related to this batch.",
+      "lotDagBackButton": "Back",
       "lotDagNoData": "No lot DAG data found for this batch.",
       "lotDagLoadFailed": "Failed to load lot DAG.",
       "fillingSummaryTotal": "Total product volume",

@@ -71,6 +71,15 @@ const router = createRouter({
       },
     },
     {
+      path: '/batches/:batchId/lot-dag',
+      name: 'batchLotDag',
+      component: () => import('../views/Pages/BatchLotDag.vue'),
+      meta: {
+        title: 'Batch Lot DAG',
+        requiresAuth: true ,
+      },
+    },
+    {
       path: '/waste',
       name: 'waste',
       component: () => import('../views/Pages/WasteList.vue'),

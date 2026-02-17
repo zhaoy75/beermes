@@ -28,7 +28,6 @@
 -  beer_tax_move dialog
 -  batch relation dialog
 -  batch actual yield dialog (new)
--  lot dag dialog (new)
 
 ### Navigation
 - Batch Packing button (移送詰口管理): navigate to Batch Packing page for current batch
@@ -53,7 +52,7 @@
 
     a horizontal line 
       batch relation list 
-      #if there is no related with current batch show "nothing exist"       
+      #if there is no related record with current batch, hide related batch section       
   　 
 ### batch relation list 
     purpose: manage lineage between batches (mes_batch_relation)
@@ -72,6 +71,7 @@
       - src_batch_id and dst_batch_id cannot be the same
       - if current batch is the edited batch:
           - show relations where current batch is src or dst
+      - if there is no relation record, hide this section on batch edit page
       - quantity optional, ratio optional (both can be null)
       - uom required when quantity is set
       - effective_at default now
@@ -97,10 +97,11 @@
     a summary of move and filling information
     a button to edit filling information (a click will move to packing page, not launch a dialog)
     add a "Lot DAG" button at the left side of 移送詰口管理 button
-    if click "Lot DAG" button, show lot dag dialog for current batch
-    lot dag dialog data should be retrieved by rpc:
+    if click "Lot DAG" button, move to lot dag page for current batch
+    lot dag page data should be retrieved by rpc:
       - function: public.lot_dag_get_by_batch
       - parameter: p_batch_id = current batch id
+    lot dag page should follow the specification defined in batchlotdag.md
     the packing page should follow the specification defined in batchpacking.md
     for filling (詰口) save, UI must call stored function public.product_filling(p_doc jsonb)
     source lot for filling should be resolved by calling rpc:

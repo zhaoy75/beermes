@@ -34,6 +34,7 @@ Required fields:
 - `from_lot_id` uuid: source produced lot id
 - `uom_id` uuid: quantity UOM (volume)
 - `lines` jsonb array: at least 1 line
+- `loss qty` numeric: loss quantity for packing
 
 Required line fields (`lines[]`):
 - `qty` numeric: filled quantity per line, must be `> 0`
@@ -88,6 +89,13 @@ Optional header fields:
    - Upsert inventory:
      - decrement source inventory `(src_site_id, from_lot_id, uom_id)`
      - increment destination inventory `(dest_site_id, new_lot_id, uom_id)`
+6. If loss qty is > 0
+  - Determine `line_no`.
+  - Insert one `inv_movement_lines` row.
+   - meta.line_role: `LOSS`
+   - meta.tank_id: `tank_id`
+  - Decrease source lot qty by line qty.
+
 6. If source lot qty reaches `0`, optionally set source lot `status = consumed`.
 7. Return `<movement_id>`.
 

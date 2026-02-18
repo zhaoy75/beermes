@@ -2506,6 +2506,11 @@ async function persistPackingEvent(form: PackingFormState, isEditing: boolean) {
     const sourceSiteId = sourceLot.site_id
     const sourceUomId = sourceLot.uom_id
     const sourceUomCode = resolveUomCode(sourceUomId)
+    const lossQtyLiters = tankLossVolume.value ?? 0
+    if (lossQtyLiters < 0) {
+      throw new Error('Tank loss volume must be greater than or equal to 0.')
+    }
+    const lossQtySourceUom = convertFromLiters(lossQtyLiters, sourceUomCode) ?? lossQtyLiters
 
     const lines = form.filling_lines
       .map((line, index) => {
@@ -2538,6 +2543,8 @@ async function persistPackingEvent(form: PackingFormState, isEditing: boolean) {
       batch_id: batchId.value,
       from_lot_id: sourceLot.id,
       uom_id: sourceUomId,
+      tank_id: form.tank_id || null,
+      loss_qty: lossQtySourceUom,
       notes: form.memo ? form.memo.trim() : null,
       meta: {
         ...packingMeta,

@@ -19,6 +19,8 @@ declare
   v_notes text;
   v_meta jsonb;
   v_lines jsonb;
+  v_loss_qty numeric;
+  v_tank_id uuid;
   v_idempotency_key text;
   v_zero_material_id uuid := '00000000-0000-0000-0000-000000000000'::uuid;
 
@@ -27,12 +29,15 @@ declare
   v_source_lot_site uuid;
   v_source_inv_qty numeric;
   v_total_qty numeric := 0;
+  v_total_deduct_qty numeric := 0;
   v_remaining_qty numeric;
 
   v_line jsonb;
   v_line_qty numeric;
   v_line_no int;
   v_line_counter int := 0;
+  v_max_line_no int := 0;
+  v_loss_line_no int;
   v_line_package_id uuid;
   v_line_lot_no text;
   v_line_expires_at timestamptz;
@@ -57,6 +62,11 @@ begin
   v_notes := nullif(p_doc ->> 'notes', '');
   v_meta := coalesce(p_doc -> 'meta', '{}'::jsonb);
   v_lines := p_doc -> 'lines';
+  v_loss_qty := coalesce(
+    nullif(btrim(coalesce(p_doc ->> 'loss_qty', '')), ''),
+    nullif(btrim(coalesce(p_doc ->> 'loss qty', '')), '')
+  )::numeric;
+  v_tank_id := nullif(p_doc ->> 'tank_id', '')::uuid;
   v_idempotency_key := nullif(btrim(coalesce(v_meta ->> 'idempotency_key', '')), '');
 
   if v_doc_no is null
@@ -64,12 +74,17 @@ begin
      or v_dest_site_id is null
      or v_batch_id is null
      or v_from_lot_id is null
-     or v_uom_id is null then
+     or v_uom_id is null
+     or v_loss_qty is null then
     raise exception 'PF001: missing required field';
   end if;
 
   if jsonb_typeof(v_lines) <> 'array' or jsonb_array_length(v_lines) = 0 then
     raise exception 'PF001: lines[] is required';
+  end if;
+
+  if v_loss_qty < 0 then
+    raise exception 'PF002: loss qty must be greater than or equal to 0';
   end if;
 
   if v_src_site_id = v_dest_site_id then
@@ -121,7 +136,12 @@ begin
       raise exception 'PF002: line qty must be greater than 0';
     end if;
     v_total_qty := v_total_qty + v_line_qty;
+    v_line_counter := v_line_counter + 1;
+    v_line_no := coalesce((v_line ->> 'line_no')::int, v_line_counter);
+    v_max_line_no := greatest(v_max_line_no, v_line_no);
   end loop;
+
+  v_total_deduct_qty := v_total_qty + v_loss_qty;
 
   -- Lock and validate source lot
   select l.qty, l.uom_id, l.site_id
@@ -143,7 +163,7 @@ begin
     raise exception 'PF006: source lot site mismatch';
   end if;
 
-  if v_source_lot_qty < v_total_qty then
+  if v_source_lot_qty < v_total_deduct_qty then
     raise exception 'PF005: source lot insufficient quantity';
   end if;
 
@@ -157,9 +177,11 @@ begin
     and i.uom_id = v_uom_id
   for update;
 
-  if not found or coalesce(v_source_inv_qty, 0) < v_total_qty then
+  if not found or coalesce(v_source_inv_qty, 0) < v_total_deduct_qty then
     raise exception 'PF005: source inventory insufficient quantity';
   end if;
+
+  v_line_counter := 0;
 
   with recursive upstream as (
     select l.id, l.lot_no, 0 as depth
@@ -317,16 +339,39 @@ begin
     end if;
   end loop;
 
+  if v_loss_qty > 0 then
+    v_loss_line_no := greatest(v_max_line_no, v_line_counter) + 1;
+
+    insert into public.inv_movement_lines (
+      tenant_id, movement_id, line_no,
+      material_id, package_id, batch_id, qty, uom_id, notes, meta
+    ) values (
+      v_tenant,
+      v_movement_id,
+      v_loss_line_no,
+      v_zero_material_id,
+      null,
+      v_batch_id,
+      v_loss_qty,
+      v_uom_id,
+      v_notes,
+      jsonb_strip_nulls(jsonb_build_object(
+        'line_role', 'LOSS',
+        'tank_id', v_tank_id
+      ))
+    );
+  end if;
+
   update public.inv_inventory i
-     set qty = i.qty - v_total_qty
+     set qty = i.qty - v_total_deduct_qty
    where i.tenant_id = v_tenant
      and i.site_id = v_src_site_id
      and i.lot_id = v_from_lot_id
      and i.uom_id = v_uom_id;
 
   update public.lot l
-     set qty = l.qty - v_total_qty,
-         status = case when l.qty - v_total_qty <= 0 then 'consumed' else l.status end,
+     set qty = l.qty - v_total_deduct_qty,
+         status = case when l.qty - v_total_deduct_qty <= 0 then 'consumed' else l.status end,
          updated_at = now()
    where l.tenant_id = v_tenant
      and l.id = v_from_lot_id

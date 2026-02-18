@@ -223,8 +223,38 @@ Warnings:
   - function: `public.get_packing_source_lotid`
   - parameter: `p_batch_id = current batch id`
 - Use returned `source_lot_id` as `from_lot_id` in `product_filling` payload
+- `product_filling` RPC payload must include:
+  - `tank_id`: selected tank id
+  - `loss_qty`: filling loss quantity
 - If not found, show error: `product_produce must be executed first`
 - UI must not insert/update `inv_movements`, `inv_movement_lines`, `lot`, `lot_edge` directly
+
+### Filling RPC payload (`public.product_filling`)
+```json
+{
+  "doc_no": "PF-20260218-0001",
+  "movement_at": "2026-02-18T10:30:00Z",
+  "src_site_id": "...",
+  "dest_site_id": "...",
+  "batch_id": "...",
+  "from_lot_id": "...",
+  "uom_id": "...",
+  "tank_id": "...",
+  "loss_qty": 10,
+  "notes": "...",
+  "lines": [
+    {
+      "line_no": 1,
+      "package_id": "...",
+      "qty": 120,
+      "lot_no": "BATCH20260218_001"
+    }
+  ]
+}
+```
+- UI-to-RPC field mapping for Filling:
+  - `Tank_No` -> `tank_id`
+  - `Tank_Loss_Volume` -> `loss_qty`
 
 ### Transfer (社内非納税移出) save rule
 - UI must call stored function `public.product_move(p_doc jsonb)`

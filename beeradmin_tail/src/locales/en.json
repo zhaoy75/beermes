@@ -1079,6 +1079,7 @@
       "card": {
         "docNo": "Document no",
         "taxType": "Tax type",
+        "taxRate": "Tax rate",
         "movementDate": "Movement date",
         "source": "Source site",
         "destination": "Destination site",

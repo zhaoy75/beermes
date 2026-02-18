@@ -64,11 +64,17 @@
   - Movement type
 
 ### Movement List View columns
-- Document no
-- Movement type
-- Movement date
+- Date
+- スタイル名
+- 目標ABV
+- package
+- number
+- volume
+- tax rate
 - Source site
 - Destination site
+- Document no
+- Movement type
 - Total liters
 - Total packages
 - Actions (Edit)

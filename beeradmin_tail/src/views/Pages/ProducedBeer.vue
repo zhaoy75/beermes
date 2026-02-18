@@ -172,11 +172,17 @@
           <table class="min-w-full divide-y divide-gray-200 text-sm">
             <thead class="bg-gray-50 text-xs uppercase text-gray-600">
               <tr>
-                <th class="px-3 py-2 text-left">{{ t('producedBeer.movement.card.docNo') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('producedBeer.movement.filters.movementType') }}</th>
                 <th class="px-3 py-2 text-left">{{ t('producedBeer.movement.card.movementDate') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('producedBeer.inventory.table.styleName') }}</th>
+                <th class="px-3 py-2 text-right">{{ t('producedBeer.inventory.table.targetAbv') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('producedBeer.movement.card.linePackageType') }}</th>
+                <th class="px-3 py-2 text-right">{{ t('producedBeer.movement.card.lineQtyPackages') }}</th>
+                <th class="px-3 py-2 text-right">{{ t('producedBeer.movement.card.lineQtyLiters') }}</th>
+                <th class="px-3 py-2 text-right">{{ t('producedBeer.movement.card.taxRate') }}</th>
                 <th class="px-3 py-2 text-left">{{ t('producedBeer.movement.card.source') }}</th>
                 <th class="px-3 py-2 text-left">{{ t('producedBeer.movement.card.destination') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('producedBeer.movement.card.docNo') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('producedBeer.movement.filters.movementType') }}</th>
                 <th class="px-3 py-2 text-right">{{ t('producedBeer.movement.card.totalLiters') }}</th>
                 <th class="px-3 py-2 text-right">{{ t('producedBeer.movement.card.totalPackages') }}</th>
                 <th class="px-3 py-2 text-left">{{ t('common.actions') }}</th>
@@ -184,11 +190,17 @@
             </thead>
             <tbody class="divide-y divide-gray-100">
               <tr v-for="card in filteredMovementCards" :key="card.id" class="hover:bg-gray-50">
-                <td class="px-3 py-2 font-semibold text-gray-900">{{ card.docNo }}</td>
-                <td class="px-3 py-2 text-gray-600">{{ movementTypeLabel(card.docType, card.taxType) }}</td>
                 <td class="px-3 py-2 text-xs text-gray-500">{{ formatDateTime(card.movementAt) }}</td>
+                <td class="px-3 py-2 text-gray-600">{{ movementStyleLabel(card) }}</td>
+                <td class="px-3 py-2 text-right text-gray-600">{{ movementTargetAbvLabel(card) }}</td>
+                <td class="px-3 py-2 text-gray-600">{{ movementPackageLabel(card) }}</td>
+                <td class="px-3 py-2 text-right text-gray-600">{{ formatNumber(card.totalPackages) }}</td>
+                <td class="px-3 py-2 text-right text-gray-600">{{ movementVolumeLabel(card) }}</td>
+                <td class="px-3 py-2 text-right text-gray-600">{{ movementTaxRateLabel(card) }}</td>
                 <td class="px-3 py-2 text-gray-600">{{ siteLabel(card.sourceSiteId) }}</td>
                 <td class="px-3 py-2 text-gray-600">{{ siteLabel(card.destSiteId) }}</td>
+                <td class="px-3 py-2 font-semibold text-gray-900">{{ card.docNo }}</td>
+                <td class="px-3 py-2 text-gray-600">{{ movementTypeLabel(card.docType, card.taxType) }}</td>
                 <td class="px-3 py-2 text-right font-semibold text-gray-900">{{ formatNumber(card.totalLiters) }}</td>
                 <td class="px-3 py-2 text-right font-semibold text-gray-900">{{ formatNumber(card.totalPackages) }}</td>
                 <td class="px-3 py-2">
@@ -198,7 +210,7 @@
                 </td>
               </tr>
               <tr v-if="!movementLoading && filteredMovementCards.length === 0">
-                <td colspan="8" class="px-3 py-8 text-center text-gray-500">{{ t('common.noData') }}</td>
+                <td colspan="14" class="px-3 py-8 text-center text-gray-500">{{ t('common.noData') }}</td>
               </tr>
             </tbody>
           </table>
@@ -366,6 +378,8 @@ interface MovementLineCard {
   batchCode: string | null
   beerName: string | null
   categoryId: string | null
+  styleName: string | null
+  targetAbv: number | null
   packageTypeId: string | null
   packageTypeLabel: string | null
   packageQty: number | null
@@ -377,6 +391,7 @@ interface MovementCard {
   docNo: string
   docType: string
   taxType: string | null
+  taxRate: number | null
   movementAt: string | null
   status: string
   sourceSiteId: string | null
@@ -571,6 +586,63 @@ function movementTypeLabel(docType: string, taxType: string | null) {
   if (docType === 'waste' && taxType === 'notax') return t('producedBeer.movement.types.wasteNotax')
   if (docType === 'transfer' && taxType === 'notax') return t('producedBeer.movement.types.transferNotax')
   return docTypeLabel(docType)
+}
+
+function uniqueNonEmpty(values: Array<string | null | undefined>) {
+  return Array.from(new Set(values.map((value) => (value ?? '').trim()).filter((value) => value.length > 0)))
+}
+
+function uniqueNumbers(values: Array<number | null | undefined>, precision = 6) {
+  const map = new Map<string, number>()
+  values.forEach((value) => {
+    if (value == null || Number.isNaN(value)) return
+    const normalized = Number(value.toFixed(precision))
+    map.set(String(normalized), normalized)
+  })
+  return Array.from(map.values())
+}
+
+function movementStyleLabel(card: MovementCardView) {
+  const styles = uniqueNonEmpty(card.lines.map((line) => line.styleName))
+  return styles.length ? styles.join(', ') : '—'
+}
+
+function movementTargetAbvLabel(card: MovementCardView) {
+  const abvs = uniqueNumbers(card.lines.map((line) => line.targetAbv))
+  if (!abvs.length) return '—'
+  return abvs.map((value) => formatAbv(value)).join(', ')
+}
+
+function movementPackageLabel(card: MovementCardView) {
+  const packages = uniqueNonEmpty(card.lines.map((line) => line.packageTypeLabel))
+  return packages.length ? packages.join(', ') : '—'
+}
+
+function movementVolumeLabel(card: MovementCardView) {
+  const unitVolumes = uniqueNumbers(
+    card.lines.map((line) => {
+      if (line.packageQty == null || line.packageQty <= 0) return null
+      if (line.qtyLiters == null || Number.isNaN(line.qtyLiters)) return null
+      return line.qtyLiters / line.packageQty
+    })
+  )
+  if (!unitVolumes.length) return '—'
+  return unitVolumes.map((value) => formatNumber(value)).join(', ')
+}
+
+function normalizeTaxRatePercent(rate: number) {
+  if (!Number.isFinite(rate)) return null
+  if (Math.abs(rate) <= 1) return rate * 100
+  return rate
+}
+
+function movementTaxRateLabel(card: MovementCardView) {
+  if (card.taxRate != null) {
+    const percent = normalizeTaxRatePercent(card.taxRate)
+    if (percent != null) return `${formatNumber(percent)}%`
+  }
+  if (card.taxType === 'notax') return '0%'
+  return '—'
 }
 
 function csvEscape(value: unknown) {
@@ -909,11 +981,22 @@ async function fetchMovements() {
       if (!header) return
       if (!cardMap.has(line.movement_id)) {
         const taxType = typeof header.meta?.tax_type === 'string' ? header.meta.tax_type : null
+        const taxRateRaw = header.meta?.tax_rate
+        const taxRate = (() => {
+          if (taxRateRaw == null) return null
+          if (typeof taxRateRaw === 'number' && Number.isFinite(taxRateRaw)) return taxRateRaw
+          if (typeof taxRateRaw === 'string') {
+            const num = Number(taxRateRaw.replace(/%/g, '').trim())
+            return Number.isFinite(num) ? num : null
+          }
+          return null
+        })()
         cardMap.set(line.movement_id, {
           id: line.movement_id,
           docNo: header.doc_no,
           docType: header.doc_type,
           taxType,
+          taxRate,
           movementAt: header.movement_at ?? null,
           status: header.status,
           sourceSiteId: header.src_site_id ?? null,
@@ -932,7 +1015,9 @@ async function fetchMovements() {
         packageId: line.package_id ?? null,
         batchCode: pkgInfo?.batchCode ?? batchInfo?.batchCode ?? null,
         beerName: pkgInfo?.beerName ?? batchInfo?.beerName ?? null,
-        categoryId: null,
+        categoryId: batchInfo?.beerCategoryId ?? null,
+        styleName: batchInfo?.styleName ?? null,
+        targetAbv: batchInfo?.targetAbv ?? null,
         packageTypeId: pkgInfo?.packageTypeId ?? null,
         packageTypeLabel: pkgInfo?.packageTypeLabel ?? null,
         packageQty,

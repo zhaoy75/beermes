@@ -1079,6 +1079,7 @@
       "card": {
         "docNo": "伝票番号",
         "taxType": "税区分",
+        "taxRate": "税率",
         "movementDate": "移出日",
         "source": "移出元",
         "destination": "移出先",

@@ -166,18 +166,19 @@
                       <td class="px-3 py-2 text-gray-700">{{ lot.batchCode || '—' }}</td>
                       <td class="px-3 py-2 text-right text-gray-700">{{ formatNumber(lot.packageVolume) }}</td>
                       <td class="px-3 py-2 text-gray-700">{{ lot.packageUom || '—' }}</td>
-                      <td class="px-3 py-2 text-right text-gray-700">{{ lot.quantity ?? '—' }}</td>
+                      <td class="px-3 py-2 text-right text-gray-700">{{ formatNumber(displayLotQuantity(lot)) }}</td>
                       <td class="px-3 py-2">
                         <input
                           v-model="movementForm.srcLotMoveQty[lot.id]"
                           type="number"
-                          step="0.001"
+                          :step="isPackagedMoveInput(lot) ? '1' : '0.001'"
                           min="0"
+                          :max="displayLotQuantity(lot) ?? undefined"
                           class="w-28 h-[34px] border rounded px-2 text-right disabled:bg-gray-100 disabled:text-gray-400"
                           :disabled="!movementForm.srcLots.includes(lot.id)"
                         />
                       </td>
-                      <td class="px-3 py-2 text-gray-700">{{ lot.uomCode || '—' }}</td>
+                      <td class="px-3 py-2 text-gray-700">{{ movementInputUomLabel(lot) }}</td>
                     </tr>
                     <tr v-if="lotOptions.length === 0">
                       <td class="px-3 py-6 text-center text-gray-500" colspan="11">{{ t('producedBeer.movementWizard.table.noLotsFound') }}</td>
@@ -318,6 +319,7 @@ type LotOption = {
   beerCategoryId: string | null
   targetAbv: number | null
   styleName: string | null
+  packageId: string | null
   packageVolume: number | null
   packageUom: string | null
   quantity: number | null
@@ -404,6 +406,61 @@ function formatAbv(value: number | null | undefined) {
   return `${numberFormatter.value.format(value)}%`
 }
 
+function normalizeVolumeUom(code: string | null | undefined) {
+  if (!code) return null
+  const normalized = code.trim().toLowerCase()
+  if (!normalized) return null
+  return normalized
+}
+
+function toLiters(value: number, uomCode: string | null | undefined) {
+  const uom = normalizeVolumeUom(uomCode)
+  if (uom == null || uom === 'l') return value
+  if (uom === 'ml') return value / 1000
+  if (uom === 'gal_us') return value * 3.78541
+  return null
+}
+
+function fromLiters(valueLiters: number, uomCode: string | null | undefined) {
+  const uom = normalizeVolumeUom(uomCode)
+  if (uom == null || uom === 'l') return valueLiters
+  if (uom === 'ml') return valueLiters * 1000
+  if (uom === 'gal_us') return valueLiters / 3.78541
+  return null
+}
+
+function isVolumeUom(code: string | null | undefined) {
+  const normalized = normalizeVolumeUom(code)
+  return normalized === 'l' || normalized === 'ml' || normalized === 'gal_us'
+}
+
+function packageUnitVolumeInLotUom(lot: LotOption) {
+  if (lot.packageVolume == null || !Number.isFinite(lot.packageVolume) || lot.packageVolume <= 0) return null
+  const fromUom = normalizeVolumeUom(lot.packageUom)
+  const toUom = normalizeVolumeUom(lot.uomCode)
+  if (!fromUom || !toUom || fromUom === toUom) return lot.packageVolume
+  const liters = toLiters(lot.packageVolume, fromUom)
+  if (liters == null) return null
+  return fromLiters(liters, toUom)
+}
+
+function isPackagedMoveInput(lot: LotOption) {
+  return Boolean(lot.packageId)
+}
+
+function displayLotQuantity(lot: LotOption) {
+  if (lot.quantity == null || Number.isNaN(lot.quantity)) return null
+  if (!isPackagedMoveInput(lot)) return lot.quantity
+  const unitVolume = packageUnitVolumeInLotUom(lot)
+  if (unitVolume != null && unitVolume > 0) return lot.quantity / unitVolume
+  return lot.quantity
+}
+
+function movementInputUomLabel(lot: LotOption) {
+  if (isPackagedMoveInput(lot)) return t('producedBeer.movementWizard.table.package')
+  return lot.uomCode || '—'
+}
+
 function toNumber(value: any): number | null {
   if (value == null || value === '') return null
   const num = Number(value)
@@ -446,10 +503,28 @@ async function saveMovement() {
     const errors: string[] = []
     const rows = selectedRows.map((lot) => {
       const rawQty = movementForm.srcLotMoveQty[lot.id]
-      const qty = toNumber(rawQty)
-      if (qty == null || qty <= 0) errors.push(`invalid movement quantity for lot ${lot.lotCode || lot.id}`)
+      const inputQty = toNumber(rawQty)
+      if (inputQty == null || inputQty <= 0) errors.push(`invalid movement quantity for lot ${lot.lotCode || lot.id}`)
       if (!lot.uomId) errors.push(`uom is missing for lot ${lot.lotCode || lot.id}`)
-      return { lot, qty: qty ?? 0 }
+      const usePackageInput = isPackagedMoveInput(lot)
+      const unitVolume = packageUnitVolumeInLotUom(lot)
+      if (usePackageInput && unitVolume == null && isVolumeUom(lot.uomCode)) {
+        errors.push(`package volume is missing for lot ${lot.lotCode || lot.id}`)
+      }
+      const qty = usePackageInput
+        ? ((unitVolume != null && unitVolume > 0) ? (inputQty ?? 0) * unitVolume : (inputQty ?? 0))
+        : (inputQty ?? 0)
+
+      const maxQty = lot.quantity
+      if (maxQty != null && Number.isFinite(maxQty) && qty > maxQty + 1e-9) {
+        errors.push(`movement quantity exceeds available quantity for lot ${lot.lotCode || lot.id}`)
+      }
+
+      return {
+        lot,
+        qty,
+        packageQty: usePackageInput ? (inputQty ?? 0) : null,
+      }
     })
     if (errors.length) throw new Error(errors[0])
 
@@ -472,6 +547,7 @@ async function saveMovement() {
           source: 'produced_beer_movement_ui',
           unit_price: toNumber(movementForm.unitPrice),
           price: toNumber(movementForm.price),
+          package_qty: row.packageQty,
           idempotency_key: `${baseKey}:${i + 1}:${row.lot.id}`,
         },
       }
@@ -995,6 +1071,7 @@ async function loadLotsForSite(siteId: string) {
       beerCategoryId: batchId ? batchCategoryMap.get(batchId) ?? null : null,
       targetAbv: batchId ? batchTargetAbvMap.get(batchId) ?? null : null,
       styleName: batchId ? batchStyleMap.get(batchId) ?? null : null,
+      packageId: lotRow?.package_id ? String(lotRow.package_id) : null,
       packageVolume: lotRow?.package_id ? packageVolumeMap.get(lotRow.package_id) ?? null : null,
       packageUom: lotRow?.package_id ? packageUomMap.get(lotRow.package_id) ?? null : null,
       quantity: qty,

@@ -447,7 +447,7 @@ const STATUS_OPTIONS = ['draft', 'submitted', 'approved'] as const
 const TAX_TYPE_OPTIONS = ['monthly', 'yearly'] as const
 const MOVEMENT_DOC_TYPES = ['sale', 'tax_transfer', 'return', 'transfer', 'waste'] as const
 
-const { t, locale } = useI18n()
+const { t, tm, locale } = useI18n()
 const pageTitle = computed(() => t('taxReport.title'))
 
 const rows = ref<TaxReportRow[]>([])
@@ -511,18 +511,24 @@ const currencyFormatter = computed(
 )
 
 function statusLabel(status: string) {
-  const map = t('taxReport.statusMap') as Record<string, string>
-  return map[status] || status
+  const map = tm('taxReport.statusMap')
+  if (!map || typeof map !== 'object') return status
+  const label = (map as Record<string, unknown>)[status]
+  return typeof label === 'string' ? label : status
 }
 
 function taxTypeLabel(taxType: string) {
-  const map = t('taxReport.taxTypeMap') as Record<string, string>
-  return map[taxType] || taxType
+  const map = tm('taxReport.taxTypeMap')
+  if (!map || typeof map !== 'object') return taxType
+  const label = (map as Record<string, unknown>)[taxType]
+  return typeof label === 'string' ? label : taxType
 }
 
 function movementTypeLabel(value: string) {
-  const map = t('taxReport.movementTypeMap') as Record<string, string>
-  return map[value] || value
+  const map = tm('taxReport.movementTypeMap')
+  if (!map || typeof map !== 'object') return value
+  const label = (map as Record<string, unknown>)[value]
+  return typeof label === 'string' ? label : value
 }
 
 function formatPeriod(row: TaxReportRow) {
@@ -809,14 +815,18 @@ async function ensureTenant() {
 }
 
 async function loadCategories() {
-  const tenant = await ensureTenant()
   const { data, error } = await supabase
-    .from('mst_category')
-    .select('id, code, name')
-    .eq('tenant_id', tenant)
-    .order('code', { ascending: true })
+    .from('registry_def')
+    .select('def_id, def_key, spec')
+    .eq('kind', 'alcohol_type')
+    .eq('is_active', true)
+    .order('def_key', { ascending: true })
   if (error) throw error
-  categories.value = data ?? []
+  categories.value = (data ?? []).map((row: { def_id?: unknown; def_key?: unknown; spec?: Record<string, unknown> | null }) => ({
+    id: String(row.def_id ?? ''),
+    code: String(row.spec?.tax_category_code ?? row.spec?.code ?? row.def_key ?? ''),
+    name: typeof row.spec?.name === 'string' ? row.spec.name : (typeof row.def_key === 'string' ? row.def_key : null),
+  }))
 }
 
 async function loadUoms() {
@@ -854,18 +864,32 @@ async function loadTemplate() {
   }
 }
 
-function buildTaxRateIndex(rows: any[]) {
+function normalizeTaxCategoryCode(value: unknown) {
+  if (value == null) return ''
+  if (typeof value === 'number' && Number.isFinite(value)) return String(Math.trunc(value))
+  const text = String(value).trim()
+  if (!text) return ''
+  const num = Number(text)
+  return Number.isFinite(num) ? String(Math.trunc(num)) : text
+}
+
+function buildTaxRateIndex(rows: Array<{ spec?: Record<string, unknown> | null }>) {
   const index: Record<string, TaxRateRecord[]> = {}
   rows.forEach((row) => {
-    const categoryId = row.category
-    if (!categoryId) return
+    const spec = (row.spec && typeof row.spec === 'object') ? row.spec : {}
+    const categoryCode = normalizeTaxCategoryCode(spec.tax_category_code)
+    if (!categoryCode) return
+
+    const taxRateRaw = Number(spec.tax_rate ?? 0)
+    if (!Number.isFinite(taxRateRaw)) return
+
     const entry: TaxRateRecord = {
-      taxrate: Number(row.taxrate ?? 0),
-      effectDate: row.effect_date ? new Date(row.effect_date) : null,
-      expireDate: row.expire_date ? new Date(row.expire_date) : null,
+      taxrate: taxRateRaw,
+      effectDate: spec.start_date ? new Date(String(spec.start_date)) : null,
+      expireDate: spec.expiration_date ? new Date(String(spec.expiration_date)) : null,
     }
-    if (!index[categoryId]) index[categoryId] = []
-    index[categoryId].push(entry)
+    if (!index[categoryCode]) index[categoryCode] = []
+    index[categoryCode].push(entry)
   })
 
   Object.values(index).forEach((list) => {
@@ -878,18 +902,19 @@ function buildTaxRateIndex(rows: any[]) {
 }
 
 async function loadTaxRates() {
-  const tenant = await ensureTenant()
   const { data, error } = await supabase
-    .from('tax_beer')
-    .select('category, taxrate, effect_date, expire_date')
-    .eq('tenant_id', tenant)
+    .from('registry_def')
+    .select('spec')
+    .eq('kind', 'alcohol_tax')
+    .eq('is_active', true)
   if (error) throw error
-  buildTaxRateIndex(data ?? [])
+  buildTaxRateIndex((data ?? []) as Array<{ spec?: Record<string, unknown> | null }>)
 }
 
-function applicableTaxRate(categoryId: string | null | undefined, dateStr: string | null | undefined) {
-  if (!categoryId) return 0
-  const records = taxRateIndex.value[categoryId]
+function applicableTaxRate(categoryCode: string | null | undefined, dateStr: string | null | undefined) {
+  const code = normalizeTaxCategoryCode(categoryCode)
+  if (!code) return 0
+  const records = taxRateIndex.value[code]
   if (!records || records.length === 0) return 0
   if (!dateStr) return records[records.length - 1]?.taxrate ?? 0
   const date = new Date(dateStr)
@@ -1056,7 +1081,7 @@ async function generateReportForPeriod(taxType: string, year: number, month: num
         })
       }
 
-      const taxRate = applicableTaxRate(categoryId, movementAt)
+      const taxRate = applicableTaxRate(categoryCode, movementAt)
       totalTax += volume * taxRate
       taxTotalMap.set(key, (taxTotalMap.get(key) ?? 0) + volume * taxRate)
     })

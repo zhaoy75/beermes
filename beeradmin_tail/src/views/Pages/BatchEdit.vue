@@ -1266,6 +1266,93 @@ function closeActualYieldDialog() {
   actualYieldDialog.errors = {}
 }
 
+type ActualYieldProduceMovement = {
+  id: string
+  src_site_id: string | null
+  dest_site_id: string | null
+  qty: number | null
+  uom_id: string | null
+}
+
+function isSameActualYieldProduce(
+  movement: ActualYieldProduceMovement,
+  qty: number,
+  uomId: string,
+  siteId: string,
+) {
+  const movementSiteId = movement.dest_site_id || movement.src_site_id || null
+  if (!movementSiteId || movementSiteId !== siteId) return false
+  if (!movement.uom_id || movement.uom_id !== uomId) return false
+  if (movement.qty == null) return false
+  return Math.abs(movement.qty - qty) <= 0.000001
+}
+
+async function findPostedActualYieldProduceMovements(batchIdValue: string) {
+  const { data: movementRows, error: movementError } = await supabase
+    .from('inv_movements')
+    .select('id, src_site_id, dest_site_id, created_at')
+    .eq('status', 'posted')
+    .eq('meta->>source', 'batch_actual_yield')
+    .eq('meta->>batch_id', batchIdValue)
+    .eq('meta->>movement_intent', 'BREW_PRODUCE')
+    .order('created_at', { ascending: false })
+
+  if (movementError) throw movementError
+  const rows = (movementRows ?? []) as Array<{ id: string, src_site_id: string | null, dest_site_id: string | null }>
+  if (!rows.length) return [] as ActualYieldProduceMovement[]
+
+  const movementIds = rows.map((row) => row.id)
+  const { data: lineRows, error: lineError } = await supabase
+    .from('inv_movement_lines')
+    .select('movement_id, line_no, qty, uom_id')
+    .in('movement_id', movementIds)
+
+  if (lineError) throw lineError
+  const lineByMovement = new Map<string, { qty: number | null, uom_id: string | null }>()
+  ;(lineRows ?? []).forEach((line: any) => {
+    const movementId = String(line.movement_id ?? '')
+    if (!movementId || lineByMovement.has(movementId)) return
+    lineByMovement.set(movementId, {
+      qty: toNumber(line.qty),
+      uom_id: line.uom_id != null ? String(line.uom_id) : null,
+    })
+  })
+
+  return rows.map((row) => {
+    const line = lineByMovement.get(row.id)
+    return {
+      id: row.id,
+      src_site_id: row.src_site_id ?? null,
+      dest_site_id: row.dest_site_id ?? null,
+      qty: line?.qty ?? null,
+      uom_id: line?.uom_id ?? null,
+    } as ActualYieldProduceMovement
+  })
+}
+
+async function rollbackActualYieldProduceMovement(
+  movementId: string,
+  batchCode: string,
+  movementAt: string,
+) {
+  const rollbackDoc = {
+    doc_no: `PPR-${batchCode}-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    movement_at: movementAt,
+    produce_movement_id: movementId,
+    reason: 'actual_yield_corrected',
+    notes: 'Rollback previous actual yield produce movement',
+    meta: {
+      source: 'batch_actual_yield',
+      movement_intent: 'BREW_PRODUCE_ROLLBACK',
+      idempotency_key: `batch_actual_yield_rollback:${movementId}`,
+    },
+  }
+  const { error } = await supabase.rpc('product_produce_rollback', {
+    p_doc: rollbackDoc,
+  })
+  if (error) throw error
+}
+
 async function saveActualYieldDialog() {
   const errors: Record<string, string> = {}
   const qty = toNumber(actualYieldDialog.form.actual_yield)
@@ -1285,7 +1372,54 @@ async function saveActualYieldDialog() {
 
   actualYieldDialog.loading = true
   actualYieldDialog.globalError = ''
+  let failedStage: 'produce' | 'save' = 'produce'
   try {
+    const movementAt = batch.value.actual_end
+      ? new Date(batch.value.actual_end).toISOString()
+      : new Date().toISOString()
+    const batchCode = String(batch.value.batch_code ?? 'BATCH')
+    const normalizedQty = Number(qty).toFixed(6)
+    const idempotencyKey = `batch_actual_yield:${batchId.value}:${normalizedQty}:${uomId}`
+
+    const existingProduceMovements = await findPostedActualYieldProduceMovements(batchId.value)
+    const matchingProduceMovement = existingProduceMovements.find((movement) =>
+      isSameActualYieldProduce(movement, qty, uomId, siteId),
+    )
+
+    if (!matchingProduceMovement) {
+      failedStage = 'produce'
+      for (const movement of existingProduceMovements) {
+        await rollbackActualYieldProduceMovement(movement.id, batchCode, movementAt)
+      }
+      const produceDoc = {
+        doc_no: `BP-${batchCode}-${Date.now()}`,
+        movement_at: movementAt,
+        src_site_id: siteId,
+        dest_site_id: siteId,
+        material_id: ZERO_UUID,
+        batch_id: batchId.value,
+        qty,
+        uom_id: uomId,
+        produced_at: movementAt,
+        meta: {
+          source: 'batch_actual_yield',
+          batch_id: batchId.value,
+          batch_code: batchCode,
+          movement_intent: 'BREW_PRODUCE',
+          idempotency_key: idempotencyKey,
+        },
+        line_meta: {
+          source: 'batch_actual_yield',
+        },
+      }
+
+      const { error: produceError } = await supabase.rpc('product_produce', {
+        p_doc: produceDoc,
+      })
+      if (produceError) throw produceError
+    }
+
+    failedStage = 'save'
     const patch: Record<string, any> = {
       actual_yield: qty,
       actual_yield_uom: uomId,
@@ -1306,54 +1440,18 @@ async function saveActualYieldDialog() {
     batch.value.actual_yield_uom = uomId
     batch.value.meta = patch.meta
 
-    const movementAt = batch.value.actual_end
-      ? new Date(batch.value.actual_end).toISOString()
-      : new Date().toISOString()
-    const batchCode = String(batch.value.batch_code ?? 'BATCH')
-    const normalizedQty = Number(qty).toFixed(6)
-    const idempotencyKey = `batch_actual_yield:${batchId.value}:${normalizedQty}:${uomId}`
-    const produceDoc = {
-      doc_no: `BP-${batchCode}-${Date.now()}`,
-      movement_at: movementAt,
-      src_site_id: siteId,
-      dest_site_id: siteId,
-      material_id: ZERO_UUID,
-      batch_id: batchId.value,
-      qty,
-      uom_id: uomId,
-      produced_at: movementAt,
-      meta: {
-        source: 'batch_actual_yield',
-        batch_id: batchId.value,
-        batch_code: batchCode,
-        movement_intent: 'BREW_PRODUCE',
-        idempotency_key: idempotencyKey,
-      },
-      line_meta: {
-        source: 'batch_actual_yield',
-      },
-    }
-
-    const { error: produceError } = await supabase.rpc('product_produce', {
-      p_doc: produceDoc,
-    })
-    if (produceError) {
-      const detail = extractErrorMessage(produceError)
-      actualYieldDialog.globalError = detail
-        ? `${t('batch.edit.actualYieldProduceFailed')} (${detail})`
-        : t('batch.edit.actualYieldProduceFailed')
-      return
-    }
-
     actualYieldDialog.open = false
     actualYieldDialog.errors = {}
     actualYieldDialog.globalError = ''
     showPackingNotice(t('batch.edit.actualYieldSaved'))
   } catch (err) {
     const detail = extractErrorMessage(err)
+    const baseMessage = failedStage === 'save'
+      ? t('batch.edit.actualYieldSaveFailed')
+      : t('batch.edit.actualYieldProduceFailed')
     actualYieldDialog.globalError = detail
-      ? `${t('batch.edit.actualYieldSaveFailed')} (${detail})`
-      : t('batch.edit.actualYieldSaveFailed')
+      ? `${baseMessage} (${detail})`
+      : baseMessage
   } finally {
     actualYieldDialog.loading = false
   }

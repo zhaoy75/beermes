@@ -32,10 +32,10 @@ security invoker;
 ## Input Contract (`p_doc`)
 Required fields:
 - `doc_no` text: rollback business document number (tenant unique)
-- `movement_at` timestamptz: rollback timestamp
 - `produce_movement_id` uuid: target movement id created by `product_produce`
 
 Optional fields:
+- `movement_at` timestamptz: rollback timestamp (defaults to `now()`)
 - `reason` text
 - `notes` text
 - `meta` jsonb
@@ -62,13 +62,16 @@ Optional idempotency:
 ## Validation
 - Tenant exists via `public._assert_tenant()`.
 - `doc_no`, `produce_movement_id` are present.
+- `inv_doc_type` supports `adjustment`.
 - Target produce movement exists, tenant-visible, and `status = 'posted'`.
 - Target movement is a produce transaction:
-  - `meta.movement_intent = 'BREW_PRODUCE'` (or mapped produce doc_type by your implementation).
+  - `meta.movement_intent = 'BREW_PRODUCE'`.
+- Target movement must not already contain `meta.reversed_by_movement_id`.
 - Produced lot and produce edge (`edge_type = 'PRODUCE'`, `from_lot_id IS NULL`) exist for the target movement.
+- Produced lot site is resolved from lot site, or fallback to target movement destination/source site.
 - Produced lot has enough inventory to rollback the current lot qty.
 - No active downstream dependency exists:
-  - there must be no non-void movement consuming/splitting/moving from this produced lot.
+  - there must be no non-void movement with `lot_edge.from_lot_id = produced_lot_id`.
 - `doc_no` unique per tenant for rollback movement.
 
 ## Transaction Behavior (Atomic)
@@ -77,7 +80,7 @@ Optional idempotency:
 3. Resolve and lock produced lot row and produced inventory row `FOR UPDATE`.
 4. Check downstream usage:
    - if any non-void movement has `lot_edge.from_lot_id = produced_lot_id`, reject rollback.
-5. Compute rollback qty = current produced lot qty (`> 0`).
+5. Compute rollback qty = current produced lot qty (`lot.qty`, must be `> 0`).
 6. Insert rollback movement (`inv_movements`) with `doc_type='adjustment'`, `status='posted'`, and rollback metadata:
    - `movement_intent = 'BREW_PRODUCE_ROLLBACK'`
    - `rollback_of_movement_id = produce_movement_id`
@@ -87,9 +90,10 @@ Optional idempotency:
 9. Decrement inventory for produced lot (`inv_inventory.qty -= rollback_qty`).
 10. Decrement lot qty and close lot:
     - `lot.qty -= rollback_qty` (expected to become `0`)
-    - `lot.status = 'void'` (or `consumed` if your policy prefers operational consume state)
+    - `lot.status = 'void'` when remaining qty is `<= 0`
 11. Mark original produce movement as void:
     - `inv_movements.status = 'void'`
+    - `reason/notes` are updated when provided
     - append metadata: `voided_at`, `void_reason`, `reversed_by_movement_id`
 12. Return rollback movement id.
 
@@ -108,7 +112,9 @@ Return `rollback_movement_id uuid`.
 ## Idempotency Recommendation
 Support optional `meta.idempotency_key`:
 - unique per tenant
-- if repeated, return existing rollback movement id
+- if repeated, return existing rollback movement id where:
+  - `doc_type = adjustment`
+  - `meta.movement_intent = BREW_PRODUCE_ROLLBACK`
 
 ## Example Input
 ```json

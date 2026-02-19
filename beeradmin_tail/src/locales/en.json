@@ -1224,6 +1224,7 @@
         "batchCode": "Batch Code",
         "packageVolume": "Package Volume",
         "packageUom": "Package UOM",
+        "totalVolume": "Total Volume",
         "relatedBatch": "Related Batch",
         "batchInfo": "Batch Info",
         "package": "Package",

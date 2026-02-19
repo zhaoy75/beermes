@@ -145,6 +145,7 @@
                       <th class="px-3 py-2 text-left">{{ t('producedBeer.movementWizard.table.batchCode') }}</th>
                       <th class="px-3 py-2 text-right">{{ t('producedBeer.movementWizard.table.packageVolume') }}</th>
                       <th class="px-3 py-2 text-left">{{ t('producedBeer.movementWizard.table.packageUom') }}</th>
+                      <th class="px-3 py-2 text-right">{{ t('producedBeer.movementWizard.table.totalVolume') }}</th>
                       <th class="px-3 py-2 text-right">{{ t('producedBeer.movementWizard.table.quantity') }}</th>
                       <th class="px-3 py-2 text-right">{{ t('producedBeer.movementWizard.table.movementQuantity') }}</th>
                       <th class="px-3 py-2 text-left">{{ t('producedBeer.movementWizard.table.uom') }}</th>
@@ -166,6 +167,7 @@
                       <td class="px-3 py-2 text-gray-700">{{ lot.batchCode || '—' }}</td>
                       <td class="px-3 py-2 text-right text-gray-700">{{ formatNumber(lot.packageVolume) }}</td>
                       <td class="px-3 py-2 text-gray-700">{{ lot.packageUom || '—' }}</td>
+                      <td class="px-3 py-2 text-right text-gray-700">{{ formatNumber(lot.quantity) }}</td>
                       <td class="px-3 py-2 text-right text-gray-700">{{ formatNumber(displayLotQuantity(lot)) }}</td>
                       <td class="px-3 py-2">
                         <input
@@ -181,7 +183,7 @@
                       <td class="px-3 py-2 text-gray-700">{{ movementInputUomLabel(lot) }}</td>
                     </tr>
                     <tr v-if="lotOptions.length === 0">
-                      <td class="px-3 py-6 text-center text-gray-500" colspan="11">{{ t('producedBeer.movementWizard.table.noLotsFound') }}</td>
+                      <td class="px-3 py-6 text-center text-gray-500" colspan="12">{{ t('producedBeer.movementWizard.table.noLotsFound') }}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -429,11 +431,6 @@ function fromLiters(valueLiters: number, uomCode: string | null | undefined) {
   return null
 }
 
-function isVolumeUom(code: string | null | undefined) {
-  const normalized = normalizeVolumeUom(code)
-  return normalized === 'l' || normalized === 'ml' || normalized === 'gal_us'
-}
-
 function packageUnitVolumeInLotUom(lot: LotOption) {
   if (lot.packageVolume == null || !Number.isFinite(lot.packageVolume) || lot.packageVolume <= 0) return null
   const fromUom = normalizeVolumeUom(lot.packageUom)
@@ -445,7 +442,9 @@ function packageUnitVolumeInLotUom(lot: LotOption) {
 }
 
 function isPackagedMoveInput(lot: LotOption) {
-  return Boolean(lot.packageId)
+  if (!lot.packageId) return false
+  const unitVolume = packageUnitVolumeInLotUom(lot)
+  return unitVolume != null && unitVolume > 0
 }
 
 function displayLotQuantity(lot: LotOption) {
@@ -508,9 +507,6 @@ async function saveMovement() {
       if (!lot.uomId) errors.push(`uom is missing for lot ${lot.lotCode || lot.id}`)
       const usePackageInput = isPackagedMoveInput(lot)
       const unitVolume = packageUnitVolumeInLotUom(lot)
-      if (usePackageInput && unitVolume == null && isVolumeUom(lot.uomCode)) {
-        errors.push(`package volume is missing for lot ${lot.lotCode || lot.id}`)
-      }
       const qty = usePackageInput
         ? ((unitVolume != null && unitVolume > 0) ? (inputQty ?? 0) * unitVolume : (inputQty ?? 0))
         : (inputQty ?? 0)
@@ -1043,9 +1039,26 @@ async function loadLotsForSite(siteId: string) {
       .select('id, unit_volume, volume_uom')
       .in('id', packageIds)
     if (pkgError) throw pkgError
+
+    const packageVolumeUomIds = Array.from(new Set((pkgRows ?? [])
+      .map((row: any) => (typeof row.volume_uom === 'string' ? row.volume_uom : ''))
+      .filter((value: string) => !!value && !uomMap.has(value))))
+    if (packageVolumeUomIds.length) {
+      const { data: packageUomRows, error: packageUomError } = await supabase
+        .from('mst_uom')
+        .select('id, code')
+        .in('id', packageVolumeUomIds)
+      if (packageUomError) throw packageUomError
+      ;(packageUomRows ?? []).forEach((row: any) => uomMap.set(row.id, row.code))
+    }
+
     ;(pkgRows ?? []).forEach((row: any) => {
       packageVolumeMap.set(row.id, toNumber(row.unit_volume))
-      packageUomMap.set(row.id, typeof row.volume_uom === 'string' ? row.volume_uom : null)
+      if (typeof row.volume_uom === 'string') {
+        packageUomMap.set(row.id, uomMap.get(row.volume_uom) ?? row.volume_uom)
+      } else {
+        packageUomMap.set(row.id, null)
+      }
     })
   }
 

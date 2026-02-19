@@ -58,7 +58,7 @@ declare
   v_source_inv_qty numeric;
 
   v_dest_lot_no text;
-  v_root_lot_no text;
+  v_lot_no_base text;
   v_next_lot_seq int;
   v_zero_material_id uuid := '00000000-0000-0000-0000-000000000000'::uuid;
 begin
@@ -349,33 +349,8 @@ begin
     );
   end if;
 
-  with recursive upstream as (
-    select l.id, l.lot_no, 0 as depth
-    from public.lot l
-    where l.tenant_id = v_tenant
-      and l.id = v_src_lot_id
-    union all
-    select parent.id, parent.lot_no, u.depth + 1
-    from upstream u
-    join public.lot_edge e
-      on e.tenant_id = v_tenant
-     and e.to_lot_id = u.id
-     and e.from_lot_id is not null
-    join public.lot parent
-      on parent.tenant_id = v_tenant
-     and parent.id = e.from_lot_id
-  )
-  select u.lot_no
-    into v_root_lot_no
-  from upstream u
-  order by u.depth desc
-  limit 1;
-
-  if v_root_lot_no is null then
-    v_root_lot_no := coalesce(v_source_lot_no, 'LOT');
-  end if;
-
-  perform pg_advisory_xact_lock(hashtext(v_tenant::text), hashtext(v_root_lot_no));
+  v_lot_no_base := coalesce(v_source_lot_no, 'LOT');
+  perform pg_advisory_xact_lock(hashtext(v_tenant::text), hashtext(v_lot_no_base));
 
   insert into public.inv_movements (
     tenant_id, doc_no, doc_type, status, movement_at,
@@ -425,47 +400,83 @@ begin
   returning id into v_movement_line_id;
 
   if v_edge_type <> 'CONSUME' then
-    select coalesce(max(sub.seq), 0) + 1
-      into v_next_lot_seq
-    from (
-      select case
-               when l.lot_no like v_root_lot_no || '\_%' escape '\'
-                    and substring(l.lot_no from char_length(v_root_lot_no) + 2) ~ '^[0-9]+$'
-                 then substring(l.lot_no from char_length(v_root_lot_no) + 2)::int
-               else null
-             end as seq
-      from public.lot l
-      where l.tenant_id = v_tenant
-    ) sub;
+    -- Reuse previously mapped destination lot for this source lot/site when possible.
+    select l.id
+      into v_to_lot_id
+    from public.lot l
+    where l.tenant_id = v_tenant
+      and l.site_id = v_dst_site_id
+      and l.status = 'active'
+      and l.uom_id = v_uom_id
+      and l.meta ->> 'from_lot_id' = v_src_lot_id::text
+    order by l.created_at desc, l.id desc
+    limit 1
+    for update;
 
-    v_dest_lot_no := format('%s_%s', v_root_lot_no, lpad(v_next_lot_seq::text, 3, '0'));
+    if v_to_lot_id is null then
+      -- Prefer source lot_no. Fall back to suffixed lot_no only when uniqueness requires it.
+      v_dest_lot_no := v_lot_no_base;
+      if exists (
+        select 1
+        from public.lot l
+        where l.tenant_id = v_tenant
+          and l.lot_no = v_dest_lot_no
+      ) then
+        select coalesce(max(sub.seq), 0) + 1
+          into v_next_lot_seq
+        from (
+          select case
+                   when l.lot_no like v_lot_no_base || '\_%' escape '\'
+                        and substring(l.lot_no from char_length(v_lot_no_base) + 2) ~ '^[0-9]+$'
+                     then substring(l.lot_no from char_length(v_lot_no_base) + 2)::int
+                   else null
+                 end as seq
+          from public.lot l
+          where l.tenant_id = v_tenant
+        ) sub;
 
-    insert into public.lot (
-      tenant_id, lot_no, material_id, package_id, batch_id, lot_tax_type, site_id,
-      produced_at, expires_at, qty, uom_id, status, meta, notes
-    ) values (
-      v_tenant,
-      v_dest_lot_no,
-      coalesce(v_source_material_id, v_zero_material_id),
-      v_source_package_id,
-      v_source_batch_id,
-      coalesce(v_result_lot_tax_type, v_effective_lot_tax_type),
-      v_dst_site_id,
-      v_source_produced_at,
-      v_source_expires_at,
-      v_qty,
-      v_uom_id,
-      'active',
-      coalesce(v_source_meta, '{}'::jsonb) || jsonb_build_object(
-        'source_movement_id', v_movement_id,
-        'from_lot_id', v_src_lot_id,
-        'movement_intent', v_movement_intent,
-        'tax_decision_code', v_tax_decision_code,
-        'tax_event', v_tax_event
-      ),
-      v_notes
-    )
-    returning id into v_to_lot_id;
+        v_dest_lot_no := format('%s_%s', v_lot_no_base, lpad(v_next_lot_seq::text, 3, '0'));
+      end if;
+
+      insert into public.lot (
+        tenant_id, lot_no, material_id, package_id, batch_id, lot_tax_type, site_id,
+        produced_at, expires_at, qty, uom_id, status, meta, notes
+      ) values (
+        v_tenant,
+        v_dest_lot_no,
+        coalesce(v_source_material_id, v_zero_material_id),
+        v_source_package_id,
+        v_source_batch_id,
+        coalesce(v_result_lot_tax_type, v_effective_lot_tax_type),
+        v_dst_site_id,
+        v_source_produced_at,
+        v_source_expires_at,
+        v_qty,
+        v_uom_id,
+        'active',
+        coalesce(v_source_meta, '{}'::jsonb) || jsonb_build_object(
+          'source_movement_id', v_movement_id,
+          'from_lot_id', v_src_lot_id,
+          'movement_intent', v_movement_intent,
+          'tax_decision_code', v_tax_decision_code,
+          'tax_event', v_tax_event
+        ),
+        v_notes
+      )
+      returning id into v_to_lot_id;
+    else
+      update public.lot l
+         set qty = l.qty + v_qty,
+             lot_tax_type = coalesce(v_result_lot_tax_type, l.lot_tax_type),
+             updated_at = now(),
+             meta = coalesce(l.meta, '{}'::jsonb) || jsonb_build_object(
+               'source_movement_id', v_movement_id,
+               'movement_intent', v_movement_intent,
+               'tax_decision_code', v_tax_decision_code,
+               'tax_event', v_tax_event
+             )
+       where l.id = v_to_lot_id;
+    end if;
   end if;
 
   insert into public.lot_edge (

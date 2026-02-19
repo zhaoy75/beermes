@@ -82,7 +82,7 @@ Optional header fields:
    - `dest_site_id = p_doc.dest_site_id`
 5. For each `lines[]` row:
    - Determine `line_no`.
-   - Create destination filled lot in `lot` with line qty.
+   - Create destination filled lot in `lot` with line qty. lot_tax_type set to TAX_SUSPENDED.
    - Insert one `inv_movement_lines` row.
    - Insert one `lot_edge` row with `edge_type = SPLIT` from source lot to destination lot.
    - Decrease source lot qty by line qty.

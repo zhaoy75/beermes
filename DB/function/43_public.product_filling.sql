@@ -268,7 +268,7 @@ begin
     end if;
 
     insert into public.lot (
-      tenant_id, lot_no, material_id, package_id, batch_id, site_id,
+      tenant_id, lot_no, material_id, package_id, batch_id, lot_tax_type, site_id,
       produced_at, expires_at, qty, uom_id, status, meta, notes
     ) values (
       v_tenant,
@@ -276,6 +276,7 @@ begin
       v_zero_material_id,
       v_line_package_id,
       v_batch_id,
+      'TAX_SUSPENDED',
       v_dest_site_id,
       v_movement_at,
       v_line_expires_at,

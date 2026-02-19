@@ -1224,6 +1224,7 @@
         "batchCode": "バッチコード",
         "packageVolume": "容量",
         "packageUom": "容量単位",
+        "totalVolume": "総容量",
         "relatedBatch": "関連バッチ",
         "batchInfo": "バッチ情報",
         "package": "パッケージ",

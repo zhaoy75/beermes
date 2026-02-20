@@ -447,6 +447,7 @@
           "packageType": "Package type",
           "lotCode": "Lot code",
           "qty": "Quantity",
+          "sampleFlg": "Sample",
           "unitVolume": "Volume per unit",
           "totalVolume": "Total volume"
         },

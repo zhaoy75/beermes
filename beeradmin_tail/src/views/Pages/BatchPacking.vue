@@ -405,16 +405,11 @@
               </div>
               <div>
                 <label class="block text-sm text-gray-600 mb-1" for="sampleVolume">{{ t('batch.packaging.dialog.sampleVolume') }}</label>
-                <input id="sampleVolume" v-model="packingDialog.form.sample_volume" type="number" min="0" step="0.001" class="w-full h-[36px] border rounded px-2 text-right" />
+                <input id="sampleVolume" v-model="packingDialog.form.sample_volume" type="number" min="0" step="0.001" class="w-full h-[36px] border rounded px-2 text-right bg-gray-50 text-gray-600" readonly />
               </div>
               <div>
                 <label class="block text-sm text-gray-600 mb-1">{{ t('batch.packaging.dialog.tankLoss') }}</label>
                 <input :value="tankLossVolumeText" type="text" class="w-full h-[36px] border rounded px-2 text-right bg-gray-50 text-gray-600" readonly />
-              </div>
-              <div class="flex items-end">
-                <button class="w-full text-xs px-2 py-2 rounded border border-gray-300 hover:bg-gray-100" type="button" @click="markTankFillingEnd">
-                  {{ t('batch.packaging.dialog.tankFillEnd') }}
-                </button>
               </div>
             </div>
             <hr class="border-gray-200" />
@@ -431,6 +426,7 @@
                     <th class="px-3 py-2 text-left">{{ t('batch.packaging.dialog.fillingTable.packageType') }}</th>
                     <th class="px-3 py-2 text-left">{{ t('batch.packaging.dialog.fillingTable.lotCode') }}</th>
                     <th class="px-3 py-2 text-right">{{ t('batch.packaging.dialog.fillingTable.qty') }}</th>
+                    <th class="px-3 py-2 text-center">{{ t('batch.packaging.dialog.fillingTable.sampleFlg') }}</th>
                     <th class="px-3 py-2 text-right">{{ t('batch.packaging.dialog.fillingTable.unitVolume') }}</th>
                     <th class="px-3 py-2 text-right">{{ t('batch.packaging.dialog.fillingTable.totalVolume') }}</th>
                     <th class="px-3 py-2 text-left">{{ t('common.actions') }}</th>
@@ -450,6 +446,9 @@
                     <td class="px-3 py-2 text-right">
                       <input v-model="line.qty" type="number" min="1" step="1" class="w-full h-[36px] border rounded px-2 text-right" />
                     </td>
+                    <td class="px-3 py-2 text-center">
+                      <input v-model="line.sample_flg" type="checkbox" class="h-4 w-4" />
+                    </td>
                     <td class="px-3 py-2 text-right text-gray-600">{{ formatFillingUnitVolume(line.package_type_id) }}</td>
                     <td class="px-3 py-2 text-right text-gray-600">{{ formatFillingLineTotal(line) }}</td>
                     <td class="px-3 py-2">
@@ -459,7 +458,7 @@
                     </td>
                   </tr>
                   <tr v-if="packingDialog.form.filling_lines.length === 0">
-                    <td class="px-3 py-4 text-center text-gray-500" colspan="5">{{ t('batch.packaging.dialog.noFillingLines') }}</td>
+                    <td class="px-3 py-4 text-center text-gray-500" colspan="7">{{ t('batch.packaging.dialog.noFillingLines') }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -767,6 +766,7 @@ type PackingFillingLine = {
   package_type_id: string
   qty: number
   lot_code?: string | null
+  sample_flg: boolean
 }
 
 type PackingEvent = {
@@ -793,6 +793,7 @@ type PackingFillingLineForm = {
   package_type_id: string
   qty: string
   lot_code: string
+  sample_flg: boolean
 }
 
 type PackingFormState = {
@@ -943,6 +944,16 @@ function eventVolumeInLiters(event: PackingEvent) {
 
 function fillingLinesVolumeFromEvent(lines: PackingFillingLine[]) {
   return lines.reduce((sum, line) => {
+    if (line.sample_flg) return sum
+    const unit = resolvePackageUnitVolume(line.package_type_id)
+    if (unit == null) return sum
+    return sum + line.qty * unit
+  }, 0)
+}
+
+function fillingSampleVolumeFromEvent(lines: PackingFillingLine[]) {
+  return lines.reduce((sum, line) => {
+    if (!line.sample_flg) return sum
     const unit = resolvePackageUnitVolume(line.package_type_id)
     if (unit == null) return sum
     return sum + line.qty * unit
@@ -954,7 +965,7 @@ function processedVolumeFromPackingEvent(event: PackingEvent) {
     let total = 0
     const qty = event.movement?.qty
     if (qty != null && Number.isFinite(qty)) total += qty
-    const sample = event.sample_volume ?? 0
+    const sample = event.sample_volume ?? fillingSampleVolumeFromEvent(event.filling_lines)
     if (Number.isFinite(sample)) total += sample
     if (event.tank_fill_start_volume != null && event.tank_left_volume != null) {
       const totalFillVolume = fillingLinesVolumeFromEvent(event.filling_lines)
@@ -979,7 +990,7 @@ function processedVolumeFromPackingForm(form: PackingFormState) {
     } else if (fillingTotals.totalVolume != null && Number.isFinite(fillingTotals.totalVolume)) {
       total += fillingTotals.totalVolume
     }
-    const sample = toNumber(form.sample_volume) ?? 0
+    const sample = toNumber(form.sample_volume) ?? computeFillingSampleVolume(form.filling_lines)
     if (Number.isFinite(sample)) total += sample
     const start = toNumber(form.tank_fill_start_volume)
     const left = toNumber(form.tank_left_volume)
@@ -1149,6 +1160,11 @@ const showPackingReason = computed(() => {
 const packingFillingTotals = computed(() => {
   const lines = packingDialog.form?.filling_lines ?? []
   return computeFillingTotals(lines)
+})
+
+const packingFillingSampleVolume = computed(() => {
+  const lines = packingDialog.form?.filling_lines ?? []
+  return computeFillingSampleVolume(lines)
 })
 
 const tankLossVolume = computed(() => {
@@ -1703,6 +1719,7 @@ async function loadPackingEvents() {
           package_type_id: String(line?.package_type_id ?? ''),
           qty: toNumber(line?.qty) ?? 0,
           lot_code: typeof line?.lot_code === 'string' ? line.lot_code : '',
+          sample_flg: line?.sample_flg === true || line?.sample_flg === 'true',
         }))
         : []
       return {
@@ -1994,6 +2011,7 @@ function openPackingEditInternal(event: PackingEvent, readOnly = false) {
       package_type_id: line.package_type_id,
       qty: String(line.qty ?? ''),
       lot_code: line.lot_code ?? '',
+      sample_flg: Boolean(line.sample_flg),
     })),
     reason: event.reason ?? '',
     tank_id: event.tank_id ?? resolveTankIdByCode(event.tank_no) ?? '',
@@ -2150,22 +2168,8 @@ function addFillingLine() {
     package_type_id: '',
     qty: '',
     lot_code: '',
+    sample_flg: false,
   })
-}
-
-function markTankFillingEnd() {
-  if (!packingDialog.form) return
-  if (!packingDialog.form.tank_fill_left_depth) {
-    packingDialog.form.tank_fill_left_depth = '0'
-  }
-  const leftDepth = toNumber(packingDialog.form.tank_fill_left_depth)
-  if (!packingDialog.form.tank_id || leftDepth == null || leftDepth < 0) {
-    if (!packingDialog.form.tank_left_volume) {
-      packingDialog.form.tank_left_volume = '0'
-    }
-    return
-  }
-  void calculateTankVolume('left')
 }
 
 function removeFillingLine(index: number) {
@@ -2468,6 +2472,7 @@ async function persistPackingEvent(form: PackingFormState, isEditing: boolean) {
     package_type_id: line.package_type_id,
     qty: toNumber(line.qty),
     lot_code: line.lot_code ? line.lot_code.trim() : null,
+    sample_flg: Boolean(line.sample_flg),
   }))
   const packingMeta = {
     source: 'packing',
@@ -2524,17 +2529,19 @@ async function persistPackingEvent(form: PackingFormState, isEditing: boolean) {
           package_id: line.package_type_id || null,
           qty: convertFromLiters(qtyLiters, sourceUomCode) ?? qtyLiters,
           unit: qtyUnits,
-          meta: { unit_count: qtyUnits },
+          meta: { unit_count: qtyUnits, sample_flg: Boolean(line.sample_flg) },
         }
       })
-      .filter((line): line is { line_no: number, lot_no: string | null, package_id: string | null, qty: number, unit: number, meta: Record<string, any> } => line !== null)
+      .filter((line): line is {
+        line_no: number
+        lot_no: string | null
+        package_id: string | null
+        qty: number
+        unit: number
+        meta: { unit_count: number, sample_flg: boolean }
+      } => line !== null)
     if (!lines.length) throw new Error(t('batch.packaging.errors.fillingRequired'))
-    const totalFillQty = form.filling_lines.reduce((sum, line) => {
-      const qtyUnits = toNumber(line.qty)
-      const unitVolume = resolvePackageUnitVolume(line.package_type_id)
-      if (qtyUnits == null || unitVolume == null || qtyUnits <= 0) return sum
-      return sum + (qtyUnits * unitVolume)
-    }, 0)
+    const totalFillQty = computeFillingTotals(form.filling_lines).totalVolume ?? 0
 
     const fillPayload = {
       doc_no: docNo,
@@ -2738,7 +2745,7 @@ function validatePackingForm(form: PackingFormState) {
     } else {
       const invalid = form.filling_lines.some((line) => {
         const qty = toNumber(line.qty)
-        return !line.package_type_id || qty == null || qty < 1 || !Number.isInteger(qty)
+        return !line.package_type_id || qty == null || qty < 1 || !Number.isInteger(qty) || typeof line.sample_flg !== 'boolean'
       })
       if (invalid) errors.filling_lines = t('batch.packaging.errors.fillingLineInvalid')
     }
@@ -2751,6 +2758,7 @@ function computeFillingTotals(lines: PackingFillingLineForm[]) {
   let totalVolume = 0
   let hasMissing = false
   lines.forEach((line) => {
+    if (line.sample_flg) return
     const qty = toNumber(line.qty)
     if (qty == null) return
     totalUnits += qty
@@ -2765,6 +2773,16 @@ function computeFillingTotals(lines: PackingFillingLineForm[]) {
     totalUnits,
     totalVolume: hasMissing ? null : totalVolume,
   }
+}
+
+function computeFillingSampleVolume(lines: PackingFillingLineForm[]) {
+  return lines.reduce((sum, line) => {
+    if (!line.sample_flg) return sum
+    const qty = toNumber(line.qty)
+    const unitVolume = resolvePackageUnitVolume(line.package_type_id)
+    if (qty == null || unitVolume == null) return sum
+    return sum + qty * unitVolume
+  }, 0)
 }
 
 function resolvePackageUnitVolume(packageTypeId: string) {
@@ -2843,7 +2861,10 @@ function formatPackingPackageInfo(event: PackingEvent) {
 
 function formatPackingNumber(event: PackingEvent) {
   if (!event.filling_lines.length) return '—'
-  const totalUnits = event.filling_lines.reduce((sum, line) => sum + (line.qty ?? 0), 0)
+  const totalUnits = event.filling_lines.reduce((sum, line) => {
+    if (line.sample_flg) return sum
+    return sum + (line.qty ?? 0)
+  }, 0)
   if (!Number.isFinite(totalUnits)) return '—'
   return totalUnits.toLocaleString(undefined, { maximumFractionDigits: 0 })
 }
@@ -2915,7 +2936,7 @@ function formatPackingFillingRemaining(event: PackingEvent) {
 function packingLossFromEvent(event: PackingEvent) {
   if (event.packing_type !== 'filling') return null
   if (event.tank_fill_start_volume == null || event.tank_left_volume == null) return null
-  const sample = event.sample_volume ?? 0
+  const sample = event.sample_volume ?? fillingSampleVolumeFromEvent(event.filling_lines)
   const fillingVolume = fillingLinesVolumeFromEvent(event.filling_lines)
   const loss = event.tank_fill_start_volume - event.tank_left_volume - fillingVolume - sample
   return Number.isFinite(loss) ? loss : null
@@ -3011,6 +3032,16 @@ watch(
     if (packingMovementQtyTouched.value) return
     if (total == null) return
     packingDialog.form.movement_qty = String(total)
+  }
+)
+
+watch(
+  () => packingFillingSampleVolume.value,
+  (total) => {
+    if (!packingDialog.form || packingDialog.form.packing_type !== 'filling') return
+    if (packingDialog.readOnly) return
+    const hasSampleLine = packingDialog.form.filling_lines.some((line) => line.sample_flg)
+    packingDialog.form.sample_volume = hasSampleLine ? String(total) : ''
   }
 )
 

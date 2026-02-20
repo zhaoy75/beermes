@@ -447,6 +447,7 @@
           "packageType": "詰口種別",
           "lotCode": "ロットコード",
           "qty": "数量",
+          "sampleFlg": "サンプル",
           "unitVolume": "単位容量",
           "totalVolume": "総容量"
         },

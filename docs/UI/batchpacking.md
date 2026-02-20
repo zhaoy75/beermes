@@ -138,9 +138,8 @@ Components:
 - Tank Fill Start Volume (樽詰め前 容量)  autocaculated by can be modify
 - Tank Fill Left Depth 
 - Tank Fill Left Volume　 (タンク残) autocaculated by can be modify
-- Sample Volume (サンプル)
+- Sample Volume (サンプル) auto-calculated from filling lines where `sample_flg = true`
 - Tank Loss Volume (欠減)
-- Tank Filling End button
 - horizontal line
 - Add Filling button
 - Filling lines table
@@ -149,6 +148,7 @@ Filling line fields:
 - Package type (dropdown from `mst_package`)
 - Quantity (integer, >= 1)
 - lot_code
+- sample_flg (boolean toggle)
 
 Table actions:
 - Edit filling line
@@ -159,6 +159,8 @@ Derived values:
 - Tank Fill Left Volume　= get_volume_by_tank (tank id, Tank Fill Left Depth )
 - Volume per unit
 - Total line volume
+- Sample Volume = sum of filling line volume where `sample_flg = true`
+- Sample Volume input field is read-only and auto-updated when filling lines change
 - Loss = Fill Start Volume - Left Volume - Total Filling Volume　- Sample Volume
 - Loss and Sample Volume must be included in Processed volume
 
@@ -176,6 +178,7 @@ Transfer:
 Filling:
 - Filling section + Movement section
 - At least one filling line is required
+- `タンク充填終了` button is not shown (tank values are auto-calculated)
 
 Loss:
 - Volume section only
@@ -199,6 +202,7 @@ Shows:
 - Site required when movement is present
 - At least one filling line for Filling
 - Filling quantity must be integer >= 1
+- `sample_flg` must be boolean
 
 Warnings:
 - Movement quantity differs from volume or filling total
@@ -286,16 +290,17 @@ Warnings:
   "Sample_Volume" : 1,
   "Tank_Loss_Volume" : 10,
   "volume_qty": null,
-  "movement": {
-    "site_id": "...",
-    "qty": 240,
-    "memo": "..."
-  },
-  "filling_lines": [
-    { "package_type_id": "keg_10l", "qty": 24 }
-  ]
-}
-```
+	  "movement": {
+	    "site_id": "...",
+	    "qty": 240,
+	    "memo": "..."
+	  },
+	  "filling_lines": [
+	    { "package_type_id": "keg_10l", "qty": 24, "sample_flg": false },
+	    { "package_type_id": "bottle_330ml", "qty": 6, "sample_flg": true }
+	  ]
+	}
+	```
 
 ## Data Handling
 ### tables

@@ -13,9 +13,9 @@ CREATE TABLE IF NOT EXISTS mst_package (
 
   -- Core for filling calculation
   unit_volume       numeric(18,6) NOT NULL CHECK (unit_volume > 0),
-  max_volume
+  max_volume        numeric(18,6) NULL CHECK (max_volume > 0), -- if null, then no max volume constraint
   volume_uom        text NOT NULL DEFAULT 'L',              -- should be volume domain (enforce by FK later if needed)
-  fixed_qty         boolean NOT NULL DEFAULT false,         -- if true, then qty is fixed and unit_volume is informational only
+  volume_fix_flg        boolean NOT NULL DEFAULT true,         -- if true, then qty is fixed and unit_volume is informational only
 
   -- Optional packaging properties
   units_per_case    integer NULL CHECK (units_per_case IS NULL OR units_per_case > 0),

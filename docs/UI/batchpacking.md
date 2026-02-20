@@ -45,7 +45,8 @@
 ### Header
 - Title: Packing
 - Batch summary (batch code / name)
-- Back button: return to Batch Edit page
+- Return button (`戻る`): return to Batch Edit page (`/batches/:batchId`)
+  - if edit form has unsaved input, show confirmation before leaving
 - `移動履歴` button: navigate to Lot DAG page
 
 ### Body Mode A: History Mode (default)
@@ -128,7 +129,7 @@ Fields:
 
 Defaults:
 - Ship / Transfer: movement quantity defaults to volume quantity
-- Filling: movement quantity defaults to filling total
+- Filling: movement quantity defaults to filling total (only lines where `sample_flg = false`)
 
 ### Filling Section (Filling only)
 Components:
@@ -149,6 +150,8 @@ Filling line fields:
 - Quantity (integer, >= 1)
 - lot_code
 - sample_flg (boolean toggle)
+  - `true`: sample line, treated as loss (not inventory)
+  - `false`: normal filling line, treated as inventory movement
 
 Table actions:
 - Edit filling line
@@ -158,10 +161,11 @@ Derived values:
 - Tank Fill Start Volume = get_volume_by_tank (tank id, Tank Fill Start Depth )
 - Tank Fill Left Volume　= get_volume_by_tank (tank id, Tank Fill Left Depth )
 - Volume per unit
-- Total line volume
+- Total line volume = sum of filling line volume where `sample_flg = false` (inventory only)
 - Sample Volume = sum of filling line volume where `sample_flg = true`
 - Sample Volume input field is read-only and auto-updated when filling lines change
-- Loss = Fill Start Volume - Left Volume - Total Filling Volume　- Sample Volume
+- Tank Loss Volume = Fill Start Volume - Left Volume - Total line volume - Sample Volume
+- Effective Loss Qty (for RPC) = Tank Loss Volume + Sample Volume
 - Loss and Sample Volume must be included in Processed volume
 
 Totals:
@@ -233,7 +237,10 @@ Warnings:
 - Use returned `source_lot_id` as `from_lot_id` in `product_filling` payload
 - `product_filling` RPC payload must include:
   - `tank_id`: selected tank id
-  - `loss_qty`: filling loss quantity
+  - `loss_qty`: effective filling loss quantity (`Tank_Loss_Volume + Sample_Volume`)
+- For `product_filling` payload `lines[]`:
+  - include only filling lines where `sample_flg = false`
+  - exclude all lines where `sample_flg = true` (sample is not inventory)
 - If not found, show error: `product_produce must be executed first`
 - UI must not insert/update `inv_movements`, `inv_movement_lines`, `lot`, `lot_edge` directly
 
@@ -262,7 +269,9 @@ Warnings:
 ```
 - UI-to-RPC field mapping for Filling:
   - `Tank_No` -> `tank_id`
-  - `Tank_Loss_Volume` -> `loss_qty`
+  - `Tank_Loss_Volume + Sample_Volume` -> `loss_qty`
+  - `filling_lines(sample_flg=false)` -> `lines[]`
+  - `filling_lines(sample_flg=true)` -> excluded from `lines[]` and counted in `loss_qty`
 
 ### Transfer (社内非納税移出) save rule
 - UI must call stored function `public.product_move(p_doc jsonb)`
@@ -282,7 +291,7 @@ Warnings:
   "packing_type": "filling",
   "event_time": "...",
   "memo": "...",
-　”Tank_No": "...",
+  "Tank_No": "...",
   "Tank_Fill_Start_Depth" : 0,
   "Tank_Fill_Start_Volume" : 1000,
   "Tank_Fill_Left_Depth" : 0,
@@ -301,6 +310,10 @@ Warnings:
 	  ]
 	}
 	```
+- In this example:
+  - `movement.qty` should reflect only non-sample filling lines total volume.
+  - `loss_qty` sent to `product_filling` should be `Tank_Loss_Volume + Sample_Volume`.
+  - any line with `sample_flg = true` must not be included in RPC `lines[]`.
 
 ## Data Handling
 ### tables

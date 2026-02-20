@@ -403,6 +403,7 @@
         "dispose": "廃棄"
       },
       "actions": {
+        "return": "戻る",
         "edit": "編集",
         "view": "参照",
         "delete": "削除"
@@ -446,6 +447,7 @@
         "fillingTable": {
           "packageType": "詰口種別",
           "lotCode": "ロットコード",
+          "input": "数量 / 容量",
           "qty": "数量",
           "sampleFlg": "サンプル",
           "unitVolume": "単位容量",
@@ -478,7 +480,8 @@
         "depthRequired": "深さは0以上で入力してください。",
         "tankVolumeCalcFailed": "深さからタンク容量を算出できませんでした。",
         "fillingRequired": "充填明細を1件以上追加してください。",
-        "fillingLineInvalid": "詰口種別と数量（1以上の整数）を入力してください。",
+        "nonSampleRequired": "サンプル以外の詰口明細を1件以上追加してください。",
+        "fillingLineInvalid": "詰口種別と有効な数量または容量を入力してください。",
         "saveFailed": "移送詰口管理の保存に失敗しました。",
         "deleteFailed": "移送詰口管理の削除に失敗しました。"
       },
@@ -519,6 +522,9 @@
       "name": "名称",
       "text": "説明",
       "unitVolume": "容量",
+      "maxVolume": "最大容量",
+      "qtyFixFlg": "数量固定",
+      "volumeFixFlg": "容量固定",
       "volumeUom": "容量単位",
       "createdAt": "作成日時"
     },
@@ -527,6 +533,7 @@
       "name": "例: 350ml 缶",
       "text": "任意の説明",
       "unitVolume": "例: 0.35",
+      "maxVolume": "例: 0.50",
       "volumeUom": "例: L"
     }
   },

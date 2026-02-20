@@ -31,6 +31,8 @@
               <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('package.columns.name') }}</th>
               <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('package.columns.text') }}</th>
               <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('package.columns.unitVolume') }}</th>
+              <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('package.columns.maxVolume') }}</th>
+              <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('package.columns.volumeFixFlg') }}</th>
               <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('package.columns.volumeUom') }}</th>
               <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('package.columns.createdAt') }}</th>
               <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('common.actions') }}</th>
@@ -42,6 +44,8 @@
               <td class="px-3 py-2">{{ resolveName(row) || '—' }}</td>
               <td class="px-3 py-2 text-sm text-gray-600">{{ row.description || '—' }}</td>
               <td class="px-3 py-2 text-sm text-gray-700">{{ formatVolume(row.unit_volume) }}</td>
+              <td class="px-3 py-2 text-sm text-gray-700">{{ formatVolume(row.max_volume) }}</td>
+              <td class="px-3 py-2 text-sm text-gray-700">{{ resolveVolumeFixFlag(row) ? t('common.yes') : t('common.no') }}</td>
               <td class="px-3 py-2 text-sm text-gray-700">{{ resolveUomLabel(row.volume_uom) }}</td>
               <td class="px-3 py-2 text-xs text-gray-500">{{ formatTimestamp(row.created_at) }}</td>
               <td class="px-3 py-2 space-x-2">
@@ -54,7 +58,7 @@
               </td>
             </tr>
             <tr v-if="!loading && rows.length === 0">
-              <td colspan="7" class="px-3 py-8 text-center text-gray-500">{{ t('common.noData') }}</td>
+              <td colspan="9" class="px-3 py-8 text-center text-gray-500">{{ t('common.noData') }}</td>
             </tr>
           </tbody>
         </table>
@@ -102,6 +106,19 @@
             </div>
             <div>
               <label class="block text-sm text-gray-600 mb-1">
+                {{ t('package.columns.maxVolume') }}
+              </label>
+              <input
+                v-model="form.max_volume"
+                type="number"
+                step="0.000001"
+                class="w-full h-[40px] border rounded px-3"
+                :placeholder="t('package.placeholders.maxVolume')"
+              />
+              <p v-if="errors.max_volume" class="mt-1 text-xs text-red-600">{{ errors.max_volume }}</p>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">
                 {{ t('package.columns.volumeUom') }}<span class="text-red-600">*</span>
               </label>
               <select v-model="form.volume_uom" class="w-full h-[40px] border rounded px-3 bg-white">
@@ -109,6 +126,12 @@
                 <option v-for="option in volumeUomOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
               </select>
               <p v-if="errors.volume_uom" class="mt-1 text-xs text-red-600">{{ errors.volume_uom }}</p>
+            </div>
+            <div class="md:col-span-2">
+              <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                <input v-model="form.volume_fix_flg" type="checkbox" class="h-4 w-4" />
+                {{ t('package.columns.volumeFixFlg') }}
+              </label>
             </div>
             <div class="md:col-span-2">
               <label class="block text-sm text-gray-600 mb-1">{{ t('package.columns.text') }}</label>
@@ -169,6 +192,10 @@ type PackageRow = {
   name_i18n: Record<string, string> | null
   description: string | null
   unit_volume: number
+  max_volume: number | null
+  volume_fix_flg: boolean | null
+  qty_fix_flg: boolean | null
+  fixed_qty: boolean | null
   volume_uom: string
   created_at: string | null
 }
@@ -194,6 +221,8 @@ const form = reactive({
   name_i18n: {} as Record<string, string>,
   description: '',
   unit_volume: '',
+  max_volume: '',
+  volume_fix_flg: true,
   volume_uom: '',
 })
 
@@ -244,6 +273,13 @@ function resolveUomLabel(value: string | null) {
   return match.name ? `${match.code} - ${match.name}` : match.code
 }
 
+function resolveVolumeFixFlag(row: PackageRow) {
+  if (typeof row.volume_fix_flg === 'boolean') return row.volume_fix_flg
+  if (typeof row.qty_fix_flg === 'boolean') return row.qty_fix_flg
+  if (typeof row.fixed_qty === 'boolean') return row.fixed_qty
+  return true
+}
+
 function openCreate() {
   editing.value = false
   Object.assign(form, {
@@ -253,9 +289,11 @@ function openCreate() {
     name_i18n: {},
     description: '',
     unit_volume: '',
+    max_volume: '',
+    volume_fix_flg: true,
     volume_uom: '',
   })
-  const defaultUom = volumeUoms.value.find((row) => row.code === 'L')?.code
+  const defaultUom = volumeUoms.value.find((row) => row.code === 'L')?.id
   if (defaultUom) form.volume_uom = defaultUom
   Object.keys(errors).forEach((key) => delete errors[key])
   showModal.value = true
@@ -271,6 +309,8 @@ function openEdit(row: PackageRow) {
     name_i18n: row.name_i18n ?? {},
     description: row.description ?? '',
     unit_volume: row.unit_volume != null ? String(row.unit_volume) : '',
+    max_volume: row.max_volume != null ? String(row.max_volume) : '',
+    volume_fix_flg: resolveVolumeFixFlag(row),
     volume_uom: row.volume_uom ?? '',
   })
   Object.keys(errors).forEach((key) => delete errors[key])
@@ -288,6 +328,13 @@ function validateForm() {
     errors.unit_volume = t('errors.mustBeNumber', { field: t('package.columns.unitVolume') })
   } else if (Number(form.unit_volume) <= 0) {
     errors.unit_volume = t('errors.mustBePositive', { field: t('package.columns.unitVolume') })
+  }
+  if (form.max_volume !== '') {
+    if (isNaN(Number(form.max_volume))) {
+      errors.max_volume = t('errors.mustBeNumber', { field: t('package.columns.maxVolume') })
+    } else if (Number(form.max_volume) <= 0) {
+      errors.max_volume = t('errors.mustBePositive', { field: t('package.columns.maxVolume') })
+    }
   }
   if (!form.volume_uom) {
     errors.volume_uom = t('errors.required', { field: t('package.columns.volumeUom') })
@@ -319,10 +366,22 @@ async function fetchPackages() {
     loading.value = true
     const { data, error } = await supabase
       .from(TABLE)
-      .select('id, package_code, name_i18n, description, unit_volume, volume_uom, created_at')
+      .select('*')
       .order('package_code', { ascending: true })
     if (error) throw error
-    rows.value = (data ?? []) as PackageRow[]
+    rows.value = ((data ?? []) as any[]).map((row) => ({
+      id: String(row.id),
+      package_code: String(row.package_code ?? ''),
+      name_i18n: (row.name_i18n ?? null) as Record<string, string> | null,
+      description: row.description ?? null,
+      unit_volume: row.unit_volume != null ? Number(row.unit_volume) : 0,
+      max_volume: row.max_volume != null ? Number(row.max_volume) : null,
+      volume_fix_flg: typeof row.volume_fix_flg === 'boolean' ? row.volume_fix_flg : null,
+      qty_fix_flg: typeof row.qty_fix_flg === 'boolean' ? row.qty_fix_flg : null,
+      fixed_qty: typeof row.fixed_qty === 'boolean' ? row.fixed_qty : null,
+      volume_uom: String(row.volume_uom ?? ''),
+      created_at: row.created_at ?? null,
+    }))
   } catch (err) {
     console.error(err)
     rows.value = []
@@ -344,14 +403,44 @@ async function saveRecord() {
       name_i18n: mergedName,
       description: form.description ? form.description.trim() : null,
       unit_volume: Number(form.unit_volume),
+      max_volume: form.max_volume === '' ? null : Number(form.max_volume),
       volume_uom: form.volume_uom,
     }
 
+    const payloadQtyFix = {
+      ...payload,
+      volume_fix_flg: Boolean(form.volume_fix_flg),
+    }
+    const payloadLegacyQtyFix = {
+      ...payload,
+      qty_fix_flg: Boolean(form.volume_fix_flg),
+    }
+    const payloadFixedQty = {
+      ...payload,
+      fixed_qty: Boolean(form.volume_fix_flg),
+    }
+
     if (editing.value && form.id) {
-      const { error } = await supabase.from(TABLE).update(payload).eq('id', form.id)
+      let { error } = await supabase.from(TABLE).update(payloadQtyFix).eq('id', form.id)
+      if (error) {
+        const retryLegacy = await supabase.from(TABLE).update(payloadLegacyQtyFix).eq('id', form.id)
+        error = retryLegacy.error
+      }
+      if (error) {
+        const retryFixed = await supabase.from(TABLE).update(payloadFixedQty).eq('id', form.id)
+        error = retryFixed.error
+      }
       if (error) throw error
     } else {
-      const { error } = await supabase.from(TABLE).insert(payload)
+      let { error } = await supabase.from(TABLE).insert(payloadQtyFix)
+      if (error) {
+        const retryLegacy = await supabase.from(TABLE).insert(payloadLegacyQtyFix)
+        error = retryLegacy.error
+      }
+      if (error) {
+        const retryFixed = await supabase.from(TABLE).insert(payloadFixedQty)
+        error = retryFixed.error
+      }
       if (error) throw error
     }
 

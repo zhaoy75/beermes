@@ -403,6 +403,7 @@
         "dispose": "Dispose"
       },
       "actions": {
+        "return": "Return",
         "edit": "Edit",
         "view": "View",
         "delete": "Delete"
@@ -446,6 +447,7 @@
         "fillingTable": {
           "packageType": "Package type",
           "lotCode": "Lot code",
+          "input": "Qty / Volume",
           "qty": "Quantity",
           "sampleFlg": "Sample",
           "unitVolume": "Volume per unit",
@@ -478,7 +480,8 @@
         "depthRequired": "Depth must be 0 or greater.",
         "tankVolumeCalcFailed": "Failed to calculate tank volume from depth.",
         "fillingRequired": "Add at least one filling line.",
-        "fillingLineInvalid": "Each filling line needs a package type and integer quantity.",
+        "nonSampleRequired": "Add at least one non-sample filling line.",
+        "fillingLineInvalid": "Each filling line needs a package type and valid quantity or volume.",
         "saveFailed": "Failed to save packing event.",
         "deleteFailed": "Failed to delete packing event."
       },
@@ -519,6 +522,9 @@
       "name": "Name",
       "text": "Text",
       "unitVolume": "Unit volume",
+      "maxVolume": "Max volume",
+      "qtyFixFlg": "Qty fixed",
+      "volumeFixFlg": "Volume fixed",
       "volumeUom": "Volume unit",
       "createdAt": "Created"
     },
@@ -527,6 +533,7 @@
       "name": "e.g., 350ml can",
       "text": "Optional description",
       "unitVolume": "e.g., 0.35",
+      "maxVolume": "e.g., 0.50",
       "volumeUom": "e.g., L"
     }
   },

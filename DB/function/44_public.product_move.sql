@@ -19,6 +19,7 @@ declare
   v_dst_site_id uuid;
   v_src_lot_id uuid;
   v_qty numeric;
+  v_unit numeric;
   v_uom_id uuid;
   v_movement_intent text;
   v_tax_decision_code text;
@@ -44,6 +45,7 @@ declare
   v_require_full_lot boolean;
 
   v_source_lot_qty numeric;
+  v_source_lot_unit numeric;
   v_source_lot_uom uuid;
   v_source_lot_site uuid;
   v_source_lot_tax_type text;
@@ -56,6 +58,7 @@ declare
   v_source_produced_at timestamptz;
   v_source_expires_at timestamptz;
   v_source_inv_qty numeric;
+  v_remaining_unit numeric;
 
   v_dest_lot_no text;
   v_lot_no_base text;
@@ -75,6 +78,7 @@ begin
   v_dst_site_id := nullif(p_doc ->> 'dst_site', '')::uuid;
   v_src_lot_id := nullif(p_doc ->> 'src_lot_id', '')::uuid;
   v_qty := coalesce((p_doc ->> 'qty')::numeric, 0);
+  v_unit := nullif(btrim(coalesce(p_doc ->> 'unit', '')), '')::numeric;
   v_uom_id := nullif(p_doc ->> 'uom_id', '')::uuid;
   v_tax_decision_code := nullif(btrim(coalesce(p_doc ->> 'tax_decision_code', '')), '');
   v_reason := nullif(p_doc ->> 'reason', '');
@@ -93,6 +97,10 @@ begin
 
   if v_qty <= 0 then
     raise exception 'PM002: qty must be greater than 0';
+  end if;
+
+  if v_unit is not null and v_unit <= 0 then
+    raise exception 'PM002: unit must be greater than 0';
   end if;
 
   select r.spec
@@ -211,6 +219,7 @@ begin
 
   select
     l.qty,
+    l.unit,
     l.uom_id,
     l.site_id,
     l.lot_tax_type,
@@ -224,6 +233,7 @@ begin
     l.expires_at
     into
       v_source_lot_qty,
+      v_source_lot_unit,
       v_source_lot_uom,
       v_source_lot_site,
       v_source_lot_tax_type,
@@ -258,6 +268,10 @@ begin
 
   if v_source_lot_qty < v_qty then
     raise exception 'PM007: source lot insufficient quantity';
+  end if;
+
+  if v_unit is not null and coalesce(v_source_lot_unit, 0) < v_unit then
+    raise exception 'PM007: source lot insufficient unit';
   end if;
 
   v_effective_lot_tax_type := coalesce(v_source_lot_tax_type, 'OUT_OF_SCOPE');
@@ -375,7 +389,7 @@ begin
 
   insert into public.inv_movement_lines (
     tenant_id, movement_id, line_no,
-    material_id, package_id, batch_id, qty, uom_id, notes, meta
+    material_id, package_id, batch_id, qty, unit, uom_id, notes, meta
   ) values (
     v_tenant,
     v_movement_id,
@@ -384,6 +398,7 @@ begin
     v_source_package_id,
     v_source_batch_id,
     v_qty,
+    v_unit,
     v_uom_id,
     v_notes,
     jsonb_build_object(
@@ -440,7 +455,7 @@ begin
 
       insert into public.lot (
         tenant_id, lot_no, material_id, package_id, batch_id, lot_tax_type, site_id,
-        produced_at, expires_at, qty, uom_id, status, meta, notes
+        produced_at, expires_at, qty, unit, uom_id, status, meta, notes
       ) values (
         v_tenant,
         v_dest_lot_no,
@@ -452,6 +467,7 @@ begin
         v_source_produced_at,
         v_source_expires_at,
         v_qty,
+        v_unit,
         v_uom_id,
         'active',
         coalesce(v_source_meta, '{}'::jsonb) || jsonb_build_object(
@@ -467,6 +483,10 @@ begin
     else
       update public.lot l
          set qty = l.qty + v_qty,
+             unit = case
+               when v_unit is not null then coalesce(l.unit, 0) + v_unit
+               else l.unit
+             end,
              lot_tax_type = coalesce(v_result_lot_tax_type, l.lot_tax_type),
              updated_at = now(),
              meta = coalesce(l.meta, '{}'::jsonb) || jsonb_build_object(
@@ -530,14 +550,22 @@ begin
 
   update public.lot l
      set qty = l.qty - v_qty,
+         unit = case
+           when v_unit is not null then coalesce(l.unit, 0) - v_unit
+           else l.unit
+         end,
          status = case when l.qty - v_qty <= 0 then 'consumed' else l.status end,
          updated_at = now()
    where l.tenant_id = v_tenant
      and l.id = v_src_lot_id
-  returning qty into v_remaining_qty;
+  returning qty, unit into v_remaining_qty, v_remaining_unit;
 
   if v_remaining_qty < 0 then
     raise exception 'PM007: source lot insufficient quantity after update';
+  end if;
+
+  if v_unit is not null and coalesce(v_remaining_unit, 0) < 0 then
+    raise exception 'PM007: source lot insufficient unit after update';
   end if;
 
   perform public._assert_non_negative_lot_qty(v_src_lot_id);

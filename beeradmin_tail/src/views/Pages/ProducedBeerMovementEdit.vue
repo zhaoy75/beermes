@@ -832,15 +832,20 @@ async function loadRulesForIntent(movementIntent: string) {
   }
 }
 
-const defKeyToRuleKey: Record<string, string> = {
+const siteTypeAliasToRuleKey: Record<string, string> = {
   brewery: 'BREWERY_MANUFACTUR',
-  brewery_storage: 'BREWERY_STORAGE',
-  tax_storage: 'TAX_STORAGE',
-  domestic_customer: 'DOMESTIC_CUSTOMER',
-  oversea_customer: 'OVERSEA_CUSTOMER',
-  other_brewery: 'OTHER_BREWERY',
-  disposal_facility: 'DISPOSAL_FACILITY',
-  direct_sales_shop: 'DIRECT_SALES_SHOP',
+  brewery_manufactur: 'BREWERY_MANUFACTUR',
+  bonded_area: 'TAX_STORAGE',
+}
+
+function toRuleSiteTypeKey(defKey: string | null | undefined) {
+  if (!defKey) return null
+  const normalized = defKey.trim()
+  if (!normalized) return null
+  const lower = normalized.toLowerCase()
+  const alias = siteTypeAliasToRuleKey[lower]
+  if (alias) return alias
+  return normalized.toUpperCase().replaceAll('-', '_')
 }
 
 async function loadSites() {
@@ -864,7 +869,7 @@ async function loadSites() {
   if (error) throw error
   siteOptions.value = (sites ?? []).map((row: any) => {
     const defKey = typeMap.get(row.site_type_id) ?? null
-    const ruleKey = defKey ? defKeyToRuleKey[defKey] ?? null : null
+    const ruleKey = toRuleSiteTypeKey(defKey)
     return {
       id: row.id,
       name: row.name ?? row.id,

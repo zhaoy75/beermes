@@ -325,8 +325,7 @@ VALUES (
         "BREWERY_MANUFACTUR",
         "BREWERY_STORAGE",
         "TAX_STORAGE",
-        "DIRECT_SALES_SHOP",
-        "OTHER_BREWERY"
+        "DIRECT_SALES_SHOP"
       ],
       "ui_hints": {
         "wizard_entry": true,
@@ -344,7 +343,8 @@ VALUES (
         "TAX_STORAGE"
       ],
       "allowed_dst_site_types": [
-        "DOMESTIC_CUSTOMER"
+        "DOMESTIC_CUSTOMER",
+        "OTHER_BREWERY"
       ],
       "ui_hints": {
         "wizard_entry": true,
@@ -888,6 +888,29 @@ VALUES (
           "tax_decision_code": "TAXABLE_REMOVAL",
           "tax_event": "TAXABLE_REMOVAL",
           "result_lot_tax_type": "TAX_PAID",
+          "default": true,
+          "lines_rules": {
+            "allow_partial_quantity": true,
+            "require_full_lot": false,
+            "allow_multiple_lots": true,
+            "lot_split_required": true,
+            "approval_required": true,
+            "require_reference_document": true,
+            "require_reason_code": false
+          }
+        }
+      ]
+    },
+    {
+      "movement_intent": "SHIP_DOMESTIC",
+      "src_site_type": "BREWERY_MANUFACTUR",
+      "dst_site_type": "OTHER_BREWERY",
+      "lot_tax_type": "TAX_SUSPENDED",
+      "allowed_tax_decisions": [
+        {
+          "tax_decision_code": "NON_TAXABLE_REMOVAL",
+          "tax_event": "NON_TAXABLE_REMOVAL",
+          "result_lot_tax_type": "TAX_SUSPENDED",
           "default": true,
           "lines_rules": {
             "allow_partial_quantity": true,

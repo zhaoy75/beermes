@@ -11,6 +11,7 @@ create table if not exists public.inv_movement_lines (
   package_id uuid,                                -- FK to mst_beer_package_category (if defined)
   batch_id uuid,                                    -- FK to mes_batches (if defined)
   qty numeric not null check (qty > 0),
+  unit numeric,
   uom_id uuid not null,                           -- FK to mst_uom
   notes text,
   meta jsonb default '{}'::jsonb,

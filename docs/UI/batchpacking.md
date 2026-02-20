@@ -88,7 +88,7 @@
    - Movement Section
    - Review Summary
 4) Edit Actions
-   - Save Packing
+   - 保存
    - Cancel (discard local input and return to History mode)
    - In View mode, only Close is shown
 
@@ -205,6 +205,10 @@ Warnings:
 
 ## Save Behavior
 - Disable Save during submission
+- On `保存` click, UI must execute save path by type:
+  - Filling: `public.product_filling(p_doc jsonb)`
+  - Ship (社外非納税移出): `public.product_move(p_doc jsonb)`
+  - Transfer (社内非納税移出): `public.product_move(p_doc jsonb)`
 - On success:
   - Stay on Batch Packing page
   - Switch from Edit mode to History mode
@@ -261,6 +265,12 @@ Warnings:
 - `movement_intent` must be `INTERNAL_TRANSFER`
 - UI must not insert/update `inv_movements`, `inv_movement_lines`, `lot`, `lot_edge` directly
 
+### Ship (社外非納税移出) save rule
+- UI must call stored function `public.product_move(p_doc jsonb)`
+- `movement_intent` must be `SHIP_DOMESTIC`
+- `tax_decision_code` must be `NON_TAXABLE_REMOVAL`
+- UI must not insert/update `inv_movements`, `inv_movement_lines`, `lot`, `lot_edge` directly
+
 ## Suggested Payload Structure
 ```json
 {
@@ -298,8 +308,9 @@ Warnings:
 
 ### usage
 - Filling: save by `public.product_filling(p_doc jsonb)`
+- Ship: save by `public.product_move(p_doc jsonb)` with `movement_intent = SHIP_DOMESTIC`
 - Transfer: save by `public.product_move(p_doc jsonb)` with `movement_intent = INTERNAL_TRANSFER`
-- Ship / Loss / Dispose: save by `inv_movements` + `inv_movement_lines` (until dedicated functions exist)
+- Loss / Dispose: save by `inv_movements` + `inv_movement_lines` (until dedicated functions exist)
 
 ## Accessibility & i18n
 - Labels for all inputs

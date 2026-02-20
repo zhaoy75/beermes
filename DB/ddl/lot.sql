@@ -15,6 +15,7 @@ create table if not exists public.lot (
   expires_at        timestamptz null,
 
   qty               numeric not null check (qty >= 0),
+  unit              numeric null,
   uom_id            uuid not null, -- FK to mst_uom
 
   status            text not null default 'active', -- active | consumed | void

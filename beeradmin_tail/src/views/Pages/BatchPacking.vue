@@ -1969,7 +1969,7 @@ async function openPackingDialog() {
 }
 
 function canEditPackingEvent(event: PackingEvent) {
-  return event.packing_type !== 'filling' && event.packing_type !== 'transfer'
+  return event.packing_type !== 'filling' && event.packing_type !== 'transfer' && event.packing_type !== 'ship'
 }
 
 function openPackingEditInternal(event: PackingEvent, readOnly = false) {
@@ -2523,10 +2523,11 @@ async function persistPackingEvent(form: PackingFormState, isEditing: boolean) {
           lot_no: line.lot_code ? line.lot_code.trim() : null,
           package_id: line.package_type_id || null,
           qty: convertFromLiters(qtyLiters, sourceUomCode) ?? qtyLiters,
+          unit: qtyUnits,
           meta: { unit_count: qtyUnits },
         }
       })
-      .filter((line): line is { line_no: number, lot_no: string | null, package_id: string | null, qty: number, meta: Record<string, any> } => line !== null)
+      .filter((line): line is { line_no: number, lot_no: string | null, package_id: string | null, qty: number, unit: number, meta: Record<string, any> } => line !== null)
     if (!lines.length) throw new Error(t('batch.packaging.errors.fillingRequired'))
     const totalFillQty = form.filling_lines.reduce((sum, line) => {
       const qtyUnits = toNumber(line.qty)
@@ -2598,6 +2599,53 @@ async function persistPackingEvent(form: PackingFormState, isEditing: boolean) {
         ...packingMeta,
         movement_intent: 'INTERNAL_TRANSFER',
         idempotency_key: `packing_transfer:${batchId.value}:${packingId}`,
+      },
+    }
+
+    await callProductMove(movePayload)
+    return
+  }
+
+  if (form.packing_type === 'ship') {
+    if (isEditing) {
+      throw new Error('Editing Ship events is not supported. Delete and re-create the event.')
+    }
+
+    const dstSiteId = form.movement_site_id || null
+    if (!dstSiteId) throw new Error(t('batch.packaging.errors.siteRequired'))
+
+    const preferredSrcSiteId = resolveProduceSiteId(batch.value)
+    const sourceLot = await resolveRootSourceLot(batchId.value, preferredSrcSiteId)
+      ?? await resolveRootSourceLot(batchId.value, null)
+    if (!sourceLot) {
+      throw new Error('Root source lot for ship is not found. Run product_produce first.')
+    }
+
+    const movementQty = toNumber(form.movement_qty)
+    if (movementQty == null || movementQty <= 0) {
+      throw new Error(t('batch.packaging.errors.movementQtyRequired'))
+    }
+
+    const movementQtyLiters = convertToLiters(movementQty, resolveUomCode(volumeUomId)) ?? movementQty
+    const sourceUomCode = resolveUomCode(sourceLot.uom_id)
+    const sourceQty = convertFromLiters(movementQtyLiters, sourceUomCode) ?? movementQtyLiters
+
+    const movePayload = {
+      doc_no: docNo,
+      movement_at: movementAt,
+      movement_intent: 'SHIP_DOMESTIC',
+      src_site: sourceLot.site_id,
+      dst_site: dstSiteId,
+      src_lot_id: sourceLot.id,
+      qty: sourceQty,
+      uom_id: sourceLot.uom_id,
+      tax_decision_code: 'NON_TAXABLE_REMOVAL',
+      reason: form.reason ? form.reason.trim() : null,
+      notes: form.memo ? form.memo.trim() : null,
+      meta: {
+        ...packingMeta,
+        movement_intent: 'SHIP_DOMESTIC',
+        idempotency_key: `packing_ship:${batchId.value}:${packingId}`,
       },
     }
 

@@ -41,6 +41,7 @@ Required line fields (`lines[]`):
 
 Optional line fields:
 - `line_no` int
+- `unit` numeric: unit count for the filled lot line (`> 0` when provided)
 - `lot_no` text: destination filled lot number; generated if absent from root lot:
   - `<ROOT_LOT_NO>_NNN` (increasing number)
 - `package_id` uuid
@@ -65,6 +66,7 @@ Optional header fields:
 - Tenant exists via `public._assert_tenant()`.
 - `doc_no`, `src_site_id`, `dest_site_id`, `batch_id`, `from_lot_id`, `uom_id`, `lines[]` are present.
 - `lines[]` is non-empty and each line `qty > 0`.
+- If line `unit` is provided, it must be `> 0`.
 - Source lot exists, tenant-visible, and has enough balance for `sum(lines.qty)`.
 - `src_site_id` and `dest_site_id` must be same for filling intent (or explicitly allowed by your rule).
 - `doc_no` unique per tenant in `inv_movements`.
@@ -82,8 +84,8 @@ Optional header fields:
    - `dest_site_id = p_doc.dest_site_id`
 5. For each `lines[]` row:
    - Determine `line_no`.
-   - Create destination filled lot in `lot` with line qty. lot_tax_type set to TAX_SUSPENDED.
-   - Insert one `inv_movement_lines` row.
+   - Create destination filled lot in `lot` with line qty and line unit. lot_tax_type set to TAX_SUSPENDED.
+   - Insert one `inv_movement_lines` row with `qty`, `unit`, `uom_id`.
    - Insert one `lot_edge` row with `edge_type = SPLIT` from source lot to destination lot.
    - Decrease source lot qty by line qty.
    - Upsert inventory:
@@ -132,6 +134,7 @@ Support optional `idempotency_key` in `p_doc.meta`:
       "lot_no": "BATCH20260214_001",
       "package_id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
       "qty": 120,
+      "unit": 240,
       "meta": { "unit_count": 240 }
     },
     {
@@ -139,6 +142,7 @@ Support optional `idempotency_key` in `p_doc.meta`:
       "lot_no": "BATCH20260214_002",
       "package_id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
       "qty": 80,
+      "unit": 160,
       "meta": { "unit_count": 160 }
     }
   ],
@@ -152,3 +156,4 @@ Support optional `idempotency_key` in `p_doc.meta`:
 ## Notes
 - This specification is aligned to `lot_edge`-based lineage (no `lot_event` / `lot_event_line`).
 - If `inv_doc_type` does not include `PACKAGE_FILL`, map to your available enum (commonly `production_receipt`).
+- DDL now provides `unit numeric` on `lot` and `inv_movement_lines`; this function should persist per-line unit counts when provided.

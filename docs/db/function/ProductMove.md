@@ -33,6 +33,7 @@ Required fields:
 - `tax_decision_code` text
 
 Recommended optional fields:
+- `unit` numeric (`> 0` when provided): movement unit count
 - `doc_no` text
 - `movement_at` timestamptz (default `now()`)
 - `reason` text
@@ -65,6 +66,7 @@ Recommended optional fields:
 - Source lot belongs to `src_site`.
 - `uom_id` is required and must match source lot/inventory UOM context.
 - `qty` does not exceed source lot balance.
+- If `unit` is provided, it must be `> 0`.
 - Source inventory (`inv_inventory`) for `(src_site, src_lot_id, uom_id)` exists and has sufficient quantity.
 - If rule requires full-lot movement, enforce `qty = source_lot_qty`.
 
@@ -82,14 +84,16 @@ Recommended optional fields:
    - movement timestamp
    - `movement_intent`, `tax_decision_code`, derived `tax_event` in `meta`.
 3. Insert one line in `inv_movement_lines`:
-   - `src_lot_id`, `qty`, `uom_id`
+   - `src_lot_id`, `qty`, `unit`, `uom_id`
    - include rule snapshot in `meta` (rule version + matched rule keys).
 4. Apply lot movement:
    - Decrease source lot qty.
+   - If `unit` is provided, decrease source lot `unit` consistently.
    - If destination lot is required:
      - create destination lot or reuse mapped destination lot
      - destination lot will inherit src lot package information
      - if auto-created, destination `lot_no` is set to src `lot_no`
+     - if `unit` is provided, set/increase destination lot `unit` consistently
      - set `lot_tax_type` to derived `result_lot_tax_type` when rule changes tax type.
 5. Insert `lot_edge`:
    - `edge_type = 'MOVE'` for lot-to-lot movement.
@@ -125,6 +129,7 @@ Recommended optional fields:
   "dst_site": "22222222-2222-2222-2222-222222222222",
   "src_lot_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
   "qty": 120,
+  "unit": 240,
   "uom_id": "44444444-4444-4444-4444-444444444444",
   "tax_decision_code": "TAXABLE_REMOVAL",
   "notes": "Domestic shipment",
@@ -137,3 +142,4 @@ Recommended optional fields:
 ## Notes
 - This specification uses your requested header table name `inc_movements`.
 - In current repository schema, movement headers are stored in `inv_movements`; implementers should map `inc_movements` to the active table name if needed.
+- DDL now provides `unit numeric` on `lot` and `inv_movement_lines`; this function should propagate unit where provided.

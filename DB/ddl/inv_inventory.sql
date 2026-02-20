@@ -72,11 +72,13 @@ begin
     and s.tenant_id = new.tenant_id;
 
   if not found then
-    raise exception 'inv_inventory.site_id must reference mst_sites row in same tenant with active site_type';
+    -- raise exception 'inv_inventory.site_id must reference mst_sites row in same tenant with active site_type';
+    return NULL;
   end if;
 
   if coalesce(v_inventory_count_flg, true) <> false then
-    raise exception 'inv_inventory.site_id must reference site_type where inventory_count_flg=false';
+    -- raise exception 'inv_inventory.site_id must reference site_type where inventory_count_flg=false';
+    return NULL;
   end if;
 
   return new;

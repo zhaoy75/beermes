@@ -34,6 +34,7 @@ declare
 
   v_line jsonb;
   v_line_qty numeric;
+  v_line_unit numeric;
   v_line_no int;
   v_line_counter int := 0;
   v_max_line_no int := 0;
@@ -132,8 +133,15 @@ begin
     from jsonb_array_elements(v_lines)
   loop
     v_line_qty := coalesce((v_line ->> 'qty')::numeric, 0);
+    v_line_unit := coalesce(
+      nullif(btrim(coalesce(v_line ->> 'unit', '')), '')::numeric,
+      nullif(btrim(coalesce(v_line -> 'meta' ->> 'unit_count', '')), '')::numeric
+    );
     if v_line_qty <= 0 then
       raise exception 'PF002: line qty must be greater than 0';
+    end if;
+    if v_line_unit is not null and v_line_unit <= 0 then
+      raise exception 'PF002: line unit must be greater than 0';
     end if;
     v_total_qty := v_total_qty + v_line_qty;
     v_line_counter := v_line_counter + 1;
@@ -256,6 +264,10 @@ begin
     v_line_counter := v_line_counter + 1;
     v_line_no := coalesce((v_line ->> 'line_no')::int, v_line_counter);
     v_line_qty := coalesce((v_line ->> 'qty')::numeric, 0);
+    v_line_unit := coalesce(
+      nullif(btrim(coalesce(v_line ->> 'unit', '')), '')::numeric,
+      nullif(btrim(coalesce(v_line -> 'meta' ->> 'unit_count', '')), '')::numeric
+    );
     v_line_package_id := nullif(v_line ->> 'package_id', '')::uuid;
     v_line_lot_no := nullif(btrim(coalesce(v_line ->> 'lot_no', '')), '');
     v_line_expires_at := nullif(v_line ->> 'expires_at', '')::timestamptz;
@@ -269,7 +281,7 @@ begin
 
     insert into public.lot (
       tenant_id, lot_no, material_id, package_id, batch_id, lot_tax_type, site_id,
-      produced_at, expires_at, qty, uom_id, status, meta, notes
+      produced_at, expires_at, qty, unit, uom_id, status, meta, notes
     ) values (
       v_tenant,
       v_line_lot_no,
@@ -281,6 +293,7 @@ begin
       v_movement_at,
       v_line_expires_at,
       v_line_qty,
+      v_line_unit,
       v_uom_id,
       'active',
       v_meta || v_line_meta || jsonb_build_object(
@@ -293,7 +306,7 @@ begin
 
     insert into public.inv_movement_lines (
       tenant_id, movement_id, line_no,
-      material_id, package_id, batch_id, qty, uom_id, notes, meta
+      material_id, package_id, batch_id, qty, unit, uom_id, notes, meta
     ) values (
       v_tenant,
       v_movement_id,
@@ -302,6 +315,7 @@ begin
       v_line_package_id,
       v_batch_id,
       v_line_qty,
+      v_line_unit,
       v_uom_id,
       v_line_notes,
       v_line_meta
@@ -345,7 +359,7 @@ begin
 
     insert into public.inv_movement_lines (
       tenant_id, movement_id, line_no,
-      material_id, package_id, batch_id, qty, uom_id, notes, meta
+      material_id, package_id, batch_id, qty, unit, uom_id, notes, meta
     ) values (
       v_tenant,
       v_movement_id,
@@ -354,6 +368,7 @@ begin
       null,
       v_batch_id,
       v_loss_qty,
+      null,
       v_uom_id,
       v_notes,
       jsonb_strip_nulls(jsonb_build_object(

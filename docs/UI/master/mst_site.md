@@ -54,14 +54,24 @@
 
 ## Action
 ### Add Location
-    - Add Location node under location folder of current select tree node
+    - Add `LOCATION` child node.
+    - If selected node is `LOCATION`, create under selected node.
+    - If selected node is `SITE`, do not create under `SITE`.
+      - System must resolve the nearest ancestor node where `node_kind = 'LOCATION'`.
+      - Use that resolved `LOCATION` node as `parent_site_id`.
+      - If no `LOCATION` ancestor exists, create top-level node (`parent_site_id = null`).
     - For create mode defaults:  
        - `node_kind = 'LOCATION'`
        - `site_type_id = uuid 0'`
        - `sort_order = 0`
 
-### Add button
-    - Add child node under currently selected tree node.
+### Add Site
+    - Add `SITE` child node.
+    - If selected node is `LOCATION`, create under selected node.
+    - If selected node is `SITE`, do not create under `SITE`.
+      - System must resolve the nearest ancestor node where `node_kind = 'LOCATION'`.
+      - Use that resolved `LOCATION` node as `parent_site_id`.
+      - If no `LOCATION` ancestor exists, create top-level node (`parent_site_id = null`).
     - If virtual root is selected, create top-level node (`parent_site_id = null`).
     - For create mode defaults:
         - `node_kind = 'SITE'`
@@ -76,6 +86,8 @@
 - When `owner_type = 'OUTSIDE'`, `owner_name` is required.
 - When `owner_type = 'OWN'`, `owner_name` is optional (normally blank).
 - Tree structure must be maintained by `parent_site_id` for site hierarchy.
+- User cannot create `LOCATION` or `SITE` directly under a node where `node_kind = 'SITE'`.
+- For both Add Location and Add Site, when selected node is `SITE`, UI must auto-resolve the nearest parent `LOCATION` and create under it.
 - UI must show ownership clearly so users can identify own-company vs outside-company sites.
 
 ## Data Handling

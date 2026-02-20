@@ -387,7 +387,7 @@ function startCreateLocation() {
 }
 
 function startCreateByKind(nodeKind: string) {
-  const parentId = selectedId.value && !isTempId(selectedId.value) ? selectedId.value : null
+  const parentId = resolveCreateParentId()
   removeTempRow()
   resetForm()
   const tempRow = createTempRow(parentId, nodeKind)
@@ -432,6 +432,30 @@ function loadForm(row: SiteRow) {
 
 function isTempId(id: string) {
   return id.startsWith(TEMP_PREFIX)
+}
+
+function resolveCreateParentId() {
+  const targetId = selectedId.value
+  if (!targetId || isTempId(targetId)) return null
+  return resolveNearestLocationNodeId(targetId)
+}
+
+function resolveNearestLocationNodeId(startId: string | null) {
+  if (!startId) return null
+  const rowMap = new Map(rows.value.map((row) => [row.id, row]))
+  const visited = new Set<string>()
+  let currentId: string | null = startId
+
+  while (currentId) {
+    if (visited.has(currentId)) return null
+    visited.add(currentId)
+    const current = rowMap.get(currentId)
+    if (!current) return null
+    if (isLocationKind(current.node_kind)) return current.id
+    currentId = current.parent_site_id
+  }
+
+  return null
 }
 
 function createTempRow(parentId: string | null, nodeKind: string) {

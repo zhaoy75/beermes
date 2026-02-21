@@ -278,7 +278,11 @@ type TankRow = {
     id: string
     code: string
     name: string | null
-  }
+  } | Array<{
+    id: string
+    code: string
+    name: string | null
+  }>
 }
 
 type TankDisplayRow = {
@@ -495,7 +499,7 @@ function validate() {
 
 async function fetchUoms() {
   const { data, error } = await supabase
-    .from<UomOption>(UOM_TABLE)
+    .from(UOM_TABLE)
     .select('id, code, name')
     .order('code', { ascending: true })
 
@@ -504,11 +508,12 @@ async function fetchUoms() {
     return
   }
 
-  uomOptions.value = data ?? []
+  uomOptions.value = (data ?? []) as UomOption[]
 }
 
 function normalizeRow(row: TankRow): TankDisplayRow {
   const meta = row.meta ?? {}
+  const uom = Array.isArray(row.uom) ? (row.uom[0] ?? null) : (row.uom ?? null)
   const tankName = (meta.name ?? row.name ?? '').trim()
   let sizeValue: number | null = null
   if (typeof meta.size === 'number') {
@@ -517,7 +522,7 @@ function normalizeRow(row: TankRow): TankDisplayRow {
     const numeric = Number(meta.size)
     sizeValue = Number.isNaN(numeric) ? null : numeric
   }
-  const uomCode = row.uom?.code ?? ''
+  const uomCode = uom?.code ?? ''
   const usedSteps = Array.isArray(meta.usedSteps) ? (meta.usedSteps.filter((step): step is StepValue => STEP_VALUES.includes(step as StepValue))) : []
   return {
     id: row.id,

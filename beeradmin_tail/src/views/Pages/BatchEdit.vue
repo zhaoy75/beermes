@@ -881,7 +881,9 @@ async function loadBatchAttributes(batchUuid: string) {
 
     const fields: AttrField[] = []
     for (const row of ruleRows ?? []) {
-      const attr = (row as AttrRuleRow).attr_def
+      const typedRow = row as unknown as AttrRuleRow
+      const attrRaw = typedRow.attr_def as any
+      const attr = Array.isArray(attrRaw) ? attrRaw[0] : attrRaw
       if (!attr) continue
       const valueRow = valueMap.get(attr.attr_id)
       let value: any = ''
@@ -902,7 +904,7 @@ async function loadBatchAttributes(batchUuid: string) {
         name: attr.name,
         name_i18n: attr.name_i18n ?? null,
         data_type: attr.data_type,
-        required: Boolean((row as AttrRuleRow).required),
+        required: Boolean(typedRow.required),
         uom_id: attr.uom_id ?? null,
         uom_code: attr.uom_id ? uomMap.get(String(attr.uom_id)) ?? null : null,
         ref_kind: attr.ref_kind ?? null,
@@ -1365,12 +1367,13 @@ async function saveActualYieldDialog() {
     actualYieldDialog.errors = errors
     return
   }
-  if (!batchId.value || !batch.value) {
-    actualYieldDialog.globalError = t('batch.edit.actualYieldSaveFailed')
-    return
-  }
+    if (!batchId.value || !batch.value) {
+      actualYieldDialog.globalError = t('batch.edit.actualYieldSaveFailed')
+      return
+    }
+    const targetQty = qty as number
 
-  actualYieldDialog.loading = true
+    actualYieldDialog.loading = true
   actualYieldDialog.globalError = ''
   let failedStage: 'produce' | 'save' = 'produce'
   try {
@@ -1383,7 +1386,7 @@ async function saveActualYieldDialog() {
 
     const existingProduceMovements = await findPostedActualYieldProduceMovements(batchId.value)
     const matchingProduceMovement = existingProduceMovements.find((movement) =>
-      isSameActualYieldProduce(movement, qty, uomId, siteId),
+      isSameActualYieldProduce(movement, targetQty, uomId, siteId),
     )
 
     if (!matchingProduceMovement) {

@@ -352,40 +352,42 @@ async function fetchBatches() {
       })
     }
 
-    const filteredBatches = (batchRows ?? [])
-      .map((row) => {
-        const recipe = row.recipe
-        if (recipe && !recipeMap.has(recipe.id)) {
-          recipeMap.set(recipe.id, {
-            id: recipe.id,
-            name: recipe.name ?? recipe.code ?? recipe.id,
-            code: recipe.code ?? recipe.id,
-            style: recipe.style ?? null,
-          })
-        }
-        const actualVolume = packageVolumes.get(row.id) ?? 0
-        const targetVolume = kpiValue(row.kpi, 'volume', 'planed')
-          ?? kpiValue(row.kpi, 'volume_l', 'planed')
-          ?? 0
-        const yieldPercent = targetVolume > 0 && actualVolume > 0 ? (actualVolume / targetVolume) * 100 : null
-        const status = row.status ?? ''
-        const statusLower = status.toLowerCase()
-        const isFinished = FINISHED_STATUSES.some((keyword) => statusLower === keyword.toLowerCase())
-        if (!isFinished) return null
-        return {
-          id: row.id,
-          batch_code: row.batch_code,
-          status,
-          planned_start: row.planned_start,
-          target_volume_l: targetVolume,
-          actual_volume_l: actualVolume,
-          yield_percent: yieldPercent,
-          recipeId: recipe?.id ?? '',
-          recipeName: recipe?.name ?? recipe?.code ?? '—',
-          style: recipe?.style ?? null,
-        }
+    const filteredBatches: BatchRow[] = []
+    ;(batchRows ?? []).forEach((row: any) => {
+      const recipeRaw = Array.isArray(row.recipe) ? row.recipe[0] : row.recipe
+      const recipe = recipeRaw as { id?: string; name?: string; code?: string; style?: string | null } | null | undefined
+      if (recipe?.id && !recipeMap.has(recipe.id)) {
+        recipeMap.set(recipe.id, {
+          id: recipe.id,
+          name: recipe.name ?? recipe.code ?? recipe.id,
+          code: recipe.code ?? recipe.id,
+          style: recipe.style ?? null,
+        })
+      }
+
+      const actualVolume = packageVolumes.get(row.id) ?? 0
+      const targetVolume = kpiValue(row.kpi, 'volume', 'planed')
+        ?? kpiValue(row.kpi, 'volume_l', 'planed')
+        ?? 0
+      const yieldPercent = targetVolume > 0 && actualVolume > 0 ? (actualVolume / targetVolume) * 100 : null
+      const status = String(row.status ?? '')
+      const statusLower = status.toLowerCase()
+      const isFinished = FINISHED_STATUSES.some((keyword) => statusLower === keyword.toLowerCase())
+      if (!isFinished) return
+
+      filteredBatches.push({
+        id: String(row.id ?? ''),
+        batch_code: String(row.batch_code ?? ''),
+        status,
+        planned_start: row.planned_start ?? null,
+        target_volume_l: targetVolume,
+        actual_volume_l: actualVolume,
+        yield_percent: yieldPercent,
+        recipeId: String(recipe?.id ?? ''),
+        recipeName: String(recipe?.name ?? recipe?.code ?? '—'),
+        style: recipe?.style ?? null,
       })
-      .filter((batch): batch is BatchRow => batch !== null)
+    })
 
     batches.value = filteredBatches
 

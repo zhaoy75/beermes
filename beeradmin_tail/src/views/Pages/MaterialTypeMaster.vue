@@ -333,7 +333,7 @@ type AttrRuleRow = {
   ui_section: string | null
   ui_widget: string | null
   help_text: string | null
-  attr_def: AttrDefRow | null
+  attr_def: AttrDefRow | AttrDefRow[] | null
 }
 
 const TYPE_DOMAIN = 'material_type'
@@ -425,7 +425,7 @@ const assignedAttrSets = computed(() => {
 
 const attributeRows = computed(() => {
   const rows = attrRules.value.map((rule) => {
-    const attr = rule.attr_def
+    const attr = Array.isArray(rule.attr_def) ? (rule.attr_def[0] ?? null) : rule.attr_def
     const set = attrSetLookup.value.get(rule.attr_set_id)
     return {
       key: `${rule.attr_set_id}-${rule.attr_id}`,
@@ -699,7 +699,7 @@ async function loadAttributes() {
       .in('attr_set_id', setIds)
       .order('sort_order', { ascending: true })
     if (ruleError) throw ruleError
-    attrRules.value = (ruleData ?? []) as AttrRuleRow[]
+    attrRules.value = (ruleData ?? []) as unknown as AttrRuleRow[]
   } catch (err) {
     console.error(err)
     toast.error(err instanceof Error ? err.message : String(err))

@@ -315,6 +315,8 @@ const form = reactive({
   status: 'open',
   src_site_id: '',
   dest_site_id: '',
+  address: '',
+  contact: '',
   notes: '',
   lines: [] as MovementLine[],
 })
@@ -373,12 +375,14 @@ function formatTimestamp(value: string | null) {
 }
 
 function docTypeLabel(value: string) {
-  const map = t('siteMovement.docTypeMap') as Record<string, string>
+  const mapped = t('siteMovement.docTypeMap')
+  const map = mapped && typeof mapped === 'object' ? (mapped as Record<string, string>) : {}
   return map[value] || value
 }
 
 function statusLabel(value: string) {
-  const map = t('siteMovement.statusMap') as Record<string, string>
+  const mapped = t('siteMovement.statusMap')
+  const map = mapped && typeof mapped === 'object' ? (mapped as Record<string, string>) : {}
   return map[value] || value
 }
 
@@ -390,10 +394,25 @@ function resetForm() {
   form.status = 'open'
   form.src_site_id = ''
   form.dest_site_id = ''
+  form.address = ''
+  form.contact = ''
   form.notes = ''
   form.lines = []
   lineErrors.value = []
   Object.keys(errors).forEach((key) => delete errors[key])
+}
+
+function validateJson(value: string, field: 'address' | 'contact') {
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  try {
+    const parsed = JSON.parse(trimmed)
+    if (parsed && typeof parsed === 'object') return parsed
+  } catch {
+    // handled below
+  }
+  errors[field] = 'Invalid JSON format'
+  throw new Error('invalid json')
 }
 
 function addLine() {

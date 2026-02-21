@@ -114,11 +114,12 @@ onMounted(async () => {
     height: 520,
     layout: 'fitColumns',
     placeholder: 'No data',
-    pagination: 'remote',
+    pagination: true,
+    paginationMode: 'remote',
     paginationSize: pageSize.value,
     ajaxURL: '/',              // unused, but required by Tabulator
     ajaxURLGenerator: (url: string) => url, // keep same URL
-    ajaxURLFunc: fetchPage,    // ← our Supabase loader
+    ajaxRequestFunc: fetchPage,    // ← our Supabase loader
     columns,
   })
 

@@ -44,6 +44,7 @@ import { useI18n } from 'vue-i18n'
 interface TreeNode {
   id: string
   name: string
+  sort_order: number
   owner_type: string
   site_type_id: string
   parent_site_id: string | null

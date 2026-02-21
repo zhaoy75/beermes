@@ -470,7 +470,7 @@ function validate() {
 
 async function fetchUoms() {
   const { data, error } = await supabase
-    .from<UomOption>(UOM_TABLE)
+    .from(UOM_TABLE)
     .select('id, code, name')
     .order('code', { ascending: true })
 
@@ -479,14 +479,14 @@ async function fetchUoms() {
     return
   }
 
-  uomOptions.value = data ?? []
+  uomOptions.value = (data ?? []) as UomOption[]
 }
 
 async function fetchMaterials() {
   loading.value = true
   const allowedCategories = [...CATEGORY_SOURCE]
   const { data, error } = await supabase
-    .from<MaterialRow>(MATERIAL_TABLE)
+    .from(MATERIAL_TABLE)
     .select('id, code, name, category, uom_id, active, created_at')
     .in('category', allowedCategories)
     .order('code', { ascending: true })

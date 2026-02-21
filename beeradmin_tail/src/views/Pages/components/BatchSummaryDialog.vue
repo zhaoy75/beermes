@@ -209,14 +209,18 @@ async function loadIngredients(recipeId: string | undefined) {
       .eq('recipe_id', recipeId)
       .order('usage_stage', { ascending: true })
     if (error) throw error
-    ingredients.value = (data ?? []).map((row) => ({
-      id: row.id,
-      amount: row.amount,
-      usage_stage: row.usage_stage,
-      notes: row.notes,
-      material_name: `${row.material?.name ?? ''} (${row.material?.code ?? ''})`.trim(),
-      uom_code: row.uom?.code ?? null,
-    }))
+    ingredients.value = (data ?? []).map((row: any) => {
+      const material = Array.isArray(row.material) ? row.material[0] : row.material
+      const uom = Array.isArray(row.uom) ? row.uom[0] : row.uom
+      return {
+        id: row.id,
+        amount: row.amount,
+        usage_stage: row.usage_stage,
+        notes: row.notes,
+        material_name: `${material?.name ?? ''} (${material?.code ?? ''})`.trim(),
+        uom_code: uom?.code ?? null,
+      }
+    })
   } catch (err) {
     console.error(err)
   } finally {

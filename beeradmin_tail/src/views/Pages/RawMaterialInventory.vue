@@ -184,7 +184,7 @@ async function fetchInventory() {
           material_code: row.material?.code ?? '',
           material_name: row.material?.name ?? '',
           material_category: row.material?.category ?? '',
-          site_id: row.site_id ?? '',
+          warehouse_id: row.site_id ?? '',
           warehouse_name: warehouseOption?.name ?? '',
           qty: row.qty ?? 0,
           uom_id: row.uom_id ?? row.material?.uom_id ?? '',

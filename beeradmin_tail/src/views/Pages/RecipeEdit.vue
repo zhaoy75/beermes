@@ -622,6 +622,8 @@ interface RecipeDetail {
   category: string | null
 }
 
+type RecipeRowLike = Partial<RecipeDetail> & Record<string, unknown>
+
 interface MaterialRow {
   id: string
   code: string
@@ -718,7 +720,23 @@ const loadingRecipe = ref(false)
 const savingRecipe = ref(false)
 const versioning = ref(false)
 const recipeErrors = reactive<Record<string, string>>({})
-const recipeForm = reactive({
+type RecipeFormState = {
+  code: string
+  name: string
+  style: string
+  category: string
+  version: number
+  status: (typeof STATUSES)[number]
+  batch_size_l: string
+  target_og: string
+  target_fg: string
+  target_abv: string
+  target_ibu: string
+  target_srm: string
+  notes: string
+}
+
+const recipeForm = reactive<RecipeFormState>({
   code: '',
   name: '',
   style: '',
@@ -962,6 +980,32 @@ function numberOrNull(value: string) {
   return Number.isNaN(num) ? null : num
 }
 
+function toNullableNumber(value: unknown): number | null {
+  if (value == null || value === '') return null
+  const parsed = typeof value === 'number' ? value : Number(value)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+function normalizeRecipeDetail(row: RecipeRowLike): RecipeDetail {
+  return {
+    id: String(row.id ?? ''),
+    code: String(row.code ?? ''),
+    name: String(row.name ?? ''),
+    style: row.style == null ? null : String(row.style),
+    version: toNullableNumber(row.version) ?? 1,
+    status: String(row.status ?? STATUSES[0]),
+    batch_size_l: toNullableNumber(row.batch_size_l),
+    target_og: toNullableNumber(row.target_og),
+    target_fg: toNullableNumber(row.target_fg),
+    target_abv: toNullableNumber(row.target_abv),
+    target_ibu: toNullableNumber(row.target_ibu),
+    target_srm: toNullableNumber(row.target_srm),
+    notes: row.notes == null ? null : String(row.notes),
+    created_at: row.created_at == null ? null : String(row.created_at),
+    category: row.category == null ? null : String(row.category),
+  }
+}
+
 function resetRecipeErrors() {
   Object.keys(recipeErrors).forEach((key) => delete recipeErrors[key])
 }
@@ -1163,20 +1207,23 @@ async function loadRecipe() {
     router.push('/recipeList')
     return
   }
-  recipe.value = data
-  recipeForm.code = data.code ?? ''
-  recipeForm.name = data.name ?? ''
-  recipeForm.style = data.style ?? ''
-  recipeForm.category = data.category ?? ''
-  recipeForm.version = data.version ?? 1
-  recipeForm.status = (STATUSES.includes(data.status as typeof STATUSES[number]) ? data.status : STATUSES[0]) as typeof STATUSES[number]
-  recipeForm.batch_size_l = data.batch_size_l != null ? String(data.batch_size_l) : ''
-  recipeForm.target_og = data.target_og != null ? String(data.target_og) : ''
-  recipeForm.target_fg = data.target_fg != null ? String(data.target_fg) : ''
-  recipeForm.target_abv = data.target_abv != null ? String(data.target_abv) : ''
-  recipeForm.target_ibu = data.target_ibu != null ? String(data.target_ibu) : ''
-  recipeForm.target_srm = data.target_srm != null ? String(data.target_srm) : ''
-  recipeForm.notes = data.notes ?? ''
+  const recipeData = normalizeRecipeDetail(data as RecipeRowLike)
+  recipe.value = recipeData
+  recipeForm.code = recipeData.code
+  recipeForm.name = recipeData.name
+  recipeForm.style = recipeData.style ?? ''
+  recipeForm.category = recipeData.category ?? ''
+  recipeForm.version = recipeData.version
+  recipeForm.status = (
+    STATUSES.includes(recipeData.status as (typeof STATUSES)[number]) ? recipeData.status : STATUSES[0]
+  ) as (typeof STATUSES)[number]
+  recipeForm.batch_size_l = recipeData.batch_size_l != null ? String(recipeData.batch_size_l) : ''
+  recipeForm.target_og = recipeData.target_og != null ? String(recipeData.target_og) : ''
+  recipeForm.target_fg = recipeData.target_fg != null ? String(recipeData.target_fg) : ''
+  recipeForm.target_abv = recipeData.target_abv != null ? String(recipeData.target_abv) : ''
+  recipeForm.target_ibu = recipeData.target_ibu != null ? String(recipeData.target_ibu) : ''
+  recipeForm.target_srm = recipeData.target_srm != null ? String(recipeData.target_srm) : ''
+  recipeForm.notes = recipeData.notes ?? ''
 
   await Promise.all([loadIngredients(), loadProcesses()])
 }
@@ -1224,14 +1271,24 @@ async function loadIngredients() {
     .from('mes_ingredients')
     .select('id, recipe_id, material_id, amount, uom_id, usage_stage, notes, material:material_id(id, code, name, category), uom:uom_id(id, code, name)')
     .eq('recipe_id', recipeId.value)
-    .order('usage_stage', { ascending: true, nullsLast: true })
+    .order('usage_stage', { ascending: true, nullsFirst: false })
     .order('material_id', { ascending: true })
   ingredientsLoading.value = false
   if (error) {
     toast.error('Failed to load ingredients: ' + error.message)
     return
   }
-  ingredients.value = (data ?? []) as IngredientRow[]
+  ingredients.value = (data ?? []).map((row: any) => ({
+    id: row.id,
+    recipe_id: row.recipe_id,
+    material_id: row.material_id,
+    amount: row.amount,
+    uom_id: row.uom_id,
+    usage_stage: row.usage_stage,
+    notes: row.notes,
+    material: Array.isArray(row.material) ? (row.material[0] ?? null) : (row.material ?? null),
+    uom: Array.isArray(row.uom) ? (row.uom[0] ?? null) : (row.uom ?? null),
+  })) as IngredientRow[]
 }
 
 function resetIngredientForm() {
@@ -1544,8 +1601,9 @@ async function saveRecipeInfo() {
     toast.error('Failed to save recipe: ' + (error?.message ?? ''))
     return
   }
-  recipe.value = data
-  recipeForm.category = data.category ?? ''
+  const recipeData = normalizeRecipeDetail(data as RecipeRowLike)
+  recipe.value = recipeData
+  recipeForm.category = recipeData.category ?? ''
   toast.success(t('recipe.edit.recipeSaved'))
 }
 

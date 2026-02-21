@@ -510,7 +510,9 @@ async function loadSummary() {
 
     const packageIds = Array.from(new Set(lines.map((line) => line.package_id).filter(Boolean))) as string[]
     const packageMap = await loadPackageCategories(packageIds)
-    const batchIds = Array.from(new Set(lines.map((line) => line.batch_id).filter(Boolean)))
+    const batchIds = Array.from(
+      new Set(lines.map((line) => line.batch_id).filter((id): id is string => Boolean(id))),
+    )
     const batchMap = await loadBatches(batchIds)
     const recipeIds = Array.from(new Set(Array.from(batchMap.values()).map((row) => row.recipe_id).filter(Boolean))) as string[]
     const recipeMap = await loadRecipes(recipeIds)

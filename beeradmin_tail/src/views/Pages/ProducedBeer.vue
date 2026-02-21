@@ -474,8 +474,7 @@ const filteredMovementCards = computed<MovementCardView[]>(() => {
   const nameFilter = movementFilters.beerName.trim().toLowerCase()
   const batchFilter = movementFilters.batchNo.trim().toLowerCase()
 
-  return movementCards.value
-    .map((card) => {
+  return movementCards.value.reduce<MovementCardView[]>((acc, card) => {
       const filteredLines = card.lines.filter((line) => {
         if (nameFilter && !(line.beerName || '').toLowerCase().includes(nameFilter)) return false
         if (movementFilters.category && line.categoryId !== movementFilters.category) return false
@@ -484,19 +483,19 @@ const filteredMovementCards = computed<MovementCardView[]>(() => {
         return true
       })
 
-      if (filteredLines.length === 0) return null
+      if (filteredLines.length === 0) return acc
 
       const totalPackages = filteredLines.reduce((sum, line) => sum + (line.packageQty ?? 0), 0)
       const totalLiters = filteredLines.reduce((sum, line) => sum + (line.qtyLiters ?? 0), 0)
 
-      return {
+      acc.push({
         ...card,
         lines: filteredLines,
         totalPackages,
         totalLiters,
-      }
-    })
-    .filter((item): item is MovementCardView => Boolean(item))
+      })
+      return acc
+    }, [])
 })
 
 const numberFormatter = computed(() => new Intl.NumberFormat(locale.value, { maximumFractionDigits: 2 }))

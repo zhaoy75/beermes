@@ -798,7 +798,7 @@ async function executeCopy() {
         target_srm: original.target_srm,
         category: original.category,
       })
-      .select('id, code, name, style, version, status, notes, created_at')
+      .select('id, code, name, style, version, status, notes, created_at, category')
       .single()
     if (insertError || !inserted) throw insertError ?? new Error('Insert failed')
 

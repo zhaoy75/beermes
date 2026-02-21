@@ -226,7 +226,7 @@ import { useI18n } from 'vue-i18n'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { supabase } from '@/lib/supabase'
-import { mapSupabaseError, setErrorLocale } from '@/lib/supabaseErrors'
+import { mapSupabaseError, setErrorLocale, type SupabaseErrorLike } from '@/lib/supabaseErrors'
 import { toast } from 'vue3-toastify'
 
 const MIN_PASSWORD_LENGTH = 8
@@ -321,7 +321,7 @@ const handleSubmit = async () => {
   } catch (err) {
     console.error(err)
     const canMap = err && typeof err === 'object' && ('status' in err || 'code' in err)
-    const friendly = canMap ? mapSupabaseError(err) : null
+    const friendly = canMap ? mapSupabaseError(err as SupabaseErrorLike) : null
     toast.error(
       friendly?.message ??
         (err instanceof Error ? err.message : t('changePassword.toast.errorGeneric'))

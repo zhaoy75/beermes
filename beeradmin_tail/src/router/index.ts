@@ -18,7 +18,7 @@ const router = createRouter({
     {
       path: '/',
       name: '概要',
-      component: () => import('../views/pages/BatchList.vue'),
+      component: () => import('../views/Pages/BatchList.vue'),
       meta: {
         title: 'eCommerce Dashboard',
         requiresAuth: true ,
@@ -208,7 +208,7 @@ const router = createRouter({
     {
       path: '/uomMaster',
       name: '単位マスタ',
-      component: () => import('../views/pages/UomMaster.vue'),
+      component: () => import('../views/Pages/UomMaster.vue'),
       meta: {
         title: 'Unit of Measure',
         requiresAuth: true ,
@@ -307,7 +307,7 @@ const router = createRouter({
     {
       path: '/MaterialMaster',
       name: '原材料マスタ',
-      component: () => import('../views/pages/MaterialMaster.vue'),
+      component: () => import('../views/Pages/MaterialMaster.vue'),
       meta: {
         title: 'Material Master',
         requiresAuth: true ,

@@ -111,7 +111,7 @@
               <th v-for="col in columns" :key="col.key" class="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">
                 <button v-if="col.sortable" class="inline-flex items-center gap-1" @click="setSort(col.key as SortKey)" type="button">
                   <span>{{ col.i18n ? t(col.label) : col.label }}</span>
-                  <span class="text-[10px] text-gray-400">{{ sortGlyph(col.key) }}</span>
+                  <span class="text-[10px] text-gray-400">{{ sortGlyph(col.key as SortKey) }}</span>
                 </button>
                 <span v-else>{{ col.i18n ? t(col.label) : col.label }}</span>
               </th>

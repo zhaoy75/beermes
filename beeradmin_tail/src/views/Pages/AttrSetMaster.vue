@@ -477,11 +477,11 @@ const paletteGroups = computed(() => {
     return !term || label.includes(term)
   })
 
-  const grouped = new Map<string, { label: string; items: AttrDefRow[] }>()
+  const grouped = new Map<string, { key: string; label: string; items: AttrDefRow[] }>()
   filtered.forEach((item) => {
     const key = `${item.domain}::${normalizeDataType(item.data_type)}`
     const label = `${item.domain} · ${dataTypeLabel(item.data_type)}`
-    if (!grouped.has(key)) grouped.set(key, { label, items: [] })
+    if (!grouped.has(key)) grouped.set(key, { key, label, items: [] })
     grouped.get(key)!.items.push(item)
   })
 

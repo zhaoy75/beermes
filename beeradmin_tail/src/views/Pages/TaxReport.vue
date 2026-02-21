@@ -764,7 +764,7 @@ function normalizeReport(row: any): TaxReportRow {
   const files = Array.isArray(row.report_files) ? row.report_files : []
   const attachments = Array.isArray(row.attachment_files) ? row.attachment_files : []
   const breakdown = Array.isArray(row.volume_breakdown) ? row.volume_breakdown : []
-  const normalizedBreakdown = breakdown
+  const normalizedBreakdown: TaxVolumeItem[] = breakdown
     .map((item: any, index: number) => ({
       key: item.key || `${row.id}-${index}`,
       move_type: item.move_type || item.moveType || item.doc_type || 'unknown',

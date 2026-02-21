@@ -464,6 +464,8 @@ const industryOptions = computed(() => {
   return [...industries.value].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.name.localeCompare(b.name))
 })
 
+const uomOptions = computed(() => uoms.value)
+
 const filteredRows = computed(() => {
   const codeFilter = filters.code.trim().toLowerCase()
   const domainFilter = filters.domain

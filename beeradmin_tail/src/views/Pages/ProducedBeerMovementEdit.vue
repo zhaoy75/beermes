@@ -845,7 +845,7 @@ function toRuleSiteTypeKey(defKey: string | null | undefined) {
   const lower = normalized.toLowerCase()
   const alias = siteTypeAliasToRuleKey[lower]
   if (alias) return alias
-  return normalized.toUpperCase().replaceAll('-', '_')
+  return normalized.toUpperCase().replace(/-/g, '_')
 }
 
 async function loadSites() {

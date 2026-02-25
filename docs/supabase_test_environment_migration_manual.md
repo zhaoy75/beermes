@@ -219,11 +219,89 @@ Then restore again.
 
 # Build Vue
 
+## create env file for test env
+
+copy .env to .ens.test
+modify ULR & KEY
+
+## modify package.json file to add following script
+    "build:test": "vite build --mode test"
+
+## Build the module 
+npm run build:test
 
 
 # Install Ngnix
 
+## Install Ngnix
 
-------------------------------------------------------------------------
+```
+sudo apt install nginx
+sudo systemctl start nginx
+```
+
+## Modify Ngnix Setting File
+
+```
+sudo vi /etc/nginx/sites-available/app
+```
+
+```
+# /etc/nginx/sites-available/app
+
+map $http_upgrade $connection_upgrade {
+  default upgrade;
+  ''      close;
+}
+
+server {
+  listen 80;
+  server_name _;
+
+  # ---- Vue (static) ----
+  root /var/www/vue;
+  index index.html;
+
+  # Vue router history mode support:
+  location / {
+    try_files $uri $uri/ /index.html;
+  }
+
+  # Cache static assets aggressively
+  location ~* \.(?:js|css|png|jpg|jpeg|gif|ico|svg|webp|woff|woff2|ttf|eot)$ {
+    expires 30d;
+    add_header Cache-Control "public, max-age=2592000, immutable";
+    try_files $uri =404;
+  }
+
+  # ---- Supabase via /api/ ----
+  # IMPORTANT: proxy to Kong (Supabase gateway), usually on 8000 in self-host compose.
+  location /api/ {
+    proxy_pass http://127.0.0.1:8000/;   # trailing slash matters
+    proxy_http_version 1.1;
+
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+
+    # WebSocket support (Realtime)
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection $connection_upgrade;
+
+    # Optional: larger uploads
+    client_max_body_size 50m;
+  }
+}
+```
+
+```
+
+sudo ln -s /etc/nginx/sites-available/app /etc/nginx/sites-enabled/app
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+
 
 End of manual.

@@ -21,8 +21,8 @@ begin
     raise exception 'inv_inventory.site_id must reference mst_sites row in same tenant with active site_type';
   end if;
 
-  if coalesce(v_inventory_count_flg, true) <> false then
-    raise exception 'inv_inventory.site_id must reference site_type where inventory_count_flg=false';
+  if coalesce(v_inventory_count_flg, true) <> true then
+    return NULL; -- skip trigger if inventory_count_flg is not false
   end if;
 
   return new;

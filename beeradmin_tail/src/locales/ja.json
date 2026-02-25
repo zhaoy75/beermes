@@ -475,6 +475,7 @@
         "eventTimeRequired": "日時は必須です。",
         "volumeRequired": "容量は0より大きい値を入力してください。",
         "siteRequired": "移動先拠点は必須です。",
+        "siteTypeInvalid": "選択した拠点の種別は、この移送詰口管理種別では利用できません。",
         "movementQtyRequired": "移動数量は0より大きい値を入力してください。",
         "tankRequired": "詰口ではタンク選択が必須です。",
         "depthRequired": "深さは0以上で入力してください。",

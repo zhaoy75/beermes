@@ -475,6 +475,7 @@
         "eventTimeRequired": "Event time is required.",
         "volumeRequired": "Volume quantity must be greater than 0.",
         "siteRequired": "Movement site is required.",
+        "siteTypeInvalid": "Selected site type is not allowed for this packing type.",
         "movementQtyRequired": "Movement quantity must be greater than 0.",
         "tankRequired": "Tank is required for filling.",
         "depthRequired": "Depth must be 0 or greater.",

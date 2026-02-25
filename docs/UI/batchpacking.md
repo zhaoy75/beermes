@@ -112,7 +112,7 @@
 Shown for: Ship, Transfer, Loss, Dispose
 
 Fields:
-- Tank (text input or selected from `mst_equipment_tank`)
+- Tank (must selected from `mst_equipment_tank`)
 - Quantity (numeric, required, > 0)
 - Unit of measure (dropdown from `mst_uom` where dimension = volume)
 
@@ -128,8 +128,17 @@ Fields:
 - Memo (optional)
 
 Defaults:
-- Ship / Transfer: movement quantity defaults to volume quantity
-- Filling: movement quantity defaults to filling total (only lines where `sample_flg = false`)
+- Ship 
+  Site type should be OTHER_BREWERY
+  movement quantity defaults to volume quantity
+
+- Transfer: 
+  Site type should BREWERY_STORAGE
+  movement quantity defaults to volume quantity
+
+- Filling: 
+  Site type should be BREWERY_MANUFACTUR, BREWERY_STORAGE
+  movement quantity defaults to filling total (only lines where `sample_flg = false`)
 
 ### Filling Section (Filling only)
 Components:

@@ -500,7 +500,7 @@
                 <label class="block text-sm text-gray-600 mb-1" for="packingMovementSite">{{ t('batch.packaging.dialog.movementSite') }}</label>
                 <select id="packingMovementSite" v-model="packingDialog.form.movement_site_id" class="w-full h-[40px] border rounded px-3 bg-white">
                   <option value="">{{ t('common.select') }}</option>
-                  <option v-for="option in siteOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+                  <option v-for="option in movementSiteOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
                 </select>
                 <p v-if="packingDialog.errors.movement_site_id" class="mt-1 text-xs text-red-600">{{ packingDialog.errors.movement_site_id }}</p>
               </div>
@@ -643,7 +643,7 @@
               <label class="block text-sm text-gray-600 mb-1" for="actualYieldDialogSite">{{ t('batch.edit.actualYieldSite') }}</label>
               <select id="actualYieldDialogSite" v-model="actualYieldDialog.form.site_id" class="w-full h-[40px] border rounded px-3 bg-white">
                 <option value="">{{ t('common.select') }}</option>
-                <option v-for="option in siteOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+                <option v-for="option in allSiteOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
               </select>
               <p v-if="actualYieldDialog.errors.site_id" class="mt-1 text-xs text-red-600">{{ actualYieldDialog.errors.site_id }}</p>
             </div>
@@ -765,6 +765,7 @@ interface PackageCategoryOption {
 interface SiteOption {
   value: string
   label: string
+  site_type_key: string | null
 }
 
 interface TankOption {
@@ -786,6 +787,13 @@ type UomOption = {
 }
 
 type PackingType = 'ship' | 'filling' | 'transfer' | 'loss' | 'dispose'
+const MOVEMENT_SITE_TYPE_KEYS: Record<PackingType, string[]> = {
+  ship: ['OTHER_BREWERY'],
+  transfer: ['BREWERY_STORAGE'],
+  filling: ['BREWERY_MANUFACTUR', 'BREWERY_STORAGE'],
+  loss: [],
+  dispose: [],
+}
 
 type PackingFillingLine = {
   id: string
@@ -846,7 +854,7 @@ type PackingFormState = {
 
 const packageCategories = ref<PackageCategoryOption[]>([])
 const tankOptions = ref<TankOption[]>([])
-const siteOptions = ref<SiteOption[]>([])
+const allSiteOptions = ref<SiteOption[]>([])
 const volumeUoms = ref<VolumeUomOption[]>([])
 const uomOptionsRaw = ref<UomOption[]>([])
 const packingEvents = ref<PackingEvent[]>([])
@@ -1218,6 +1226,15 @@ const showPackingFillingSection = computed(() => packingDialog.form?.packing_typ
 const showPackingReason = computed(() => {
   const type = packingDialog.form?.packing_type
   return type === 'loss' || type === 'dispose'
+})
+
+const movementSiteOptions = computed(() => {
+  const type = packingDialog.form?.packing_type
+  if (!type) return []
+  const allowedKeys = MOVEMENT_SITE_TYPE_KEYS[type]
+  if (!allowedKeys.length) return allSiteOptions.value
+  const keySet = new Set(allowedKeys)
+  return allSiteOptions.value.filter((row) => row.site_type_key && keySet.has(row.site_type_key))
 })
 
 const packingFillingTotals = computed(() => {
@@ -1623,18 +1640,40 @@ async function loadBatchStatusOptions() {
 async function loadSites() {
   try {
     const tenant = await ensureTenant()
-    const { data, error } = await supabase
-      .from('mst_sites')
-      .select('id, name')
-      .eq('tenant_id', tenant)
-      .order('name')
-    if (error) throw error
-    siteOptions.value = (data ?? []).map((row: any) => ({
+    const [siteTypeResult, siteResult] = await Promise.all([
+      supabase
+        .from('registry_def')
+        .select('def_id, def_key')
+        .eq('kind', 'site_type')
+        .eq('is_active', true),
+      supabase
+        .from('mst_sites')
+        .select('id, name, site_type_id')
+        .eq('tenant_id', tenant)
+        .order('name'),
+    ])
+    if (siteTypeResult.error) throw siteTypeResult.error
+    if (siteResult.error) throw siteResult.error
+
+    const siteTypeById = new Map<string, string>()
+    ;(siteTypeResult.data ?? []).forEach((row: any) => {
+      if (!row?.def_id) return
+      const key = normalizeSiteTypeKey(row.def_key)
+      if (!key) return
+      siteTypeById.set(String(row.def_id), key)
+    })
+
+    allSiteOptions.value = (siteResult.data ?? []).map((row: any) => ({
       value: row.id,
       label: row.name ?? row.id,
+      site_type_key: row.site_type_id ? siteTypeById.get(String(row.site_type_id)) ?? null : null,
     }))
+    if (packingDialog.form && !packingDialog.readOnly) {
+      ensureMovementSiteSelection(packingDialog.form)
+    }
   } catch (err) {
     console.error(err)
+    allSiteOptions.value = []
   }
 }
 
@@ -2243,6 +2282,7 @@ function resetPackingFormForType(form: PackingFormState, prevType: PackingType) 
     form.tank_left_volume = ''
     form.sample_volume = ''
   }
+  ensureMovementSiteSelection(form)
 }
 
 function isVolumeType(type: PackingType) {
@@ -2251,6 +2291,35 @@ function isVolumeType(type: PackingType) {
 
 function isMovementType(type: PackingType) {
   return type === 'ship' || type === 'filling' || type === 'transfer'
+}
+
+function normalizeSiteTypeKey(value: unknown) {
+  if (typeof value !== 'string') return ''
+  return value.trim().toUpperCase()
+}
+
+function isMovementSiteAllowed(type: PackingType, siteId: string | null | undefined) {
+  if (!isMovementType(type)) return true
+  const value = siteId?.trim()
+  if (!value) return false
+  const allowed = MOVEMENT_SITE_TYPE_KEYS[type]
+  if (!allowed.length) return true
+  const site = allSiteOptions.value.find((row) => row.value === value)
+  if (!site?.site_type_key) return false
+  return allowed.includes(site.site_type_key)
+}
+
+function ensureMovementSiteSelection(form: PackingFormState) {
+  if (!isMovementType(form.packing_type)) return
+  if (!form.movement_site_id) return
+  if (isMovementSiteAllowed(form.packing_type, form.movement_site_id)) return
+  form.movement_site_id = ''
+}
+
+function isSelectedTankValid(tankId: string | null | undefined) {
+  const value = tankId?.trim()
+  if (!value) return false
+  return tankOptions.value.some((row) => row.value === value)
 }
 
 function addFillingLine() {
@@ -2832,11 +2901,14 @@ function validatePackingForm(form: PackingFormState) {
   }
   if (isMovementType(form.packing_type)) {
     if (!form.movement_site_id) errors.movement_site_id = t('batch.packaging.errors.siteRequired')
+    else if (!isMovementSiteAllowed(form.packing_type, form.movement_site_id)) {
+      errors.movement_site_id = t('batch.packaging.errors.siteTypeInvalid')
+    }
     const qty = toNumber(form.movement_qty)
     if (qty == null || qty <= 0) errors.movement_qty = t('batch.packaging.errors.movementQtyRequired')
   }
   if (form.packing_type === 'filling') {
-    if (!form.tank_id) errors.tank_id = t('batch.packaging.errors.tankRequired')
+    if (!form.tank_id || !isSelectedTankValid(form.tank_id)) errors.tank_id = t('batch.packaging.errors.tankRequired')
     const startDepth = toNumber(form.tank_fill_start_depth)
     if (startDepth == null || startDepth < 0) errors.tank_fill_start_depth = t('batch.packaging.errors.depthRequired')
     const leftDepth = toNumber(form.tank_fill_left_depth)
@@ -3183,7 +3255,7 @@ watch(
 
 function siteLabel(siteId?: string | null) {
   if (!siteId) return '—'
-  const match = siteOptions.value.find((row) => row.value === siteId)
+  const match = allSiteOptions.value.find((row) => row.value === siteId)
   return match?.label ?? '—'
 }
 

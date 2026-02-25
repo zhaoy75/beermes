@@ -477,7 +477,7 @@
         "siteRequired": "Movement site is required.",
         "siteTypeInvalid": "Selected site type is not allowed for this packing type.",
         "movementQtyRequired": "Movement quantity must be greater than 0.",
-        "tankRequired": "Tank is required for filling.",
+        "tankRequired": "Tank selection is required.",
         "depthRequired": "Depth must be 0 or greater.",
         "tankVolumeCalcFailed": "Failed to calculate tank volume from depth.",
         "fillingRequired": "Add at least one filling line.",

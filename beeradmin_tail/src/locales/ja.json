@@ -477,7 +477,7 @@
         "siteRequired": "移動先拠点は必須です。",
         "siteTypeInvalid": "選択した拠点の種別は、この移送詰口管理種別では利用できません。",
         "movementQtyRequired": "移動数量は0より大きい値を入力してください。",
-        "tankRequired": "詰口ではタンク選択が必須です。",
+        "tankRequired": "タンク選択は必須です。",
         "depthRequired": "深さは0以上で入力してください。",
         "tankVolumeCalcFailed": "深さからタンク容量を算出できませんでした。",
         "fillingRequired": "充填明細を1件以上追加してください。",

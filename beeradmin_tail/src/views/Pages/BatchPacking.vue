@@ -360,7 +360,15 @@
 
           <div v-if="showPackingVolumeSection" class="border border-gray-200 rounded-lg p-3 space-y-3">
             <h4 class="text-sm font-semibold text-gray-700">{{ t('batch.packaging.dialog.volumeSection') }}</h4>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <div>
+                <label class="block text-sm text-gray-600 mb-1" for="packingVolumeTank">{{ t('batch.packaging.dialog.volumeTank') }}</label>
+                <select id="packingVolumeTank" v-model="packingDialog.form.tank_id" class="w-full h-[40px] border rounded px-3 bg-white">
+                  <option value="">{{ t('common.select') }}</option>
+                  <option v-for="option in tankOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+                </select>
+                <p v-if="packingDialog.errors.tank_id" class="mt-1 text-xs text-red-600">{{ packingDialog.errors.tank_id }}</p>
+              </div>
               <div>
                 <label class="block text-sm text-gray-600 mb-1" for="packingVolumeQty">{{ t('batch.packaging.dialog.volumeQty') }}</label>
                 <input id="packingVolumeQty" v-model="packingDialog.form.volume_qty" type="number" min="0" step="0.001" class="w-full h-[40px] border rounded px-3 text-right" />
@@ -2275,7 +2283,6 @@ function resetPackingFormForType(form: PackingFormState, prevType: PackingType) 
     form.reason = ''
   }
   if (form.packing_type !== 'filling') {
-    form.tank_id = ''
     form.tank_fill_start_depth = '0'
     form.tank_fill_start_volume = ''
     form.tank_fill_left_depth = '0'
@@ -2899,6 +2906,12 @@ function validatePackingForm(form: PackingFormState) {
     if (qty == null || qty <= 0) errors.volume_qty = t('batch.packaging.errors.volumeRequired')
     if (!form.volume_uom) errors.volume_uom = t('batch.packaging.errors.volumeUomRequired')
   }
+  if (
+    (form.packing_type === 'ship' || form.packing_type === 'transfer' || form.packing_type === 'filling') &&
+    (!form.tank_id || !isSelectedTankValid(form.tank_id))
+  ) {
+    errors.tank_id = t('batch.packaging.errors.tankRequired')
+  }
   if (isMovementType(form.packing_type)) {
     if (!form.movement_site_id) errors.movement_site_id = t('batch.packaging.errors.siteRequired')
     else if (!isMovementSiteAllowed(form.packing_type, form.movement_site_id)) {
@@ -2908,7 +2921,6 @@ function validatePackingForm(form: PackingFormState) {
     if (qty == null || qty <= 0) errors.movement_qty = t('batch.packaging.errors.movementQtyRequired')
   }
   if (form.packing_type === 'filling') {
-    if (!form.tank_id || !isSelectedTankValid(form.tank_id)) errors.tank_id = t('batch.packaging.errors.tankRequired')
     const startDepth = toNumber(form.tank_fill_start_depth)
     if (startDepth == null || startDepth < 0) errors.tank_fill_start_depth = t('batch.packaging.errors.depthRequired')
     const leftDepth = toNumber(form.tank_fill_left_depth)

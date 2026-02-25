@@ -112,9 +112,12 @@
 Shown for: Ship, Transfer, Loss, Dispose
 
 Fields:
-- Tank (must selected from `mst_equipment_tank`)
+- Tank (dropdown list selected from `mst_equipment_tank`)
 - Quantity (numeric, required, > 0)
 - Unit of measure (dropdown from `mst_uom` where dimension = volume)
+
+Defaults:
+  Tank choose is not need for Loss and Dispose
 
 Rules:
 - Tank is not needed for Loss and Dispose

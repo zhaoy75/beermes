@@ -131,6 +131,23 @@ Restore:
 docker exec -i <EC2_DB_CONTAINER> pg_restore -U postgres -d postgres --clean --if-exists < /home/ubuntu/supabase_local.dump
 ```
 
+## Option postgresのバージョンが異なる場合
+
+### Export sql from local database
+docker exec -t  supabase_db_beer  pg_dump -U postgres --schema-only --no-owner --no-privileges postgres > schema.sql
+docker exec -t  supabase_db_beer pg_dump -U postgres --data-only --column-inserts --no-owner --no-privileges postgres > data.sql
+
+### Copy sql to EC2
+``` bash
+scp -i craftbeer.pem supabase_local.dump ubuntu@<EC2_PUBLIC_IP>:/home/ubuntu/
+```
+
+
+### Import on EC2
+docker exec -i supabase-db psql -U postgres -d postgres < schema.sql
+docker exec -i supabase-db psql -U postgres -d postgres < data.sql
+
+
 ------------------------------------------------------------------------
 
 ## 8. Verify
@@ -154,7 +171,34 @@ Open Studio:
 
 ------------------------------------------------------------------------
 
-## 9. Optional: Reset and Re-migrate
+## 9. Migrate Edge Function
+
+### Copy Edge Function
+
+### Confirm Edge Function Folder
+
+Check supabase docker-compose.yml file to get folder of Edge Function 
+./volumes/functions
+
+
+```
+  213  docker exec -it <EDGE_CONTAINER> sh -lc 'ls -la /home/deno/
+  214  docker exec -it supabase-edge-functions sh -lc 'ls -la /home/deno/
+  215  docker exec -it supabase-edge-functions sh -lc 'ls -la /home/deno/functions'
+```
+
+### Copy Edge Function to Edge Function Folder
+
+
+### Check again
+```
+  213  docker exec -it <EDGE_CONTAINER> sh -lc 'ls -la /home/deno/
+  214  docker exec -it supabase-edge-functions sh -lc 'ls -la /home/deno/
+  215  docker exec -it supabase-edge-functions sh -lc 'ls -la /home/deno/functions'
+```
+
+
+## 10. Optional: Reset and Re-migrate
 
 ``` bash
 docker compose down
@@ -166,12 +210,19 @@ Then restore again.
 
 ------------------------------------------------------------------------
 
-## 10. Test Environment Hardening
+## 11. Test Environment Hardening
 
 -   Restrict SSH to your IP
 -   Do not expose Postgres port
 -   Use strong passwords
 -   Take pg_dump backups if data matters
+
+# Build Vue
+
+
+
+# Install Ngnix
+
 
 ------------------------------------------------------------------------
 

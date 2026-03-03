@@ -360,8 +360,8 @@
 
           <div v-if="showPackingVolumeSection" class="border border-gray-200 rounded-lg p-3 space-y-3">
             <h4 class="text-sm font-semibold text-gray-700">{{ t('batch.packaging.dialog.volumeSection') }}</h4>
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-              <div>
+            <div class="grid grid-cols-1 gap-3" :class="showVolumeTankField ? 'md:grid-cols-4' : 'md:grid-cols-3'">
+              <div v-if="showVolumeTankField">
                 <label class="block text-sm text-gray-600 mb-1" for="packingVolumeTank">{{ t('batch.packaging.dialog.volumeTank') }}</label>
                 <select id="packingVolumeTank" v-model="packingDialog.form.tank_id" class="w-full h-[40px] border rounded px-3 bg-white">
                   <option value="">{{ t('common.select') }}</option>
@@ -370,7 +370,17 @@
                 <p v-if="packingDialog.errors.tank_id" class="mt-1 text-xs text-red-600">{{ packingDialog.errors.tank_id }}</p>
               </div>
               <div>
-                <label class="block text-sm text-gray-600 mb-1" for="packingVolumeQty">{{ t('batch.packaging.dialog.volumeQty') }}</label>
+                <div class="mb-1 flex items-center justify-between gap-2">
+                  <label class="block text-sm text-gray-600" for="packingVolumeQty">{{ t('batch.packaging.dialog.volumeQty') }}</label>
+                  <button
+                    v-if="showDisposeVolumeAutoFill"
+                    class="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-100"
+                    type="button"
+                    @click="autoFillDisposeVolumeQty"
+                  >
+                    {{ t('batch.packaging.dialog.volumeAutoFill') }}
+                  </button>
+                </div>
                 <input id="packingVolumeQty" v-model="packingDialog.form.volume_qty" type="number" min="0" step="0.001" class="w-full h-[40px] border rounded px-3 text-right" />
                 <p v-if="packingDialog.errors.volume_qty" class="mt-1 text-xs text-red-600">{{ packingDialog.errors.volume_qty }}</p>
               </div>
@@ -1223,6 +1233,13 @@ const showPackingVolumeSection = computed(() => {
   const type = packingDialog.form?.packing_type
   return type === 'ship' || type === 'transfer' || type === 'loss' || type === 'dispose'
 })
+
+const showVolumeTankField = computed(() => {
+  const type = packingDialog.form?.packing_type
+  return type === 'ship' || type === 'transfer'
+})
+
+const showDisposeVolumeAutoFill = computed(() => packingDialog.form?.packing_type === 'dispose')
 
 const showPackingMovementSection = computed(() => {
   const type = packingDialog.form?.packing_type
@@ -2282,6 +2299,9 @@ function resetPackingFormForType(form: PackingFormState, prevType: PackingType) 
   if (!(form.packing_type === 'loss' || form.packing_type === 'dispose')) {
     form.reason = ''
   }
+  if (form.packing_type === 'loss' || form.packing_type === 'dispose') {
+    form.tank_id = ''
+  }
   if (form.packing_type !== 'filling') {
     form.tank_fill_start_depth = '0'
     form.tank_fill_start_volume = ''
@@ -2402,6 +2422,28 @@ function scheduleTankVolumeCalc(target: 'start' | 'left') {
 
 function markMovementQtyTouched() {
   packingMovementQtyTouched.value = true
+}
+
+function remainingVolumeForDisposeAutoFillLiters() {
+  if (totalProductVolume.value == null) return null
+  let processed = persistedProcessedVolume.value
+  if (packingDialog.form?.id) {
+    const existing = packingEvents.value.find((event) => event.id === packingDialog.form?.id)
+    if (existing) processed -= processedVolumeFromPackingEvent(existing)
+  }
+  const remaining = totalProductVolume.value - processed
+  if (!Number.isFinite(remaining)) return null
+  return Math.max(remaining, 0)
+}
+
+function autoFillDisposeVolumeQty() {
+  if (!packingDialog.form || packingDialog.form.packing_type !== 'dispose') return
+  const remainingLiters = remainingVolumeForDisposeAutoFillLiters()
+  if (remainingLiters == null) return
+  const qty = convertFromLiters(remainingLiters, resolveUomCode(packingDialog.form.volume_uom)) ?? remainingLiters
+  if (!Number.isFinite(qty)) return
+  packingDialog.form.volume_qty = String(Number(qty.toFixed(6)))
+  delete packingDialog.errors.volume_qty
 }
 
 async function savePackingEvent(addAnother: boolean) {
@@ -2635,6 +2677,7 @@ async function persistPackingEvent(form: PackingFormState, isEditing: boolean) {
   const packingId = form.id ?? generateLocalId()
   const movementAt = fromInputDateTime(form.event_time) ?? new Date().toISOString()
   const docNo = `PACK-${batchCode}-${Date.now()}`
+  const includeTank = form.packing_type === 'filling' || form.packing_type === 'ship' || form.packing_type === 'transfer'
   const selectedTank = tankOptions.value.find((row) => row.value === form.tank_id)
   const fillingLinesMeta = form.filling_lines.map((line) => ({
     id: line.id,
@@ -2657,8 +2700,8 @@ async function persistPackingEvent(form: PackingFormState, isEditing: boolean) {
     movement_qty: form.movement_qty ? toNumber(form.movement_qty) : null,
     movement_memo: form.movement_memo ? form.movement_memo.trim() : null,
     filling_lines: fillingLinesMeta,
-    tank_id: form.tank_id || null,
-    tank_no: selectedTank?.code ?? null,
+    tank_id: includeTank ? (form.tank_id || null) : null,
+    tank_no: includeTank ? (selectedTank?.code ?? null) : null,
     tank_fill_start_depth: toNumber(form.tank_fill_start_depth),
     tank_fill_start_volume: toNumber(form.tank_fill_start_volume),
     tank_fill_left_depth: toNumber(form.tank_fill_left_depth),

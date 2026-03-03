@@ -427,6 +427,7 @@
         "volumeTank": "タンク",
         "volumeQty": "数量",
         "volumeUom": "容量単位",
+        "volumeAutoFill": "残容量を自動入力",
         "volumeUnit": "L",
         "reason": "理由（任意）",
         "movementSection": "移動",

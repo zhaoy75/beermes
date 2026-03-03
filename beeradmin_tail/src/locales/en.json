@@ -427,6 +427,7 @@
         "volumeTank": "Tank",
         "volumeQty": "Quantity",
         "volumeUom": "Unit of measure",
+        "volumeAutoFill": "Auto Fill Remaining",
         "volumeUnit": "L",
         "reason": "Reason (optional)",
         "movementSection": "Movement",

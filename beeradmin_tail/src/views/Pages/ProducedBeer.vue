@@ -39,31 +39,51 @@
               <tr>
                 <th class="px-3 py-2 text-left">{{ t('producedBeer.inventory.table.lotNo') }}</th>
                 <th class="px-3 py-2 text-left">{{ t('producedBeer.inventory.table.batchNo') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('producedBeer.inventory.table.beerCategory') }}</th>
-                <th class="px-3 py-2 text-right">{{ t('producedBeer.inventory.table.targetAbv') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('producedBeer.inventory.table.styleName') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('producedBeer.inventory.table.packageType') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('producedBeer.inventory.table.productionDate') }}</th>
-                <th class="px-3 py-2 text-right">{{ t('producedBeer.inventory.table.qtyLiters') }}</th>
-                <th class="px-3 py-2 text-right">{{ t('producedBeer.inventory.table.qtyPackages') }}</th>
+                <th class="px-3 py-2 text-left">
+                  {{ t('producedBeer.inventory.table.beerCategory') }}
+                </th>
+                <th class="px-3 py-2 text-right">
+                  {{ t('producedBeer.inventory.table.targetAbv') }}
+                </th>
+                <th class="px-3 py-2 text-left">
+                  {{ t('producedBeer.inventory.table.styleName') }}
+                </th>
+                <th class="px-3 py-2 text-left">
+                  {{ t('producedBeer.inventory.table.packageType') }}
+                </th>
+                <th class="px-3 py-2 text-left">
+                  {{ t('producedBeer.inventory.table.productionDate') }}
+                </th>
+                <th class="px-3 py-2 text-right">
+                  {{ t('producedBeer.inventory.table.qtyLiters') }}
+                </th>
+                <th class="px-3 py-2 text-right">
+                  {{ t('producedBeer.inventory.table.qtyPackages') }}
+                </th>
                 <th class="px-3 py-2 text-left">{{ t('producedBeer.inventory.table.site') }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
               <tr v-for="row in inventoryRows" :key="row.id" class="hover:bg-gray-50">
                 <td class="px-3 py-2 font-mono text-xs text-gray-600">{{ row.lotNo || '—' }}</td>
-                <td class="px-3 py-2 font-mono text-xs text-gray-600">{{ row.batchCode || '—' }}</td>
+                <td class="px-3 py-2 font-mono text-xs text-gray-600">
+                  {{ row.batchCode || '—' }}
+                </td>
                 <td class="px-3 py-2">{{ categoryLabel(row.beerCategoryId) }}</td>
                 <td class="px-3 py-2 text-right">{{ formatAbv(row.targetAbv) }}</td>
                 <td class="px-3 py-2">{{ row.styleName || '—' }}</td>
                 <td class="px-3 py-2">{{ row.packageTypeLabel || '—' }}</td>
-                <td class="px-3 py-2 text-xs text-gray-500">{{ formatDate(row.productionDate) }}</td>
+                <td class="px-3 py-2 text-xs text-gray-500">
+                  {{ formatDate(row.productionDate) }}
+                </td>
                 <td class="px-3 py-2 text-right">{{ formatNumber(row.qtyLiters) }}</td>
                 <td class="px-3 py-2 text-right">{{ formatNumber(row.qtyPackages) }}</td>
                 <td class="px-3 py-2">{{ siteLabel(row.siteId) }}</td>
               </tr>
               <tr v-if="!inventoryLoading && inventoryRows.length === 0">
-                <td colspan="10" class="px-3 py-8 text-center text-gray-500">{{ t('common.noData') }}</td>
+                <td colspan="10" class="px-3 py-8 text-center text-gray-500">
+                  {{ t('common.noData') }}
+                </td>
               </tr>
             </tbody>
           </table>
@@ -80,7 +100,11 @@
             <div class="inline-flex rounded-lg border border-gray-300 bg-white p-0.5 mr-6">
               <button
                 class="px-3 py-1.5 text-sm rounded-md"
-                :class="movementView === 'list' ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-50'"
+                :class="
+                  movementView === 'list'
+                    ? 'bg-gray-900 text-white'
+                    : 'text-gray-600 hover:bg-gray-50'
+                "
                 type="button"
                 @click="movementView = 'list'"
               >
@@ -88,7 +112,11 @@
               </button>
               <button
                 class="px-3 py-1.5 text-sm rounded-md"
-                :class="movementView === 'card' ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-50'"
+                :class="
+                  movementView === 'card'
+                    ? 'bg-gray-900 text-white'
+                    : 'text-gray-600 hover:bg-gray-50'
+                "
                 type="button"
                 @click="movementView = 'card'"
               >
@@ -102,10 +130,23 @@
             >
               {{ t('producedBeer.movement.actions.exportCsv') }}
             </button>
-            <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" @click="openMovementCreate">
+            <button
+              class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-50"
+              @click="openMovementCreateFast"
+            >
+              {{ t('producedBeer.movement.actions.fast') }}
+            </button>
+            <button
+              class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
+              @click="openMovementCreate"
+            >
               {{ t('producedBeer.movement.actions.new') }}
             </button>
-            <button class="px-3 py-2 rounded border hover:bg-gray-50" type="button" @click="resetMovementFilters">
+            <button
+              class="px-3 py-2 rounded border hover:bg-gray-50"
+              type="button"
+              @click="resetMovementFilters"
+            >
               {{ t('common.reset') }}
             </button>
             <button
@@ -121,96 +162,191 @@
         <section class="border border-gray-200 rounded-lg p-4 bg-white">
           <form class="grid grid-cols-1 md:grid-cols-6 gap-3" @submit.prevent>
             <div class="md:col-span-2">
-              <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.movement.filters.beerName') }}</label>
-              <input v-model.trim="movementFilters.beerName" type="search" class="w-full h-[40px] border rounded px-3" />
+              <label class="block text-sm text-gray-600 mb-1">{{
+                t('producedBeer.movement.filters.beerName')
+              }}</label>
+              <input
+                v-model.trim="movementFilters.beerName"
+                type="search"
+                class="w-full h-[40px] border rounded px-3"
+              />
             </div>
             <div>
-              <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.movement.filters.category') }}</label>
-              <select v-model="movementFilters.category" class="w-full h-[40px] border rounded px-3 bg-white">
+              <label class="block text-sm text-gray-600 mb-1">{{
+                t('producedBeer.movement.filters.category')
+              }}</label>
+              <select
+                v-model="movementFilters.category"
+                class="w-full h-[40px] border rounded px-3 bg-white"
+              >
                 <option value="">{{ t('common.all') }}</option>
-                <option v-for="category in categories" :key="category.def_id" :value="category.def_id">
-                  {{ typeof category.spec?.name === 'string' ? category.spec.name : category.def_key }}
+                <option
+                  v-for="category in categories"
+                  :key="category.def_id"
+                  :value="category.def_id"
+                >
+                  {{
+                    typeof category.spec?.name === 'string' ? category.spec.name : category.def_key
+                  }}
                 </option>
               </select>
             </div>
             <div>
-              <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.movement.filters.packageType') }}</label>
-              <select v-model="movementFilters.packageType" class="w-full h-[40px] border rounded px-3 bg-white">
+              <label class="block text-sm text-gray-600 mb-1">{{
+                t('producedBeer.movement.filters.packageType')
+              }}</label>
+              <select
+                v-model="movementFilters.packageType"
+                class="w-full h-[40px] border rounded px-3 bg-white"
+              >
                 <option value="">{{ t('common.all') }}</option>
-                <option v-for="option in packageCategoryOptions" :key="option.value" :value="option.value">
+                <option
+                  v-for="option in packageCategoryOptions"
+                  :key="option.value"
+                  :value="option.value"
+                >
                   {{ option.label }}
                 </option>
               </select>
             </div>
             <div>
-              <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.movement.filters.batchNo') }}</label>
-              <input v-model.trim="movementFilters.batchNo" type="search" class="w-full h-[40px] border rounded px-3" />
+              <label class="block text-sm text-gray-600 mb-1">{{
+                t('producedBeer.movement.filters.batchNo')
+              }}</label>
+              <input
+                v-model.trim="movementFilters.batchNo"
+                type="search"
+                class="w-full h-[40px] border rounded px-3"
+              />
             </div>
             <div>
-              <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.movement.filters.dateFrom') }}</label>
-              <input v-model="movementFilters.dateFrom" type="date" class="w-full h-[40px] border rounded px-3" />
+              <label class="block text-sm text-gray-600 mb-1">{{
+                t('producedBeer.movement.filters.dateFrom')
+              }}</label>
+              <input
+                v-model="movementFilters.dateFrom"
+                type="date"
+                class="w-full h-[40px] border rounded px-3"
+              />
             </div>
             <div>
-              <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.movement.filters.dateTo') }}</label>
-              <input v-model="movementFilters.dateTo" type="date" class="w-full h-[40px] border rounded px-3" />
+              <label class="block text-sm text-gray-600 mb-1">{{
+                t('producedBeer.movement.filters.dateTo')
+              }}</label>
+              <input
+                v-model="movementFilters.dateTo"
+                type="date"
+                class="w-full h-[40px] border rounded px-3"
+              />
             </div>
             <div>
-              <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.movement.filters.movementType') }}</label>
-              <select v-model="movementTypeFilter" class="w-full h-[40px] border rounded px-3 bg-white">
+              <label class="block text-sm text-gray-600 mb-1">{{
+                t('producedBeer.movement.filters.movementType')
+              }}</label>
+              <select
+                v-model="movementTypeFilter"
+                class="w-full h-[40px] border rounded px-3 bg-white"
+              >
                 <option value="all">{{ t('common.all') }}</option>
                 <option value="taxed">{{ t('producedBeer.movement.types.taxed') }}</option>
                 <option value="notax">{{ t('producedBeer.movement.types.notax') }}</option>
-                <option value="returnNotax">{{ t('producedBeer.movement.types.returnNotax') }}</option>
-                <option value="wasteNotax">{{ t('producedBeer.movement.types.wasteNotax') }}</option>
-                <option value="transferNotax">{{ t('producedBeer.movement.types.transferNotax') }}</option>
+                <option value="returnNotax">
+                  {{ t('producedBeer.movement.types.returnNotax') }}
+                </option>
+                <option value="wasteNotax">
+                  {{ t('producedBeer.movement.types.wasteNotax') }}
+                </option>
+                <option value="transferNotax">
+                  {{ t('producedBeer.movement.types.transferNotax') }}
+                </option>
               </select>
             </div>
           </form>
         </section>
 
-        <section v-if="movementView === 'list'" class="overflow-x-auto border border-gray-200 rounded-lg">
+        <section
+          v-if="movementView === 'list'"
+          class="overflow-x-auto border border-gray-200 rounded-lg"
+        >
           <table class="min-w-full divide-y divide-gray-200 text-sm">
             <thead class="bg-gray-50 text-xs uppercase text-gray-600">
               <tr>
-                <th class="px-3 py-2 text-left">{{ t('producedBeer.movement.card.movementDate') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('producedBeer.inventory.table.styleName') }}</th>
-                <th class="px-3 py-2 text-right">{{ t('producedBeer.inventory.table.targetAbv') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('producedBeer.movement.card.linePackageType') }}</th>
-                <th class="px-3 py-2 text-right">{{ t('producedBeer.movement.card.lineQtyPackages') }}</th>
-                <th class="px-3 py-2 text-right">{{ t('producedBeer.movement.card.lineQtyLiters') }}</th>
+                <th class="px-3 py-2 text-left">
+                  {{ t('producedBeer.movement.card.movementDate') }}
+                </th>
+                <th class="px-3 py-2 text-left">
+                  {{ t('producedBeer.inventory.table.styleName') }}
+                </th>
+                <th class="px-3 py-2 text-right">
+                  {{ t('producedBeer.inventory.table.targetAbv') }}
+                </th>
+                <th class="px-3 py-2 text-left">
+                  {{ t('producedBeer.movement.card.linePackageType') }}
+                </th>
+                <th class="px-3 py-2 text-right">
+                  {{ t('producedBeer.movement.card.lineQtyPackages') }}
+                </th>
+                <th class="px-3 py-2 text-right">
+                  {{ t('producedBeer.movement.card.lineQtyLiters') }}
+                </th>
                 <th class="px-3 py-2 text-right">{{ t('producedBeer.movement.card.taxRate') }}</th>
                 <th class="px-3 py-2 text-left">{{ t('producedBeer.movement.card.source') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('producedBeer.movement.card.destination') }}</th>
+                <th class="px-3 py-2 text-left">
+                  {{ t('producedBeer.movement.card.destination') }}
+                </th>
                 <th class="px-3 py-2 text-left">{{ t('producedBeer.movement.card.docNo') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('producedBeer.movement.filters.movementType') }}</th>
-                <th class="px-3 py-2 text-right">{{ t('producedBeer.movement.card.totalLiters') }}</th>
-                <th class="px-3 py-2 text-right">{{ t('producedBeer.movement.card.totalPackages') }}</th>
+                <th class="px-3 py-2 text-left">
+                  {{ t('producedBeer.movement.filters.movementType') }}
+                </th>
+                <th class="px-3 py-2 text-right">
+                  {{ t('producedBeer.movement.card.totalLiters') }}
+                </th>
+                <th class="px-3 py-2 text-right">
+                  {{ t('producedBeer.movement.card.totalPackages') }}
+                </th>
                 <th class="px-3 py-2 text-left">{{ t('common.actions') }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
               <tr v-for="card in filteredMovementCards" :key="card.id" class="hover:bg-gray-50">
-                <td class="px-3 py-2 text-xs text-gray-500">{{ formatDateTime(card.movementAt) }}</td>
+                <td class="px-3 py-2 text-xs text-gray-500">
+                  {{ formatDateTime(card.movementAt) }}
+                </td>
                 <td class="px-3 py-2 text-gray-600">{{ movementStyleLabel(card) }}</td>
-                <td class="px-3 py-2 text-right text-gray-600">{{ movementTargetAbvLabel(card) }}</td>
+                <td class="px-3 py-2 text-right text-gray-600">
+                  {{ movementTargetAbvLabel(card) }}
+                </td>
                 <td class="px-3 py-2 text-gray-600">{{ movementPackageLabel(card) }}</td>
-                <td class="px-3 py-2 text-right text-gray-600">{{ formatNumber(card.totalPackages) }}</td>
+                <td class="px-3 py-2 text-right text-gray-600">
+                  {{ formatNumber(card.totalPackages) }}
+                </td>
                 <td class="px-3 py-2 text-right text-gray-600">{{ movementVolumeLabel(card) }}</td>
                 <td class="px-3 py-2 text-right text-gray-600">{{ movementTaxRateLabel(card) }}</td>
                 <td class="px-3 py-2 text-gray-600">{{ siteLabel(card.sourceSiteId) }}</td>
                 <td class="px-3 py-2 text-gray-600">{{ siteLabel(card.destSiteId) }}</td>
                 <td class="px-3 py-2 font-semibold text-gray-900">{{ card.docNo }}</td>
-                <td class="px-3 py-2 text-gray-600">{{ movementTypeLabel(card.docType, card.taxType) }}</td>
-                <td class="px-3 py-2 text-right font-semibold text-gray-900">{{ formatNumber(card.totalLiters) }}</td>
-                <td class="px-3 py-2 text-right font-semibold text-gray-900">{{ formatNumber(card.totalPackages) }}</td>
+                <td class="px-3 py-2 text-gray-600">
+                  {{ movementTypeLabel(card.docType, card.taxType) }}
+                </td>
+                <td class="px-3 py-2 text-right font-semibold text-gray-900">
+                  {{ formatNumber(card.totalLiters) }}
+                </td>
+                <td class="px-3 py-2 text-right font-semibold text-gray-900">
+                  {{ formatNumber(card.totalPackages) }}
+                </td>
                 <td class="px-3 py-2">
-                  <button class="px-2 py-1 text-xs rounded border hover:bg-gray-50" @click="openMovementEdit(card)">
+                  <button
+                    class="px-2 py-1 text-xs rounded border hover:bg-gray-50"
+                    @click="openMovementEdit(card)"
+                  >
                     {{ t('producedBeer.movement.actions.edit') }}
                   </button>
                 </td>
               </tr>
               <tr v-if="!movementLoading && filteredMovementCards.length === 0">
-                <td colspan="14" class="px-3 py-8 text-center text-gray-500">{{ t('common.noData') }}</td>
+                <td colspan="14" class="px-3 py-8 text-center text-gray-500">
+                  {{ t('common.noData') }}
+                </td>
               </tr>
             </tbody>
           </table>
@@ -224,14 +360,23 @@
           >
             <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
               <div>
-                <p class="text-xs uppercase tracking-wide text-gray-400">{{ t('producedBeer.movement.card.docNo') }}</p>
+                <p class="text-xs uppercase tracking-wide text-gray-400">
+                  {{ t('producedBeer.movement.card.docNo') }}
+                </p>
                 <h3 class="text-lg font-semibold text-gray-900">{{ card.docNo }}</h3>
-                <p class="text-xs text-gray-500">{{ movementTypeLabel(card.docType, card.taxType) }}</p>
+                <p class="text-xs text-gray-500">
+                  {{ movementTypeLabel(card.docType, card.taxType) }}
+                </p>
               </div>
               <div class="text-left md:text-right">
-                <p class="text-xs uppercase tracking-wide text-gray-400">{{ t('producedBeer.movement.card.movementDate') }}</p>
+                <p class="text-xs uppercase tracking-wide text-gray-400">
+                  {{ t('producedBeer.movement.card.movementDate') }}
+                </p>
                 <p class="text-xs text-gray-500">{{ formatDateTime(card.movementAt) }}</p>
-                <button class="mt-2 px-3 py-1.5 text-xs rounded border hover:bg-gray-50" @click="openMovementEdit(card)">
+                <button
+                  class="mt-2 px-3 py-1.5 text-xs rounded border hover:bg-gray-50"
+                  @click="openMovementEdit(card)"
+                >
                   {{ t('producedBeer.movement.actions.edit') }}
                 </button>
               </div>
@@ -257,17 +402,31 @@
             </dl>
 
             <div class="border-t border-gray-100 pt-3">
-              <p class="text-xs uppercase tracking-wide text-gray-400 mb-2">{{ t('producedBeer.movement.card.lines') }}</p>
+              <p class="text-xs uppercase tracking-wide text-gray-400 mb-2">
+                {{ t('producedBeer.movement.card.lines') }}
+              </p>
               <div class="overflow-x-auto">
                 <table class="min-w-full text-xs">
                   <thead class="text-[11px] uppercase text-gray-500">
                     <tr>
-                      <th class="px-2 py-1 text-left">{{ t('producedBeer.movement.card.lineBeer') }}</th>
-                      <th class="px-2 py-1 text-left">{{ t('producedBeer.movement.card.lineCategory') }}</th>
-                      <th class="px-2 py-1 text-left">{{ t('producedBeer.movement.card.linePackageType') }}</th>
-                      <th class="px-2 py-1 text-left">{{ t('producedBeer.movement.card.lineBatch') }}</th>
-                      <th class="px-2 py-1 text-right">{{ t('producedBeer.movement.card.lineQtyPackages') }}</th>
-                      <th class="px-2 py-1 text-right">{{ t('producedBeer.movement.card.lineQtyLiters') }}</th>
+                      <th class="px-2 py-1 text-left">
+                        {{ t('producedBeer.movement.card.lineBeer') }}
+                      </th>
+                      <th class="px-2 py-1 text-left">
+                        {{ t('producedBeer.movement.card.lineCategory') }}
+                      </th>
+                      <th class="px-2 py-1 text-left">
+                        {{ t('producedBeer.movement.card.linePackageType') }}
+                      </th>
+                      <th class="px-2 py-1 text-left">
+                        {{ t('producedBeer.movement.card.lineBatch') }}
+                      </th>
+                      <th class="px-2 py-1 text-right">
+                        {{ t('producedBeer.movement.card.lineQtyPackages') }}
+                      </th>
+                      <th class="px-2 py-1 text-right">
+                        {{ t('producedBeer.movement.card.lineQtyLiters') }}
+                      </th>
                     </tr>
                   </thead>
                   <tbody class="divide-y divide-gray-100">
@@ -275,19 +434,26 @@
                       <td class="px-2 py-1 text-gray-800">{{ line.beerName || '—' }}</td>
                       <td class="px-2 py-1 text-gray-600">{{ categoryLabel(line.categoryId) }}</td>
                       <td class="px-2 py-1 text-gray-600">{{ line.packageTypeLabel || '—' }}</td>
-                      <td class="px-2 py-1 font-mono text-[11px] text-gray-500">{{ line.batchCode || '—' }}</td>
+                      <td class="px-2 py-1 font-mono text-[11px] text-gray-500">
+                        {{ line.batchCode || '—' }}
+                      </td>
                       <td class="px-2 py-1 text-right">{{ formatNumber(line.packageQty) }}</td>
                       <td class="px-2 py-1 text-right">{{ formatNumber(line.qtyLiters) }}</td>
                     </tr>
                     <tr v-if="card.lines.length === 0">
-                      <td colspan="6" class="px-2 py-2 text-center text-gray-500">{{ t('common.noData') }}</td>
+                      <td colspan="6" class="px-2 py-2 text-center text-gray-500">
+                        {{ t('common.noData') }}
+                      </td>
                     </tr>
                   </tbody>
                 </table>
               </div>
             </div>
           </article>
-          <p v-if="!movementLoading && filteredMovementCards.length === 0" class="py-8 text-center text-gray-500">
+          <p
+            v-if="!movementLoading && filteredMovementCards.length === 0"
+            class="py-8 text-center text-gray-500"
+          >
             {{ t('common.noData') }}
           </p>
         </section>
@@ -431,7 +597,9 @@ const movementFilters = reactive({
   dateTo: '',
 })
 
-const movementTypeFilter = ref<'all' | 'taxed' | 'notax' | 'returnNotax' | 'wasteNotax' | 'transferNotax'>('all')
+const movementTypeFilter = ref<
+  'all' | 'taxed' | 'notax' | 'returnNotax' | 'wasteNotax' | 'transferNotax'
+>('all')
 
 const siteMap = computed(() => {
   const map = new Map<string, SiteOption>()
@@ -467,7 +635,7 @@ const packageCategoryOptions = computed(() =>
   packageCategories.value.map((row) => ({
     value: row.id,
     label: resolvePackageName(row),
-  }))
+  })),
 )
 
 const filteredMovementCards = computed<MovementCardView[]>(() => {
@@ -475,30 +643,33 @@ const filteredMovementCards = computed<MovementCardView[]>(() => {
   const batchFilter = movementFilters.batchNo.trim().toLowerCase()
 
   return movementCards.value.reduce<MovementCardView[]>((acc, card) => {
-      const filteredLines = card.lines.filter((line) => {
-        if (nameFilter && !(line.beerName || '').toLowerCase().includes(nameFilter)) return false
-        if (movementFilters.category && line.categoryId !== movementFilters.category) return false
-        if (movementFilters.packageType && line.packageTypeId !== movementFilters.packageType) return false
-        if (batchFilter && !(line.batchCode || '').toLowerCase().includes(batchFilter)) return false
-        return true
-      })
+    const filteredLines = card.lines.filter((line) => {
+      if (nameFilter && !(line.beerName || '').toLowerCase().includes(nameFilter)) return false
+      if (movementFilters.category && line.categoryId !== movementFilters.category) return false
+      if (movementFilters.packageType && line.packageTypeId !== movementFilters.packageType)
+        return false
+      if (batchFilter && !(line.batchCode || '').toLowerCase().includes(batchFilter)) return false
+      return true
+    })
 
-      if (filteredLines.length === 0) return acc
+    if (filteredLines.length === 0) return acc
 
-      const totalPackages = filteredLines.reduce((sum, line) => sum + (line.packageQty ?? 0), 0)
-      const totalLiters = filteredLines.reduce((sum, line) => sum + (line.qtyLiters ?? 0), 0)
+    const totalPackages = filteredLines.reduce((sum, line) => sum + (line.packageQty ?? 0), 0)
+    const totalLiters = filteredLines.reduce((sum, line) => sum + (line.qtyLiters ?? 0), 0)
 
-      acc.push({
-        ...card,
-        lines: filteredLines,
-        totalPackages,
-        totalLiters,
-      })
-      return acc
-    }, [])
+    acc.push({
+      ...card,
+      lines: filteredLines,
+      totalPackages,
+      totalLiters,
+    })
+    return acc
+  }, [])
 })
 
-const numberFormatter = computed(() => new Intl.NumberFormat(locale.value, { maximumFractionDigits: 2 }))
+const numberFormatter = computed(
+  () => new Intl.NumberFormat(locale.value, { maximumFractionDigits: 2 }),
+)
 
 function formatNumber(value: number | null | undefined) {
   if (value == null || Number.isNaN(value)) return '—'
@@ -537,7 +708,11 @@ function categoryLabel(categoryId: string | null | undefined) {
 }
 
 function resolveLang() {
-  return String(locale.value ?? '').toLowerCase().startsWith('ja') ? 'ja' : 'en'
+  return String(locale.value ?? '')
+    .toLowerCase()
+    .startsWith('ja')
+    ? 'ja'
+    : 'en'
 }
 
 function resolvePackageName(row: PackageCategoryRow) {
@@ -581,14 +756,18 @@ function docTypeLabel(value: string) {
 function movementTypeLabel(docType: string, taxType: string | null) {
   if (docType === 'sale' && taxType === 'tax') return t('producedBeer.movement.types.taxed')
   if (docType === 'sale' && taxType === 'notax') return t('producedBeer.movement.types.notax')
-  if (docType === 'return' && taxType === 'notax') return t('producedBeer.movement.types.returnNotax')
+  if (docType === 'return' && taxType === 'notax')
+    return t('producedBeer.movement.types.returnNotax')
   if (docType === 'waste' && taxType === 'notax') return t('producedBeer.movement.types.wasteNotax')
-  if (docType === 'transfer' && taxType === 'notax') return t('producedBeer.movement.types.transferNotax')
+  if (docType === 'transfer' && taxType === 'notax')
+    return t('producedBeer.movement.types.transferNotax')
   return docTypeLabel(docType)
 }
 
 function uniqueNonEmpty(values: Array<string | null | undefined>) {
-  return Array.from(new Set(values.map((value) => (value ?? '').trim()).filter((value) => value.length > 0)))
+  return Array.from(
+    new Set(values.map((value) => (value ?? '').trim()).filter((value) => value.length > 0)),
+  )
 }
 
 function uniqueNumbers(values: Array<number | null | undefined>, precision = 6) {
@@ -623,7 +802,7 @@ function movementVolumeLabel(card: MovementCardView) {
       if (line.packageQty == null || line.packageQty <= 0) return null
       if (line.qtyLiters == null || Number.isNaN(line.qtyLiters)) return null
       return line.qtyLiters / line.packageQty
-    })
+    }),
   )
   if (!unitVolumes.length) return '—'
   return unitVolumes.map((value) => formatNumber(value)).join(', ')
@@ -686,20 +865,20 @@ function exportMovementsCsv() {
       return
     }
     card.lines.forEach((line) => {
-      rows.push([
-        ...base,
-        line.beerName ?? '',
-        line.packageTypeLabel ?? '',
-        line.batchCode ?? '',
-        line.packageQty ?? '',
-        line.qtyLiters ?? '',
-      ].map((value) => String(value)))
+      rows.push(
+        [
+          ...base,
+          line.beerName ?? '',
+          line.packageTypeLabel ?? '',
+          line.batchCode ?? '',
+          line.packageQty ?? '',
+          line.qtyLiters ?? '',
+        ].map((value) => String(value)),
+      )
     })
   })
 
-  const csv = [header, ...rows]
-    .map((row) => row.map(csvEscape).join(','))
-    .join('\n')
+  const csv = [header, ...rows].map((row) => row.map(csvEscape).join(',')).join('\n')
 
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
@@ -789,7 +968,10 @@ async function loadPackageCategories() {
 }
 
 async function loadUoms() {
-  const { data, error } = await supabase.from('mst_uom').select('id, code').order('code', { ascending: true })
+  const { data, error } = await supabase
+    .from('mst_uom')
+    .select('id, code')
+    .order('code', { ascending: true })
   if (error) throw error
   uoms.value = data ?? []
 }
@@ -845,8 +1027,20 @@ async function loadInventoryFromInventory() {
       return
     }
 
-    const packageIds = Array.from(new Set(Array.from(lotMap.values()).map((row: any) => row.package_id).filter(Boolean)))
-    const batchIds = Array.from(new Set(Array.from(lotMap.values()).map((row: any) => row.batch_id).filter(Boolean)))
+    const packageIds = Array.from(
+      new Set(
+        Array.from(lotMap.values())
+          .map((row: any) => row.package_id)
+          .filter(Boolean),
+      ),
+    )
+    const batchIds = Array.from(
+      new Set(
+        Array.from(lotMap.values())
+          .map((row: any) => row.batch_id)
+          .filter(Boolean),
+      ),
+    )
 
     const packageInfoMap = await loadPackageInfo(packageIds)
     const batchInfoMap = await loadBatchInfo(batchIds)
@@ -882,9 +1076,8 @@ async function loadInventoryFromInventory() {
       const inventoryUomCode = row.uom_id ? (uomMap.value.get(row.uom_id) ?? null) : null
       const qtyLiters = convertToLiters(inventoryQty, inventoryUomCode) ?? 0
       const unitSizeLiters = pkgInfo?.unitSizeLiters ?? null
-      const qtyPackages = (unitSizeLiters != null && unitSizeLiters > 0)
-        ? qtyLiters / unitSizeLiters
-        : 0
+      const qtyPackages =
+        unitSizeLiters != null && unitSizeLiters > 0 ? qtyLiters / unitSizeLiters : 0
 
       const key = `${siteId}__${lot.id}`
       if (!accum.has(key)) {
@@ -943,8 +1136,10 @@ async function fetchMovements() {
       .eq('tenant_id', tenant)
       .order('movement_at', { ascending: false })
 
-    if (movementFilters.dateFrom) headerQuery = headerQuery.gte('movement_at', `${movementFilters.dateFrom}T00:00:00`)
-    if (movementFilters.dateTo) headerQuery = headerQuery.lte('movement_at', `${movementFilters.dateTo}T23:59:59`)
+    if (movementFilters.dateFrom)
+      headerQuery = headerQuery.gte('movement_at', `${movementFilters.dateFrom}T00:00:00`)
+    if (movementFilters.dateTo)
+      headerQuery = headerQuery.lte('movement_at', `${movementFilters.dateTo}T23:59:59`)
 
     const { data: headers, error: headerError } = await headerQuery
     if (headerError) throw headerError
@@ -967,7 +1162,9 @@ async function fetchMovements() {
 
     if (lineError) throw lineError
 
-    const lineList = (lines ?? []).filter((row: any) => row.package_id || row.batch_id) as MovementLineRow[]
+    const lineList = (lines ?? []).filter(
+      (row: any) => row.package_id || row.batch_id,
+    ) as MovementLineRow[]
     const packageIds = lineList.map((row) => row.package_id).filter(Boolean) as string[]
     const batchIds = lineList.map((row) => row.batch_id).filter(Boolean) as string[]
 
@@ -1007,7 +1204,9 @@ async function fetchMovements() {
       const pkgInfo = line.package_id ? packageInfoMap.get(line.package_id) : undefined
       const batchInfo = line.batch_id ? batchInfoMap.get(line.batch_id) : undefined
       const packageQty = toNumber(line.meta?.package_qty)
-      const qtyLiters = toNumber(line.qty) ?? (packageQty && pkgInfo?.unitSizeLiters ? packageQty * pkgInfo.unitSizeLiters : null)
+      const qtyLiters =
+        toNumber(line.qty) ??
+        (packageQty && pkgInfo?.unitSizeLiters ? packageQty * pkgInfo.unitSizeLiters : null)
 
       const lineCard: MovementLineCard = {
         id: line.id,
@@ -1063,13 +1262,16 @@ async function loadPackageInfo(packageIds: string[]) {
 }
 
 async function loadBatchInfo(batchIds: string[]) {
-  const infoMap = new Map<string, {
-    batchCode: string | null
-    beerName: string | null
-    beerCategoryId: string | null
-    targetAbv: number | null
-    styleName: string | null
-  }>()
+  const infoMap = new Map<
+    string,
+    {
+      batchCode: string | null
+      beerName: string | null
+      beerCategoryId: string | null
+      targetAbv: number | null
+      styleName: string | null
+    }
+  >()
   if (batchIds.length === 0) return infoMap
 
   const tenant = await ensureTenant()
@@ -1077,11 +1279,14 @@ async function loadBatchInfo(batchIds: string[]) {
 
   const attrIdToCode = new Map<string, string>()
   const attrIds: number[] = []
-  const attrValueByBatch = new Map<string, {
-    beerCategoryId: string | null
-    targetAbv: number | null
-    styleName: string | null
-  }>()
+  const attrValueByBatch = new Map<
+    string,
+    {
+      beerCategoryId: string | null
+      targetAbv: number | null
+      styleName: string | null
+    }
+  >()
 
   try {
     const { data: attrDefs, error: attrDefError } = await supabase
@@ -1091,7 +1296,6 @@ async function loadBatchInfo(batchIds: string[]) {
       .in('code', ['beer_category', 'target_abv', 'style_name'])
       .eq('is_active', true)
     if (attrDefError) throw attrDefError
-
     ;(attrDefs ?? []).forEach((row: any) => {
       const id = Number(row.attr_id)
       if (!Number.isFinite(id)) return
@@ -1107,7 +1311,6 @@ async function loadBatchInfo(batchIds: string[]) {
         .in('entity_id', uniqueIds)
         .in('attr_id', attrIds)
       if (attrValueError) throw attrValueError
-
       ;(attrValues ?? []).forEach((row: any) => {
         const batchId = String(row.entity_id ?? '')
         if (!batchId) return
@@ -1126,16 +1329,20 @@ async function loadBatchInfo(batchIds: string[]) {
 
         if (code === 'beer_category') {
           const jsonDefId = row.value_json?.def_id
-          if (typeof jsonDefId === 'string' && jsonDefId.trim()) entry.beerCategoryId = jsonDefId.trim()
-          else if (typeof row.value_text === 'string' && row.value_text.trim()) entry.beerCategoryId = row.value_text.trim()
-          else if (row.value_ref_type_id != null) entry.beerCategoryId = String(row.value_ref_type_id)
+          if (typeof jsonDefId === 'string' && jsonDefId.trim())
+            entry.beerCategoryId = jsonDefId.trim()
+          else if (typeof row.value_text === 'string' && row.value_text.trim())
+            entry.beerCategoryId = row.value_text.trim()
+          else if (row.value_ref_type_id != null)
+            entry.beerCategoryId = String(row.value_ref_type_id)
         }
         if (code === 'target_abv') {
           const num = toNumber(row.value_num)
           if (num != null) entry.targetAbv = num
         }
         if (code === 'style_name') {
-          if (typeof row.value_text === 'string' && row.value_text.trim()) entry.styleName = row.value_text.trim()
+          if (typeof row.value_text === 'string' && row.value_text.trim())
+            entry.styleName = row.value_text.trim()
         }
       })
     }
@@ -1145,33 +1352,40 @@ async function loadBatchInfo(batchIds: string[]) {
 
   const { data, error } = await supabase
     .from('mes_batches')
-    .select('id, batch_code, batch_label, product_name, meta, recipe_id, recipe:recipe_id ( category, target_abv, style )')
+    .select(
+      'id, batch_code, batch_label, product_name, meta, recipe_id, recipe:recipe_id ( category, target_abv, style )',
+    )
     .eq('tenant_id', tenant)
     .in('id', uniqueIds)
   if (error) throw error
-
   ;(data ?? []).forEach((row: any) => {
     const attr = attrValueByBatch.get(row.id)
     const recipe = Array.isArray(row.recipe) ? row.recipe[0] : row.recipe
-    const meta = (row.meta && typeof row.meta === 'object' && !Array.isArray(row.meta)) ? row.meta as Record<string, any> : null
+    const meta =
+      row.meta && typeof row.meta === 'object' && !Array.isArray(row.meta)
+        ? (row.meta as Record<string, any>)
+        : null
 
     infoMap.set(row.id, {
       batchCode: row.batch_code ?? null,
       beerName: row.product_name ?? row.batch_label ?? resolveBatchLabel(meta) ?? null,
-      beerCategoryId: attr?.beerCategoryId
-        ?? (typeof recipe?.category === 'string' ? recipe.category : null)
-        ?? resolveMetaString(meta, 'beer_category')
-        ?? resolveMetaString(meta, 'category')
-        ?? null,
-      targetAbv: attr?.targetAbv
-        ?? toNumber(recipe?.target_abv)
-        ?? resolveMetaNumber(meta, 'target_abv')
-        ?? null,
-      styleName: attr?.styleName
-        ?? (typeof recipe?.style === 'string' ? recipe.style : null)
-        ?? resolveMetaString(meta, 'style_name')
-        ?? resolveMetaString(meta, 'style')
-        ?? null,
+      beerCategoryId:
+        attr?.beerCategoryId ??
+        (typeof recipe?.category === 'string' ? recipe.category : null) ??
+        resolveMetaString(meta, 'beer_category') ??
+        resolveMetaString(meta, 'category') ??
+        null,
+      targetAbv:
+        attr?.targetAbv ??
+        toNumber(recipe?.target_abv) ??
+        resolveMetaNumber(meta, 'target_abv') ??
+        null,
+      styleName:
+        attr?.styleName ??
+        (typeof recipe?.style === 'string' ? recipe.style : null) ??
+        resolveMetaString(meta, 'style_name') ??
+        resolveMetaString(meta, 'style') ??
+        null,
     })
   })
   return infoMap
@@ -1191,6 +1405,10 @@ function openMovementCreate() {
   router.push({ path: '/producedBeerMovement' })
 }
 
+function openMovementCreateFast() {
+  router.push({ path: '/producedBeerMovementFast' })
+}
+
 function openMovementEdit(card: MovementCard) {
   router.push({ path: '/producedBeerMovement', query: { id: card.id } })
 }
@@ -1207,7 +1425,7 @@ watch(
   }),
   async () => {
     await fetchMovements()
-  }
+  },
 )
 
 onMounted(async () => {

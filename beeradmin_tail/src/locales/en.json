@@ -1082,6 +1082,7 @@
         "waste": "Disposal"
       },
       "actions": {
+        "fast": "Internal Transfer Fast",
         "new": "Produced Beer Movement Regist...",
         "edit": "Edit movement",
         "exportCsv": "Export CSV"
@@ -1168,6 +1169,101 @@
       },
       "toast": {
         "saved": "Movement saved."
+      }
+    },
+    "movementFast": {
+      "title": "INTERNAL_TRANSFER",
+      "subtitle": "Fast entry page for high-volume internal beer transfers.",
+      "actions": {
+        "back": "Back",
+        "post": "Post",
+        "postNext": "Post & Next",
+        "swap": "Swap",
+        "clearLines": "Clear lines",
+        "favorite": "Add favorite",
+        "unfavorite": "Remove favorite"
+      },
+      "fields": {
+        "fromSite": "From site",
+        "toSite": "To site",
+        "movedAt": "Movement date",
+        "allocationPolicy": "Allocation policy",
+        "note": "Note",
+        "lines": "Lines"
+      },
+      "columns": {
+        "beer": "Beer (code / name)",
+        "quantity": "Quantity (L)",
+        "note": "Note"
+      },
+      "allocation": {
+        "fefo": "FEFO",
+        "fifo": "FIFO",
+        "manual": "MANUAL"
+      },
+      "panels": {
+        "routes": "Recent / Favorites",
+        "favorites": "Favorites",
+        "recent": "Recent",
+        "lines": "Lines Grid",
+        "summary": "Summary",
+        "validation": "Validation",
+        "warnings": "Warnings"
+      },
+      "summary": {
+        "route": "Route",
+        "policy": "Policy",
+        "lines": "Valid lines",
+        "totalQty": "Total liters"
+      },
+      "placeholders": {
+        "beer": "Search by beer code or name",
+        "note": "Optional note"
+      },
+      "hints": {
+        "routes": "Reuse frequent routes to reduce clicks.",
+        "beerSearch": "Press Enter to select the top match. Paste multiple rows into the first beer field.",
+        "selectSourceFirst": "Select a source site first to load searchable beer options.",
+        "pasteExample": "Example paste: IPA01 50 / PILS02 20 / STOUT03 10",
+        "summary": "Validation updates as you type.",
+        "manualMode": "Manual lot allocation is not available on this page yet. Use FEFO/FIFO or complete lot selection in a dedicated flow."
+      },
+      "labels": {
+        "stock": "Available: {qty} L",
+        "availableBeerCount": "{count} beer options",
+        "uses": "{count} uses",
+        "ready": "Ready to post"
+      },
+      "siteTypes": {
+        "BREWERY_MANUFACTUR": "Brewery",
+        "BREWERY_STORAGE": "Storage",
+        "TAX_STORAGE": "Tax storage",
+        "DIRECT_SALES_SHOP": "Direct shop"
+      },
+      "errors": {
+        "tenantRequired": "Tenant context is missing.",
+        "fromRequired": "From site is required.",
+        "toRequired": "To site is required.",
+        "sameSite": "From and To site must be different.",
+        "invalidRoute": "This route is not allowed for INTERNAL_TRANSFER on the fast page.",
+        "useDomesticShipment": "Destination is a direct shop. Use domestic shipment flow instead.",
+        "useTaxMovement": "Destination is a tax storage site. Use the tax-specific movement flow instead.",
+        "manualNotImplemented": "MANUAL allocation is not supported on this page yet.",
+        "beerRequired": "Beer is required.",
+        "beerUnresolved": "Beer code/name could not be resolved.",
+        "qtyPositive": "Quantity must be greater than 0.",
+        "qtyExceedsStock": "Entered quantity exceeds available stock.",
+        "lineRequired": "Add at least one valid line before posting.",
+        "rpcUnavailable": "Backend function product_move_fast is not available yet.",
+        "saveFailed": "Failed to post movement."
+      },
+      "warnings": {
+        "lowStock": "{beer}: quantity uses most of the available stock.",
+        "manyLots": "{beer}: allocation may split across many lots.",
+        "nearExpiry": "{beer}: near-expiry stock may be allocated."
+      },
+      "toast": {
+        "saved": "Movement posted. ID: {movementId}"
       }
     },
     "movementWizard": {

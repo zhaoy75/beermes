@@ -21,7 +21,7 @@ const router = createRouter({
       component: () => import('../views/Pages/BatchList.vue'),
       meta: {
         title: 'eCommerce Dashboard',
-        requiresAuth: true ,
+        requiresAuth: true,
       },
     },
     {
@@ -30,7 +30,7 @@ const router = createRouter({
       component: () => import('../views/Pages/RecipeEdit.vue'),
       meta: {
         title: 'レシピ編集',
-        requiresAuth: true ,
+        requiresAuth: true,
       },
     },
     {
@@ -39,7 +39,7 @@ const router = createRouter({
       component: () => import('../views/Pages/RecipeList.vue'),
       meta: {
         title: 'レシピ管理',
-        requiresAuth: true ,
+        requiresAuth: true,
       },
     },
 
@@ -49,7 +49,7 @@ const router = createRouter({
       component: () => import('../views/Pages/BatchList.vue'),
       meta: {
         title: 'Batch Management',
-        requiresAuth: true ,
+        requiresAuth: true,
       },
     },
     {
@@ -58,7 +58,7 @@ const router = createRouter({
       component: () => import('../views/Pages/BatchEdit.vue'),
       meta: {
         title: 'Batch Edit',
-        requiresAuth: true ,
+        requiresAuth: true,
       },
     },
     {
@@ -67,7 +67,7 @@ const router = createRouter({
       component: () => import('../views/Pages/BatchPacking.vue'),
       meta: {
         title: 'Batch Packing',
-        requiresAuth: true ,
+        requiresAuth: true,
       },
     },
     {
@@ -76,7 +76,7 @@ const router = createRouter({
       component: () => import('../views/Pages/BatchLotDag.vue'),
       meta: {
         title: 'Batch Lot DAG',
-        requiresAuth: true ,
+        requiresAuth: true,
       },
     },
     {
@@ -85,7 +85,7 @@ const router = createRouter({
       component: () => import('../views/Pages/WasteList.vue'),
       meta: {
         title: 'Waste Management',
-        requiresAuth: true ,
+        requiresAuth: true,
       },
     },
     {
@@ -94,7 +94,7 @@ const router = createRouter({
       component: () => import('../views/Others/Calendar.vue'),
       meta: {
         title: 'Calendar',
-        requiresAuth: true ,
+        requiresAuth: true,
       },
     },
     {
@@ -103,7 +103,7 @@ const router = createRouter({
       component: () => import('../views/Pages/BeerSalesForecast.vue'),
       meta: {
         title: 'AI Sales Forecast',
-        requiresAuth: true ,
+        requiresAuth: true,
       },
     },
     {
@@ -112,7 +112,7 @@ const router = createRouter({
       component: () => import('../views/Pages/AIAssistant.vue'),
       meta: {
         title: 'AI Assistant',
-        requiresAuth: true ,
+        requiresAuth: true,
       },
     },
     {
@@ -121,7 +121,7 @@ const router = createRouter({
       component: () => import('../views/Pages/AIOrderAssistant.vue'),
       meta: {
         title: 'AI Order Assistant',
-        requiresAuth: true ,
+        requiresAuth: true,
       },
     },
     {
@@ -130,7 +130,7 @@ const router = createRouter({
       component: () => import('../views/Pages/AlcoholTypeMaster.vue'),
       meta: {
         title: 'Alcohol Type Master',
-        requiresAuth: true ,
+        requiresAuth: true,
       },
     },
     {
@@ -139,7 +139,7 @@ const router = createRouter({
       component: () => import('../views/Pages/AlcoholTaxMaster.vue'),
       meta: {
         title: 'Alcohol Tax Master',
-        requiresAuth: true ,
+        requiresAuth: true,
       },
     },
     {
@@ -148,7 +148,7 @@ const router = createRouter({
       component: () => import('../views/Pages/MaterialClassMaster.vue'),
       meta: {
         title: 'Material Class Master',
-        requiresAuth: true ,
+        requiresAuth: true,
       },
     },
     {
@@ -157,7 +157,7 @@ const router = createRouter({
       component: () => import('../views/Pages/MaterialTypeMaster.vue'),
       meta: {
         title: 'Material Type Master',
-        requiresAuth: true ,
+        requiresAuth: true,
       },
     },
     {
@@ -166,7 +166,7 @@ const router = createRouter({
       component: () => import('../views/Pages/AttrDefMaster.vue'),
       meta: {
         title: 'Attribute Definition Master',
-        requiresAuth: true ,
+        requiresAuth: true,
       },
     },
     {
@@ -175,7 +175,7 @@ const router = createRouter({
       component: () => import('../views/Pages/AttrSetMaster.vue'),
       meta: {
         title: 'Attribute Set Master',
-        requiresAuth: true ,
+        requiresAuth: true,
       },
     },
     {
@@ -184,7 +184,7 @@ const router = createRouter({
       component: () => import('../views/Pages/TaxYearSummary.vue'),
       meta: {
         title: 'Tax Year Summary',
-        requiresAuth: true ,
+        requiresAuth: true,
       },
     },
     {
@@ -193,7 +193,7 @@ const router = createRouter({
       component: () => import('../views/Pages/TaxReport.vue'),
       meta: {
         title: 'Tax Report',
-        requiresAuth: true ,
+        requiresAuth: true,
       },
     },
     {
@@ -202,7 +202,7 @@ const router = createRouter({
       component: () => import('../views/Pages/SiteMovement.vue'),
       meta: {
         title: 'Site Movements',
-        requiresAuth: true ,
+        requiresAuth: true,
       },
     },
     {
@@ -211,7 +211,7 @@ const router = createRouter({
       component: () => import('../views/Pages/UomMaster.vue'),
       meta: {
         title: 'Unit of Measure',
-        requiresAuth: true ,
+        requiresAuth: true,
       },
     },
     {
@@ -220,7 +220,7 @@ const router = createRouter({
       component: () => import('../views/Pages/RawMaterialReceipts.vue'),
       meta: {
         title: 'Raw Material Receipts',
-        requiresAuth: true ,
+        requiresAuth: true,
       },
     },
     {
@@ -229,7 +229,7 @@ const router = createRouter({
       component: () => import('../views/Pages/RawMaterialInventory.vue'),
       meta: {
         title: 'Raw Material Inventory',
-        requiresAuth: true ,
+        requiresAuth: true,
       },
     },
     {
@@ -238,7 +238,7 @@ const router = createRouter({
       component: () => import('../views/Pages/ProducedBeer.vue'),
       meta: {
         title: 'Produced Craft Beer',
-        requiresAuth: true ,
+        requiresAuth: true,
       },
     },
     {
@@ -247,7 +247,16 @@ const router = createRouter({
       component: () => import('../views/Pages/ProducedBeerMovementEdit.vue'),
       meta: {
         title: 'Produced Beer Movement',
-        requiresAuth: true ,
+        requiresAuth: true,
+      },
+    },
+    {
+      path: '/producedBeerMovementFast',
+      name: 'ProductMoveFast',
+      component: () => import('../views/Pages/ProductMoveFast.vue'),
+      meta: {
+        title: 'Product Move Fast',
+        requiresAuth: true,
       },
     },
     {
@@ -256,7 +265,7 @@ const router = createRouter({
       component: () => import('../views/Pages/TankMaintenance.vue'),
       meta: {
         title: 'Tank Maintenance',
-        requiresAuth: true ,
+        requiresAuth: true,
       },
     },
     {
@@ -265,7 +274,7 @@ const router = createRouter({
       component: () => import('../views/Pages/SiteTypeMaster.vue'),
       meta: {
         title: 'Site Type Master',
-        requiresAuth: true ,
+        requiresAuth: true,
       },
     },
     {
@@ -274,7 +283,7 @@ const router = createRouter({
       component: () => import('../views/Pages/SiteMaster.vue'),
       meta: {
         title: 'Site Master',
-        requiresAuth: true ,
+        requiresAuth: true,
       },
     },
     {
@@ -283,7 +292,7 @@ const router = createRouter({
       component: () => import('../views/Pages/EquipmentMaster.vue'),
       meta: {
         title: 'Equipment Master',
-        requiresAuth: true ,
+        requiresAuth: true,
       },
     },
     {
@@ -292,7 +301,7 @@ const router = createRouter({
       component: () => import('../views/Pages/BatchYieldSummary.vue'),
       meta: {
         title: 'Batch Yield Summary',
-        requiresAuth: true ,
+        requiresAuth: true,
       },
     },
     {
@@ -301,7 +310,7 @@ const router = createRouter({
       component: () => import('../views/Pages/PackageMaster.vue'),
       meta: {
         title: 'Package Master',
-        requiresAuth: true ,
+        requiresAuth: true,
       },
     },
     {
@@ -310,7 +319,7 @@ const router = createRouter({
       component: () => import('../views/Pages/MaterialMaster.vue'),
       meta: {
         title: 'Material Master',
-        requiresAuth: true ,
+        requiresAuth: true,
       },
     },
 
@@ -320,7 +329,7 @@ const router = createRouter({
       component: () => import('../views/Others/UserProfile.vue'),
       meta: {
         title: 'Profile',
-        requiresAuth: true ,
+        requiresAuth: true,
       },
     },
     {
@@ -329,7 +338,7 @@ const router = createRouter({
       component: () => import('../views/Pages/UserManagement.vue'),
       meta: {
         title: 'User Management',
-        requiresAuth: true ,
+        requiresAuth: true,
       },
     },
     {
@@ -338,7 +347,7 @@ const router = createRouter({
       component: () => import('../views/Others/ChangePassword.vue'),
       meta: {
         title: 'Change Password',
-        requiresAuth: true ,
+        requiresAuth: true,
       },
     },
     {
@@ -347,7 +356,7 @@ const router = createRouter({
       component: () => import('../views/Forms/FormElements.vue'),
       meta: {
         title: 'Form Elements',
-        requiresAuth: true ,
+        requiresAuth: true,
       },
     },
     {
@@ -356,7 +365,7 @@ const router = createRouter({
       component: () => import('../views/Tables/BasicTables.vue'),
       meta: {
         title: 'Basic Tables',
-        requiresAuth: true ,
+        requiresAuth: true,
       },
     },
     {
@@ -365,7 +374,7 @@ const router = createRouter({
       component: () => import('../views/Tables/BasicTables1.vue'),
       meta: {
         title: 'Basic Tables1',
-        requiresAuth: true ,
+        requiresAuth: true,
       },
     },
     {
@@ -374,7 +383,7 @@ const router = createRouter({
       component: () => import('../views/Chart/LineChart/LineChart.vue'),
       meta: {
         title: 'Line Chart',
-        requiresAuth: true ,
+        requiresAuth: true,
       },
     },
     {
@@ -383,7 +392,7 @@ const router = createRouter({
       component: () => import('../views/Chart/BarChart/BarChart.vue'),
       meta: {
         title: 'Bar Chart',
-        requiresAuth: true ,
+        requiresAuth: true,
       },
     },
     {
@@ -392,7 +401,7 @@ const router = createRouter({
       component: () => import('../views/UiElements/Alerts.vue'),
       meta: {
         title: 'Alerts',
-        requiresAuth: true ,
+        requiresAuth: true,
       },
     },
     {
@@ -401,7 +410,7 @@ const router = createRouter({
       component: () => import('../views/UiElements/Avatars.vue'),
       meta: {
         title: 'Avatars',
-        requiresAuth: true ,
+        requiresAuth: true,
       },
     },
     {
@@ -410,7 +419,7 @@ const router = createRouter({
       component: () => import('../views/UiElements/Badges.vue'),
       meta: {
         title: 'Badge',
-        requiresAuth: true ,
+        requiresAuth: true,
       },
     },
 
@@ -420,10 +429,9 @@ const router = createRouter({
       component: () => import('../views/UiElements/Buttons.vue'),
       meta: {
         title: 'Buttons',
-        requiresAuth: true ,
+        requiresAuth: true,
       },
     },
-
 
     {
       path: '/images',
@@ -431,7 +439,7 @@ const router = createRouter({
       component: () => import('../views/UiElements/Images.vue'),
       meta: {
         title: 'Images',
-        requiresAuth: true ,
+        requiresAuth: true,
       },
     },
     {
@@ -440,7 +448,7 @@ const router = createRouter({
       component: () => import('../views/UiElements/Videos.vue'),
       meta: {
         title: 'Videos',
-        requiresAuth: true ,
+        requiresAuth: true,
       },
     },
     {
@@ -449,7 +457,7 @@ const router = createRouter({
       component: () => import('../views/Pages/BlankPage.vue'),
       meta: {
         title: 'Blank',
-        requiresAuth: true ,
+        requiresAuth: true,
       },
     },
 

@@ -1082,6 +1082,7 @@
         "waste": "廃棄"
       },
       "actions": {
+        "fast": "社内移動(高速入力)",
         "new": "製品ビール移動登録",
         "edit": "移出編集",
         "exportCsv": "CSV出力"
@@ -1168,6 +1169,101 @@
       },
       "toast": {
         "saved": "移動を保存しました。"
+      }
+    },
+    "movementFast": {
+      "title": "INTERNAL_TRANSFER",
+      "subtitle": "社内移動を高速入力する専用ページです。",
+      "actions": {
+        "back": "戻る",
+        "post": "確定",
+        "postNext": "確定して次へ",
+        "swap": "入替",
+        "clearLines": "明細クリア",
+        "favorite": "お気に入り登録",
+        "unfavorite": "お気に入り解除"
+      },
+      "fields": {
+        "fromSite": "移動元サイト",
+        "toSite": "移動先サイト",
+        "movedAt": "移動日",
+        "allocationPolicy": "引当ポリシー",
+        "note": "摘要",
+        "lines": "明細数"
+      },
+      "columns": {
+        "beer": "ビール（コード / 名称）",
+        "quantity": "数量(L)",
+        "note": "摘要"
+      },
+      "allocation": {
+        "fefo": "FEFO",
+        "fifo": "FIFO",
+        "manual": "MANUAL"
+      },
+      "panels": {
+        "routes": "最近 / お気に入り",
+        "favorites": "お気に入り",
+        "recent": "最近使った経路",
+        "lines": "明細入力",
+        "summary": "サマリー",
+        "validation": "入力チェック",
+        "warnings": "警告"
+      },
+      "summary": {
+        "route": "経路",
+        "policy": "引当",
+        "lines": "有効明細",
+        "totalQty": "合計L"
+      },
+      "placeholders": {
+        "beer": "ビールコードまたは名称で検索",
+        "note": "任意メモ"
+      },
+      "hints": {
+        "routes": "よく使う経路を再利用できます。",
+        "beerSearch": "Enter で先頭候補を選択します。1列目に複数行を貼り付け可能です。",
+        "selectSourceFirst": "移動元サイトを選択すると検索候補を読み込みます。",
+        "pasteExample": "貼り付け例: IPA01 50 / PILS02 20 / STOUT03 10",
+        "summary": "入力に応じてチェック結果が更新されます。",
+        "manualMode": "MANUAL のロット選択はこのページでは未実装です。FEFO/FIFO を使うか、別フローでロット選択してください。"
+      },
+      "labels": {
+        "stock": "在庫: {qty} L",
+        "availableBeerCount": "{count} 件の候補",
+        "uses": "{count} 回利用",
+        "ready": "登録可能です"
+      },
+      "siteTypes": {
+        "BREWERY_MANUFACTUR": "製造場",
+        "BREWERY_STORAGE": "蔵置場",
+        "TAX_STORAGE": "蔵置所",
+        "DIRECT_SALES_SHOP": "直営販売店"
+      },
+      "errors": {
+        "tenantRequired": "テナント情報を取得できません。",
+        "fromRequired": "移動元サイトは必須です。",
+        "toRequired": "移動先サイトは必須です。",
+        "sameSite": "移動元サイトと移動先サイトは同じにできません。",
+        "invalidRoute": "この高速入力ページでは選択できない経路です。",
+        "useDomesticShipment": "移動先が直営販売店です。国内出荷フローを使用してください。",
+        "useTaxMovement": "移動先が蔵置所です。税務用の移動フローを使用してください。",
+        "manualNotImplemented": "MANUAL 引当はこのページでは未対応です。",
+        "beerRequired": "ビールは必須です。",
+        "beerUnresolved": "ビールコード/名称を解決できませんでした。",
+        "qtyPositive": "数量は 0 より大きい値を入力してください。",
+        "qtyExceedsStock": "入力数量が在庫を超えています。",
+        "lineRequired": "少なくとも1件の有効明細を入力してください。",
+        "rpcUnavailable": "バックエンド関数 product_move_fast はまだ利用できません。",
+        "saveFailed": "移動の登録に失敗しました。"
+      },
+      "warnings": {
+        "lowStock": "{beer}: 在庫の大半を使用します。",
+        "manyLots": "{beer}: 多数のロットに分割される可能性があります。",
+        "nearExpiry": "{beer}: 期限が近いロットが引当対象になる可能性があります。"
+      },
+      "toast": {
+        "saved": "移動を登録しました。ID: {movementId}"
       }
     },
     "movementWizard": {

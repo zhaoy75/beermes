@@ -216,8 +216,8 @@
       "actualYieldSaved": "実績生産量を保存し、製品生成を登録しました。",
       "relatedBatch": "関連バッチ",
       "fillingTitle": "詰口",
-      "fillingSubtitle": "移動・詰口情報のサマリーです。",
-      "lotDagButton": "移動履歴",
+      "fillingSubtitle": "移出・詰口情報のサマリーです。",
+      "lotDagButton": "移出履歴",
       "lotDagDialogTitle": "Lot DAG",
       "lotDagDialogSubtitle": "このバッチに関連するロットDAGを表示します。",
       "lotDagBackButton": "戻る",
@@ -259,13 +259,13 @@
       "outputActualType": "種別",
       "outputActualDispositionType": "処分区分",
       "outputActualDispositionNone": "処分なし",
-      "outputActualDispositionTransferBatch": "他バッチへ移動",
-      "outputActualDispositionTransferWarehouse": "倉庫へ移動",
+      "outputActualDispositionTransferBatch": "他バッチへ移出",
+      "outputActualDispositionTransferWarehouse": "倉庫へ移出",
       "outputActualDispositionDisposal": "廃棄",
-      "outputActualTargetBatch": "移動先バッチ",
-      "outputActualTargetWarehouse": "移動先倉庫",
-      "outputActualTransferQty": "移動数量",
-      "outputActualTransferUom": "移動単位",
+      "outputActualTargetBatch": "移出先バッチ",
+      "outputActualTargetWarehouse": "移出先倉庫",
+      "outputActualTransferQty": "移出数量",
+      "outputActualTransferUom": "移出単位",
       "outputActualDisposalReason": "廃棄理由",
       "notes": "メモ",
       "parentBatchesTitle": "親バッチ",
@@ -366,7 +366,7 @@
       "colVolumeReturned": "戻し量",
       "colVolumeDumped": "廃棄量",
       "colNotes": "メモ",
-      "noData": "酵母移動の記録がありません。",
+      "noData": "酵母移出の記録がありません。",
       "todoHint": "※ データベースを準備したら、この表と接続してください。"
     },
     "packaging": {
@@ -378,7 +378,7 @@
         "eventTime": "日時",
         "type": "種別",
         "volume": "容量",
-        "movement": "移動",
+        "movement": "移出",
         "filling": "充填",
         "memo": "メモ",
         "date": "日付",
@@ -410,7 +410,7 @@
       },
       "confirmDelete": "この移送詰口管理記録を削除しますか？",
       "warnings": {
-        "movementMismatch": "移動数量が容量または充填合計と一致しません。"
+        "movementMismatch": "移出数量が容量または充填合計と一致しません。"
       },
       "dialog": {
         "title": "移送詰口管理",
@@ -430,8 +430,8 @@
         "volumeAutoFill": "残容量を自動入力",
         "volumeUnit": "L",
         "reason": "理由（任意）",
-        "movementSection": "移動",
-        "movementSite": "移動先拠点",
+        "movementSection": "移出",
+        "movementSite": "移出先拠点",
         "movementQty": "数量",
         "movementMemo": "メモ（任意）",
         "fillingSection": "詰口",
@@ -462,7 +462,7 @@
         "reviewTitle": "確認",
         "reviewType": "種別",
         "reviewVolume": "容量",
-        "reviewMovement": "移動",
+        "reviewMovement": "移出",
         "reviewFilling": "詰口",
         "reviewMemo": "メモ",
         "save": "保存",
@@ -475,9 +475,9 @@
         "typeRequired": "移送詰口管理種別は必須です。",
         "eventTimeRequired": "日時は必須です。",
         "volumeRequired": "容量は0より大きい値を入力してください。",
-        "siteRequired": "移動先拠点は必須です。",
+        "siteRequired": "移出先拠点は必須です。",
         "siteTypeInvalid": "選択した拠点の種別は、この移送詰口管理種別では利用できません。",
-        "movementQtyRequired": "移動数量は0より大きい値を入力してください。",
+        "movementQtyRequired": "移出数量は0より大きい値を入力してください。",
         "tankRequired": "タンク選択は必須です。",
         "depthRequired": "深さは0以上で入力してください。",
         "tankVolumeCalcFailed": "深さからタンク容量を算出できませんでした。",
@@ -654,7 +654,7 @@
       "category": "カテゴリ",
       "alcoholTaxRequired": "酒税管理",
       "manufacturingRequired": "製造申請",
-      "movingControlRequired": "移動管理",
+      "movingControlRequired": "移出管理",
       "shipmentControlRequired": "出荷管理",
       "description": "説明",
       "createdAt": "作成日時"
@@ -665,7 +665,7 @@
       "category": "カテゴリ",
       "alcoholTaxRequired": "酒税管理",
       "manufacturingRequired": "製造申請",
-      "movingControlRequired": "移動管理",
+      "movingControlRequired": "移出管理",
       "shipmentControlRequired": "出荷管理",
       "description": "説明"
     },
@@ -1082,8 +1082,8 @@
         "waste": "廃棄"
       },
       "actions": {
-        "fast": "社内移動(高速入力)",
-        "new": "製品ビール移動登録",
+        "fast": "社内移出(高速入力)",
+        "new": "製品ビール移出登録",
         "edit": "移出編集",
         "exportCsv": "CSV出力"
       },
@@ -1144,7 +1144,7 @@
         }
       },
       "moveDialog": {
-        "title": "移動数量",
+        "title": "移出数量",
         "packageQty": "数量(本/箱)",
         "qtyLiters": "数量(L)",
         "confirm": "明細に追加"
@@ -1156,24 +1156,24 @@
       },
       "errors": {
         "docNoRequired": "伝票番号は必須です。",
-        "docTypeRequired": "移動種別は必須です。",
-        "movementDateRequired": "移動日は必須です。",
-        "siteRequired": "移動元と移動先は必須です。",
+        "docTypeRequired": "移出種別は必須です。",
+        "movementDateRequired": "移出日は必須です。",
+        "siteRequired": "移出元と移出先は必須です。",
         "linesRequired": "明細を追加してください。",
         "moveQtyRequired": "数量は1以上で入力してください。",
         "moveQtyExceed": "在庫数量を超えています。",
-        "sourceRequired": "先に移動元を選択してください。",
-        "selectSourceItem": "移動元の在庫カードを選択してください。",
+        "sourceRequired": "先に移出元を選択してください。",
+        "selectSourceItem": "移出元の在庫カードを選択してください。",
         "selectLineRequired": "戻す明細を選択してください。",
         "manualPackageRequired": "ビールパッケージを選択してください。"
       },
       "toast": {
-        "saved": "移動を保存しました。"
+        "saved": "移出を保存しました。"
       }
     },
     "movementFast": {
-      "title": "INTERNAL_TRANSFER",
-      "subtitle": "社内移動を高速入力する専用ページです。",
+      "title": "製品ビール移出 高速入力",
+      "subtitle": "ルールエンジンに基づいて製品ビール移出を高速入力します。",
       "actions": {
         "back": "戻る",
         "post": "確定",
@@ -1184,10 +1184,13 @@
         "unfavorite": "お気に入り解除"
       },
       "fields": {
-        "fromSite": "移動元サイト",
-        "toSite": "移動先サイト",
-        "movedAt": "移動日",
+        "fromSite": "移出元サイト",
+        "toSite": "移出先サイト",
+        "movedAt": "移出日",
         "allocationPolicy": "引当ポリシー",
+        "movementIntent": "移出目的",
+        "taxEvent": "税務移出種別",
+        "taxDecisionCode": "税務判定コード",
         "note": "摘要",
         "lines": "明細数"
       },
@@ -1213,6 +1216,9 @@
       "summary": {
         "route": "経路",
         "policy": "引当",
+        "intent": "移出目的",
+        "taxEvent": "税務移出種別",
+        "taxDecision": "税務判定",
         "lines": "有効明細",
         "totalQty": "合計L"
       },
@@ -1223,7 +1229,7 @@
       "hints": {
         "routes": "よく使う経路を再利用できます。",
         "beerSearch": "Enter で先頭候補を選択します。1列目に複数行を貼り付け可能です。",
-        "selectSourceFirst": "移動元サイトを選択すると検索候補を読み込みます。",
+        "selectSourceFirst": "移出元サイトを選択すると検索候補を読み込みます。",
         "pasteExample": "貼り付け例: IPA01 50 / PILS02 20 / STOUT03 10",
         "summary": "入力に応じてチェック結果が更新されます。",
         "manualMode": "MANUAL のロット選択はこのページでは未実装です。FEFO/FIFO を使うか、別フローでロット選択してください。"
@@ -1232,7 +1238,8 @@
         "stock": "在庫: {qty} L",
         "availableBeerCount": "{count} 件の候補",
         "uses": "{count} 回利用",
-        "ready": "登録可能です"
+        "ready": "登録可能です",
+        "variesByLot": "ロットにより変動"
       },
       "siteTypes": {
         "BREWERY_MANUFACTUR": "製造場",
@@ -1242,20 +1249,24 @@
       },
       "errors": {
         "tenantRequired": "テナント情報を取得できません。",
-        "fromRequired": "移動元サイトは必須です。",
-        "toRequired": "移動先サイトは必須です。",
-        "sameSite": "移動元サイトと移動先サイトは同じにできません。",
-        "invalidRoute": "この高速入力ページでは選択できない経路です。",
-        "useDomesticShipment": "移動先が直営販売店です。国内出荷フローを使用してください。",
-        "useTaxMovement": "移動先が蔵置所です。税務用の移動フローを使用してください。",
+        "rulesUnavailable": "移出ルール定義を取得できません。",
+        "fromRequired": "移出元サイトは必須です。",
+        "toRequired": "移出先サイトは必須です。",
+        "sameSite": "移出元サイトと移出先サイトは同じにできません。",
+        "noRouteRule": "選択した経路に対応する移出ルールがありません。",
+        "intentRequired": "この経路に対する移出目的を選択してください。",
+        "taxDecisionRequired": "税務判定コードを選択してください。",
         "manualNotImplemented": "MANUAL 引当はこのページでは未対応です。",
         "beerRequired": "ビールは必須です。",
         "beerUnresolved": "ビールコード/名称を解決できませんでした。",
         "qtyPositive": "数量は 0 より大きい値を入力してください。",
         "qtyExceedsStock": "入力数量が在庫を超えています。",
+        "allocationUom": "引当数量を元ロットの単位へ変換できませんでした。",
+        "taxDecisionMissing": "割当ロットの税務判定を解決できませんでした。",
+        "selectedTaxDecisionUnsupported": "選択した税務判定コードは割当ロットの一部に適用できません。",
         "lineRequired": "少なくとも1件の有効明細を入力してください。",
-        "rpcUnavailable": "バックエンド関数 product_move_fast はまだ利用できません。",
-        "saveFailed": "移動の登録に失敗しました。"
+        "rpcUnavailable": "バックエンド関数 product_move はまだ利用できません。",
+        "saveFailed": "移出の登録に失敗しました。"
       },
       "warnings": {
         "lowStock": "{beer}: 在庫の大半を使用します。",
@@ -1263,14 +1274,14 @@
         "nearExpiry": "{beer}: 期限が近いロットが引当対象になる可能性があります。"
       },
       "toast": {
-        "saved": "移動を登録しました。ID: {movementId}"
+        "saved": "{count} 件の移出セグメントを登録しました。"
       }
     },
     "movementWizard": {
-      "title": "製品ビール移動登録",
+      "title": "製品ビール移出登録",
       "subtitle": "registry_def からルールを動的に読み込みます。",
       "back": "戻る",
-      "wizardTitle": "製品ビール移動登録ウィザード",
+      "wizardTitle": "製品ビール移出登録ウィザード",
       "wizardSubtitle": "ステップ1〜5を順に入力してください。",
       "steps": {
         "step1": "ステップ1",
@@ -1280,17 +1291,17 @@
         "step5": "ステップ5"
       },
       "intent": {
-        "title": "ステップ1：移動目的",
-        "subtitle": "movement_get_movement_ui_intent で移動目的一覧を取得します。",
-        "loading": "移動目的を読み込み中..."
+        "title": "ステップ1：移出目的",
+        "subtitle": "movement_get_movement_ui_intent で移出目的一覧を取得します。",
+        "loading": "移出目的を読み込み中..."
       },
       "sites": {
-        "title": "ステップ2：移動元/移動先の選択",
-        "subtitle": "movement_get_rules で選択した移動目的のルールを取得します。",
-        "loading": "移動ルールを読み込み中..."
+        "title": "ステップ2：移出元/移出先の選択",
+        "subtitle": "movement_get_rules で選択した移出目的のルールを取得します。",
+        "loading": "移出ルールを読み込み中..."
       },
       "lots": {
-        "title": "ステップ3：移動商品（Lot）選択",
+        "title": "ステップ3：移出商品（Lot）選択",
         "subtitle": "ロット税区分により税イベントが変わる場合があります。",
         "multiTaxTypeWarning": "複数のロット税区分が選択されています。選択により税イベントが変わる可能性があります。",
         "multiEventWarning": "候補ロットにより税イベントのプレビューが変化します"
@@ -1304,16 +1315,16 @@
         "subtitle": "導出された税イベントと適用ルールを確認します。"
       },
       "fields": {
-        "sourceSiteType": "移動元サイト種別",
-        "destinationSiteType": "移動先サイト種別",
-        "sourceSite": "移動元サイト",
-        "destinationSite": "移動先サイト",
+        "sourceSiteType": "移出元サイト種別",
+        "destinationSiteType": "移出先サイト種別",
+        "sourceSite": "移出元サイト",
+        "destinationSite": "移出先サイト",
         "taxDecisionCode": "税務判定コード",
         "defaultTaxDecision": "既定値",
         "reasonNonDefault": "理由（既定値以外を選択した場合必須）",
         "reasonNonDefaultHint": "既定値以外を選択した場合は理由の入力が必要です。",
         "product": "製品",
-        "sourceLotTaxType": "移動元ロット税区分",
+        "sourceLotTaxType": "移出元ロット税区分",
         "unitPrice": "単価",
         "price": "価格",
         "date": "日付",
@@ -1335,7 +1346,7 @@
         "batchInfo": "バッチ情報",
         "package": "パッケージ",
         "quantity": "数量",
-        "movementQuantity": "移動数量",
+        "movementQuantity": "移出数量",
         "uom": "単位",
         "lotTaxType": "ロット税区分",
         "noLotsFound": "ロットが見つかりません。"
@@ -1360,8 +1371,8 @@
         "post": "確定"
       },
       "errors": {
-        "loadIntents": "移動目的一覧の取得に失敗しました。",
-        "loadRules": "移動ルールの取得に失敗しました。"
+        "loadIntents": "移出目的一覧の取得に失敗しました。",
+        "loadRules": "移出ルールの取得に失敗しました。"
       }
     },
     "taxEvent": {
@@ -1790,7 +1801,7 @@
       "unpaidMove": "未納税搬入出",
       "returnBook": "戻入帳",
       "exportDutyFree": "輸出免税帳",
-      "siteMovements": "サイト間移動",
+      "siteMovements": "サイト間移出",
       "recipe": "レシピ管理",
       "batchYield": "エキス収率",
       "recipemng": "レシピ管理",
@@ -1799,7 +1810,7 @@
       "inventory": "在庫管理",
       "rawMaterialReceipts": "原材料受入",
       "rawMaterialInventory": "原材料在庫",
-      "producedBeer": "移動記録",
+      "producedBeer": "移出記録",
       "waste": "廃棄物管理",
       "masterMaintenance": "マスタ管理",
       "systemMaintenance": "システム管理",
@@ -1923,11 +1934,11 @@
     }
   },
   "siteMovement": {
-    "title": "サイト間移動",
-    "subtitle": "拠点間の在庫移動を記録・管理します。",
-    "newTitle": "移動伝票を作成",
-    "editTitle": "移動伝票を編集",
-    "deleteTitle": "移動伝票の削除",
+    "title": "サイト間移出",
+    "subtitle": "拠点間の在庫移出を記録・管理します。",
+    "newTitle": "移出伝票を作成",
+    "editTitle": "移出伝票を編集",
+    "deleteTitle": "移出伝票の削除",
     "deleteConfirm": "伝票 {docNo} を削除しますか？この操作は元に戻せません。",
     "filters": {
       "docNo": "伝票番号",
@@ -1940,7 +1951,7 @@
     "table": {
       "docNo": "伝票番号",
       "docType": "種別",
-      "movementDate": "移動日",
+      "movementDate": "移出日",
       "source": "出庫サイト",
       "destination": "入庫サイト",
       "status": "ステータス",
@@ -1949,7 +1960,7 @@
     "form": {
       "docNo": "伝票番号",
       "docType": "伝票種別",
-      "movementDate": "移動日",
+      "movementDate": "移出日",
       "status": "ステータス",
       "source": "出庫サイト",
       "destination": "入庫サイト",
@@ -1963,7 +1974,7 @@
     },
     "errors": {
       "docNoRequired": "伝票番号は必須です。",
-      "movementDateRequired": "移動日は必須です。",
+      "movementDateRequired": "移出日は必須です。",
       "siteRequired": "出庫サイトと入庫サイトを選択してください。",
       "docTypeRequired": "伝票種別を選択してください。",
       "linesRequired": "少なくとも1件の明細が必要です。",
@@ -1976,8 +1987,8 @@
       "void": "取消"
     },
     "docTypeMap": {
-      "transfer": "社内移動",
-      "tax_transfer": "税倉庫移動",
+      "transfer": "社内移出",
+      "tax_transfer": "税倉庫移出",
       "production_issue": "仕込払出",
       "production_receipt": "仕込受入"
     }
@@ -2112,13 +2123,13 @@
       "sale": "課税移出",
       "tax_transfer": "輸出免税",
       "return": "戻入",
-      "transfer": "社内移動",
+      "transfer": "社内移出",
       "waste": "廃棄",
       "unknown": "不明"
     },
     "breakdown": {
       "columns": {
-        "movementType": "移動種別",
+        "movementType": "移出種別",
         "category": "ビール種別",
         "abv": "ABV(%)",
         "volume": "数量(L)"
@@ -2127,7 +2138,7 @@
     "sections": {
       "summary": {
         "title": "サマリー",
-        "subtitle": "移動内訳を確認・編集します。"
+        "subtitle": "移出内訳を確認・編集します。"
       },
       "dispose": {
         "title": "廃棄",

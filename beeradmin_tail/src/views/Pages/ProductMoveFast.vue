@@ -127,6 +127,45 @@
               {{ validLineCount }}
             </div>
           </div>
+          <div class="lg:col-span-4">
+            <label class="block text-sm text-gray-600 mb-1">{{
+              t('producedBeer.movementFast.fields.movementIntent')
+            }}</label>
+            <div
+              class="w-full h-[42px] border rounded-lg px-3 bg-gray-50 text-sm text-gray-700 flex items-center"
+            >
+              {{ movementIntentDisplay }}
+            </div>
+          </div>
+          <div class="lg:col-span-4">
+            <label class="block text-sm text-gray-600 mb-1">{{
+              t('producedBeer.movementFast.fields.taxEvent')
+            }}</label>
+            <div
+              class="w-full h-[42px] border rounded-lg px-3 bg-gray-50 text-sm text-gray-700 flex items-center"
+            >
+              {{ derivedTaxEventDisplay }}
+            </div>
+          </div>
+          <div class="lg:col-span-4">
+            <label class="block text-sm text-gray-600 mb-1">{{
+              t('producedBeer.movementFast.fields.taxDecisionCode')
+            }}</label>
+            <select
+              v-model="routeForm.taxDecisionCode"
+              class="w-full h-[42px] border rounded-lg px-3 bg-white"
+              :disabled="taxDecisionOptions.length <= 1"
+            >
+              <option value="">{{ t('common.select') }}</option>
+              <option
+                v-for="option in taxDecisionOptions"
+                :key="option.value"
+                :value="option.value"
+              >
+                {{ option.label }}
+              </option>
+            </select>
+          </div>
           <div class="lg:col-span-12">
             <label class="block text-sm text-gray-600 mb-1">{{
               t('producedBeer.movementFast.fields.note')
@@ -252,7 +291,7 @@
                   <th class="px-3 py-2 text-left min-w-[22rem]">
                     {{ t('producedBeer.movementFast.columns.beer') }}
                   </th>
-                  <th class="px-3 py-2 text-right w-40">
+                  <th class="px-3 py-2 text-right w-52 min-w-[13rem]">
                     {{ t('producedBeer.movementFast.columns.quantity') }}
                   </th>
                   <th class="px-3 py-2 text-left min-w-[14rem]">
@@ -322,7 +361,7 @@
                       {{ lineErrorMap[row.id] }}
                     </p>
                   </td>
-                  <td class="px-3 py-2">
+                  <td class="px-3 py-2 min-w-[13rem]">
                     <input
                       :ref="(el) => setQtyInputRef(row.id, el)"
                       v-model="row.qtyText"
@@ -330,7 +369,7 @@
                       min="0"
                       step="0.001"
                       inputmode="decimal"
-                      class="w-full h-[38px] border rounded-lg px-3 text-right"
+                      class="w-full min-w-[12rem] h-[38px] border rounded-lg px-3 text-right"
                       placeholder="0.000"
                       @keydown="handleQtyKeydown($event, index)"
                     />
@@ -385,6 +424,20 @@
                 <dd class="text-right font-medium text-gray-900">
                   {{ allocationPolicyLabel(routeForm.allocationPolicy) }}
                 </dd>
+              </div>
+              <div class="flex items-center justify-between gap-4">
+                <dt class="text-gray-500">{{ t('producedBeer.movementFast.summary.intent') }}</dt>
+                <dd class="text-right font-medium text-gray-900">{{ movementIntentDisplay }}</dd>
+              </div>
+              <div class="flex items-center justify-between gap-4">
+                <dt class="text-gray-500">{{ t('producedBeer.movementFast.summary.taxEvent') }}</dt>
+                <dd class="text-right font-medium text-gray-900">{{ derivedTaxEventDisplay }}</dd>
+              </div>
+              <div class="flex items-center justify-between gap-4">
+                <dt class="text-gray-500">
+                  {{ t('producedBeer.movementFast.summary.taxDecision') }}
+                </dt>
+                <dd class="text-right font-medium text-gray-900">{{ taxDecisionDisplay }}</dd>
               </div>
               <div class="flex items-center justify-between gap-4">
                 <dt class="text-gray-500">{{ t('producedBeer.movementFast.summary.lines') }}</dt>
@@ -455,12 +508,52 @@ type SiteOption = {
   siteTypeKey: string | null
 }
 
+type RuleLabel = {
+  ja?: string
+  en?: string
+  show_in_movement_wizard?: boolean
+}
+
+type MovementRules = {
+  enums?: Record<string, string[]>
+  movement_intent_labels?: Record<string, RuleLabel>
+  site_type_labels?: Record<string, RuleLabel>
+  tax_event_labels?: Record<string, RuleLabel>
+  tax_decision_code_labels?: Record<string, RuleLabel>
+  tax_decision_definitions?: Array<{
+    tax_decision_code?: string
+    name_ja?: string
+    name_en?: string
+  }>
+  movement_intent_rules?: Array<{
+    movement_intent?: string
+    allowed_src_site_types?: string[]
+    allowed_dst_site_types?: string[]
+    ui_hints?: Record<string, any>
+  }>
+  tax_transformation_rules?: Array<{
+    movement_intent?: string
+    src_site_type?: string
+    dst_site_type?: string
+    lot_tax_type?: string
+    allowed_tax_decisions?: Array<{
+      tax_decision_code?: string
+      default?: boolean
+      tax_event?: string
+    }>
+  }>
+}
+
 type BeerLotOption = {
   lotId: string
   lotNo: string | null
   batchId: string | null
   batchCode: string | null
+  inventoryQty: number
   qtyLiters: number
+  uomId: string
+  uomCode: string | null
+  lotTaxType: string | null
   producedAt: string | null
   expiresAt: string | null
 }
@@ -496,14 +589,9 @@ type RoutePreset = {
 
 type SubmitMode = 'post' | 'next'
 
-const INTERNAL_SITE_TYPES = [
-  'BREWERY_MANUFACTUR',
-  'BREWERY_STORAGE',
-  'TAX_STORAGE',
-  'DIRECT_SALES_SHOP',
-]
 const WARNING_NEAR_EXPIRY_DAYS = 30
 const ROUTE_STORAGE_PREFIX = 'product-move-fast-routes'
+const INTERNAL_TRANSFER_INTENT = 'INTERNAL_TRANSFER'
 
 const router = useRouter()
 const { t, locale } = useI18n()
@@ -514,6 +602,7 @@ const userId = ref<string | null>(null)
 const siteOptions = ref<SiteOption[]>([])
 const beerOptions = ref<BeerOption[]>([])
 const storedRoutes = ref<RoutePreset[]>([])
+const movementRules = ref<MovementRules | null>(null)
 const inventoryLoading = ref(false)
 const saving = ref(false)
 const activeSuggestionRowId = ref<string | null>(null)
@@ -525,6 +614,8 @@ const routeForm = reactive({
   toSiteId: '',
   movedAt: formatDateTimeLocal(new Date()),
   allocationPolicy: 'FEFO',
+  movementIntent: INTERNAL_TRANSFER_INTENT,
+  taxDecisionCode: '',
   note: '',
 })
 
@@ -580,6 +671,20 @@ function formatNumber(value: number | null | undefined) {
   return new Intl.NumberFormat(locale.value, { maximumFractionDigits: 3 }).format(value)
 }
 
+function pickLabel(label: RuleLabel | null | undefined, fallback: string) {
+  if (!label) return fallback
+  const isJa = String(locale.value || '')
+    .toLowerCase()
+    .startsWith('ja')
+  if (isJa) return label.ja || label.en || fallback
+  return label.en || label.ja || fallback
+}
+
+function mapLabel(map: Record<string, RuleLabel> | undefined, code: string | null | undefined) {
+  if (!code) return '—'
+  return pickLabel(map?.[code], code)
+}
+
 function resolveBatchLabel(meta: Record<string, any> | null | undefined) {
   const label = meta?.label
   if (typeof label !== 'string') return null
@@ -606,6 +711,15 @@ function convertToLiters(value: number, uomCode: string | null | undefined) {
   if (normalized === 'ml') return value / 1000
   if (normalized === 'hl') return value * 100
   if (normalized === 'gal_us') return value * 3.78541
+  return value
+}
+
+function convertFromLiters(value: number, uomCode: string | null | undefined) {
+  const normalized = normalizeVolumeUom(uomCode)
+  if (!normalized || normalized === 'l') return value
+  if (normalized === 'ml') return value * 1000
+  if (normalized === 'hl') return value / 100
+  if (normalized === 'gal_us') return value / 3.78541
   return value
 }
 
@@ -697,22 +811,60 @@ async function loadSites() {
         siteTypeKey: toRuleSiteTypeKey(defKey),
       } satisfies SiteOption
     })
-    .filter((row) => row.siteTypeKey && INTERNAL_SITE_TYPES.includes(row.siteTypeKey))
+    .filter((row) => !!row.siteTypeKey)
+}
+
+async function loadMovementRules() {
+  const { data, error } = await supabase.rpc('movement_get_rules', {
+    p_movement_intent: INTERNAL_TRANSFER_INTENT,
+  })
+  if (error) throw error
+  movementRules.value = ((Array.isArray(data) ? data[0] : data) ?? null) as MovementRules | null
 }
 
 function siteOptionLabel(site: SiteOption) {
   const siteType = site.siteTypeKey
-    ? t(`producedBeer.movementFast.siteTypes.${site.siteTypeKey}`)
+    ? mapLabel(movementRules.value?.site_type_labels, site.siteTypeKey)
     : ''
   return siteType ? `${site.name} (${siteType})` : site.name
 }
 
-const sourceSiteOptions = computed(() => siteOptions.value)
-const destinationSiteOptions = computed(() => siteOptions.value)
 const siteMap = computed(() => new Map(siteOptions.value.map((site) => [site.id, site])))
 
 const fromSite = computed(() => siteMap.value.get(routeForm.fromSiteId) ?? null)
 const toSite = computed(() => siteMap.value.get(routeForm.toSiteId) ?? null)
+const fromSiteType = computed(() => fromSite.value?.siteTypeKey ?? '')
+const toSiteType = computed(() => toSite.value?.siteTypeKey ?? '')
+
+const internalTransferRule = computed(() => {
+  return (
+    movementRules.value?.movement_intent_rules?.find(
+      (rule) => rule.movement_intent === INTERNAL_TRANSFER_INTENT,
+    ) ?? null
+  )
+})
+
+const allowedSourceSiteTypes = computed(
+  () => new Set(internalTransferRule.value?.allowed_src_site_types ?? []),
+)
+
+const allowedDestinationSiteTypes = computed(
+  () => new Set(internalTransferRule.value?.allowed_dst_site_types ?? []),
+)
+
+const sourceSiteOptions = computed(() =>
+  siteOptions.value.filter((site) => {
+    if (!site.siteTypeKey) return false
+    return allowedSourceSiteTypes.value.has(site.siteTypeKey)
+  }),
+)
+
+const destinationSiteOptions = computed(() =>
+  siteOptions.value.filter((site) => {
+    if (!site.siteTypeKey) return false
+    return allowedDestinationSiteTypes.value.has(site.siteTypeKey)
+  }),
+)
 
 function compareDateAsc(a: string | null | undefined, b: string | null | undefined) {
   const aTime = a ? Date.parse(a) : Number.POSITIVE_INFINITY
@@ -727,7 +879,7 @@ async function loadBeerOptionsForSite(siteId: string) {
     const { data: inventoryRows, error } = await supabase
       .from('inv_inventory')
       .select(
-        'lot_id, qty, uom_id, lot:lot_id ( id, lot_no, batch_id, produced_at, expires_at, status )',
+        'lot_id, qty, uom_id, lot:lot_id ( id, lot_no, batch_id, produced_at, expires_at, lot_tax_type, status )',
       )
       .eq('tenant_id', auth.tenantId)
       .eq('site_id', siteId)
@@ -849,7 +1001,11 @@ async function loadBeerOptionsForSite(siteId: string) {
         lotNo: lotRow.lot_no ? String(lotRow.lot_no) : null,
         batchId: String(lotRow.batch_id),
         batchCode: batchInfo.batchCode,
+        inventoryQty: qtyValue,
         qtyLiters,
+        uomId: String(row.uom_id),
+        uomCode: uomMap.get(String(row.uom_id ?? '')) ?? null,
+        lotTaxType: typeof lotRow.lot_tax_type === 'string' ? String(lotRow.lot_tax_type) : null,
         producedAt: typeof lotRow.produced_at === 'string' ? lotRow.produced_at : null,
         expiresAt: typeof lotRow.expires_at === 'string' ? lotRow.expires_at : null,
       })
@@ -1120,18 +1276,254 @@ function allocationPolicyLabel(value: string) {
   return option?.label ?? value
 }
 
-function isAllowedPageRoute(
+const selectedBeerLotTaxTypes = computed(() => {
+  const set = new Set<string>()
+  lineRows.value.forEach((row) => {
+    const option = row.beerKey ? beerOptionByKey.value.get(row.beerKey) : null
+    option?.candidateLots.forEach((lot) => {
+      if (lot.lotTaxType) set.add(lot.lotTaxType)
+    })
+  })
+  return Array.from(set)
+})
+
+function matchingTaxRulesForRoute() {
+  return (movementRules.value?.tax_transformation_rules ?? []).filter((entry) => {
+    if (entry.movement_intent !== INTERNAL_TRANSFER_INTENT) return false
+    if (fromSiteType.value && entry.src_site_type !== fromSiteType.value) return false
+    if (toSiteType.value && entry.dst_site_type !== toSiteType.value) return false
+    if (selectedBeerLotTaxTypes.value.length === 1) {
+      return entry.lot_tax_type === selectedBeerLotTaxTypes.value[0]
+    }
+    return true
+  })
+}
+
+const taxDecisionOptions = computed(() => {
+  const defs = new Map<string, { name_ja?: string; name_en?: string }>()
+  ;(movementRules.value?.tax_decision_definitions ?? []).forEach((row) => {
+    if (!row.tax_decision_code) return
+    defs.set(row.tax_decision_code, { name_ja: row.name_ja, name_en: row.name_en })
+  })
+
+  const codes = new Set<string>()
+  matchingTaxRulesForRoute().forEach((rule) => {
+    ;(rule.allowed_tax_decisions ?? []).forEach((decision) => {
+      if (decision.tax_decision_code) codes.add(decision.tax_decision_code)
+    })
+  })
+
+  return Array.from(codes).map((code) => {
+    const def = defs.get(code)
+    const isJa = String(locale.value || '')
+      .toLowerCase()
+      .startsWith('ja')
+    const label = isJa
+      ? (def?.name_ja ??
+        def?.name_en ??
+        mapLabel(movementRules.value?.tax_decision_code_labels, code))
+      : (def?.name_en ??
+        def?.name_ja ??
+        mapLabel(movementRules.value?.tax_decision_code_labels, code))
+    return { value: code, label }
+  })
+})
+
+function defaultTaxDecisionCodeForRule(
+  movementIntent: string,
   srcSiteType: string | null | undefined,
   dstSiteType: string | null | undefined,
+  lotTaxType: string | null | undefined,
 ) {
-  if (!srcSiteType || !dstSiteType) return true
-  if (dstSiteType === 'DIRECT_SALES_SHOP') return false
-  if (dstSiteType === 'TAX_STORAGE') return false
-  if (srcSiteType === 'BREWERY_MANUFACTUR' && dstSiteType === 'BREWERY_STORAGE') return true
-  if (srcSiteType === 'BREWERY_STORAGE' && dstSiteType === 'BREWERY_MANUFACTUR') return true
-  if (srcSiteType === 'BREWERY_STORAGE' && dstSiteType === 'BREWERY_STORAGE') return true
-  if (srcSiteType === 'BREWERY_MANUFACTUR' && dstSiteType === 'BREWERY_MANUFACTUR') return true
-  return false
+  if (!movementIntent || !srcSiteType || !dstSiteType) return null
+  const matchingRules = (movementRules.value?.tax_transformation_rules ?? []).filter((entry) => {
+    if (entry.movement_intent !== movementIntent) return false
+    if (entry.src_site_type !== srcSiteType) return false
+    if (entry.dst_site_type !== dstSiteType) return false
+    if (lotTaxType && entry.lot_tax_type !== lotTaxType) return false
+    return true
+  })
+  const rule = matchingRules[0]
+  if (!rule) return null
+  const defaultDecision = rule.allowed_tax_decisions?.find((entry) => entry.default)
+  return (
+    defaultDecision?.tax_decision_code ?? rule.allowed_tax_decisions?.[0]?.tax_decision_code ?? null
+  )
+}
+
+const defaultTaxDecisionCode = computed(() => {
+  return defaultTaxDecisionCodeForRule(
+    INTERNAL_TRANSFER_INTENT,
+    fromSiteType.value,
+    toSiteType.value,
+    selectedBeerLotTaxTypes.value.length === 1 ? selectedBeerLotTaxTypes.value[0] : null,
+  )
+})
+
+function taxDecisionLabel(code: string | null | undefined) {
+  if (!code) return '—'
+  const option = taxDecisionOptions.value.find((entry) => entry.value === code)
+  return option?.label ?? mapLabel(movementRules.value?.tax_decision_code_labels, code)
+}
+
+function intentLabel(code: string | null | undefined) {
+  return mapLabel(movementRules.value?.movement_intent_labels, code)
+}
+
+function taxEventLabel(code: string | null | undefined) {
+  return mapLabel(movementRules.value?.tax_event_labels, code)
+}
+
+const derivedTaxEventCodes = computed(() => {
+  const codes = new Set<string>()
+  matchingTaxRulesForRoute().forEach((rule) => {
+    const selectedDecision = routeForm.taxDecisionCode
+      ? rule.allowed_tax_decisions?.find(
+          (entry) => entry.tax_decision_code === routeForm.taxDecisionCode,
+        )
+      : undefined
+    const decision =
+      selectedDecision ??
+      rule.allowed_tax_decisions?.find((entry) => entry.default) ??
+      rule.allowed_tax_decisions?.[0]
+    if (decision?.tax_event) codes.add(decision.tax_event)
+  })
+  return Array.from(codes)
+})
+
+const derivedTaxEventDisplay = computed(() => {
+  if (!routeForm.fromSiteId || !routeForm.toSiteId) return '—'
+  if (derivedTaxEventCodes.value.length === 0) return '—'
+  if (derivedTaxEventCodes.value.length === 1) return taxEventLabel(derivedTaxEventCodes.value[0])
+  return t('producedBeer.movementFast.labels.variesByLot')
+})
+
+const movementIntentDisplay = computed(() => intentLabel(INTERNAL_TRANSFER_INTENT))
+const taxDecisionDisplay = computed(() => taxDecisionLabel(routeForm.taxDecisionCode))
+
+function candidateLotsForPolicy(option: BeerOption) {
+  const lots = [...option.candidateLots]
+  if (routeForm.allocationPolicy === 'FIFO') {
+    return lots.sort((a, b) =>
+      compareDateAsc(a.producedAt || a.expiresAt, b.producedAt || b.expiresAt),
+    )
+  }
+  return lots.sort((a, b) =>
+    compareDateAsc(a.expiresAt || a.producedAt, b.expiresAt || b.producedAt),
+  )
+}
+
+function defaultTaxDecisionCodeForLot(lotTaxType: string | null | undefined) {
+  return defaultTaxDecisionCodeForRule(
+    INTERNAL_TRANSFER_INTENT,
+    fromSiteType.value,
+    toSiteType.value,
+    lotTaxType,
+  )
+}
+
+function resolveTaxDecisionCodeForLot(lotTaxType: string | null | undefined) {
+  const srcType = fromSiteType.value
+  const dstType = toSiteType.value
+  if (!srcType || !dstType || !lotTaxType) return null
+  const rule = (movementRules.value?.tax_transformation_rules ?? []).find((entry) => {
+    return (
+      entry.movement_intent === INTERNAL_TRANSFER_INTENT &&
+      entry.src_site_type === srcType &&
+      entry.dst_site_type === dstType &&
+      entry.lot_tax_type === lotTaxType
+    )
+  })
+  if (!rule) return null
+  if (routeForm.taxDecisionCode) {
+    const matched = rule.allowed_tax_decisions?.find(
+      (entry) => entry.tax_decision_code === routeForm.taxDecisionCode,
+    )
+    if (!matched) {
+      throw new Error(t('producedBeer.movementFast.errors.selectedTaxDecisionUnsupported'))
+    }
+    return matched.tax_decision_code ?? null
+  }
+  return defaultTaxDecisionCodeForLot(lotTaxType)
+}
+
+function resolveTaxEventForLot(
+  lotTaxType: string | null | undefined,
+  taxDecisionCode: string | null | undefined,
+) {
+  const srcType = fromSiteType.value
+  const dstType = toSiteType.value
+  if (!srcType || !dstType || !lotTaxType || !taxDecisionCode) return null
+  const rule = (movementRules.value?.tax_transformation_rules ?? []).find((entry) => {
+    return (
+      entry.movement_intent === INTERNAL_TRANSFER_INTENT &&
+      entry.src_site_type === srcType &&
+      entry.dst_site_type === dstType &&
+      entry.lot_tax_type === lotTaxType
+    )
+  })
+  const decision = rule?.allowed_tax_decisions?.find(
+    (entry) => entry.tax_decision_code === taxDecisionCode,
+  )
+  return decision?.tax_event ?? null
+}
+
+type AllocatedMoveSegment = {
+  beerCode: string
+  beerName: string
+  qtyLiters: number
+  qtySourceUom: number
+  lotId: string
+  lotNo: string | null
+  lotTaxType: string | null
+  uomId: string
+  uomCode: string | null
+  taxDecisionCode: string
+  note: string | null
+}
+
+function allocateLine(line: ValidatedLine) {
+  const orderedLots = candidateLotsForPolicy(line.option)
+  let remainingLiters = line.qtyLiters
+  const segments: AllocatedMoveSegment[] = []
+
+  for (const lot of orderedLots) {
+    if (remainingLiters <= 0.0000001) break
+    const availableLiters = lot.qtyLiters
+    if (availableLiters <= 0) continue
+
+    const takeLiters = Math.min(remainingLiters, availableLiters)
+    const qtySourceUom = convertFromLiters(takeLiters, lot.uomCode)
+    if (qtySourceUom == null || !Number.isFinite(qtySourceUom) || qtySourceUom <= 0) {
+      throw new Error(t('producedBeer.movementFast.errors.allocationUom'))
+    }
+
+    const resolvedTaxDecisionCode = resolveTaxDecisionCodeForLot(lot.lotTaxType)
+    if (!resolvedTaxDecisionCode) {
+      throw new Error(t('producedBeer.movementFast.errors.taxDecisionMissing'))
+    }
+
+    segments.push({
+      beerCode: line.option.beerCode,
+      beerName: line.option.beerName,
+      qtyLiters: takeLiters,
+      qtySourceUom,
+      lotId: lot.lotId,
+      lotNo: lot.lotNo,
+      lotTaxType: lot.lotTaxType,
+      uomId: lot.uomId,
+      uomCode: lot.uomCode,
+      taxDecisionCode: resolvedTaxDecisionCode,
+      note: line.note,
+    })
+    remainingLiters -= takeLiters
+  }
+
+  if (remainingLiters > 0.0001) {
+    throw new Error(t('producedBeer.movementFast.errors.qtyExceedsStock'))
+  }
+
+  return segments
 }
 
 const routeErrors = computed(() => {
@@ -1141,14 +1533,28 @@ const routeErrors = computed(() => {
   if (routeForm.fromSiteId && routeForm.toSiteId && routeForm.fromSiteId === routeForm.toSiteId) {
     errors.push(t('producedBeer.movementFast.errors.sameSite'))
   }
-
-  const srcType = fromSite.value?.siteTypeKey ?? null
-  const dstType = toSite.value?.siteTypeKey ?? null
-  if (dstType === 'DIRECT_SALES_SHOP')
-    errors.push(t('producedBeer.movementFast.errors.useDomesticShipment'))
-  if (dstType === 'TAX_STORAGE') errors.push(t('producedBeer.movementFast.errors.useTaxMovement'))
-  if ((srcType || dstType) && !isAllowedPageRoute(srcType, dstType)) {
-    errors.push(t('producedBeer.movementFast.errors.invalidRoute'))
+  if (!movementRules.value) {
+    errors.push(t('producedBeer.movementFast.errors.rulesUnavailable'))
+  }
+  if (
+    routeForm.fromSiteId &&
+    fromSiteType.value &&
+    !allowedSourceSiteTypes.value.has(fromSiteType.value)
+  ) {
+    errors.push(t('producedBeer.movementFast.errors.noRouteRule'))
+  }
+  if (
+    routeForm.toSiteId &&
+    toSiteType.value &&
+    !allowedDestinationSiteTypes.value.has(toSiteType.value)
+  ) {
+    errors.push(t('producedBeer.movementFast.errors.noRouteRule'))
+  }
+  if (routeForm.fromSiteId && routeForm.toSiteId && matchingTaxRulesForRoute().length === 0) {
+    errors.push(t('producedBeer.movementFast.errors.noRouteRule'))
+  }
+  if (taxDecisionOptions.value.length > 1 && !routeForm.taxDecisionCode) {
+    errors.push(t('producedBeer.movementFast.errors.taxDecisionRequired'))
   }
   if (routeForm.allocationPolicy === 'MANUAL') {
     errors.push(t('producedBeer.movementFast.errors.manualNotImplemented'))
@@ -1254,21 +1660,42 @@ const routeSummaryText = computed(() => {
   return `${fromSite.value.name} → ${toSite.value.name}`
 })
 
-function buildPayload() {
-  return {
-    movement_intent: 'INTERNAL_TRANSFER',
-    from_site_id: routeForm.fromSiteId,
-    to_site_id: routeForm.toSiteId,
-    moved_at: new Date(routeForm.movedAt).toISOString(),
-    allocation_policy: routeForm.allocationPolicy,
-    note: routeForm.note.trim() || null,
-    lines: validatedLines.value.map((line) => ({
-      beer_code: line.option.beerCode,
-      beer_name: line.option.beerName,
-      qty_l: line.qtyLiters,
-      note: line.note,
-    })),
-  }
+function buildMovePayloads() {
+  const movementAt = new Date(routeForm.movedAt).toISOString()
+  const payloads: Array<Record<string, any>> = []
+  const idempotencyPrefix = `product_move_fast:${Date.now()}`
+
+  validatedLines.value.forEach((line, lineIndex) => {
+    const segments = allocateLine(line)
+    segments.forEach((segment, segmentIndex) => {
+      payloads.push({
+        movement_intent: INTERNAL_TRANSFER_INTENT,
+        src_site: routeForm.fromSiteId,
+        dst_site: routeForm.toSiteId,
+        src_lot_id: segment.lotId,
+        qty: segment.qtySourceUom,
+        uom_id: segment.uomId,
+        tax_decision_code: segment.taxDecisionCode,
+        movement_at: movementAt,
+        notes: routeForm.note.trim() || segment.note || null,
+        meta: {
+          source: 'product_move_fast',
+          allocation_policy: routeForm.allocationPolicy,
+          beer_code: segment.beerCode,
+          beer_name: segment.beerName,
+          lot_no: segment.lotNo,
+          derived_tax_event: resolveTaxEventForLot(segment.lotTaxType, segment.taxDecisionCode),
+          line_note: segment.note,
+          qty_l: segment.qtyLiters,
+          ui_line_index: lineIndex + 1,
+          allocation_segment_index: segmentIndex + 1,
+          idempotency_key: `${idempotencyPrefix}:${lineIndex + 1}:${segmentIndex + 1}:${segment.lotId}`,
+        },
+      })
+    })
+  })
+
+  return payloads
 }
 
 async function submit(mode: SubmitMode) {
@@ -1280,19 +1707,23 @@ async function submit(mode: SubmitMode) {
 
   saving.value = true
   try {
-    const payload = buildPayload()
-    const { data, error } = await supabase.rpc('product_move_fast', { p_doc: payload })
-    if (error) throw error
-
-    const movementId =
-      typeof data === 'string'
-        ? data
-        : data && typeof data === 'object' && 'movement_id' in data
-          ? String((data as Record<string, any>).movement_id ?? '')
-          : ''
+    const payloads = buildMovePayloads()
+    const movementIds: string[] = []
+    for (const payload of payloads) {
+      const { data, error } = await supabase.rpc('product_move', { p_doc: payload })
+      if (error) throw error
+      if (data != null) movementIds.push(String(data))
+    }
 
     touchRoutePreset(false)
-    toast.success(t('producedBeer.movementFast.toast.saved', { movementId: movementId || '—' }))
+    if (routeForm.fromSiteId) {
+      await loadBeerOptionsForSite(routeForm.fromSiteId)
+    }
+    toast.success(
+      t('producedBeer.movementFast.toast.saved', {
+        count: movementIds.length,
+      }),
+    )
 
     if (mode === 'next') {
       resetLines()
@@ -1300,7 +1731,7 @@ async function submit(mode: SubmitMode) {
   } catch (err: any) {
     console.error(err)
     const message = String(err?.message ?? '')
-    if (message.includes('product_move_fast')) {
+    if (message.includes('product_move')) {
       toast.error(t('producedBeer.movementFast.errors.rpcUnavailable'))
     } else {
       toast.error(message || t('producedBeer.movementFast.errors.saveFailed'))
@@ -1354,6 +1785,21 @@ watch(
 )
 
 watch(
+  () => [fromSiteType.value, toSiteType.value, selectedBeerLotTaxTypes.value.join('|')] as const,
+  () => {
+    const current = routeForm.taxDecisionCode
+    const valid = taxDecisionOptions.value.find((option) => option.value === current)
+    if (!valid) {
+      routeForm.taxDecisionCode =
+        taxDecisionOptions.value.length === 1
+          ? taxDecisionOptions.value[0].value
+          : (defaultTaxDecisionCode.value ?? '')
+    }
+  },
+  { immediate: true },
+)
+
+watch(
   () => lineRows.value.map((row) => `${row.searchText}__${row.qtyText}__${row.note}`).join('|'),
   () => {
     ensureTrailingRows()
@@ -1363,7 +1809,7 @@ watch(
 onMounted(async () => {
   try {
     await ensureTenant()
-    await loadSites()
+    await Promise.all([loadSites(), loadMovementRules()])
     loadStoredRoutes()
     window.addEventListener('keydown', handleGlobalKeydown)
     nextTick(() => focusBeerRow(0))

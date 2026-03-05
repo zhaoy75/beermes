@@ -1172,8 +1172,8 @@
       }
     },
     "movementFast": {
-      "title": "INTERNAL_TRANSFER",
-      "subtitle": "Fast entry page for high-volume internal beer transfers.",
+      "title": "Product Move Fast",
+      "subtitle": "Fast entry page for rule-driven product beer movements.",
       "actions": {
         "back": "Back",
         "post": "Post",
@@ -1188,6 +1188,9 @@
         "toSite": "To site",
         "movedAt": "Movement date",
         "allocationPolicy": "Allocation policy",
+        "movementIntent": "Movement intent",
+        "taxEvent": "Tax movement type",
+        "taxDecisionCode": "Tax decision code",
         "note": "Note",
         "lines": "Lines"
       },
@@ -1213,6 +1216,9 @@
       "summary": {
         "route": "Route",
         "policy": "Policy",
+        "intent": "Intent",
+        "taxEvent": "Tax movement type",
+        "taxDecision": "Tax decision",
         "lines": "Valid lines",
         "totalQty": "Total liters"
       },
@@ -1232,7 +1238,8 @@
         "stock": "Available: {qty} L",
         "availableBeerCount": "{count} beer options",
         "uses": "{count} uses",
-        "ready": "Ready to post"
+        "ready": "Ready to post",
+        "variesByLot": "Varies by lot"
       },
       "siteTypes": {
         "BREWERY_MANUFACTUR": "Brewery",
@@ -1242,19 +1249,23 @@
       },
       "errors": {
         "tenantRequired": "Tenant context is missing.",
+        "rulesUnavailable": "Movement rule definitions could not be loaded.",
         "fromRequired": "From site is required.",
         "toRequired": "To site is required.",
         "sameSite": "From and To site must be different.",
-        "invalidRoute": "This route is not allowed for INTERNAL_TRANSFER on the fast page.",
-        "useDomesticShipment": "Destination is a direct shop. Use domestic shipment flow instead.",
-        "useTaxMovement": "Destination is a tax storage site. Use the tax-specific movement flow instead.",
+        "noRouteRule": "No valid movement rule exists for the selected route.",
+        "intentRequired": "Select a movement intent for this route.",
+        "taxDecisionRequired": "Select a tax decision code.",
         "manualNotImplemented": "MANUAL allocation is not supported on this page yet.",
         "beerRequired": "Beer is required.",
         "beerUnresolved": "Beer code/name could not be resolved.",
         "qtyPositive": "Quantity must be greater than 0.",
         "qtyExceedsStock": "Entered quantity exceeds available stock.",
+        "allocationUom": "Failed to convert allocated quantity into the source lot UOM.",
+        "taxDecisionMissing": "Could not resolve tax decision for one or more allocated lots.",
+        "selectedTaxDecisionUnsupported": "The selected tax decision code is not valid for one or more allocated lots.",
         "lineRequired": "Add at least one valid line before posting.",
-        "rpcUnavailable": "Backend function product_move_fast is not available yet.",
+        "rpcUnavailable": "Backend function product_move is not available yet.",
         "saveFailed": "Failed to post movement."
       },
       "warnings": {
@@ -1263,7 +1274,7 @@
         "nearExpiry": "{beer}: near-expiry stock may be allocated."
       },
       "toast": {
-        "saved": "Movement posted. ID: {movementId}"
+        "saved": "Posted {count} movement segment(s)."
       }
     },
     "movementWizard": {

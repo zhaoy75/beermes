@@ -1,8 +1,8 @@
-製品ビール移動登録 Dialog UI Specification (Dynamic Rules)
+製品ビール移出登録 Dialog UI Specification (Dynamic Rules)
 =================================================
 
 ## Purpose
-This specification defines the UI flow for 製品ビール移動登録 (Tax Movement Register).
+This specification defines the UI flow for 製品ビール移出登録 (Tax Removal Register).
 The UI must get rules from server call and never hardcode movement intents, tax decisions, or site type mappings.
 
 Key principles:
@@ -12,7 +12,7 @@ Key principles:
 - Final confirmation must explain derived tax event and rule source.
 
 ## Entry Point
-- ProducedBeer page -> button: "製品ビール移動登録" (Tax Movement Regist...)
+- ProducedBeer page -> button: "製品ビール移出登録" (Tax Removal Register...)
 
 ## Rule Source (Dynamic)
 - Rules are stored in - Table: `public.registry_def`
@@ -44,7 +44,7 @@ Step 4 → fill necessary information
 Step 5 → confirmation
 
 --------------------------------------------------
-Step 1: Select movement_intent(移動目的)
+Step 1: Select movement_intent(移出目的)
 --------------------------------------------------
 UI:
 - List movement intents 
@@ -54,7 +54,7 @@ System behavior:
 - list the movement intents in return json
 
 --------------------------------------------------
-Step 2: Select src/dst site（移動元先酒税情報入力）
+Step 2: Select src/dst site（移出元先酒税情報入力）
 --------------------------------------------------
 UI:
 - Select Source Site (required)
@@ -78,7 +78,7 @@ System behavior:
 - Preview derived tax event using `tax_transformation_rules`.
 
 --------------------------------------------------
-Step 3: Select lot　（移動商品選択）
+Step 3: Select lot　（移出商品選択）
 --------------------------------------------------
 UI:
 - Select Lot(s) from inventory (inv_inventory) for Source Site
@@ -90,7 +90,7 @@ UI:
   - package volume
   - package uom
   - quantity
-  - movement quantity (for input)
+  - removal quantity (for input)
 - If multiple lots have different `lot_tax_type`, show tax preview changes.
 
 System behavior:

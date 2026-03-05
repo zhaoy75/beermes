@@ -635,3 +635,24 @@ scope%2Cowner_id%2Cis_active%2Csort_order&domain=in.%28material%2Cmaterial_type%
 
 
 {"source": "batch_actual_yield", "batch_id": "e4ddd26b-fb03-4a76-8d0f-f8efce89ccd6", "batch_code": "test1", "idempotency_key": "batch_actual_yield:e4ddd26b-fb03-4a76-8d0f-f8efce89ccd6:5000.000000:0b038b0e-d1d8-464b-8511-a7706e2b2b65", "movement_intent": "BREW_PRODUCE"}
+
+docker run --hostname=6f9f2f1c99ac --env=SUPABASE_URL=http://kong:8000 --env=SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0 --env=SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU --env=SUPABASE_DB_URL=postgresql://postgres:postgres@db:5432/postgres --env=SUPABASE_INTERNAL_JWT_SECRET=super-secret-jwt-token-with-at-least-32-characters-long --env=SUPABASE_INTERNAL_HOST_PORT=54321 --env=SUPABASE_INTERNAL_FUNCTIONS_CONFIG={"hello-world":{"verifyJWT":true,"importMapPath":"supabase/functions/hello-world/deno.json","entrypointPath":"supabase/functions/hello-world/index.ts"},"invite-member":{"verifyJWT":true,"importMapPath":"supabase/functions/invite-member/deno.json","entrypointPath":"supabase/functions/invite-member/index.ts"},"set-tenant":{"verifyJWT":true,"importMapPath":"supabase/functions/set-tenant/deno.json","entrypointPath":"supabase/functions/set-tenant/index.ts"}} --env=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin --volume=supabase_edge_runtime_beer:/root/.cache/deno:rw --volume=/host_mnt/Users/zhao/dev/other/beer/supabase/supabase/functions:/Users/zhao/dev/other/beer/supabase/supabase/functions/:ro --network=supabase_network_beer --workdir=/Users/zhao/dev/other/beer/supabase --restart=no --label='com.docker.compose.project=beer' --label='com.supabase.cli.project=beer' --runtime=runc -d public.ecr.aws/supabase/edge-runtime:v1.68.3
+
+docker exec -it supabase-auth_beer sh -lc \
+'openssl s_client -starttls smtp -connect YOUR_SMTP_HOST:587 -servername YOUR_SMTP_HOST -crlf -brief'
+
+docker run -d \
+  --name supabase-postfix \
+  --restart unless-stopped \
+  -p 127.0.0.1:2525:25 \
+  -e RELAYHOST="[bytex.co.jp]:465" \
+  -e SMTP_USERNAME="isamu.cho@bytex.co.jp" \
+  -e SMTP_PASSWORD="yongzhao@001" \
+  -e ALLOWED_SENDER_DOMAINS="bytex.co.jp" \
+  -e RELAY_NETWORKS="172.16.0.0/12 192.168.0.0/16 10.0.0.0/8" \
+  -e POSTFIX_smtpd_tls_security_level="none" \
+  -e POSTFIX_smtpd_use_tls="no" \
+  -e POSTFIX_smtpd_tls_auth_only="no" \
+  -e POSTFIX_smtp_tls_security_level="encrypt" \
+  -e POSTFIX_smtp_tls_mandatory_protocols="TLSv1.2 TLSv1.3" \
+  boky/postfix

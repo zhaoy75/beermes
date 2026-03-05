@@ -1571,9 +1571,11 @@
       "nameLabel": "氏名",
       "emailLabel": "メールアドレス",
       "roleLabel": "権限",
+      "statusLabel": "状態",
       "namePlaceholder": "氏名で検索",
       "emailPlaceholder": "メールアドレスで検索",
-      "roleAll": "すべての権限"
+      "roleAll": "すべての権限",
+      "statusAll": "すべての状態"
     },
     "fields": {
       "name": "氏名",
@@ -1592,9 +1594,12 @@
     "roles": {
       "viewer": "参照",
       "editor": "更新",
-      "admin": "管理者"
+      "admin": "管理者",
+      "owner": "オーナー"
     },
     "status": {
+      "active": "有効",
+      "invited": "招待中",
       "valid": "有効",
       "invalid": "無効"
     },
@@ -1620,6 +1625,15 @@
     "errors": {
       "nameRequired": "氏名は必須です。",
       "emailRequired": "メールアドレスは必須です。",
+      "invalidEmail": "有効なメールアドレスを入力してください。",
+      "tenantUnknown": "現在のセッションからテナントを判定できません。",
+      "permissionDenied": "ユーザー管理を行う権限がありません。",
+      "ownerProtected": "オーナーはこの画面で編集・削除できません。",
+      "loadFailed": "ユーザー一覧の取得に失敗しました。",
+      "inviteFailed": "招待メールの送信に失敗しました。",
+      "updateFailed": "ユーザー権限の更新に失敗しました。",
+      "deleteFailed": "ユーザーの削除に失敗しました。",
+      "generic": "予期しないエラーが発生しました。",
       "passwordRequired": "新しいパスワードは必須です。",
       "confirmRequired": "新しいパスワードを確認してください。",
       "passwordMismatch": "パスワードが一致しません。"

@@ -1571,9 +1571,11 @@
       "nameLabel": "Name",
       "emailLabel": "Email",
       "roleLabel": "Role",
+      "statusLabel": "Status",
       "namePlaceholder": "Search by name",
       "emailPlaceholder": "Search by email",
-      "roleAll": "All roles"
+      "roleAll": "All roles",
+      "statusAll": "All statuses"
     },
     "fields": {
       "name": "Name",
@@ -1592,9 +1594,12 @@
     "roles": {
       "viewer": "Viewer",
       "editor": "Editor",
-      "admin": "Admin"
+      "admin": "Admin",
+      "owner": "Owner"
     },
     "status": {
+      "active": "Active",
+      "invited": "Invited",
       "valid": "Valid",
       "invalid": "Invalid"
     },
@@ -1620,6 +1625,15 @@
     "errors": {
       "nameRequired": "Name is required.",
       "emailRequired": "Email is required.",
+      "invalidEmail": "Enter a valid email address.",
+      "tenantUnknown": "Unable to determine tenant from the current session.",
+      "permissionDenied": "You do not have permission to manage users.",
+      "ownerProtected": "Owner cannot be edited or deleted from this page.",
+      "loadFailed": "Failed to load users.",
+      "inviteFailed": "Failed to send invitation.",
+      "updateFailed": "Failed to update user role.",
+      "deleteFailed": "Failed to delete user.",
+      "generic": "Unexpected error occurred.",
       "passwordRequired": "New password is required.",
       "confirmRequired": "Confirm the new password.",
       "passwordMismatch": "Passwords do not match."

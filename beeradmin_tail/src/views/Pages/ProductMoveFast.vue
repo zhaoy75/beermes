@@ -292,7 +292,7 @@
                     @keydown="handleQuickKeywordKeydown"
                   />
                   <div
-                    v-if="quickSuggestionOpen && quickEntry.keyword && quickKeywordSuggestions.length"
+                    v-if="quickSuggestionOpen && quickKeywordSuggestions.length"
                     class="absolute z-20 mt-1 w-full rounded-xl border border-gray-200 bg-white shadow-lg"
                   >
                     <button
@@ -305,7 +305,7 @@
                       <div class="text-sm font-medium text-gray-900">
                         {{ displayBeerOption(option) }}
                       </div>
-                      <div class="text-xs text-gray-500 truncate">
+                      <div class="text-xs text-gray-500">
                         {{ quickSuggestionMeta(option) }}
                       </div>
                     </button>
@@ -1363,7 +1363,7 @@ function focusQuickAmountInput() {
 
 const quickKeywordSuggestions = computed(() => {
   const term = quickEntry.keyword.trim().toLowerCase()
-  if (!term) return []
+  if (!term) return beerOptions.value.slice(0, 12)
   return beerOptions.value.filter((option) => option.searchIndex.includes(term)).slice(0, 12)
 })
 
@@ -1398,8 +1398,30 @@ const quickPackageOptions = computed<PackageOption[]>(() => {
     .sort((a, b) => a.label.localeCompare(b.label))
 })
 
+function formatUomForDisplay(code: string | null | undefined) {
+  const normalized = normalizeVolumeUom(code)
+  if (!normalized) return 'L'
+  if (normalized === 'gal_us') return 'gal(US)'
+  return normalized.toUpperCase()
+}
+
+function formatSuggestionPackageUnit(lot: BeerLotOption) {
+  if (!lot.packageId) return ''
+  const packageName = lot.packageLabel || lot.packageId
+  if (!packageName) return ''
+  if (lot.packageUnitVolumeLiters == null || lot.packageUnitVolumeLiters <= 0) return packageName
+  const uomCode = lot.packageVolumeUomCode || 'l'
+  const packageUnitValue = convertFromLiters(lot.packageUnitVolumeLiters, uomCode)
+  return `${packageName} ${formatNumber(packageUnitValue)} ${formatUomForDisplay(uomCode)}`
+}
+
 function quickSuggestionMeta(option: BeerOption) {
-  return [option.styleName, option.entityAttrSummary].filter(Boolean).join(' | ')
+  const packageUnits = Array.from(
+    new Set(option.candidateLots.map((lot) => formatSuggestionPackageUnit(lot)).filter(Boolean)),
+  )
+    .slice(0, 3)
+    .join(', ')
+  return [option.styleName, packageUnits, option.entityAttrSummary].filter(Boolean).join(' | ')
 }
 
 function handleQuickKeywordInput() {

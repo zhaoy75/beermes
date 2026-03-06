@@ -95,6 +95,8 @@
 | Volume (L)  | Conditional | (package * unit) with uom conversion or  volume |
 
 - Keyword behavior:
+  - when user put cursor on keyword field, show suggestion list of beer in inventory
+    - beer name, style name, package, unit 
   - exact code
   - partial code
   - name match

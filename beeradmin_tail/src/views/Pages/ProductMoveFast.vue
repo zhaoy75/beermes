@@ -187,10 +187,10 @@
           </span>
         </div>
 
-        <div class="mt-4 border-t border-gray-100 pt-3">
-          <div class="flex items-center justify-between mb-3">
+        <div class="mt-3 border-t border-gray-100 pt-2">
+          <div class="flex items-center justify-between mb-2">
             <div>
-              <h2 class="text-sm font-semibold text-gray-900">
+              <h2 class="text-xs font-semibold uppercase tracking-wide text-gray-700">
                 {{ t('producedBeer.movementFast.panels.routes') }}
               </h2>
               <p class="text-xs text-gray-500">
@@ -198,53 +198,46 @@
               </p>
             </div>
           </div>
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
-            <section class="rounded-xl border border-gray-200 p-3">
-              <h3 class="text-xs uppercase tracking-wide text-gray-400 mb-2">
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-2">
+            <section class="rounded-lg border border-gray-200 p-2">
+              <h3 class="text-[11px] uppercase tracking-wide text-gray-400 mb-1">
                 {{ t('producedBeer.movementFast.panels.favorites') }}
               </h3>
-              <div class="space-y-2 max-h-44 overflow-auto pr-1">
+              <div class="space-y-1 max-h-32 overflow-auto pr-1">
                 <button
-                  v-for="preset in favoriteRoutes"
+                  v-for="preset in favoriteRoutes.slice(0, 6)"
                   :key="`fav-${preset.key}`"
-                  class="w-full text-left rounded-lg border border-gray-200 p-2 hover:bg-gray-50"
+                  class="w-full text-left rounded-md border border-gray-200 px-2 py-1.5 hover:bg-gray-50"
                   type="button"
                   @click="applyRoutePreset(preset)"
                 >
-                  <div class="text-sm font-medium text-gray-900">
+                  <div class="text-xs font-medium text-gray-900 truncate">
                     {{ preset.fromSiteName }} → {{ preset.toSiteName }}
                   </div>
-                  <div class="text-xs text-gray-500">{{ formatDateTime(preset.lastUsedAt) }}</div>
                 </button>
-                <p v-if="favoriteRoutes.length === 0" class="text-sm text-gray-500">
+                <p v-if="favoriteRoutes.length === 0" class="text-xs text-gray-500">
                   {{ t('common.noData') }}
                 </p>
               </div>
             </section>
 
-            <section class="rounded-xl border border-gray-200 p-3">
-              <h3 class="text-xs uppercase tracking-wide text-gray-400 mb-2">
+            <section class="rounded-lg border border-gray-200 p-2">
+              <h3 class="text-[11px] uppercase tracking-wide text-gray-400 mb-1">
                 {{ t('producedBeer.movementFast.panels.recent') }}
               </h3>
-              <div class="space-y-2 max-h-44 overflow-auto pr-1">
+              <div class="space-y-1 max-h-32 overflow-auto pr-1">
                 <button
-                  v-for="preset in recentRoutes"
+                  v-for="preset in recentRoutes.slice(0, 6)"
                   :key="`recent-${preset.key}`"
-                  class="w-full text-left rounded-lg border border-gray-200 p-2 hover:bg-gray-50"
+                  class="w-full text-left rounded-md border border-gray-200 px-2 py-1.5 hover:bg-gray-50"
                   type="button"
                   @click="applyRoutePreset(preset)"
                 >
-                  <div class="text-sm font-medium text-gray-900">
+                  <div class="text-xs font-medium text-gray-900 truncate">
                     {{ preset.fromSiteName }} → {{ preset.toSiteName }}
                   </div>
-                  <div class="flex items-center justify-between text-xs text-gray-500">
-                    <span>{{ formatDateTime(preset.lastUsedAt) }}</span>
-                    <span>{{
-                      t('producedBeer.movementFast.labels.uses', { count: preset.useCount })
-                    }}</span>
-                  </div>
                 </button>
-                <p v-if="recentRoutes.length === 0" class="text-sm text-gray-500">
+                <p v-if="recentRoutes.length === 0" class="text-xs text-gray-500">
                   {{ t('common.noData') }}
                 </p>
               </div>

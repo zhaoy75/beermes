@@ -77,7 +77,6 @@ add favorites button
 - Each item shows at minimum:
   - From site
   - To site
-  - Last used date or favorite marker
 - Clicking an item applies route bar values without posting.
 - Recent routes are updated only after successful post.
 

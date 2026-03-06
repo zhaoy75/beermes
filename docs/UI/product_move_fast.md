@@ -28,13 +28,16 @@
   - `Post & Next`
 
 ### Body
-- Recent / Favorites
-- Sticky route bar under header.
-- Main body uses 2 areas on desktop and stacked layout on mobile:
-  - left: 
-    Fixed Input Area (`keyword`, `package`, `amount`)
-    Lines Grid
-  - Right: Summary / Validation
+- route & summary section used 2 areas 
+ - Left
+   - Sticky route bar under header.
+   - Recent / Favorites
+ - Right:
+   - Summary / Validation
+- Main body 
+   Fixed Input Area (`keyword`, `package`, `amount`)
+   Lines Grid
+ 
 
 ### Modal/Dialog
 - No modal in standard flow.

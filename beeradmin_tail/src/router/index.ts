@@ -486,6 +486,15 @@ const router = createRouter({
         title: 'Signup',
       },
     },
+    {
+      path: '/accept-invite',
+      name: 'AcceptInvite',
+      component: () => import('../views/Auth/AcceptInvite.vue'),
+      meta: {
+        title: 'Accept Invite',
+        public: true,
+      },
+    },
   ],
 })
 

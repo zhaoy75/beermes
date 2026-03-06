@@ -66,7 +66,7 @@ export const useAuthStore = defineStore('auth', {
         if (!sess) {
           this.$reset()
           const path = window.location.pathname
-          if (path !== '/signin' && path !== '/signup') {
+          if (path !== '/signin' && path !== '/signup' && path !== '/accept-invite') {
             const redirect = encodeURIComponent(window.location.pathname + window.location.search + window.location.hash)
             window.location.assign(`/signin?redirect=${redirect}`)
           }

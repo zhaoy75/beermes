@@ -13,6 +13,7 @@ type InviteMemberPayload = {
 const url = Deno.env.get("SUPABASE_URL")!;
 const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const inviteRedirectTo = Deno.env.get("INVITE_REDIRECT_URL") ?? "http://localhost:5173/accept-invite";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -142,6 +143,7 @@ Deno.serve(async (req: Request) => {
   const { data: inviteData, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(
     parsed.email,
     {
+      redirectTo: inviteRedirectTo,
       data: {
         tenant_id: parsed.tenantId,
         invited_role: parsed.dbRole,

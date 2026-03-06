@@ -651,6 +651,7 @@ docker run -d \
   -e ALLOWED_SENDER_DOMAINS="bytex.co.jp" \
   -e RELAY_NETWORKS="172.16.0.0/12 192.168.0.0/16 10.0.0.0/8" \
   -e POSTFIX_smtpd_tls_security_level="none" \
+  -e POSTFIX_smtp_tls_wrappermode="yes" \
   -e POSTFIX_smtpd_use_tls="no" \
   -e POSTFIX_smtpd_tls_auth_only="no" \
   -e POSTFIX_smtp_tls_security_level="encrypt" \

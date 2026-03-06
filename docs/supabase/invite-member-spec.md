@@ -70,12 +70,15 @@
 ## Acceptance and Finalization
 
 ## Flow
-1. Invited user clicks invite link and completes signup/password setup (Supabase Auth flow).
-2. Membership is finalized when user first logs in (recommended: extend existing `set-tenant` function):
-   - find `tenant_invitations` where `lower(email)=lower(auth.user.email)` and `status='invited'`
-   - insert `tenant_members(tenant_id, user_id, role, invited_by)` if not exists
-   - update invitation `status='accepted'`, `accepted_at=now()`, `invited_user_id=user_id`
-3. Refresh JWT/session so `app_metadata.tenant_id` is current.
+1. Invited user opens `/accept-invite` from email link (`token_hash`, `type=invite`).
+2. User sets password in the UI.
+3. UI calls `accept-invitation` Edge Function:
+   - find pending invites by caller email
+   - create `tenant_members` rows if missing
+   - mark invitation rows as `accepted`
+   - set current tenant in `auth.users.app_metadata.tenant_id`
+4. Frontend refreshes session/JWT so tenant context is available immediately.
+5. Detailed contract: `docs/supabase/accept-invite-spec.md`.
 
 ## Why this approach
 - Works with current schema where `tenant_members` requires `user_id`.

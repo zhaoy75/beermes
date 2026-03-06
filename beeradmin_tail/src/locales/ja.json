@@ -1179,6 +1179,7 @@
         "post": "確定",
         "postNext": "確定して次へ",
         "swap": "入替",
+        "addLine": "追加",
         "clearLines": "明細クリア",
         "favorite": "お気に入り登録",
         "unfavorite": "お気に入り解除"
@@ -1188,6 +1189,10 @@
         "toSite": "移出先サイト",
         "movedAt": "移出日",
         "allocationPolicy": "引当ポリシー",
+        "keyword": "キーワード",
+        "package": "容器",
+        "unit": "単位数",
+        "volume": "容量(L)",
         "movementIntent": "移出目的",
         "taxEvent": "税務移出種別",
         "taxDecisionCode": "税務判定コード",
@@ -1197,7 +1202,9 @@
       "columns": {
         "beer": "ビール（コード / 名称）",
         "lotNo": "ロット番号",
-        "quantity": "数量(L)",
+        "packageInfo": "容器情報",
+        "unit": "単位",
+        "volume": "容量(L)",
         "note": "摘要"
       },
       "allocation": {
@@ -1225,6 +1232,9 @@
       },
       "placeholders": {
         "beer": "ビールコードまたは名称で検索",
+        "keyword": "ビールコード、名称、スタイル、属性で検索",
+        "unit": "0",
+        "volume": "0.000",
         "note": "任意メモ"
       },
       "hints": {
@@ -1260,6 +1270,12 @@
         "routeBlockedTaxStorage": "蔵置所への経路はこの画面では登録できません。税務専用フローを使用してください。",
         "intentRequired": "この経路に対する移出目的を選択してください。",
         "taxDecisionRequired": "税務判定コードを選択してください。",
+        "sourceSiteRequiredForLine": "明細追加の前に移出元サイトを選択してください。",
+        "packageRequired": "ロット候補を絞るため容器を選択してください。",
+        "packageRequiredForUnit": "単位数入力時は容器を選択してください。",
+        "packageVolumeUnavailable": "容器と単位数から容量を算出できません。容量を直接入力してください。",
+        "packageNoStock": "選択した容器に在庫がありません。",
+        "volumeRequired": "容器+単位数、または容量(0より大きい値)を入力してください。",
         "manualNotImplemented": "MANUAL 引当はこのページでは未対応です。",
         "manualLotRequired": "MANUAL モードではロット選択が必須です。",
         "manualLotInvalid": "選択したロットはこのビール/移出元在庫で使用できません。",

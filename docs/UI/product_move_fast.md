@@ -7,6 +7,7 @@
 - Prevent route misuse for tax-sensitive site combinations.
 - Default to backend auto lot allocation using `FEFO`.
 - Ensure posting is atomic (all-or-nothing) even when one UI line is split into multiple lot-level movements.
+- Allow all tax movement outcomes derived by rule engine, as long as `movement_intent` is `INTERNAL_TRANSFER`.
 
 ## Entry Points
 - Produced Beer page -> action button: `ProductMoveFast` / `社内移動(高速入力)`
@@ -31,7 +32,7 @@
 - Sticky route bar under header.
 - Main body uses 2 areas on desktop and stacked layout on mobile:
   - left: 
-    Lines Search
+    Fixed Input Area (`keyword`, `package`, `amount`)
     Lines Grid
   - Right: Summary / Validation
 
@@ -54,11 +55,10 @@
 | Tax Decision Code | Conditional | Auto | Shown when rule returns selectable tax decision |
 | Note | No | Empty | Header note for movement |
 
-add favorites button 
-
 - Behavior:
   - `From Site` dropdown must be filtered to site types allowed as `allowed_src_site_types` for `INTERNAL_TRANSFER`
   - `To Site` dropdown must be filtered to site types allowed as `allowed_dst_site_types` for `INTERNAL_TRANSFER`
+  - when `From Site` is selected, UI loads source-site inventory and lot candidates for line entry
   - route values persist after successful `Post` and `Post & Next`
   - block when `From Site = To Site`
   - swap button exchanges From/To site values
@@ -68,31 +68,48 @@ add favorites button
     - default `tax_decision_code`
   - UI must call Supabase RPC `movement_get_rules` with `p_movement_intent = 'INTERNAL_TRANSFER'`
   - if multiple tax decisions are allowed for the resolved `INTERNAL_TRANSFER` route, UI shows selectable tax decision list and defaults to the rule default
-  - default focus after page load is first Beer field in Lines Grid, not route bar
-  - clike button (add to favorites) will add current route to favoriates 
+  - default focus after page load is `keyword` field in fixed input area, not route bar
+  - click favorites button adds current route to favorites
 
 ### Recent / Favorites Panel
 - Shows recently used routes for the current user.
 - Supports favorite route presets.
+- Item layout:
+  - desktop/tablet: items are arranged in 2 columns
+  - mobile: items are stacked in 1 column
 - Each item shows at minimum:
   - From site
   - To site
 - Clicking an item applies route bar values without posting.
 - Recent routes are updated only after successful post.
 
-### Lines Search
-- One primary search input (`Beer`) is used for line entry.
-- Search modes:
+### Fixed Input Area (`keyword`, `package`, `unit`, `volume`)
+- A fixed input area is displayed above Lines Grid.
+- Fields:
+
+| Field | Required | Notes |
+| --- | --- | --- |
+| Keyword | Yes | Beer lookup key (code/name/style/etc.) |
+| Package | Conditional | Optional filter; required when multiple package candidates must be disambiguated |
+| Unit    | Conditional | Input quantity for line creation (`> 0`) |
+| Volume (L)  | Conditional | (package * unit) with uom conversion or  volume |
+
+- Keyword behavior:
   - exact code
   - partial code
   - name match
-- `Enter` selects top result when suggestion list is open.
-- After beer selection, focus moves to Quantity.
-- Search result should display code and name together.
-- Package and amount are represented by line fields (Lot No and Quantity), not separate global search inputs.
+  - suggestion list must include beer basic info and related `entity_attr` fields
+  - suggestion display should include beer code and name at minimum
+- Enter behavior (`keyword` + `amount`, and `package` when needed):
+  - resolve beer/package from source-site inventory context
+  - apply current `allocation_policy`
+  - `FEFO`/`FIFO`: allocate lots automatically and split quantity across multiple lots when one lot is insufficient
+  - `MANUAL`: open lot selection UI and add line(s) after lot selection is confirmed
+  - append resulting row(s) to Lines Grid
+  - if source-site stock is insufficient for requested amount, do not append rows and show error
 
 ### Paste Input
-- User can paste multiple lines into the first `Beer` field.
+- User can paste multiple lines into `keyword` input.
 - Example:
 
 ```text
@@ -101,16 +118,17 @@ PILS02 20
 STOUT03 10
 ```
 - System behavior:
-  - parse each line as `beer_identifier + qty`
+  - parse each line as `keyword + amount` (optional package token can be supported)
   - create rows automatically
-  - resolve beer code/name search for each pasted row
+  - resolve beer/package candidates against source-site inventory
+  - apply allocation policy (`FEFO`/`FIFO` auto split; `MANUAL` requires lot selection)
   - leave unresolved rows highlighted for correction
 
 
 ### Lines Grid
 - Default state:
   - 5 empty rows
-  - first Beer field focused
+  - first `keyword` field in fixed input area focused
   - Quantity input should be sized for typical entry around 4 integer digits plus decimal precision, without wasting horizontal space
 - Columns:
 
@@ -118,11 +136,15 @@ STOUT03 10
 | --- | --- | --- |
 | Beer | Yes | Search by beer code or name |
 | Lot No | Conditional | Required only for `MANUAL`; read-only/auto for `FEFO` and `FIFO` |
-| Quantity (L) | Yes | Numeric, `> 0`; width should comfortably fit values in the range of `9999.999` but stay visually compact |
+| Package Info | Conditional | only if package is choosen |
+| Unit         | Conditional | package unit or qty        |
+| Volume (L) | Yes | Numeric, `> 0`; width should comfortably fit values in the range of `9999.999` but stay visually compact |
 | Note | No | Line note |
 
 - Row behavior:
-  - selecting a beer moves focus to Quantity
+  - main add flow is fixed input area + `Enter`
+  - when allocation splits requested amount across lots, grid receives multiple rows (one row per lot segment)
+  - grid rows remain editable for note and quantity correction before posting
   - pressing `Enter` in Quantity moves to next editable row
   - empty trailing rows should be auto-added as needed
   - rows with no beer and no quantity are ignored
@@ -155,7 +177,7 @@ STOUT03 10
   - same save behavior as `Post`
   - clear lines only
   - keep route bar values
-  - focus first Beer field
+  - focus `keyword` field in fixed input area
 - `Swap`
   - exchange From Site and To Site
   - immediately re-run route validation
@@ -165,8 +187,8 @@ STOUT03 10
 
 | Key | Action |
 | --- | --- |
-| `/` | Focus first Beer search field |
-| `Enter` | Move to next editable cell |
+| `/` | Focus `keyword` input in fixed input area |
+| `Enter` | In fixed input area: allocate and append line(s); in grid: move to next editable cell |
 | `Ctrl+Enter` | Post |
 | `Shift+Enter` | Post & Next |
 
@@ -184,8 +206,7 @@ STOUT03 10
   - UI determines derived tax movement type / tax event and default `tax_decision_code`
 - Examples:
   - internal non-taxable route may resolve to non-taxable internal transfer behavior
-  - route to `DIRECT_SALES_SHOP` must be blocked on this page and explained as domestic shipment flow
-  - route to `TAX_STORAGE` must be blocked on this page and explained as tax-specific movement flow
+  - taxable/non-taxable/tax-storage-related tax movement results are all allowed when resolved under `INTERNAL_TRANSFER`
 - If site combination has no valid rule match, posting is blocked.
 - If route change invalidates current tax decision, lots, or line assumptions, UI must recalculate and prompt user to confirm if needed.
 - `From Site` and `To Site` are required.
@@ -197,15 +218,16 @@ STOUT03 10
 - Allocation rules:
   - `FEFO` or `FIFO`: backend auto-allocates lots
   - `MANUAL`: user must select lots before posting
+  - at line-entry stage, requested amount must be allocated from source-site inventory based on allocation policy
+  - if one lot is insufficient, allocation must continue from the next eligible lot
+  - if package is specified, allocation candidates must be filtered by package first
   - in `MANUAL`, selected lot must belong to the selected beer and source site
   - in `MANUAL`, selected lot available quantity must be `>=` line quantity
 - Soft warnings:
   - low available stock
   - allocation split across many lots
   - near-expiry lots included in allocation
-- Route blocking reason codes:
-  - `ROUTE_BLOCKED_DIRECT_SALES_SHOP`: destination is `DIRECT_SALES_SHOP`; user must use domestic shipment flow
-  - `ROUTE_BLOCKED_TAX_STORAGE`: destination is `TAX_STORAGE`; user must use tax-specific movement flow
+- Route validation reason codes:
   - `ROUTE_NO_INTERNAL_TRANSFER_RULE`: no matching `INTERNAL_TRANSFER` rule for site combination
 
 ## Save Behavior
@@ -292,7 +314,7 @@ STOUT03 10
   - show success message
   - update Recent routes
   - `Post`: remain on page with current route retained
-  - `Post & Next`: clear lines and return focus to first Beer field
+  - `Post & Next`: clear lines and return focus to `keyword` field
 - On error:
   - show inline row errors when possible
   - show global error summary for post failure
@@ -301,6 +323,8 @@ STOUT03 10
 - Master/reference data:
   - site list from site master
   - beer/product search source with code and localized name
+  - source-site inventory/lot candidates loaded after `From Site` selection
+  - keyword suggestion payload includes beer basic information and relevant `entity_attr` fields
 - Rule engine data:
   - load from Supabase before route evaluation
   - use RPC `movement_get_rules` with `p_movement_intent = 'INTERNAL_TRANSFER'`
@@ -330,13 +354,16 @@ STOUT03 10
 - Hard-block errors:
   - missing From Site
   - missing To Site
+  - line entry attempted before selecting From Site
   - same source and destination
   - no valid `INTERNAL_TRANSFER` rule for selected route
   - tax decision required but not selected
   - no valid lines
   - quantity `<= 0`
+  - package required for candidate disambiguation but not selected
   - invalid site combination for `INTERNAL_TRANSFER`
   - unresolved beer code/name
+  - requested amount exceeds allocatable source-site stock
   - `MANUAL` selected but `Lot No` missing for any valid line
   - selected lot does not match beer/source site
   - selected lot has insufficient available quantity
@@ -346,9 +373,8 @@ STOUT03 10
   - many-lot split
   - near expiry
 - Route/rule message must be explicit:
-  - destination `DIRECT_SALES_SHOP`: explain that domestic shipment flow must be used
-  - destination `TAX_STORAGE`: explain that tax-specific movement flow must be used
   - if route has no matching `INTERNAL_TRANSFER` rule, UI must explain that the selected site combination is not allowed
+  - do not block route only because derived tax movement type is taxable/tax-storage-related
 
 ## Other
 - This page is multilingual (Japanese/English).
@@ -362,6 +388,16 @@ STOUT03 10
   - fast repetitive entry
 
 ## Acceptance Criteria
+- Fixed input line creation:
+  - Given `From Site` is selected and inventory is loaded
+  - When user inputs `keyword`, `amount`, and presses `Enter`
+  - Then system allocates by policy and appends row(s) to Lines Grid
+- Multi-lot split on line entry:
+  - Given one lot is insufficient for requested amount
+  - When allocation policy is `FEFO` or `FIFO`
+  - Then system continues allocation from next eligible lot and appends split rows
+- Keyword suggestion:
+  - Suggestion list includes beer basic info and `entity_attr`
 - FEFO/FIFO post:
   - Given valid route and lines
   - When user clicks `Post`
@@ -373,8 +409,7 @@ STOUT03 10
   - When all lines have valid lot selections
   - Then post succeeds and keeps exact selected lots
 - Route blocking:
-  - Route to `DIRECT_SALES_SHOP` must return `ROUTE_BLOCKED_DIRECT_SALES_SHOP`
-  - Route to `TAX_STORAGE` must return `ROUTE_BLOCKED_TAX_STORAGE`
+  - Route with valid `INTERNAL_TRANSFER` rule is allowed regardless of derived tax movement type
   - Unmapped route must return `ROUTE_NO_INTERNAL_TRANSFER_RULE`
 - Atomicity:
   - If one segment fails during backend execution

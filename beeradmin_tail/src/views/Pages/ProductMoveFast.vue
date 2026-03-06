@@ -203,7 +203,7 @@
               <h3 class="text-[11px] uppercase tracking-wide text-gray-400 mb-1">
                 {{ t('producedBeer.movementFast.panels.favorites') }}
               </h3>
-              <div class="space-y-1 max-h-32 overflow-auto pr-1">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-1 max-h-32 overflow-auto pr-1">
                 <button
                   v-for="preset in favoriteRoutes.slice(0, 6)"
                   :key="`fav-${preset.key}`"
@@ -215,7 +215,7 @@
                     {{ preset.fromSiteName }} → {{ preset.toSiteName }}
                   </div>
                 </button>
-                <p v-if="favoriteRoutes.length === 0" class="text-xs text-gray-500">
+                <p v-if="favoriteRoutes.length === 0" class="text-xs text-gray-500 md:col-span-2">
                   {{ t('common.noData') }}
                 </p>
               </div>
@@ -225,7 +225,7 @@
               <h3 class="text-[11px] uppercase tracking-wide text-gray-400 mb-1">
                 {{ t('producedBeer.movementFast.panels.recent') }}
               </h3>
-              <div class="space-y-1 max-h-32 overflow-auto pr-1">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-1 max-h-32 overflow-auto pr-1">
                 <button
                   v-for="preset in recentRoutes.slice(0, 6)"
                   :key="`recent-${preset.key}`"
@@ -237,7 +237,7 @@
                     {{ preset.fromSiteName }} → {{ preset.toSiteName }}
                   </div>
                 </button>
-                <p v-if="recentRoutes.length === 0" class="text-xs text-gray-500">
+                <p v-if="recentRoutes.length === 0" class="text-xs text-gray-500 md:col-span-2">
                   {{ t('common.noData') }}
                 </p>
               </div>
@@ -273,19 +273,126 @@
             </div>
           </div>
 
+          <div class="rounded-xl border border-gray-200 bg-gray-50 p-3">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
+              <div class="lg:col-span-4">
+                <label class="block text-xs text-gray-600 mb-1">
+                  {{ t('producedBeer.movementFast.fields.keyword') }}
+                </label>
+                <div class="relative">
+                  <input
+                    ref="quickKeywordInputRef"
+                    v-model.trim="quickEntry.keyword"
+                    type="text"
+                    class="w-full h-[38px] border rounded-lg px-3 bg-white"
+                    :placeholder="t('producedBeer.movementFast.placeholders.keyword')"
+                    @focus="quickSuggestionOpen = true"
+                    @blur="handleQuickKeywordBlur"
+                    @input="handleQuickKeywordInput"
+                    @keydown="handleQuickKeywordKeydown"
+                  />
+                  <div
+                    v-if="quickSuggestionOpen && quickEntry.keyword && quickKeywordSuggestions.length"
+                    class="absolute z-20 mt-1 w-full rounded-xl border border-gray-200 bg-white shadow-lg"
+                  >
+                    <button
+                      v-for="option in quickKeywordSuggestions"
+                      :key="`quick-${option.key}`"
+                      class="w-full px-3 py-2 text-left hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                      type="button"
+                      @mousedown.prevent="selectQuickBeer(option)"
+                    >
+                      <div class="text-sm font-medium text-gray-900">
+                        {{ displayBeerOption(option) }}
+                      </div>
+                      <div class="text-xs text-gray-500 truncate">
+                        {{ quickSuggestionMeta(option) }}
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="lg:col-span-3">
+                <label class="block text-xs text-gray-600 mb-1">
+                  {{ t('producedBeer.movementFast.fields.package') }}
+                </label>
+                <select
+                  v-model="quickEntry.packageId"
+                  class="w-full h-[38px] border rounded-lg px-3 bg-white"
+                >
+                  <option value="">{{ t('common.select') }}</option>
+                  <option v-for="pkg in quickPackageOptions" :key="pkg.id" :value="pkg.id">
+                    {{ pkg.label }}
+                  </option>
+                </select>
+              </div>
+
+              <div class="lg:col-span-2">
+                <label class="block text-xs text-gray-600 mb-1">
+                  {{ t('producedBeer.movementFast.fields.unit') }}
+                </label>
+                <input
+                  ref="quickAmountInputRef"
+                  v-model.trim="quickEntry.unitText"
+                  type="number"
+                  min="0"
+                  step="1"
+                  inputmode="numeric"
+                  class="w-full h-[38px] border rounded-lg px-3 text-right bg-white"
+                  :placeholder="t('producedBeer.movementFast.placeholders.unit')"
+                  @keydown.enter.prevent="addLineFromQuickEntry"
+                />
+              </div>
+
+              <div class="lg:col-span-2">
+                <label class="block text-xs text-gray-600 mb-1">
+                  {{ t('producedBeer.movementFast.fields.volume') }}
+                </label>
+                <input
+                  v-model.trim="quickEntry.volumeText"
+                  type="number"
+                  min="0"
+                  step="0.001"
+                  inputmode="decimal"
+                  class="w-full h-[38px] border rounded-lg px-3 text-right bg-white"
+                  :placeholder="t('producedBeer.movementFast.placeholders.volume')"
+                  @keydown.enter.prevent="addLineFromQuickEntry"
+                />
+              </div>
+
+              <div class="lg:col-span-1 flex items-end">
+                <button
+                  class="w-full h-[38px] rounded-lg border border-gray-300 hover:bg-gray-100 disabled:opacity-50"
+                  type="button"
+                  :disabled="!routeForm.fromSiteId"
+                  @click="addLineFromQuickEntry"
+                >
+                  {{ t('producedBeer.movementFast.actions.addLine') }}
+                </button>
+              </div>
+            </div>
+          </div>
+
           <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200 text-sm">
               <thead class="bg-gray-50 text-xs uppercase text-gray-500">
                 <tr>
                   <th class="px-3 py-2 text-left w-14">#</th>
-                  <th class="px-3 py-2 text-left min-w-[22rem]">
+                  <th class="px-3 py-2 text-left w-56 min-w-[14rem]">
                     {{ t('producedBeer.movementFast.columns.beer') }}
                   </th>
-                  <th class="px-3 py-2 text-left w-56 min-w-[14rem]">
+                  <th class="px-3 py-2 text-left w-44 min-w-[10rem]">
                     {{ t('producedBeer.movementFast.columns.lotNo') }}
                   </th>
-                  <th class="px-3 py-2 text-right w-52 min-w-[13rem]">
-                    {{ t('producedBeer.movementFast.columns.quantity') }}
+                  <th class="px-3 py-2 text-left w-52 min-w-[11rem]">
+                    {{ t('producedBeer.movementFast.columns.packageInfo') }}
+                  </th>
+                  <th class="px-3 py-2 text-right w-32 min-w-[7rem]">
+                    {{ t('producedBeer.movementFast.columns.unit') }}
+                  </th>
+                  <th class="px-3 py-2 text-right w-40 min-w-[9rem]">
+                    {{ t('producedBeer.movementFast.columns.volume') }}
                   </th>
                   <th class="px-3 py-2 text-left min-w-[14rem]">
                     {{ t('producedBeer.movementFast.columns.note') }}
@@ -296,47 +403,10 @@
                 <tr v-for="(row, index) in lineRows" :key="row.id" class="align-top">
                   <td class="px-3 py-2 text-xs text-gray-400">{{ index + 1 }}</td>
                   <td class="px-3 py-2">
-                    <div class="relative">
-                      <input
-                        :ref="(el) => setBeerInputRef(row.id, el)"
-                        v-model="row.searchText"
-                        type="text"
-                        class="w-full h-[38px] border rounded-lg px-3"
-                        :placeholder="t('producedBeer.movementFast.placeholders.beer')"
-                        @focus="activeSuggestionRowId = row.id"
-                        @blur="handleBeerBlur(row.id)"
-                        @input="handleBeerInput(index)"
-                        @keydown="handleBeerKeydown($event, index)"
-                        @paste="handleBeerPaste($event, index)"
-                      />
-                      <div
-                        v-if="
-                          activeSuggestionRowId === row.id &&
-                          row.searchText.trim() &&
-                          filteredBeerOptions(index).length
-                        "
-                        class="absolute z-20 mt-1 w-full rounded-xl border border-gray-200 bg-white shadow-lg"
-                      >
-                        <button
-                          v-for="option in filteredBeerOptions(index)"
-                          :key="option.key"
-                          class="w-full px-3 py-2 text-left hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
-                          type="button"
-                          @mousedown.prevent="selectBeer(index, option)"
-                        >
-                          <div class="text-sm font-medium text-gray-900">
-                            {{ displayBeerOption(option) }}
-                          </div>
-                          <div class="text-xs text-gray-500">
-                            {{ option.styleName || option.beerName }}
-                            <span class="ml-2">{{
-                              t('producedBeer.movementFast.labels.stock', {
-                                qty: formatNumber(option.totalQtyLiters),
-                              })
-                            }}</span>
-                          </div>
-                        </button>
-                      </div>
+                    <div
+                      class="h-[38px] border rounded-lg px-3 bg-gray-50 text-sm text-gray-700 flex items-center"
+                    >
+                      {{ row.searchText || '—' }}
                     </div>
                     <p
                       v-if="row.beerKey && beerOptionByKey.get(row.beerKey)"
@@ -354,7 +424,7 @@
                       {{ lineErrorMap[row.id] }}
                     </p>
                   </td>
-                  <td class="px-3 py-2 min-w-[14rem]">
+                  <td class="px-3 py-2 min-w-[10rem]">
                     <template v-if="routeForm.allocationPolicy === 'MANUAL'">
                       <select
                         v-model="row.selectedLotId"
@@ -375,10 +445,27 @@
                       v-else
                       class="h-[38px] border rounded-lg px-3 bg-gray-50 text-sm text-gray-700 flex items-center"
                     >
-                      {{ t('producedBeer.movementFast.labels.autoAllocated') }}
+                      {{
+                        resolvedLotLabelForRow(row) || t('producedBeer.movementFast.labels.autoAllocated')
+                      }}
                     </div>
                   </td>
-                  <td class="px-3 py-2 min-w-[13rem]">
+                  <td class="px-3 py-2 min-w-[11rem]">
+                    <div
+                      class="h-[38px] border rounded-lg px-3 bg-gray-50 text-sm text-gray-700 flex items-center truncate"
+                      :title="resolvedPackageInfoForRow(row)"
+                    >
+                      {{ resolvedPackageInfoForRow(row) }}
+                    </div>
+                  </td>
+                  <td class="px-3 py-2 min-w-[7rem]">
+                    <div
+                      class="h-[38px] border rounded-lg px-2 bg-gray-50 text-sm text-gray-700 flex items-center justify-end"
+                    >
+                      {{ resolvedUnitDisplayForRow(row) }}
+                    </div>
+                  </td>
+                  <td class="px-3 py-2 min-w-[9rem]">
                     <input
                       :ref="(el) => setQtyInputRef(row.id, el)"
                       v-model="row.qtyText"
@@ -386,7 +473,7 @@
                       min="0"
                       step="0.001"
                       inputmode="decimal"
-                      class="w-full min-w-[12rem] h-[38px] border rounded-lg px-3 text-right"
+                      class="w-[8.5rem] max-w-full h-[38px] border rounded-lg px-2 text-right ml-auto"
                       placeholder="0.000"
                       @keydown="handleQtyKeydown($event, index)"
                     />
@@ -566,6 +653,10 @@ type BeerLotOption = {
   lotNo: string | null
   batchId: string | null
   batchCode: string | null
+  packageId: string | null
+  packageLabel: string | null
+  packageUnitVolumeLiters: number | null
+  packageVolumeUomCode: string | null
   inventoryQty: number
   qtyLiters: number
   uomId: string
@@ -580,9 +671,24 @@ type BeerOption = {
   beerCode: string
   beerName: string
   styleName: string | null
+  entityAttrSummary: string
   totalQtyLiters: number
   candidateLots: BeerLotOption[]
   searchIndex: string
+}
+
+type PackageOption = {
+  id: string
+  label: string
+  unitVolumeLiters: number | null
+  volumeUomCode: string | null
+}
+
+type UomDefinition = {
+  id: string
+  code: string
+  baseFactor: number | null
+  baseCode: string | null
 }
 
 type LineRow = {
@@ -626,6 +732,11 @@ const saving = ref(false)
 const activeSuggestionRowId = ref<string | null>(null)
 const beerInputRefs = new Map<string, HTMLInputElement>()
 const qtyInputRefs = new Map<string, HTMLInputElement>()
+const quickKeywordInputRef = ref<HTMLInputElement | null>(null)
+const quickAmountInputRef = ref<HTMLInputElement | null>(null)
+const quickSuggestionOpen = ref(false)
+const uomDefinitionsByKey = new Map<string, UomDefinition>()
+const uomDefinitionsLoaded = ref(false)
 
 const routeForm = reactive({
   fromSiteId: '',
@@ -635,6 +746,14 @@ const routeForm = reactive({
   movementIntent: INTERNAL_TRANSFER_INTENT,
   taxDecisionCode: '',
   note: '',
+})
+
+const quickEntry = reactive({
+  keyword: '',
+  beerKey: '',
+  packageId: '',
+  unitText: '',
+  volumeText: '',
 })
 
 const allocationOptions = computed(() => [
@@ -704,6 +823,24 @@ function mapLabel(map: Record<string, RuleLabel> | undefined, code: string | nul
   return pickLabel(map?.[code], code)
 }
 
+function resolveLocalizedName(value: unknown) {
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    return trimmed || null
+  }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  const record = value as Record<string, unknown>
+  const isJa = String(locale.value || '')
+    .toLowerCase()
+    .startsWith('ja')
+  const primary = isJa ? record.ja : record.en
+  if (typeof primary === 'string' && primary.trim()) return primary.trim()
+  const fallback = Object.values(record).find(
+    (entry) => typeof entry === 'string' && entry.trim(),
+  ) as string | undefined
+  return fallback?.trim() || null
+}
+
 function resolveBatchLabel(meta: Record<string, any> | null | undefined) {
   const label = meta?.label
   if (typeof label !== 'string') return null
@@ -724,22 +861,61 @@ function normalizeVolumeUom(code: string | null | undefined) {
   return normalized || null
 }
 
-function convertToLiters(value: number, uomCode: string | null | undefined) {
+async function loadUomDefinitions() {
+  if (uomDefinitionsLoaded.value) return
+  const { data, error } = await supabase
+    .from('mst_uom')
+    .select('id, code, base_factor, base_code')
+  if (error) throw error
+  uomDefinitionsByKey.clear()
+  ;(data ?? []).forEach((row: any) => {
+    const id = String(row?.id ?? '').trim().toLowerCase()
+    const code = normalizeVolumeUom(row?.code ?? null)
+    if (!id && !code) return
+    const definition: UomDefinition = {
+      id,
+      code: code ?? '',
+      baseFactor: toNumber(row?.base_factor),
+      baseCode: normalizeVolumeUom(row?.base_code ?? null),
+    }
+    if (id) uomDefinitionsByKey.set(id, definition)
+    if (code) uomDefinitionsByKey.set(code, definition)
+  })
+  uomDefinitionsLoaded.value = true
+}
+
+function resolveFactorToLiters(
+  uomCode: string | null | undefined,
+  visited: Set<string> = new Set(),
+): number | null {
   const normalized = normalizeVolumeUom(uomCode)
-  if (!normalized || normalized === 'l') return value
-  if (normalized === 'ml') return value / 1000
-  if (normalized === 'hl') return value * 100
-  if (normalized === 'gal_us') return value * 3.78541
-  return value
+  if (!normalized || normalized === 'l') return 1
+  if (visited.has(normalized)) return null
+  visited.add(normalized)
+
+  const uom = uomDefinitionsByKey.get(normalized)
+  if (!uom) return null
+
+  const baseFactor = uom.baseFactor
+  if (baseFactor == null || !Number.isFinite(baseFactor)) return null
+  const baseCode = normalizeVolumeUom(uom.baseCode)
+  if (!baseCode || baseCode === 'l') return baseFactor
+
+  const baseToLiters = resolveFactorToLiters(baseCode, visited)
+  if (baseToLiters == null) return null
+  return baseFactor * baseToLiters
+}
+
+function convertToLiters(value: number, uomCode: string | null | undefined) {
+  const factor = resolveFactorToLiters(uomCode)
+  if (factor == null) return value
+  return value * factor
 }
 
 function convertFromLiters(value: number, uomCode: string | null | undefined) {
-  const normalized = normalizeVolumeUom(uomCode)
-  if (!normalized || normalized === 'l') return value
-  if (normalized === 'ml') return value * 1000
-  if (normalized === 'hl') return value / 100
-  if (normalized === 'gal_us') return value / 3.78541
-  return value
+  const factor = resolveFactorToLiters(uomCode)
+  if (factor == null || factor === 0) return value
+  return value / factor
 }
 
 function setBeerInputRef(id: string, el: unknown) {
@@ -894,11 +1070,12 @@ function compareDateAsc(a: string | null | undefined, b: string | null | undefin
 async function loadBeerOptionsForSite(siteId: string) {
   inventoryLoading.value = true
   try {
+    await loadUomDefinitions()
     const auth = await ensureTenant()
     const { data: inventoryRows, error } = await supabase
       .from('inv_inventory')
       .select(
-        'lot_id, qty, uom_id, lot:lot_id ( id, lot_no, batch_id, produced_at, expires_at, lot_tax_type, status )',
+        'lot_id, qty, uom_id, lot:lot_id ( id, lot_no, batch_id, package_id, produced_at, expires_at, lot_tax_type, status )',
       )
       .eq('tenant_id', auth.tenantId)
       .eq('site_id', siteId)
@@ -927,6 +1104,16 @@ async function loadBeerOptionsForSite(siteId: string) {
     const uomIds = Array.from(
       new Set(activeRows.map((row: any) => String(row.uom_id ?? '')).filter(Boolean)),
     )
+    const packageIds = Array.from(
+      new Set(
+        activeRows
+          .map((row: any) => {
+            const lotRow = Array.isArray(row.lot) ? row.lot[0] : row.lot
+            return lotRow?.package_id ? String(lotRow.package_id) : ''
+          })
+          .filter(Boolean),
+      ),
+    )
 
     const uomMap = new Map<string, string>()
     if (uomIds.length) {
@@ -940,9 +1127,98 @@ async function loadBeerOptionsForSite(siteId: string) {
       })
     }
 
+    const packageMap = new Map<
+      string,
+      { label: string; unitVolumeLiters: number | null; volumeUomCode: string | null }
+    >()
+    if (packageIds.length) {
+      const { data: packages, error: packageError } = await supabase
+        .from('mst_package')
+        .select('id, package_code, name_i18n, unit_volume, volume_uom')
+        .in('id', packageIds)
+      if (packageError) throw packageError
+      ;(packages ?? []).forEach((row: any) => {
+        if (!row?.id) return
+        const packageCode = typeof row.package_code === 'string' ? row.package_code.trim() : ''
+        const packageName = resolveLocalizedName(row.name_i18n)
+        const unitVolume = toNumber(row.unit_volume)
+        const volumeUomCode = normalizeVolumeUom(row.volume_uom ?? null)
+        const unitVolumeLiters =
+          unitVolume == null ? null : convertToLiters(unitVolume, volumeUomCode)
+        packageMap.set(String(row.id), {
+          label: packageName || packageCode || String(row.id),
+          unitVolumeLiters:
+            unitVolumeLiters != null && Number.isFinite(unitVolumeLiters) ? unitVolumeLiters : null,
+          volumeUomCode,
+        })
+      })
+    }
+
+    const batchEntityAttrMap = new Map<string, string>()
+    if (batchIds.length) {
+      try {
+        const { data: attrDefs, error: attrDefError } = await supabase
+          .from('attr_def')
+          .select('attr_id, code')
+          .eq('domain', 'batch')
+          .eq('is_active', true)
+        if (attrDefError) throw attrDefError
+
+        const attrCodeById = new Map<string, string>()
+        const attrIds: number[] = []
+        ;(attrDefs ?? []).forEach((row: any) => {
+          const attrId = Number(row.attr_id)
+          const code = typeof row.code === 'string' ? row.code.trim() : ''
+          if (!Number.isFinite(attrId) || !code) return
+          attrIds.push(attrId)
+          attrCodeById.set(String(attrId), code)
+        })
+
+        if (attrIds.length) {
+          const { data: attrRows, error: attrError } = await supabase
+            .from('entity_attr')
+            .select('entity_id, attr_id, value_text, value_num, value_json')
+            .eq('entity_type', 'batch')
+            .in('entity_id', batchIds)
+            .in('attr_id', attrIds)
+          if (attrError) throw attrError
+
+          const attrPartsByBatch = new Map<string, string[]>()
+          ;(attrRows ?? []).forEach((row: any) => {
+            const batchId = String(row.entity_id ?? '')
+            const attrCode = attrCodeById.get(String(row.attr_id))
+            if (!batchId || !attrCode) return
+            const textValue =
+              (typeof row.value_text === 'string' && row.value_text.trim()) ||
+              (row.value_num != null ? String(row.value_num) : '') ||
+              (row.value_json != null ? JSON.stringify(row.value_json) : '')
+            const trimmed = textValue.trim()
+            if (!trimmed) return
+            if (!attrPartsByBatch.has(batchId)) attrPartsByBatch.set(batchId, [])
+            const list = attrPartsByBatch.get(batchId)
+            if (!list) return
+            list.push(`${attrCode}:${trimmed}`)
+          })
+
+          attrPartsByBatch.forEach((parts, batchId) => {
+            const unique = Array.from(new Set(parts))
+            if (unique.length) batchEntityAttrMap.set(batchId, unique.join(' | '))
+          })
+        }
+      } catch (err) {
+        console.warn('Failed to load batch entity_attr for ProductMoveFast keyword suggestion', err)
+      }
+    }
+
     const batchMap = new Map<
       string,
-      { batchCode: string; beerCode: string; beerName: string; styleName: string | null }
+      {
+        batchCode: string
+        beerCode: string
+        beerName: string
+        styleName: string | null
+        entityAttrSummary: string
+      }
     >()
     if (batchIds.length) {
       const { data: batches, error: batchError } = await supabase
@@ -975,6 +1251,7 @@ async function loadBeerOptionsForSite(siteId: string) {
           beerCode,
           beerName,
           styleName: styleName ?? null,
+          entityAttrSummary: batchEntityAttrMap.get(String(row.id)) ?? '',
         })
       })
     }
@@ -997,6 +1274,7 @@ async function loadBeerOptionsForSite(siteId: string) {
           batchInfo.beerName,
           batchInfo.styleName,
           batchInfo.batchCode,
+          batchInfo.entityAttrSummary,
         ]
           .filter(Boolean)
           .join(' ')
@@ -1006,6 +1284,7 @@ async function loadBeerOptionsForSite(siteId: string) {
           beerCode: batchInfo.beerCode,
           beerName: batchInfo.beerName,
           styleName: batchInfo.styleName,
+          entityAttrSummary: batchInfo.entityAttrSummary,
           totalQtyLiters: 0,
           candidateLots: [],
           searchIndex,
@@ -1015,11 +1294,28 @@ async function loadBeerOptionsForSite(siteId: string) {
       const option = optionMap.get(key)
       if (!option) return
       option.totalQtyLiters += qtyLiters
+      if (
+        batchInfo.entityAttrSummary &&
+        !option.entityAttrSummary.includes(batchInfo.entityAttrSummary)
+      ) {
+        option.entityAttrSummary = option.entityAttrSummary
+          ? `${option.entityAttrSummary} | ${batchInfo.entityAttrSummary}`
+          : batchInfo.entityAttrSummary
+        option.searchIndex = `${option.searchIndex} ${batchInfo.entityAttrSummary.toLowerCase()}`
+      }
+      const packageId = lotRow.package_id ? String(lotRow.package_id) : null
+      const packageInfo = packageId ? packageMap.get(packageId) : null
+      const packageLabel = packageInfo?.label ?? (packageId || null)
+      if (packageLabel) option.searchIndex = `${option.searchIndex} ${packageLabel.toLowerCase()}`
       option.candidateLots.push({
         lotId: String(lotRow.id),
         lotNo: lotRow.lot_no ? String(lotRow.lot_no) : null,
         batchId: String(lotRow.batch_id),
         batchCode: batchInfo.batchCode,
+        packageId,
+        packageLabel,
+        packageUnitVolumeLiters: packageInfo?.unitVolumeLiters ?? null,
+        packageVolumeUomCode: packageInfo?.volumeUomCode ?? null,
         inventoryQty: qtyValue,
         qtyLiters,
         uomId: String(row.uom_id),
@@ -1051,6 +1347,223 @@ function displayBeerOption(option: BeerOption) {
   return `${option.beerCode} · ${option.beerName}`
 }
 
+function focusQuickKeywordInput() {
+  const target = quickKeywordInputRef.value
+  if (!target) return
+  target.focus()
+  target.select()
+}
+
+function focusQuickAmountInput() {
+  const target = quickAmountInputRef.value
+  if (!target) return
+  target.focus()
+  target.select()
+}
+
+const quickKeywordSuggestions = computed(() => {
+  const term = quickEntry.keyword.trim().toLowerCase()
+  if (!term) return []
+  return beerOptions.value.filter((option) => option.searchIndex.includes(term)).slice(0, 12)
+})
+
+const selectedQuickBeer = computed(() => {
+  if (!quickEntry.beerKey) return null
+  return beerOptionByKey.value.get(quickEntry.beerKey) ?? null
+})
+
+const quickPackageOptions = computed<PackageOption[]>(() => {
+  const map = new Map<
+    string,
+    { label: string; unitVolumeLiters: number | null; volumeUomCode: string | null }
+  >()
+  const targets = selectedQuickBeer.value ? [selectedQuickBeer.value] : beerOptions.value
+  targets.forEach((option) => {
+    option.candidateLots.forEach((lot) => {
+      if (!lot.packageId) return
+      map.set(lot.packageId, {
+        label: lot.packageLabel || lot.packageId,
+        unitVolumeLiters: lot.packageUnitVolumeLiters,
+        volumeUomCode: lot.packageVolumeUomCode,
+      })
+    })
+  })
+  return Array.from(map.entries())
+    .map(([id, value]) => ({
+      id,
+      label: value.label,
+      unitVolumeLiters: value.unitVolumeLiters,
+      volumeUomCode: value.volumeUomCode,
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label))
+})
+
+function quickSuggestionMeta(option: BeerOption) {
+  return [option.styleName, option.entityAttrSummary].filter(Boolean).join(' | ')
+}
+
+function handleQuickKeywordInput() {
+  if (!quickEntry.beerKey) {
+    quickSuggestionOpen.value = true
+    return
+  }
+  const selected = beerOptionByKey.value.get(quickEntry.beerKey)
+  if (!selected) {
+    quickEntry.beerKey = ''
+    quickSuggestionOpen.value = true
+    return
+  }
+  if (quickEntry.keyword !== displayBeerOption(selected)) {
+    quickEntry.beerKey = ''
+    quickEntry.packageId = ''
+    quickSuggestionOpen.value = true
+  }
+}
+
+function handleQuickKeywordBlur() {
+  window.setTimeout(() => {
+    quickSuggestionOpen.value = false
+  }, 120)
+}
+
+function selectQuickBeer(option: BeerOption) {
+  quickEntry.beerKey = option.key
+  quickEntry.keyword = displayBeerOption(option)
+  const packageAllowed = quickPackageOptions.value.some((entry) => entry.id === quickEntry.packageId)
+  if (!packageAllowed) quickEntry.packageId = ''
+  quickSuggestionOpen.value = false
+  nextTick(() => focusQuickAmountInput())
+}
+
+function resolveQuickBeerOption() {
+  if (quickEntry.beerKey) {
+    const selected = beerOptionByKey.value.get(quickEntry.beerKey)
+    if (selected) return selected
+  }
+  const keyword = quickEntry.keyword.trim().toLowerCase()
+  if (!keyword) return null
+  const exact = beerOptions.value.find((option) => {
+    return (
+      option.beerCode.toLowerCase() === keyword ||
+      option.beerName.toLowerCase() === keyword ||
+      displayBeerOption(option).toLowerCase() === keyword
+    )
+  })
+  return exact ?? quickKeywordSuggestions.value[0] ?? null
+}
+
+function roundQty(value: number) {
+  return Math.round(value * 1000) / 1000
+}
+
+function resolveRequestedVolumeLiters() {
+  const unit = toNumber(quickEntry.unitText)
+  const volume = toNumber(quickEntry.volumeText)
+  if (quickEntry.packageId && unit != null && unit > 0) {
+    const packageInfo = quickPackageOptions.value.find((entry) => entry.id === quickEntry.packageId)
+    if (packageInfo?.unitVolumeLiters != null && packageInfo.unitVolumeLiters > 0) {
+      const calculated = packageInfo.unitVolumeLiters * unit
+      quickEntry.volumeText = String(roundQty(calculated))
+      return calculated
+    }
+    if (volume != null && volume > 0) return volume
+    throw new Error(t('producedBeer.movementFast.errors.packageVolumeUnavailable'))
+  }
+  if (unit != null && unit > 0 && !quickEntry.packageId) {
+    throw new Error(t('producedBeer.movementFast.errors.packageRequiredForUnit'))
+  }
+  if (volume != null && volume > 0) return volume
+  throw new Error(t('producedBeer.movementFast.errors.volumeRequired'))
+}
+
+function appendAllocatedRows(
+  option: BeerOption,
+  allocations: Array<{ lot: BeerLotOption; qtyLiters: number }>,
+) {
+  const existing = lineRows.value.filter(
+    (row) => row.searchText.trim() || row.selectedLotId || row.qtyText.trim() || row.note.trim(),
+  )
+  const appended = allocations.map((allocation) => {
+    const row = createEmptyRow()
+    row.searchText = displayBeerOption(option)
+    row.beerKey = option.key
+    row.selectedLotId = allocation.lot.lotId
+    row.qtyText = String(roundQty(allocation.qtyLiters))
+    row.note = ''
+    return row
+  })
+  lineRows.value = [...existing, ...appended]
+  ensureTrailingRows()
+}
+
+function addLineFromQuickEntry() {
+  if (!routeForm.fromSiteId) {
+    toast.error(t('producedBeer.movementFast.errors.sourceSiteRequiredForLine'))
+    return
+  }
+  const option = resolveQuickBeerOption()
+  if (!option) {
+    toast.error(t('producedBeer.movementFast.errors.beerUnresolved'))
+    return
+  }
+  let requestedVolumeLiters = 0
+  try {
+    requestedVolumeLiters = resolveRequestedVolumeLiters()
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    toast.error(message || t('producedBeer.movementFast.errors.volumeRequired'))
+    return
+  }
+
+  const packageIds = Array.from(
+    new Set(option.candidateLots.map((lot) => lot.packageId).filter(Boolean)),
+  ) as string[]
+  if (!quickEntry.packageId && packageIds.length > 1) {
+    toast.error(t('producedBeer.movementFast.errors.packageRequired'))
+    return
+  }
+
+  const packageFilteredLots = quickEntry.packageId
+    ? candidateLotsForPolicy(option).filter((lot) => lot.packageId === quickEntry.packageId)
+    : candidateLotsForPolicy(option)
+  if (!packageFilteredLots.length) {
+    toast.error(t('producedBeer.movementFast.errors.packageNoStock'))
+    return
+  }
+
+  let remaining = requestedVolumeLiters
+  const allocations: Array<{ lot: BeerLotOption; qtyLiters: number }> = []
+  for (const lot of packageFilteredLots) {
+    if (remaining <= 0.0001) break
+    if (lot.qtyLiters <= 0) continue
+    const take = Math.min(remaining, lot.qtyLiters)
+    allocations.push({ lot, qtyLiters: take })
+    remaining -= take
+  }
+  if (remaining > 0.0001) {
+    toast.error(t('producedBeer.movementFast.errors.qtyExceedsStock'))
+    return
+  }
+
+  quickEntry.beerKey = option.key
+  quickEntry.keyword = displayBeerOption(option)
+  appendAllocatedRows(option, allocations)
+  quickEntry.unitText = ''
+  quickEntry.volumeText = ''
+  quickSuggestionOpen.value = false
+  nextTick(() => focusQuickKeywordInput())
+}
+
+function handleQuickKeywordKeydown(event: KeyboardEvent) {
+  if (event.key !== 'Enter') return
+  event.preventDefault()
+  if (quickSuggestionOpen.value && quickKeywordSuggestions.value.length) {
+    selectQuickBeer(quickKeywordSuggestions.value[0])
+    return
+  }
+  addLineFromQuickEntry()
+}
+
 function lotOptionsForRow(row: LineRow) {
   if (!row.beerKey) return []
   const option = beerOptionByKey.value.get(row.beerKey)
@@ -1066,6 +1579,30 @@ function lotOptionLabel(lot: BeerLotOption) {
 function selectedLotForRow(row: LineRow, option: BeerOption | null | undefined) {
   if (!row.selectedLotId || !option) return null
   return option.candidateLots.find((lot) => lot.lotId === row.selectedLotId) ?? null
+}
+
+function resolvedLotLabelForRow(row: LineRow) {
+  const option = row.beerKey ? beerOptionByKey.value.get(row.beerKey) : null
+  const lot = selectedLotForRow(row, option)
+  return lot ? lotOptionLabel(lot) : ''
+}
+
+function resolvedPackageInfoForRow(row: LineRow) {
+  const option = row.beerKey ? beerOptionByKey.value.get(row.beerKey) : null
+  const lot = selectedLotForRow(row, option)
+  if (!lot?.packageId) return '—'
+  return lot.packageLabel || lot.packageId
+}
+
+function resolvedUnitDisplayForRow(row: LineRow) {
+  const qtyLiters = toNumber(row.qtyText)
+  if (qtyLiters == null || qtyLiters <= 0) return '—'
+  const option = row.beerKey ? beerOptionByKey.value.get(row.beerKey) : null
+  const lot = selectedLotForRow(row, option)
+  if (lot?.packageUnitVolumeLiters != null && lot.packageUnitVolumeLiters > 0) {
+    return formatNumber(qtyLiters / lot.packageUnitVolumeLiters)
+  }
+  return formatNumber(qtyLiters)
 }
 
 function filteredBeerOptions(index: number) {
@@ -1202,19 +1739,30 @@ function handleQtyKeydown(event: KeyboardEvent, index: number) {
   ensureTrailingRows()
   nextTick(() => {
     const nextIndex = Math.min(index + 1, lineRows.value.length - 1)
-    focusBeerRow(nextIndex)
+    focusQtyRow(nextIndex)
   })
 }
 
 function resetLines() {
   lineRows.value = createInitialRows()
   activeSuggestionRowId.value = null
-  nextTick(() => focusBeerRow(0))
+  quickEntry.keyword = ''
+  quickEntry.beerKey = ''
+  quickEntry.packageId = ''
+  quickEntry.unitText = ''
+  quickEntry.volumeText = ''
+  nextTick(() => focusQuickKeywordInput())
 }
 
 function clearRowsForNewSource() {
   lineRows.value = createInitialRows()
   activeSuggestionRowId.value = null
+  quickEntry.keyword = ''
+  quickEntry.beerKey = ''
+  quickEntry.packageId = ''
+  quickEntry.unitText = ''
+  quickEntry.volumeText = ''
+  quickSuggestionOpen.value = false
 }
 
 function goBack() {
@@ -1324,9 +1872,9 @@ const selectedBeerLotTaxTypes = computed(() => {
   lineRows.value.forEach((row) => {
     const option = row.beerKey ? beerOptionByKey.value.get(row.beerKey) : null
     if (!option) return
-    if (routeForm.allocationPolicy === 'MANUAL') {
-      const selectedLot = selectedLotForRow(row, option)
-      if (selectedLot?.lotTaxType) set.add(selectedLot.lotTaxType)
+    const selectedLot = selectedLotForRow(row, option)
+    if (selectedLot?.lotTaxType) {
+      set.add(selectedLot.lotTaxType)
       return
     }
     option.candidateLots.forEach((lot) => {
@@ -1532,19 +2080,15 @@ type AllocatedMoveSegment = {
 }
 
 function allocateLine(line: ValidatedLine) {
-  if (routeForm.allocationPolicy === 'MANUAL') {
-    const manualLot = line.selectedLot
-    if (!manualLot) {
-      throw new Error(t('producedBeer.movementFast.errors.manualLotRequired'))
-    }
-    if (line.qtyLiters > manualLot.qtyLiters + 0.0001) {
+  if (line.selectedLot) {
+    if (line.qtyLiters > line.selectedLot.qtyLiters + 0.0001) {
       throw new Error(t('producedBeer.movementFast.errors.qtyExceedsSelectedLot'))
     }
-    const qtySourceUom = convertFromLiters(line.qtyLiters, manualLot.uomCode)
+    const qtySourceUom = convertFromLiters(line.qtyLiters, line.selectedLot.uomCode)
     if (qtySourceUom == null || !Number.isFinite(qtySourceUom) || qtySourceUom <= 0) {
       throw new Error(t('producedBeer.movementFast.errors.allocationUom'))
     }
-    const resolvedTaxDecisionCode = resolveTaxDecisionCodeForLot(manualLot.lotTaxType)
+    const resolvedTaxDecisionCode = resolveTaxDecisionCodeForLot(line.selectedLot.lotTaxType)
     if (!resolvedTaxDecisionCode) {
       throw new Error(t('producedBeer.movementFast.errors.taxDecisionMissing'))
     }
@@ -1554,15 +2098,19 @@ function allocateLine(line: ValidatedLine) {
         beerName: line.option.beerName,
         qtyLiters: line.qtyLiters,
         qtySourceUom,
-        lotId: manualLot.lotId,
-        lotNo: manualLot.lotNo,
-        lotTaxType: manualLot.lotTaxType,
-        uomId: manualLot.uomId,
-        uomCode: manualLot.uomCode,
+        lotId: line.selectedLot.lotId,
+        lotNo: line.selectedLot.lotNo,
+        lotTaxType: line.selectedLot.lotTaxType,
+        uomId: line.selectedLot.uomId,
+        uomCode: line.selectedLot.uomCode,
         taxDecisionCode: resolvedTaxDecisionCode,
         note: line.note,
       },
     ]
+  }
+
+  if (routeForm.allocationPolicy === 'MANUAL') {
+    throw new Error(t('producedBeer.movementFast.errors.manualLotRequired'))
   }
 
   const orderedLots = candidateLotsForPolicy(line.option)
@@ -1632,19 +2180,8 @@ const routeErrors = computed(() => {
   ) {
     errors.push(t('producedBeer.movementFast.errors.noRouteRule'))
   }
-  if (toSiteType.value === 'DIRECT_SALES_SHOP') {
-    errors.push(t('producedBeer.movementFast.errors.routeBlockedDirectSalesShop'))
-  }
-  if (toSiteType.value === 'TAX_STORAGE') {
-    errors.push(t('producedBeer.movementFast.errors.routeBlockedTaxStorage'))
-  }
   if (routeForm.fromSiteId && routeForm.toSiteId && matchingTaxRulesForRoute().length === 0) {
-    if (
-      toSiteType.value !== 'DIRECT_SALES_SHOP' &&
-      toSiteType.value !== 'TAX_STORAGE'
-    ) {
-      errors.push(t('producedBeer.movementFast.errors.noRouteRule'))
-    }
+    errors.push(t('producedBeer.movementFast.errors.noRouteRule'))
   }
   if (taxDecisionOptions.value.length > 1 && !routeForm.taxDecisionCode) {
     errors.push(t('producedBeer.movementFast.errors.taxDecisionRequired'))
@@ -1668,6 +2205,7 @@ const validatedLines = computed(() => {
     const qty = toNumber(row.qtyText)
     const selectedLot = selectedLotForRow(row, option)
     if (!option || qty == null || qty <= 0) return
+    if (selectedLot && qty > selectedLot.qtyLiters + 0.0001) return
     if (routeForm.allocationPolicy === 'MANUAL') {
       if (!selectedLot) return
       if (qty > selectedLot.qtyLiters + 0.0001) return
@@ -1703,6 +2241,10 @@ const lineErrorMap = computed(() => {
     }
     if (qty == null || qty <= 0) {
       errors[row.id] = t('producedBeer.movementFast.errors.qtyPositive')
+      return
+    }
+    if (selectedLot && qty > selectedLot.qtyLiters + 0.0001) {
+      errors[row.id] = t('producedBeer.movementFast.errors.qtyExceedsSelectedLot')
       return
     }
     if (routeForm.allocationPolicy === 'MANUAL') {
@@ -1864,7 +2406,7 @@ function handleGlobalKeydown(event: KeyboardEvent) {
 
   if (event.key === '/' && !event.metaKey && !event.ctrlKey && !event.altKey && !isEditable) {
     event.preventDefault()
-    focusBeerRow(0)
+    focusQuickKeywordInput()
     return
   }
 
@@ -1890,7 +2432,7 @@ watch(
     }
     try {
       await loadBeerOptionsForSite(value)
-      nextTick(() => focusBeerRow(0))
+      nextTick(() => focusQuickKeywordInput())
     } catch (err) {
       console.error(err)
       beerOptions.value = []
@@ -1935,13 +2477,32 @@ watch(
   },
 )
 
+watch(
+  () => quickEntry.beerKey,
+  () => {
+    const packageAllowed = quickPackageOptions.value.some((entry) => entry.id === quickEntry.packageId)
+    if (!packageAllowed) quickEntry.packageId = ''
+  },
+)
+
+watch(
+  () => [quickEntry.packageId, quickEntry.unitText] as const,
+  () => {
+    const unit = toNumber(quickEntry.unitText)
+    if (!quickEntry.packageId || unit == null || unit <= 0) return
+    const packageInfo = quickPackageOptions.value.find((entry) => entry.id === quickEntry.packageId)
+    if (packageInfo?.unitVolumeLiters == null || packageInfo.unitVolumeLiters <= 0) return
+    quickEntry.volumeText = String(roundQty(packageInfo.unitVolumeLiters * unit))
+  },
+)
+
 onMounted(async () => {
   try {
     await ensureTenant()
-    await Promise.all([loadSites(), loadMovementRules()])
+    await Promise.all([loadUomDefinitions(), loadSites(), loadMovementRules()])
     loadStoredRoutes()
     window.addEventListener('keydown', handleGlobalKeydown)
-    nextTick(() => focusBeerRow(0))
+    nextTick(() => focusQuickKeywordInput())
   } catch (err) {
     console.error(err)
     toast.error(err instanceof Error ? err.message : String(err))

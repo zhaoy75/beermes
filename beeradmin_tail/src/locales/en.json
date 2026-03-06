@@ -1179,6 +1179,7 @@
         "post": "Post",
         "postNext": "Post & Next",
         "swap": "Swap",
+        "addLine": "Add",
         "clearLines": "Clear lines",
         "favorite": "Add favorite",
         "unfavorite": "Remove favorite"
@@ -1188,6 +1189,10 @@
         "toSite": "To site",
         "movedAt": "Movement date",
         "allocationPolicy": "Allocation policy",
+        "keyword": "Keyword",
+        "package": "Package",
+        "unit": "Unit",
+        "volume": "Volume (L)",
         "movementIntent": "Movement intent",
         "taxEvent": "Tax movement type",
         "taxDecisionCode": "Tax decision code",
@@ -1197,7 +1202,9 @@
       "columns": {
         "beer": "Beer (code / name)",
         "lotNo": "Lot No",
-        "quantity": "Quantity (L)",
+        "packageInfo": "Package info",
+        "unit": "Unit",
+        "volume": "Volume (L)",
         "note": "Note"
       },
       "allocation": {
@@ -1225,6 +1232,9 @@
       },
       "placeholders": {
         "beer": "Search by beer code or name",
+        "keyword": "Beer code, name, style, or attribute",
+        "unit": "0",
+        "volume": "0.000",
         "note": "Optional note"
       },
       "hints": {
@@ -1260,6 +1270,12 @@
         "routeBlockedTaxStorage": "Route to tax storage is blocked here. Use tax-specific movement flow.",
         "intentRequired": "Select a movement intent for this route.",
         "taxDecisionRequired": "Select a tax decision code.",
+        "sourceSiteRequiredForLine": "Select source site before adding lines.",
+        "packageRequired": "Select package to narrow the lot candidates.",
+        "packageRequiredForUnit": "Select package when inputting unit.",
+        "packageVolumeUnavailable": "Cannot derive volume from package and unit. Input volume directly.",
+        "packageNoStock": "No stock is available for the selected package.",
+        "volumeRequired": "Input unit+package or volume greater than 0.",
         "manualNotImplemented": "MANUAL allocation is not supported on this page yet.",
         "manualLotRequired": "Select a lot in MANUAL mode.",
         "manualLotInvalid": "Selected lot is not valid for this beer/source stock.",

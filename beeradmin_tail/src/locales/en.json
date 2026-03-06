@@ -1521,6 +1521,38 @@
         "en": "English",
         "ja": "Japanese"
       }
+    },
+    "acceptInvite": {
+      "backToSignIn": "Back to sign in",
+      "titleInvite": "Accept Invitation",
+      "titleRecovery": "Reset Password",
+      "subtitleInvite": "Set your password to join the invited tenant.",
+      "subtitleRecovery": "Set a new password for your account.",
+      "verifying": "Verifying invitation link...",
+      "emailLabel": "Email",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "Enter your password",
+      "confirmPasswordLabel": "Confirm Password",
+      "confirmPasswordPlaceholder": "Confirm your password",
+      "showPassword": "Show password",
+      "processing": "Processing...",
+      "submitInvite": "Set Password and Join",
+      "submitRecovery": "Set New Password",
+      "sideCopy": "Invitation-based tenant onboarding",
+      "languageToggle": "Switch to {lang}",
+      "errors": {
+        "invalidLinkType": "Invalid link type in URL.",
+        "invalidOrExpiredLink": "Invitation link is invalid or expired.",
+        "missingSession": "Missing invite session. Open this page from your invitation email link.",
+        "passwordRequired": "Password is required.",
+        "passwordMin": "Password must be at least {min} characters.",
+        "passwordMismatch": "Passwords do not match.",
+        "submitFailed": "Failed to accept invitation."
+      },
+      "success": {
+        "passwordUpdated": "Password updated. Redirecting...",
+        "invitationAccepted": "Invitation accepted. Redirecting..."
+      }
     }
   },
   "changePassword": {
@@ -1608,6 +1640,7 @@
       "edit": "Edit",
       "delete": "Delete",
       "resetPassword": "Reset password",
+      "resendInvitation": "Resend invite",
       "save": "Save",
       "cancel": "Cancel",
       "confirmDelete": "Delete user",
@@ -1637,6 +1670,11 @@
       "passwordRequired": "New password is required.",
       "confirmRequired": "Confirm the new password.",
       "passwordMismatch": "Passwords do not match."
+    },
+    "feedback": {
+      "deleteSuccess": "User deleted successfully.",
+      "resetPasswordSent": "Password reset email sent.",
+      "resendInvitationSent": "Invitation email sent."
     },
     "cards": {
       "empty": "No users match your filters."
@@ -1857,6 +1895,26 @@
       "changePassword": "Change Password",
       "userManagement": "User Management",
       "users": "Users"
+    }
+  },
+  "header": {
+    "searchBar": {
+      "placeholder": "Search or type command..."
+    },
+    "notificationMenu": {
+      "title": "Notification",
+      "messageAction": "requests permission to change",
+      "projectName": "Project - Nganter App",
+      "typeProject": "Project",
+      "timeAgo": "5 min ago",
+      "viewAll": "View All Notification"
+    },
+    "userMenu": {
+      "editProfile": "Edit profile",
+      "changePassword": "Change password",
+      "support": "Support",
+      "signOut": "Sign out",
+      "signOutError": "An error occurred during sign out"
     }
   },
   "siteType": {

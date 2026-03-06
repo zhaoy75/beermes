@@ -1514,12 +1514,44 @@
       "submit": "サインイン",
       "noAccount": "アカウントをお持ちでない場合",
       "signupLink": "新規登録",
-      "sideCopy": "クラフトビール管理",
+      "sideCopy": "クラフトビール生産管理",
       "errorGeneric": "サインインに失敗しました",
       "languageToggle": "{lang}に切り替える",
       "languageNames": {
         "en": "英語",
         "ja": "日本語"
+      }
+    },
+    "acceptInvite": {
+      "backToSignIn": "サインインに戻る",
+      "titleInvite": "招待を承認",
+      "titleRecovery": "パスワード再設定",
+      "subtitleInvite": "招待されたテナントに参加するため、パスワードを設定してください。",
+      "subtitleRecovery": "アカウントの新しいパスワードを設定してください。",
+      "verifying": "招待リンクを確認しています...",
+      "emailLabel": "メールアドレス",
+      "passwordLabel": "パスワード",
+      "passwordPlaceholder": "パスワードを入力",
+      "confirmPasswordLabel": "パスワード（確認）",
+      "confirmPasswordPlaceholder": "パスワードを再入力",
+      "showPassword": "パスワードを表示",
+      "processing": "処理中...",
+      "submitInvite": "パスワードを設定して参加",
+      "submitRecovery": "新しいパスワードを設定",
+      "sideCopy": "招待ベースのテナント参加フロー",
+      "languageToggle": "{lang}に切り替える",
+      "errors": {
+        "invalidLinkType": "URLのリンク種別が正しくありません。",
+        "invalidOrExpiredLink": "招待リンクが無効か期限切れです。",
+        "missingSession": "招待セッションが見つかりません。招待メールのリンクから開いてください。",
+        "passwordRequired": "パスワードは必須です。",
+        "passwordMin": "パスワードは{min}文字以上で入力してください。",
+        "passwordMismatch": "パスワードが一致しません。",
+        "submitFailed": "招待の承認に失敗しました。"
+      },
+      "success": {
+        "passwordUpdated": "パスワードを更新しました。リダイレクトしています...",
+        "invitationAccepted": "招待を承認しました。リダイレクトしています..."
       }
     }
   },
@@ -1608,6 +1640,7 @@
       "edit": "編集",
       "delete": "削除",
       "resetPassword": "パスワード再設定",
+      "resendInvitation": "招待を再送",
       "save": "保存",
       "cancel": "キャンセル",
       "confirmDelete": "削除する",
@@ -1637,6 +1670,11 @@
       "passwordRequired": "新しいパスワードは必須です。",
       "confirmRequired": "新しいパスワードを確認してください。",
       "passwordMismatch": "パスワードが一致しません。"
+    },
+    "feedback": {
+      "deleteSuccess": "ユーザーを削除しました。",
+      "resetPasswordSent": "パスワード再設定メールを送信しました。",
+      "resendInvitationSent": "招待メールを再送しました。"
     },
     "cards": {
       "empty": "条件に一致するユーザーがいません。"
@@ -1856,6 +1894,26 @@
       "changePassword": "パスワード変更",
       "userManagement": "ユーザー管理",
       "users": "ユーザー一覧"
+    }
+  },
+  "header": {
+    "searchBar": {
+      "placeholder": "検索またはコマンドを入力..."
+    },
+    "notificationMenu": {
+      "title": "通知",
+      "messageAction": "の権限変更をリクエストしています",
+      "projectName": "プロジェクト - Nganter App",
+      "typeProject": "プロジェクト",
+      "timeAgo": "5分前",
+      "viewAll": "すべての通知を見る"
+    },
+    "userMenu": {
+      "editProfile": "プロフィール編集",
+      "changePassword": "パスワード変更",
+      "support": "サポート",
+      "signOut": "サインアウト",
+      "signOutError": "サインアウト中にエラーが発生しました。"
     }
   },
   "siteType": {

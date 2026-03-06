@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { supabase } from '../lib/supabase'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -339,6 +340,7 @@ const router = createRouter({
       meta: {
         title: 'User Management',
         requiresAuth: true,
+        requiresAdmin: true,
       },
     },
     {
@@ -509,6 +511,24 @@ export default router
 
 import { useAuthStore } from '../stores/auth'
 
+async function isCurrentUserTenantAdmin() {
+  const { data, error } = await supabase.auth.getUser()
+  if (error || !data.user?.id) return false
+
+  const tenantId = data.user.app_metadata?.tenant_id as string | undefined
+  if (!tenantId) return false
+
+  const { data: membership, error: memErr } = await supabase
+    .from('tenant_members')
+    .select('role')
+    .eq('tenant_id', tenantId)
+    .eq('user_id', data.user.id)
+    .maybeSingle()
+
+  if (memErr || !membership) return false
+  return membership.role === 'owner' || membership.role === 'admin'
+}
+
 router.beforeEach(async (to) => {
   const auth = useAuthStore()
 
@@ -520,6 +540,13 @@ router.beforeEach(async (to) => {
   const isPublic = to.meta.public === true
   if (to.meta.requiresAuth && !auth.isAuthed && !isPublic) {
     return { path: '/signin', query: { redirect: to.fullPath } }
+  }
+
+  if (to.meta.requiresAdmin === true) {
+    const allowed = await isCurrentUserTenantAdmin()
+    if (!allowed) {
+      return { path: '/error-404' }
+    }
   }
 
   // If already authed, keep them out of /login

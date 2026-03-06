@@ -50,7 +50,7 @@
         <LogoutIcon
           class="text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-300"
         />
-        Sign out
+        {{ t('header.userMenu.signOut') }}
     </div>
     </div>
     <!-- Dropdown End -->
@@ -60,21 +60,23 @@
 <script setup lang="ts">
 import { UserCircleIcon, ChevronDownIcon, LogoutIcon, SettingsIcon, InfoCircleIcon } from '@/icons'
 import { RouterLink } from 'vue-router'
-import { ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 
 const dropdownOpen = ref(false)
 const dropdownRef = ref<HTMLElement | null>(null)
 
 const auth = useAuthStore()
 const router = useRouter()
+const { t } = useI18n()
 
-const menuItems = [
-  { href: '/profile', icon: UserCircleIcon, text: 'Edit profile' },
-  { href: '/change-password', icon: SettingsIcon, text: 'Change password' },
-  { href: '/profile', icon: InfoCircleIcon, text: 'Support' },
-]
+const menuItems = computed(() => [
+  // { href: '/profile', icon: UserCircleIcon, text: t('header.userMenu.editProfile') },
+  { href: '/change-password', icon: SettingsIcon, text: t('header.userMenu.changePassword') },
+  // { href: '/profile', icon: InfoCircleIcon, text: t('header.userMenu.support') },
+])
 
 const toggleDropdown = () => {
   dropdownOpen.value = !dropdownOpen.value
@@ -89,7 +91,7 @@ const signOut = async () => {
   try {
     await auth.signOut()
   } catch (e) {
-    const errorMessage = e instanceof Error ? e.message : 'An error occurred during sign out'
+    const errorMessage = e instanceof Error ? e.message : t('header.userMenu.signOutError')
     console.error(errorMessage)
   }
   router.replace('/signin')

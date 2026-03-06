@@ -279,9 +279,10 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import { useI18n } from 'vue-i18n'
+import { supabase } from '@/lib/supabase'
 
 import {
   GridIcon,
@@ -304,10 +305,40 @@ import { useSidebar } from "@/composables/useSidebar";
 
 const route = useRoute();
 const { t } = useI18n()
+const canSeeUsers = ref(false)
 
 const openSubmenuChild = ref(null);
 
 const { isExpanded, isMobileOpen, isHovered, openSubmenu } = useSidebar();
+
+const loadUserManagementVisibility = async () => {
+  try {
+    const { data, error } = await supabase.auth.getUser()
+    if (error || !data.user?.id) {
+      canSeeUsers.value = false
+      return
+    }
+    const tenantId = data.user.app_metadata?.tenant_id
+    if (!tenantId) {
+      canSeeUsers.value = false
+      return
+    }
+
+    const { data: membership, error: memErr } = await supabase
+      .from('tenant_members')
+      .select('role')
+      .eq('tenant_id', tenantId)
+      .eq('user_id', data.user.id)
+      .maybeSingle()
+    if (memErr || !membership) {
+      canSeeUsers.value = false
+      return
+    }
+    canSeeUsers.value = membership.role === 'owner' || membership.role === 'admin'
+  } catch {
+    canSeeUsers.value = false
+  }
+}
 
 const menuGroups = computed(() => [
   {
@@ -407,7 +438,7 @@ const menuGroups = computed(() => [
         icon: UserCircleIcon,
         name: t('sidebar.items.userManagement'),
         subItems: [
-          { name: t('sidebar.items.users'), path: "/users", pro: false },
+          ...(canSeeUsers.value ? [{ name: t('sidebar.items.users'), path: "/users", pro: false }] : []),
           // { name: t('sidebar.items.profile'), path: "/profile", pro: false },
           { name: t('sidebar.items.changePassword'), path: "/change-password", pro: false },
         ],
@@ -553,4 +584,8 @@ const startTransition = (el) => {
 const endTransition = (el) => {
   el.style.height = "";
 };
+
+onMounted(async () => {
+  await loadUserManagementVisibility()
+})
 </script>

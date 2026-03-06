@@ -3,6 +3,54 @@
     <div class="relative p-6 bg-white z-1 dark:bg-gray-900 sm:p-0">
       <div class="relative flex flex-col justify-center w-full h-screen lg:flex-row dark:bg-gray-900">
         <div class="flex flex-col flex-1 w-full lg:w-1/2">
+          <button
+            type="button"
+            @click="toggleLanguage"
+            class="absolute top-6 right-6 inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+            :aria-label="$t('auth.acceptInvite.languageToggle', { lang: nextLocaleLabel })"
+            :title="$t('auth.acceptInvite.languageToggle', { lang: nextLocaleLabel })"
+          >
+            <svg
+              class="h-5 w-5"
+              viewBox="0 0 20 20"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M10 18.3333C14.6023 18.3333 18.3333 14.6023 18.3333 10C18.3333 5.39763 14.6023 1.66663 10 1.66663C5.39763 1.66663 1.66663 5.39763 1.66663 10C1.66663 14.6023 5.39763 18.3333 10 18.3333Z"
+                stroke="currentColor"
+                stroke-width="1.2"
+              />
+              <path
+                d="M10 1.66663C12.0848 3.94953 13.25 6.87916 13.25 10C13.25 13.1208 12.0848 16.0504 10 18.3333"
+                stroke="currentColor"
+                stroke-width="1.2"
+              />
+              <path
+                d="M10 1.66663C7.91518 3.94953 6.75 6.87916 6.75 10C6.75 13.1208 7.91518 16.0504 10 18.3333"
+                stroke="currentColor"
+                stroke-width="1.2"
+              />
+              <path
+                d="M1.66663 10H18.3333"
+                stroke="currentColor"
+                stroke-width="1.2"
+              />
+              <path
+                d="M3.54163 5.20837H16.4583"
+                stroke="currentColor"
+                stroke-width="1.2"
+              />
+              <path
+                d="M3.54163 14.7916H16.4583"
+                stroke="currentColor"
+                stroke-width="1.2"
+              />
+            </svg>
+            <span class="sr-only">
+              {{ $t('auth.acceptInvite.languageToggle', { lang: nextLocaleLabel }) }}
+            </span>
+          </button>
           <div class="w-full max-w-md pt-10 mx-auto">
             <router-link
               to="/signin"
@@ -24,7 +72,7 @@
                   stroke-linejoin="round"
                 />
               </svg>
-              Back to sign in
+              {{ t('auth.acceptInvite.backToSignIn') }}
             </router-link>
           </div>
 
@@ -33,10 +81,14 @@
               <h1
                 class="mb-2 font-semibold text-gray-800 text-title-sm dark:text-white/90 sm:text-title-md"
               >
-                Accept Invitation
+                {{ isRecoveryMode ? t('auth.acceptInvite.titleRecovery') : t('auth.acceptInvite.titleInvite') }}
               </h1>
               <p class="text-sm text-gray-500 dark:text-gray-400">
-                Set your password to join the invited tenant.
+                {{
+                  isRecoveryMode
+                    ? t('auth.acceptInvite.subtitleRecovery')
+                    : t('auth.acceptInvite.subtitleInvite')
+                }}
               </p>
             </div>
 
@@ -44,14 +96,14 @@
               v-if="state === 'verifying'"
               class="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
             >
-              Verifying invitation link...
+              {{ t('auth.acceptInvite.verifying') }}
             </div>
 
             <form v-else @submit.prevent="submit" class="space-y-5">
               <div
                 class="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
               >
-                Email: <span class="font-medium">{{ email }}</span>
+                {{ t('auth.acceptInvite.emailLabel') }}: <span class="font-medium">{{ email }}</span>
               </div>
 
               <div>
@@ -59,13 +111,13 @@
                   for="password"
                   class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400"
                 >
-                  Password<span class="text-error-500">*</span>
+                  {{ t('auth.acceptInvite.passwordLabel') }}<span class="text-error-500">*</span>
                 </label>
                 <input
                   v-model="password"
                   :type="showPassword ? 'text' : 'password'"
                   id="password"
-                  placeholder="Enter your password"
+                  :placeholder="t('auth.acceptInvite.passwordPlaceholder')"
                   class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
                 />
               </div>
@@ -75,13 +127,13 @@
                   for="confirmPassword"
                   class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400"
                 >
-                  Confirm Password<span class="text-error-500">*</span>
+                  {{ t('auth.acceptInvite.confirmPasswordLabel') }}<span class="text-error-500">*</span>
                 </label>
                 <input
                   v-model="confirmPassword"
                   :type="showPassword ? 'text' : 'password'"
                   id="confirmPassword"
-                  placeholder="Confirm your password"
+                  :placeholder="t('auth.acceptInvite.confirmPasswordPlaceholder')"
                   class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
                 />
               </div>
@@ -96,7 +148,7 @@
                   type="checkbox"
                   class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
                 />
-                <span class="ml-2">Show password</span>
+                <span class="ml-2">{{ t('auth.acceptInvite.showPassword') }}</span>
               </label>
 
               <p v-if="errorMsg" class="text-red-600 text-sm">{{ errorMsg }}</p>
@@ -108,7 +160,13 @@
                   :disabled="isSubmitting || !isReadyForSubmit"
                   class="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white transition rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {{ isSubmitting ? 'Processing...' : 'Set Password and Join' }}
+                  {{
+                    isSubmitting
+                      ? t('auth.acceptInvite.processing')
+                      : (isRecoveryMode
+                        ? t('auth.acceptInvite.submitRecovery')
+                        : t('auth.acceptInvite.submitInvite'))
+                  }}
                 </button>
               </div>
             </form>
@@ -125,7 +183,7 @@
                 <img width="{231}" height="{48}" src="/images/logo/beer-auth.svg" alt="Logo" />
               </router-link>
               <p class="text-center text-gray-400 dark:text-white/60">
-                Invitation-based tenant onboarding
+                {{ t('auth.acceptInvite.sideCopy') }}
               </p>
             </div>
           </div>
@@ -138,18 +196,21 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import CommonGridShape from '@/components/common/CommonGridShape.vue'
 import FullScreenLayout from '@/components/layout/FullScreenLayout.vue'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/auth'
 
 type ViewState = 'verifying' | 'ready' | 'submitting' | 'success' | 'error'
+type LocaleOption = 'en' | 'ja'
 
 const MIN_PASSWORD_LENGTH = 6
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
+const { t, locale } = useI18n()
 
 const state = ref<ViewState>('verifying')
 const email = ref('')
@@ -185,27 +246,34 @@ const redirectPath = computed(() => {
 
 const tokenHash = computed(() => readParam(route.query.token_hash) ?? readHashParam('token_hash'))
 const inviteType = computed(() => readParam(route.query.type) ?? readHashParam('type') ?? 'invite')
+const isRecoveryMode = computed(() => inviteType.value === 'recovery')
+const nextLocale = computed<LocaleOption>(() => (locale.value === 'ja' ? 'en' : 'ja'))
+const nextLocaleLabel = computed(() => t(`auth.signin.languageNames.${nextLocale.value}`))
+
+const toggleLanguage = () => {
+  locale.value = nextLocale.value
+}
 
 async function verifyLinkAndSession() {
   errorMsg.value = ''
   state.value = 'verifying'
 
-  if (tokenHash.value && inviteType.value !== 'invite') {
+  if (tokenHash.value && inviteType.value !== 'invite' && inviteType.value !== 'recovery') {
     state.value = 'error'
-    errorMsg.value = 'Invalid invite type in URL.'
+    errorMsg.value = t('auth.acceptInvite.errors.invalidLinkType')
     return
   }
 
   if (tokenHash.value) {
     const { error } = await supabase.auth.verifyOtp({
       token_hash: tokenHash.value,
-      type: 'invite',
+      type: isRecoveryMode.value ? 'recovery' : 'invite',
     })
     if (error) {
       const { data: fallbackSession } = await supabase.auth.getSession()
       if (!fallbackSession.session?.user?.email) {
         state.value = 'error'
-        errorMsg.value = error.message
+        errorMsg.value = t('auth.acceptInvite.errors.invalidOrExpiredLink')
         return
       }
     }
@@ -215,8 +283,8 @@ async function verifyLinkAndSession() {
   if (sessionError || !sessionData.session?.user?.email) {
     state.value = 'error'
     errorMsg.value = tokenHash.value
-      ? 'Invitation link is invalid or expired.'
-      : 'Missing invite session. Open this page from your invitation email link.'
+      ? t('auth.acceptInvite.errors.invalidOrExpiredLink')
+      : t('auth.acceptInvite.errors.missingSession')
     return
   }
 
@@ -233,44 +301,51 @@ async function submit() {
 
   if (!password.value) {
     state.value = 'error'
-    errorMsg.value = 'Password is required.'
+    errorMsg.value = t('auth.acceptInvite.errors.passwordRequired')
     return
   }
   if (password.value.length < MIN_PASSWORD_LENGTH) {
     state.value = 'error'
-    errorMsg.value = `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`
+    errorMsg.value = t('auth.acceptInvite.errors.passwordMin', { min: MIN_PASSWORD_LENGTH })
     return
   }
   if (password.value !== confirmPassword.value) {
     state.value = 'error'
-    errorMsg.value = 'Passwords do not match.'
+    errorMsg.value = t('auth.acceptInvite.errors.passwordMismatch')
     return
   }
 
   state.value = 'submitting'
 
   try {
-    const payload: { password: string; tenant_id?: string } = { password: password.value }
-    if (tenantId.value) payload.tenant_id = tenantId.value
+    if (isRecoveryMode.value) {
+      const { error } = await supabase.auth.updateUser({ password: password.value })
+      if (error) throw error
+    } else {
+      const payload: { password: string; tenant_id?: string } = { password: password.value }
+      if (tenantId.value) payload.tenant_id = tenantId.value
 
-    const { data, error } = await supabase.functions.invoke('accept-invitation', {
-      body: payload,
-    })
+      const { data, error } = await supabase.functions.invoke('accept-invitation', {
+        body: payload,
+      })
 
-    if (error) throw error
-    if (data && typeof data === 'object' && 'error' in data) {
-      throw new Error(String((data as { error?: unknown }).error ?? 'Failed to accept invitation.'))
+      if (error) throw error
+      if (data && typeof data === 'object' && 'error' in data) {
+        throw new Error(String((data as { error?: unknown }).error ?? t('auth.acceptInvite.errors.submitFailed')))
+      }
     }
 
     await supabase.auth.refreshSession()
     await auth.bootstrap()
 
     state.value = 'success'
-    successMsg.value = 'Invitation accepted. Redirecting...'
+    successMsg.value = isRecoveryMode.value
+      ? t('auth.acceptInvite.success.passwordUpdated')
+      : t('auth.acceptInvite.success.invitationAccepted')
     await router.replace(redirectPath.value)
   } catch (err) {
     state.value = 'error'
-    errorMsg.value = err instanceof Error ? err.message : 'Failed to accept invitation.'
+    errorMsg.value = err instanceof Error ? err.message : t('auth.acceptInvite.errors.submitFailed')
   }
 }
 

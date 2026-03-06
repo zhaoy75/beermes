@@ -30,6 +30,12 @@
       >
         {{ pageError }}
       </div>
+      <div
+        v-if="pageSuccess"
+        class="mt-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700 dark:border-green-900/40 dark:bg-green-900/20 dark:text-green-300"
+      >
+        {{ pageSuccess }}
+      </div>
 
       <div
         class="mt-6 rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900"
@@ -138,6 +144,24 @@
               class="w-full rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30"
             >
               {{ t('users.actions.delete') }}
+            </button>
+            <button
+              v-if="user.status === 'active'"
+              type="button"
+              :disabled="!canManageUsers || saving || !user.memberUserId"
+              @click="sendResetPassword(user)"
+              class="w-full rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-700 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-amber-900/40 dark:bg-amber-900/20 dark:text-amber-300 dark:hover:bg-amber-900/30"
+            >
+              {{ t('users.actions.resetPassword') }}
+            </button>
+            <button
+              v-else
+              type="button"
+              :disabled="!canManageUsers || saving || !user.invitationId"
+              @click="resendInvitation(user)"
+              class="w-full rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-blue-900/40 dark:bg-blue-900/20 dark:text-blue-300 dark:hover:bg-blue-900/30"
+            >
+              {{ t('users.actions.resendInvitation') }}
             </button>
           </div>
         </div>
@@ -304,6 +328,7 @@ const canManageUsers = ref(false)
 const loading = ref(false)
 const saving = ref(false)
 const pageError = ref('')
+const pageSuccess = ref('')
 
 const filters = reactive({
   name: '',
@@ -469,6 +494,7 @@ const fetchUsers = async () => {
   try {
     loading.value = true
     pageError.value = ''
+    pageSuccess.value = ''
     const ctx = await resolveTenantContext()
 
     const { data: memberData, error: memberError } = await supabase
@@ -505,6 +531,7 @@ const fetchUsers = async () => {
 
 const openAdd = () => {
   pageError.value = ''
+  pageSuccess.value = ''
   if (!canManageUsers.value) {
     pageError.value = t('users.errors.permissionDenied')
     return
@@ -519,6 +546,7 @@ const openAdd = () => {
 
 const openEdit = (user: UserRecord) => {
   pageError.value = ''
+  pageSuccess.value = ''
   if (!canManageUsers.value) {
     pageError.value = t('users.errors.permissionDenied')
     return
@@ -625,6 +653,7 @@ const saveUser = async () => {
 
 const openDelete = (user: UserRecord) => {
   pageError.value = ''
+  pageSuccess.value = ''
   if (!canManageUsers.value) {
     pageError.value = t('users.errors.permissionDenied')
     return
@@ -636,6 +665,74 @@ const openDelete = (user: UserRecord) => {
 const closeDelete = () => {
   deleteTarget.value = null
   isDeleteOpen.value = false
+}
+
+async function invokeUserAdminAction(body: Record<string, unknown>) {
+  const { data, error } = await supabase.functions.invoke('user-admin-action', { body })
+  if (error) throw error
+  if (data && typeof data === 'object' && 'error' in data) {
+    throw new Error(String((data as { error?: unknown }).error ?? t('users.errors.generic')))
+  }
+  return data
+}
+
+const sendResetPassword = async (user: UserRecord) => {
+  if (!canManageUsers.value) {
+    pageError.value = t('users.errors.permissionDenied')
+    return
+  }
+  if (!user.memberUserId) {
+    pageError.value = t('users.errors.generic')
+    return
+  }
+
+  try {
+    saving.value = true
+    pageError.value = ''
+    pageSuccess.value = ''
+    const ctx = await resolveTenantContext()
+    await invokeUserAdminAction({
+      action: 'reset_password',
+      tenant_id: ctx.tenantId,
+      target_user_id: user.memberUserId,
+    })
+    pageSuccess.value = t('users.feedback.resetPasswordSent')
+  } catch (err) {
+    console.error(err)
+    pageError.value = toErrorMessage(err, t('users.errors.generic'))
+  } finally {
+    saving.value = false
+  }
+}
+
+const resendInvitation = async (user: UserRecord) => {
+  if (!canManageUsers.value) {
+    pageError.value = t('users.errors.permissionDenied')
+    return
+  }
+  if (!user.invitationId) {
+    pageError.value = t('users.errors.generic')
+    return
+  }
+
+  try {
+    saving.value = true
+    pageError.value = ''
+    pageSuccess.value = ''
+    const ctx = await resolveTenantContext()
+    await invokeUserAdminAction({
+      action: 'resend_invitation',
+      tenant_id: ctx.tenantId,
+      invitation_id: user.invitationId,
+    })
+    pageSuccess.value = t('users.feedback.resendInvitationSent')
+    await fetchUsers()
+  } catch (err) {
+    console.error(err)
+    pageError.value = toErrorMessage(err, t('users.errors.inviteFailed'))
+  } finally {
+    saving.value = false
+  }
 }
 
 const confirmDelete = async () => {
@@ -652,29 +749,29 @@ const confirmDelete = async () => {
 
   try {
     saving.value = true
+    pageError.value = ''
+    pageSuccess.value = ''
     const ctx = await resolveTenantContext()
     const target = deleteTarget.value
 
     if (target.source === 'member') {
       if (!target.memberUserId) throw new Error(t('users.errors.deleteFailed'))
-      const { error } = await supabase
-        .from('tenant_members')
-        .delete()
-        .eq('tenant_id', ctx.tenantId)
-        .eq('user_id', target.memberUserId)
-      if (error) throw error
+      await invokeUserAdminAction({
+        action: 'delete_user',
+        tenant_id: ctx.tenantId,
+        target_user_id: target.memberUserId,
+      })
     } else {
       if (!target.invitationId) throw new Error(t('users.errors.deleteFailed'))
-      const { error } = await supabase
-        .from('tenant_invitations')
-        .update({ status: 'revoked' })
-        .eq('tenant_id', ctx.tenantId)
-        .eq('id', target.invitationId)
-        .eq('status', 'invited')
-      if (error) throw error
+      await invokeUserAdminAction({
+        action: 'delete_user',
+        tenant_id: ctx.tenantId,
+        invitation_id: target.invitationId,
+      })
     }
 
     closeDelete()
+    pageSuccess.value = t('users.feedback.deleteSuccess')
     await fetchUsers()
   } catch (err) {
     console.error(err)

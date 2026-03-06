@@ -186,77 +186,74 @@
             {{ error }}
           </span>
         </div>
-      </section>
 
-      <div class="grid grid-cols-1 xl:grid-cols-[18rem_minmax(0,1fr)_20rem] gap-4 items-start">
-        <aside class="space-y-4">
-          <section class="border border-gray-200 rounded-2xl bg-white shadow-sm p-4">
-            <div class="flex items-center justify-between mb-3">
-              <div>
-                <h2 class="text-sm font-semibold text-gray-900">
-                  {{ t('producedBeer.movementFast.panels.routes') }}
-                </h2>
-                <p class="text-xs text-gray-500">
-                  {{ t('producedBeer.movementFast.hints.routes') }}
+        <div class="mt-4 border-t border-gray-100 pt-3">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <h2 class="text-sm font-semibold text-gray-900">
+                {{ t('producedBeer.movementFast.panels.routes') }}
+              </h2>
+              <p class="text-xs text-gray-500">
+                {{ t('producedBeer.movementFast.hints.routes') }}
+              </p>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            <section class="rounded-xl border border-gray-200 p-3">
+              <h3 class="text-xs uppercase tracking-wide text-gray-400 mb-2">
+                {{ t('producedBeer.movementFast.panels.favorites') }}
+              </h3>
+              <div class="space-y-2 max-h-44 overflow-auto pr-1">
+                <button
+                  v-for="preset in favoriteRoutes"
+                  :key="`fav-${preset.key}`"
+                  class="w-full text-left rounded-lg border border-gray-200 p-2 hover:bg-gray-50"
+                  type="button"
+                  @click="applyRoutePreset(preset)"
+                >
+                  <div class="text-sm font-medium text-gray-900">
+                    {{ preset.fromSiteName }} → {{ preset.toSiteName }}
+                  </div>
+                  <div class="text-xs text-gray-500">{{ formatDateTime(preset.lastUsedAt) }}</div>
+                </button>
+                <p v-if="favoriteRoutes.length === 0" class="text-sm text-gray-500">
+                  {{ t('common.noData') }}
                 </p>
               </div>
-            </div>
+            </section>
 
-            <div class="space-y-3">
-              <div>
-                <h3 class="text-xs uppercase tracking-wide text-gray-400 mb-2">
-                  {{ t('producedBeer.movementFast.panels.favorites') }}
-                </h3>
-                <div class="space-y-2">
-                  <button
-                    v-for="preset in favoriteRoutes"
-                    :key="`fav-${preset.key}`"
-                    class="w-full text-left rounded-xl border border-gray-200 p-3 hover:bg-gray-50"
-                    type="button"
-                    @click="applyRoutePreset(preset)"
-                  >
-                    <div class="text-sm font-medium text-gray-900">
-                      {{ preset.fromSiteName }} → {{ preset.toSiteName }}
-                    </div>
-                    <div class="text-xs text-gray-500">{{ formatDateTime(preset.lastUsedAt) }}</div>
-                  </button>
-                  <p v-if="favoriteRoutes.length === 0" class="text-sm text-gray-500">
-                    {{ t('common.noData') }}
-                  </p>
-                </div>
+            <section class="rounded-xl border border-gray-200 p-3">
+              <h3 class="text-xs uppercase tracking-wide text-gray-400 mb-2">
+                {{ t('producedBeer.movementFast.panels.recent') }}
+              </h3>
+              <div class="space-y-2 max-h-44 overflow-auto pr-1">
+                <button
+                  v-for="preset in recentRoutes"
+                  :key="`recent-${preset.key}`"
+                  class="w-full text-left rounded-lg border border-gray-200 p-2 hover:bg-gray-50"
+                  type="button"
+                  @click="applyRoutePreset(preset)"
+                >
+                  <div class="text-sm font-medium text-gray-900">
+                    {{ preset.fromSiteName }} → {{ preset.toSiteName }}
+                  </div>
+                  <div class="flex items-center justify-between text-xs text-gray-500">
+                    <span>{{ formatDateTime(preset.lastUsedAt) }}</span>
+                    <span>{{
+                      t('producedBeer.movementFast.labels.uses', { count: preset.useCount })
+                    }}</span>
+                  </div>
+                </button>
+                <p v-if="recentRoutes.length === 0" class="text-sm text-gray-500">
+                  {{ t('common.noData') }}
+                </p>
               </div>
+            </section>
+          </div>
+        </div>
+      </section>
 
-              <div>
-                <h3 class="text-xs uppercase tracking-wide text-gray-400 mb-2">
-                  {{ t('producedBeer.movementFast.panels.recent') }}
-                </h3>
-                <div class="space-y-2">
-                  <button
-                    v-for="preset in recentRoutes"
-                    :key="`recent-${preset.key}`"
-                    class="w-full text-left rounded-xl border border-gray-200 p-3 hover:bg-gray-50"
-                    type="button"
-                    @click="applyRoutePreset(preset)"
-                  >
-                    <div class="text-sm font-medium text-gray-900">
-                      {{ preset.fromSiteName }} → {{ preset.toSiteName }}
-                    </div>
-                    <div class="flex items-center justify-between text-xs text-gray-500">
-                      <span>{{ formatDateTime(preset.lastUsedAt) }}</span>
-                      <span>{{
-                        t('producedBeer.movementFast.labels.uses', { count: preset.useCount })
-                      }}</span>
-                    </div>
-                  </button>
-                  <p v-if="recentRoutes.length === 0" class="text-sm text-gray-500">
-                    {{ t('common.noData') }}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </section>
-        </aside>
-
+      <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_20rem] gap-4 items-start">
         <section class="border border-gray-200 rounded-2xl bg-white shadow-sm p-4 space-y-4">
           <div class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
             <div>
@@ -290,6 +287,9 @@
                   <th class="px-3 py-2 text-left w-14">#</th>
                   <th class="px-3 py-2 text-left min-w-[22rem]">
                     {{ t('producedBeer.movementFast.columns.beer') }}
+                  </th>
+                  <th class="px-3 py-2 text-left w-56 min-w-[14rem]">
+                    {{ t('producedBeer.movementFast.columns.lotNo') }}
                   </th>
                   <th class="px-3 py-2 text-right w-52 min-w-[13rem]">
                     {{ t('producedBeer.movementFast.columns.quantity') }}
@@ -360,6 +360,30 @@
                     <p v-if="lineErrorMap[row.id]" class="mt-1 text-xs text-red-600">
                       {{ lineErrorMap[row.id] }}
                     </p>
+                  </td>
+                  <td class="px-3 py-2 min-w-[14rem]">
+                    <template v-if="routeForm.allocationPolicy === 'MANUAL'">
+                      <select
+                        v-model="row.selectedLotId"
+                        class="w-full h-[38px] border rounded-lg px-3 bg-white"
+                        :disabled="!row.beerKey"
+                      >
+                        <option value="">{{ t('common.select') }}</option>
+                        <option
+                          v-for="lot in lotOptionsForRow(row)"
+                          :key="lot.lotId"
+                          :value="lot.lotId"
+                        >
+                          {{ lotOptionLabel(lot) }}
+                        </option>
+                      </select>
+                    </template>
+                    <div
+                      v-else
+                      class="h-[38px] border rounded-lg px-3 bg-gray-50 text-sm text-gray-700 flex items-center"
+                    >
+                      {{ t('producedBeer.movementFast.labels.autoAllocated') }}
+                    </div>
                   </td>
                   <td class="px-3 py-2 min-w-[13rem]">
                     <input
@@ -572,6 +596,7 @@ type LineRow = {
   id: string
   searchText: string
   beerKey: string
+  selectedLotId: string
   qtyText: string
   note: string
 }
@@ -633,6 +658,7 @@ function createEmptyRow(): LineRow {
     id: `line-${rowSeed}`,
     searchText: '',
     beerKey: '',
+    selectedLotId: '',
     qtyText: '',
     note: '',
   }
@@ -1032,6 +1058,23 @@ function displayBeerOption(option: BeerOption) {
   return `${option.beerCode} · ${option.beerName}`
 }
 
+function lotOptionsForRow(row: LineRow) {
+  if (!row.beerKey) return []
+  const option = beerOptionByKey.value.get(row.beerKey)
+  if (!option) return []
+  return candidateLotsForPolicy(option)
+}
+
+function lotOptionLabel(lot: BeerLotOption) {
+  const primary = lot.lotNo || lot.batchCode || lot.lotId
+  return `${primary} (${formatNumber(lot.qtyLiters)} L)`
+}
+
+function selectedLotForRow(row: LineRow, option: BeerOption | null | undefined) {
+  if (!row.selectedLotId || !option) return null
+  return option.candidateLots.find((lot) => lot.lotId === row.selectedLotId) ?? null
+}
+
 function filteredBeerOptions(index: number) {
   const row = lineRows.value[index]
   if (!row) return []
@@ -1042,11 +1085,11 @@ function filteredBeerOptions(index: number) {
 
 function ensureTrailingRows() {
   const nonEmptyRows = lineRows.value.filter(
-    (row) => row.searchText.trim() || row.qtyText.trim() || row.note.trim(),
+    (row) => row.searchText.trim() || row.selectedLotId || row.qtyText.trim() || row.note.trim(),
   )
   const trailingEmpty = [...lineRows.value]
     .reverse()
-    .findIndex((row) => row.searchText.trim() || row.qtyText.trim() || row.note.trim())
+    .findIndex((row) => row.searchText.trim() || row.selectedLotId || row.qtyText.trim() || row.note.trim())
   const trailingEmptyCount = trailingEmpty === -1 ? lineRows.value.length : trailingEmpty
 
   if (lineRows.value.length < 5) {
@@ -1063,9 +1106,13 @@ function normalizeSelectedBeer(row: LineRow) {
   const option = beerOptionByKey.value.get(row.beerKey)
   if (!option) {
     row.beerKey = ''
+    row.selectedLotId = ''
     return
   }
-  if (row.searchText !== displayBeerOption(option)) row.beerKey = ''
+  if (row.searchText !== displayBeerOption(option)) {
+    row.beerKey = ''
+    row.selectedLotId = ''
+  }
 }
 
 function handleBeerInput(index: number) {
@@ -1080,6 +1127,7 @@ function selectBeer(index: number, option: BeerOption) {
   const row = lineRows.value[index]
   if (!row) return
   row.beerKey = option.key
+  row.selectedLotId = ''
   row.searchText = displayBeerOption(option)
   activeSuggestionRowId.value = null
   ensureTrailingRows()
@@ -1120,9 +1168,11 @@ function applyParsedLines(index: number, parsedLines: Array<{ identifier: string
     )
     if (match) {
       row.beerKey = match.key
+      row.selectedLotId = ''
       row.searchText = displayBeerOption(match)
     } else {
       row.beerKey = ''
+      row.selectedLotId = ''
       row.searchText = parsed.identifier
     }
     row.qtyText = String(parsed.qty)
@@ -1280,7 +1330,13 @@ const selectedBeerLotTaxTypes = computed(() => {
   const set = new Set<string>()
   lineRows.value.forEach((row) => {
     const option = row.beerKey ? beerOptionByKey.value.get(row.beerKey) : null
-    option?.candidateLots.forEach((lot) => {
+    if (!option) return
+    if (routeForm.allocationPolicy === 'MANUAL') {
+      const selectedLot = selectedLotForRow(row, option)
+      if (selectedLot?.lotTaxType) set.add(selectedLot.lotTaxType)
+      return
+    }
+    option.candidateLots.forEach((lot) => {
       if (lot.lotTaxType) set.add(lot.lotTaxType)
     })
   })
@@ -1483,6 +1539,39 @@ type AllocatedMoveSegment = {
 }
 
 function allocateLine(line: ValidatedLine) {
+  if (routeForm.allocationPolicy === 'MANUAL') {
+    const manualLot = line.selectedLot
+    if (!manualLot) {
+      throw new Error(t('producedBeer.movementFast.errors.manualLotRequired'))
+    }
+    if (line.qtyLiters > manualLot.qtyLiters + 0.0001) {
+      throw new Error(t('producedBeer.movementFast.errors.qtyExceedsSelectedLot'))
+    }
+    const qtySourceUom = convertFromLiters(line.qtyLiters, manualLot.uomCode)
+    if (qtySourceUom == null || !Number.isFinite(qtySourceUom) || qtySourceUom <= 0) {
+      throw new Error(t('producedBeer.movementFast.errors.allocationUom'))
+    }
+    const resolvedTaxDecisionCode = resolveTaxDecisionCodeForLot(manualLot.lotTaxType)
+    if (!resolvedTaxDecisionCode) {
+      throw new Error(t('producedBeer.movementFast.errors.taxDecisionMissing'))
+    }
+    return [
+      {
+        beerCode: line.option.beerCode,
+        beerName: line.option.beerName,
+        qtyLiters: line.qtyLiters,
+        qtySourceUom,
+        lotId: manualLot.lotId,
+        lotNo: manualLot.lotNo,
+        lotTaxType: manualLot.lotTaxType,
+        uomId: manualLot.uomId,
+        uomCode: manualLot.uomCode,
+        taxDecisionCode: resolvedTaxDecisionCode,
+        note: line.note,
+      },
+    ]
+  }
+
   const orderedLots = candidateLotsForPolicy(line.option)
   let remainingLiters = line.qtyLiters
   const segments: AllocatedMoveSegment[] = []
@@ -1550,14 +1639,22 @@ const routeErrors = computed(() => {
   ) {
     errors.push(t('producedBeer.movementFast.errors.noRouteRule'))
   }
+  if (toSiteType.value === 'DIRECT_SALES_SHOP') {
+    errors.push(t('producedBeer.movementFast.errors.routeBlockedDirectSalesShop'))
+  }
+  if (toSiteType.value === 'TAX_STORAGE') {
+    errors.push(t('producedBeer.movementFast.errors.routeBlockedTaxStorage'))
+  }
   if (routeForm.fromSiteId && routeForm.toSiteId && matchingTaxRulesForRoute().length === 0) {
-    errors.push(t('producedBeer.movementFast.errors.noRouteRule'))
+    if (
+      toSiteType.value !== 'DIRECT_SALES_SHOP' &&
+      toSiteType.value !== 'TAX_STORAGE'
+    ) {
+      errors.push(t('producedBeer.movementFast.errors.noRouteRule'))
+    }
   }
   if (taxDecisionOptions.value.length > 1 && !routeForm.taxDecisionCode) {
     errors.push(t('producedBeer.movementFast.errors.taxDecisionRequired'))
-  }
-  if (routeForm.allocationPolicy === 'MANUAL') {
-    errors.push(t('producedBeer.movementFast.errors.manualNotImplemented'))
   }
   return Array.from(new Set(errors))
 })
@@ -1566,6 +1663,7 @@ type ValidatedLine = {
   rowId: string
   index: number
   option: BeerOption
+  selectedLot: BeerLotOption | null
   qtyLiters: number
   note: string | null
 }
@@ -1575,11 +1673,17 @@ const validatedLines = computed(() => {
   lineRows.value.forEach((row, index) => {
     const option = row.beerKey ? beerOptionByKey.value.get(row.beerKey) : null
     const qty = toNumber(row.qtyText)
+    const selectedLot = selectedLotForRow(row, option)
     if (!option || qty == null || qty <= 0) return
+    if (routeForm.allocationPolicy === 'MANUAL') {
+      if (!selectedLot) return
+      if (qty > selectedLot.qtyLiters + 0.0001) return
+    }
     valid.push({
       rowId: row.id,
       index,
       option,
+      selectedLot,
       qtyLiters: qty,
       note: row.note.trim() || null,
     })
@@ -1590,9 +1694,11 @@ const validatedLines = computed(() => {
 const lineErrorMap = computed(() => {
   const errors: Record<string, string> = {}
   lineRows.value.forEach((row) => {
-    const hasAnyInput = !!row.searchText.trim() || !!row.qtyText.trim() || !!row.note.trim()
+    const hasAnyInput =
+      !!row.searchText.trim() || !!row.selectedLotId || !!row.qtyText.trim() || !!row.note.trim()
     if (!hasAnyInput) return
     const option = row.beerKey ? beerOptionByKey.value.get(row.beerKey) : null
+    const selectedLot = selectedLotForRow(row, option)
     const qty = toNumber(row.qtyText)
     if (!row.searchText.trim()) {
       errors[row.id] = t('producedBeer.movementFast.errors.beerRequired')
@@ -1604,6 +1710,20 @@ const lineErrorMap = computed(() => {
     }
     if (qty == null || qty <= 0) {
       errors[row.id] = t('producedBeer.movementFast.errors.qtyPositive')
+      return
+    }
+    if (routeForm.allocationPolicy === 'MANUAL') {
+      if (!row.selectedLotId) {
+        errors[row.id] = t('producedBeer.movementFast.errors.manualLotRequired')
+        return
+      }
+      if (!selectedLot) {
+        errors[row.id] = t('producedBeer.movementFast.errors.manualLotInvalid')
+        return
+      }
+      if (qty > selectedLot.qtyLiters + 0.0001) {
+        errors[row.id] = t('producedBeer.movementFast.errors.qtyExceedsSelectedLot')
+      }
       return
     }
     if (qty > option.totalQtyLiters + 0.0001) {
@@ -1708,12 +1828,14 @@ async function submit(mode: SubmitMode) {
   saving.value = true
   try {
     const payloads = buildMovePayloads()
-    const movementIds: string[] = []
-    for (const payload of payloads) {
-      const { data, error } = await supabase.rpc('product_move', { p_doc: payload })
-      if (error) throw error
-      if (data != null) movementIds.push(String(data))
-    }
+    const { data, error } = await supabase.rpc('product_move_fast_post', { p_docs: payloads })
+    if (error) throw error
+
+    const movementIds = Array.isArray((data as any)?.movement_ids)
+      ? (data as any).movement_ids.map((entry: unknown) => String(entry))
+      : []
+    const postedCount =
+      movementIds.length > 0 ? movementIds.length : Number((data as any)?.count ?? payloads.length)
 
     touchRoutePreset(false)
     if (routeForm.fromSiteId) {
@@ -1721,7 +1843,7 @@ async function submit(mode: SubmitMode) {
     }
     toast.success(
       t('producedBeer.movementFast.toast.saved', {
-        count: movementIds.length,
+        count: postedCount,
       }),
     )
 
@@ -1731,7 +1853,7 @@ async function submit(mode: SubmitMode) {
   } catch (err: any) {
     console.error(err)
     const message = String(err?.message ?? '')
-    if (message.includes('product_move')) {
+    if (message.includes('product_move_fast_post') || message.includes('product_move')) {
       toast.error(t('producedBeer.movementFast.errors.rpcUnavailable'))
     } else {
       toast.error(message || t('producedBeer.movementFast.errors.saveFailed'))
@@ -1800,9 +1922,23 @@ watch(
 )
 
 watch(
-  () => lineRows.value.map((row) => `${row.searchText}__${row.qtyText}__${row.note}`).join('|'),
+  () =>
+    lineRows.value
+      .map((row) => `${row.searchText}__${row.selectedLotId}__${row.qtyText}__${row.note}`)
+      .join('|'),
   () => {
     ensureTrailingRows()
+  },
+)
+
+watch(
+  () => routeForm.allocationPolicy,
+  (next, prev) => {
+    if (prev === 'MANUAL' && next !== 'MANUAL') {
+      lineRows.value.forEach((row) => {
+        row.selectedLotId = ''
+      })
+    }
   },
 )
 

@@ -6,6 +6,7 @@
 - Support keyboard-first operation and paste-based multi-line input.
 - Prevent route misuse for tax-sensitive site combinations.
 - Default to backend auto lot allocation using `FEFO`.
+- Ensure posting is atomic (all-or-nothing) even when one UI line is split into multiple lot-level movements.
 
 ## Entry Points
 - Produced Beer page -> action button: `ProductMoveFast` / `社内移動(高速入力)`
@@ -26,10 +27,12 @@
   - `Post & Next`
 
 ### Body
+- Recent / Favorites
 - Sticky route bar under header.
-- Main body uses 3 areas on desktop and stacked layout on mobile:
-  - Left: Recent / Favorites
-  - Center: Lines Grid
+- Main body uses 2 areas on desktop and stacked layout on mobile:
+  - left: 
+    Lines Search
+    Lines Grid
   - Right: Summary / Validation
 
 ### Modal/Dialog
@@ -51,6 +54,8 @@
 | Tax Decision Code | Conditional | Auto | Shown when rule returns selectable tax decision |
 | Note | No | Empty | Header note for movement |
 
+add favorites button 
+
 - Behavior:
   - `From Site` dropdown must be filtered to site types allowed as `allowed_src_site_types` for `INTERNAL_TRANSFER`
   - `To Site` dropdown must be filtered to site types allowed as `allowed_dst_site_types` for `INTERNAL_TRANSFER`
@@ -64,6 +69,7 @@
   - UI must call Supabase RPC `movement_get_rules` with `p_movement_intent = 'INTERNAL_TRANSFER'`
   - if multiple tax decisions are allowed for the resolved `INTERNAL_TRANSFER` route, UI shows selectable tax decision list and defaults to the rule default
   - default focus after page load is first Beer field in Lines Grid, not route bar
+  - clike button (add to favorites) will add current route to favoriates 
 
 ### Recent / Favorites Panel
 - Shows recently used routes for the current user.
@@ -75,6 +81,33 @@
 - Clicking an item applies route bar values without posting.
 - Recent routes are updated only after successful post.
 
+### Lines Search
+- One primary search input (`Beer`) is used for line entry.
+- Search modes:
+  - exact code
+  - partial code
+  - name match
+- `Enter` selects top result when suggestion list is open.
+- After beer selection, focus moves to Quantity.
+- Search result should display code and name together.
+- Package and amount are represented by line fields (Lot No and Quantity), not separate global search inputs.
+
+### Paste Input
+- User can paste multiple lines into the first `Beer` field.
+- Example:
+
+```text
+IPA01 50
+PILS02 20
+STOUT03 10
+```
+- System behavior:
+  - parse each line as `beer_identifier + qty`
+  - create rows automatically
+  - resolve beer code/name search for each pasted row
+  - leave unresolved rows highlighted for correction
+
+
 ### Lines Grid
 - Default state:
   - 5 empty rows
@@ -85,6 +118,7 @@
 | Column | Required | Notes |
 | --- | --- | --- |
 | Beer | Yes | Search by beer code or name |
+| Lot No | Conditional | Required only for `MANUAL`; read-only/auto for `FEFO` and `FIFO` |
 | Quantity (L) | Yes | Numeric, `> 0`; width should comfortably fit values in the range of `9999.999` but stay visually compact |
 | Note | No | Line note |
 
@@ -93,32 +127,11 @@
   - pressing `Enter` in Quantity moves to next editable row
   - empty trailing rows should be auto-added as needed
   - rows with no beer and no quantity are ignored
+  - when allocation policy is `MANUAL`, `Lot No` is user-selectable from available lots in source site stock for the selected beer
+  - when allocation policy is `FEFO` or `FIFO`, `Lot No` is display-only and determined by backend allocation result
+  - changing policy from `MANUAL` to `FEFO`/`FIFO` clears manual lot selections for all lines
   - Quantity cell width should balance entry speed and table density; avoid both cramped and oversized presentation
 
-### Beer Search
-- Search modes:
-  - exact code
-  - partial code
-  - name match
-- `Enter` selects top result when suggestion list is open.
-- After beer selection, focus moves to Quantity.
-- Search result should display code and name together.
-
-### Paste Input
-- User can paste multiple lines into the first Beer cell or dedicated paste target.
-- Example:
-
-```text
-IPA01 50
-PILS02 20
-STOUT03 10
-```
-
-- System behavior:
-  - parse each line as `beer_identifier + qty`
-  - create rows automatically
-  - resolve beer code/name search for each pasted row
-  - leave unresolved rows highlighted for correction
 
 ### Summary / Validation Panel
 - Always visible.
@@ -185,10 +198,16 @@ STOUT03 10
 - Allocation rules:
   - `FEFO` or `FIFO`: backend auto-allocates lots
   - `MANUAL`: user must select lots before posting
+  - in `MANUAL`, selected lot must belong to the selected beer and source site
+  - in `MANUAL`, selected lot available quantity must be `>=` line quantity
 - Soft warnings:
   - low available stock
   - allocation split across many lots
   - near-expiry lots included in allocation
+- Route blocking reason codes:
+  - `ROUTE_BLOCKED_DIRECT_SALES_SHOP`: destination is `DIRECT_SALES_SHOP`; user must use domestic shipment flow
+  - `ROUTE_BLOCKED_TAX_STORAGE`: destination is `TAX_STORAGE`; user must use tax-specific movement flow
+  - `ROUTE_NO_INTERNAL_TRANSFER_RULE`: no matching `INTERNAL_TRANSFER` rule for site combination
 
 ## Save Behavior
 - Disable `Post` actions while submitting.
@@ -208,7 +227,13 @@ STOUT03 10
   - `MANUAL`
     - user selects source lots explicitly
     - call `public.product_move(p_doc jsonb)` once per selected lot segment
-- Because one screen post may require multiple `product_move` calls, the posting workflow should be orchestrated server-side when atomic all-or-nothing behavior is required.
+- Because one screen post may require multiple `product_move` calls, posting must be orchestrated server-side in one transaction.
+- UI must call a single backend endpoint (Edge Function or RPC wrapper) for posting, not loop `product_move` directly from browser.
+- Backend endpoint requirements:
+  - run all lot-level `product_move` calls inside one DB transaction
+  - rollback all work if any line/segment fails
+  - return structured row-level errors and route-level errors
+  - support optional idempotency key to prevent duplicate posts on retry
 - UI working payload example:
 
 ```json
@@ -261,6 +286,7 @@ STOUT03 10
   - resolve lot allocation
   - execute required `product_move` calls
   - collect created `movement_id` values
+  - commit transaction only after all moves succeed
 - Success result:
   - return created `movement_id` list or equivalent posted-count summary
 - On success:
@@ -312,6 +338,10 @@ STOUT03 10
   - quantity `<= 0`
   - invalid site combination for `INTERNAL_TRANSFER`
   - unresolved beer code/name
+  - `MANUAL` selected but `Lot No` missing for any valid line
+  - selected lot does not match beer/source site
+  - selected lot has insufficient available quantity
+  - backend transaction failed; no movements committed
 - Soft warnings:
   - low stock
   - many-lot split
@@ -331,3 +361,22 @@ STOUT03 10
   - keyboard-first workflow
   - route reuse
   - fast repetitive entry
+
+## Acceptance Criteria
+- FEFO/FIFO post:
+  - Given valid route and lines
+  - When user clicks `Post`
+  - Then backend allocates lots automatically and commits all movements atomically
+- MANUAL post:
+  - Given allocation policy `MANUAL`
+  - When any valid line has no lot selection
+  - Then post is blocked with line-level error
+  - When all lines have valid lot selections
+  - Then post succeeds and keeps exact selected lots
+- Route blocking:
+  - Route to `DIRECT_SALES_SHOP` must return `ROUTE_BLOCKED_DIRECT_SALES_SHOP`
+  - Route to `TAX_STORAGE` must return `ROUTE_BLOCKED_TAX_STORAGE`
+  - Unmapped route must return `ROUTE_NO_INTERNAL_TRANSFER_RULE`
+- Atomicity:
+  - If one segment fails during backend execution
+  - Then zero movement rows are committed for that post attempt

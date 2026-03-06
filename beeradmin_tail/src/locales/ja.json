@@ -1196,6 +1196,7 @@
       },
       "columns": {
         "beer": "ビール（コード / 名称）",
+        "lotNo": "ロット番号",
         "quantity": "数量(L)",
         "note": "摘要"
       },
@@ -1232,14 +1233,15 @@
         "selectSourceFirst": "移出元サイトを選択すると検索候補を読み込みます。",
         "pasteExample": "貼り付け例: IPA01 50 / PILS02 20 / STOUT03 10",
         "summary": "入力に応じてチェック結果が更新されます。",
-        "manualMode": "MANUAL のロット選択はこのページでは未実装です。FEFO/FIFO を使うか、別フローでロット選択してください。"
+        "manualMode": "MANUAL モードでは各明細でロット選択が必須です。"
       },
       "labels": {
         "stock": "在庫: {qty} L",
         "availableBeerCount": "{count} 件の候補",
         "uses": "{count} 回利用",
         "ready": "登録可能です",
-        "variesByLot": "ロットにより変動"
+        "variesByLot": "ロットにより変動",
+        "autoAllocated": "自動（バックエンド引当）"
       },
       "siteTypes": {
         "BREWERY_MANUFACTUR": "製造場",
@@ -1254,9 +1256,14 @@
         "toRequired": "移出先サイトは必須です。",
         "sameSite": "移出元サイトと移出先サイトは同じにできません。",
         "noRouteRule": "選択した経路に対応する移出ルールがありません。",
+        "routeBlockedDirectSalesShop": "直営販売店への経路はこの画面では登録できません。国内出荷フローを使用してください。",
+        "routeBlockedTaxStorage": "蔵置所への経路はこの画面では登録できません。税務専用フローを使用してください。",
         "intentRequired": "この経路に対する移出目的を選択してください。",
         "taxDecisionRequired": "税務判定コードを選択してください。",
         "manualNotImplemented": "MANUAL 引当はこのページでは未対応です。",
+        "manualLotRequired": "MANUAL モードではロット選択が必須です。",
+        "manualLotInvalid": "選択したロットはこのビール/移出元在庫で使用できません。",
+        "qtyExceedsSelectedLot": "入力数量が選択ロット在庫を超えています。",
         "beerRequired": "ビールは必須です。",
         "beerUnresolved": "ビールコード/名称を解決できませんでした。",
         "qtyPositive": "数量は 0 より大きい値を入力してください。",
@@ -1265,7 +1272,7 @@
         "taxDecisionMissing": "割当ロットの税務判定を解決できませんでした。",
         "selectedTaxDecisionUnsupported": "選択した税務判定コードは割当ロットの一部に適用できません。",
         "lineRequired": "少なくとも1件の有効明細を入力してください。",
-        "rpcUnavailable": "バックエンド関数 product_move はまだ利用できません。",
+        "rpcUnavailable": "バックエンドの登録関数が利用できません。",
         "saveFailed": "移出の登録に失敗しました。"
       },
       "warnings": {

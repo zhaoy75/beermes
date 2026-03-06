@@ -1196,6 +1196,7 @@
       },
       "columns": {
         "beer": "Beer (code / name)",
+        "lotNo": "Lot No",
         "quantity": "Quantity (L)",
         "note": "Note"
       },
@@ -1232,14 +1233,15 @@
         "selectSourceFirst": "Select a source site first to load searchable beer options.",
         "pasteExample": "Example paste: IPA01 50 / PILS02 20 / STOUT03 10",
         "summary": "Validation updates as you type.",
-        "manualMode": "Manual lot allocation is not available on this page yet. Use FEFO/FIFO or complete lot selection in a dedicated flow."
+        "manualMode": "In MANUAL mode, each line requires an explicit lot selection."
       },
       "labels": {
         "stock": "Available: {qty} L",
         "availableBeerCount": "{count} beer options",
         "uses": "{count} uses",
         "ready": "Ready to post",
-        "variesByLot": "Varies by lot"
+        "variesByLot": "Varies by lot",
+        "autoAllocated": "Auto (backend allocation)"
       },
       "siteTypes": {
         "BREWERY_MANUFACTUR": "Brewery",
@@ -1254,9 +1256,14 @@
         "toRequired": "To site is required.",
         "sameSite": "From and To site must be different.",
         "noRouteRule": "No valid movement rule exists for the selected route.",
+        "routeBlockedDirectSalesShop": "Route to direct sales shop is blocked here. Use domestic shipment flow.",
+        "routeBlockedTaxStorage": "Route to tax storage is blocked here. Use tax-specific movement flow.",
         "intentRequired": "Select a movement intent for this route.",
         "taxDecisionRequired": "Select a tax decision code.",
         "manualNotImplemented": "MANUAL allocation is not supported on this page yet.",
+        "manualLotRequired": "Select a lot in MANUAL mode.",
+        "manualLotInvalid": "Selected lot is not valid for this beer/source stock.",
+        "qtyExceedsSelectedLot": "Entered quantity exceeds selected lot stock.",
         "beerRequired": "Beer is required.",
         "beerUnresolved": "Beer code/name could not be resolved.",
         "qtyPositive": "Quantity must be greater than 0.",
@@ -1265,7 +1272,7 @@
         "taxDecisionMissing": "Could not resolve tax decision for one or more allocated lots.",
         "selectedTaxDecisionUnsupported": "The selected tax decision code is not valid for one or more allocated lots.",
         "lineRequired": "Add at least one valid line before posting.",
-        "rpcUnavailable": "Backend function product_move is not available yet.",
+        "rpcUnavailable": "Backend posting function is not available.",
         "saveFailed": "Failed to post movement."
       },
       "warnings": {

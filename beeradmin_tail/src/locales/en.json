@@ -1032,7 +1032,7 @@
   },
   "producedBeer": {
     "title": "Produced Craft Beer",
-    "subtitle": "Monitor packaged craft beer inventory and movements.",
+    "subtitle": "Monitor packaged craft beer movements.",
     "sections": {
       "inventory": "Inventory",
       "movements": "Movements"
@@ -1857,6 +1857,39 @@
         "planning": "Planning",
         "waiting": "Waiting"
       }
+      }
+    },
+  "producedBeerInventory": {
+    "title": "Beer Inventory Management",
+    "subtitle": "Review packaged beer inventory by lot and batch."
+  },
+  "inventorySearchModal": {
+    "title": "Inventory Search",
+    "subtitle": "Search packaged beer inventory across lots, batches, products, sites, and containers.",
+    "fields": {
+      "keyword": "Lot / Barcode",
+      "product": "Product",
+      "site": "Site",
+      "container": "Container"
+    },
+    "placeholders": {
+      "keyword": "Search by lot, barcode, batch code, or attributes"
+    },
+    "defaults": {
+      "allProducts": "All Products",
+      "allSites": "All Sites",
+      "allContainers": "All Containers"
+    },
+    "containers": {
+      "tank": "Tank",
+      "keg": "Keg",
+      "case": "Case"
+    },
+    "results": {
+      "count": "{count} results"
+    },
+    "shortcuts": {
+      "closeHint": "Press Esc to close"
     }
   },
   "sidebar": {
@@ -1884,6 +1917,7 @@
       "recipeList": "Recipe List",
       "batchYield": "Extract Yield",
       "inventory": "Inventory",
+      "beerInventory": "Beer Inventory Management",
       "rawMaterialReceipts": "Raw Material Receipts",
       "rawMaterialInventory": "Raw Material Inventory",
       "producedBeer": "Produced Craft Beer",

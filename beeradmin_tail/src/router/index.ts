@@ -243,6 +243,15 @@ const router = createRouter({
       },
     },
     {
+      path: '/producedBeerInventory',
+      name: 'ProducedBeerInventory',
+      component: () => import('../views/Pages/ProducedBeerInventory.vue'),
+      meta: {
+        title: 'Inventory Management',
+        requiresAuth: true,
+      },
+    },
+    {
       path: '/producedBeerMovement',
       name: 'ProducedBeerMovement',
       component: () => import('../views/Pages/ProducedBeerMovementEdit.vue'),

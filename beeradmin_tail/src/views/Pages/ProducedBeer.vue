@@ -10,85 +10,13 @@
         <div class="flex flex-wrap items-center gap-2">
           <button
             class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
-            :disabled="inventoryLoading || movementLoading"
-            @click="refreshAll"
+            :disabled="movementLoading"
+            @click="fetchMovements"
           >
             {{ t('common.refresh') }}
           </button>
         </div>
       </header>
-
-      <section class="border border-gray-200 rounded-xl shadow-sm p-4 bg-white space-y-4">
-        <header class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h2 class="text-lg font-semibold">{{ t('producedBeer.sections.inventory') }}</h2>
-            <p class="text-sm text-gray-500">{{ t('producedBeer.inventory.subtitle') }}</p>
-          </div>
-          <button
-            class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
-            :disabled="inventoryLoading"
-            @click="loadInventoryFromInventory"
-          >
-            {{ t('common.refresh') }}
-          </button>
-        </header>
-
-        <section class="overflow-x-auto border border-gray-200 rounded-lg">
-          <table class="min-w-full divide-y divide-gray-200 text-sm">
-            <thead class="bg-gray-50 text-xs uppercase text-gray-600">
-              <tr>
-                <th class="px-3 py-2 text-left">{{ t('producedBeer.inventory.table.lotNo') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('producedBeer.inventory.table.batchNo') }}</th>
-                <th class="px-3 py-2 text-left">
-                  {{ t('producedBeer.inventory.table.beerCategory') }}
-                </th>
-                <th class="px-3 py-2 text-right">
-                  {{ t('producedBeer.inventory.table.targetAbv') }}
-                </th>
-                <th class="px-3 py-2 text-left">
-                  {{ t('producedBeer.inventory.table.styleName') }}
-                </th>
-                <th class="px-3 py-2 text-left">
-                  {{ t('producedBeer.inventory.table.packageType') }}
-                </th>
-                <th class="px-3 py-2 text-left">
-                  {{ t('producedBeer.inventory.table.productionDate') }}
-                </th>
-                <th class="px-3 py-2 text-right">
-                  {{ t('producedBeer.inventory.table.qtyLiters') }}
-                </th>
-                <th class="px-3 py-2 text-right">
-                  {{ t('producedBeer.inventory.table.qtyPackages') }}
-                </th>
-                <th class="px-3 py-2 text-left">{{ t('producedBeer.inventory.table.site') }}</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-100">
-              <tr v-for="row in inventoryRows" :key="row.id" class="hover:bg-gray-50">
-                <td class="px-3 py-2 font-mono text-xs text-gray-600">{{ row.lotNo || '—' }}</td>
-                <td class="px-3 py-2 font-mono text-xs text-gray-600">
-                  {{ row.batchCode || '—' }}
-                </td>
-                <td class="px-3 py-2">{{ categoryLabel(row.beerCategoryId) }}</td>
-                <td class="px-3 py-2 text-right">{{ formatAbv(row.targetAbv) }}</td>
-                <td class="px-3 py-2">{{ row.styleName || '—' }}</td>
-                <td class="px-3 py-2">{{ row.packageTypeLabel || '—' }}</td>
-                <td class="px-3 py-2 text-xs text-gray-500">
-                  {{ formatDate(row.productionDate) }}
-                </td>
-                <td class="px-3 py-2 text-right">{{ formatNumber(row.qtyLiters) }}</td>
-                <td class="px-3 py-2 text-right">{{ formatNumber(row.qtyPackages) }}</td>
-                <td class="px-3 py-2">{{ siteLabel(row.siteId) }}</td>
-              </tr>
-              <tr v-if="!inventoryLoading && inventoryRows.length === 0">
-                <td colspan="10" class="px-3 py-8 text-center text-gray-500">
-                  {{ t('common.noData') }}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </section>
-      </section>
 
       <section class="border border-gray-200 rounded-xl shadow-sm p-4 bg-white space-y-4">
         <header class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
@@ -491,20 +419,6 @@ interface PackageCategoryRow {
   volume_uom: string | null
 }
 
-interface InventoryRow {
-  id: string
-  lotNo: string | null
-  batchCode: string | null
-  beerCategoryId: string | null
-  targetAbv: number | null
-  styleName: string | null
-  packageTypeLabel: string | null
-  productionDate: string | null
-  qtyPackages: number | null
-  qtyLiters: number | null
-  siteId: string | null
-}
-
 interface MovementHeader {
   id: string
   doc_no: string
@@ -575,15 +489,12 @@ const router = useRouter()
 const pageTitle = computed(() => t('producedBeer.title'))
 
 const tenantId = ref<string | null>(null)
-const inventoryLoading = ref(false)
 const movementLoading = ref(false)
 
 const categories = ref<CategoryRow[]>([])
 const packageCategories = ref<PackageCategoryRow[]>([])
 const uoms = ref<Array<{ id: string; code: string | null }>>([])
 const siteOptions = ref<SiteOption[]>([])
-
-const inventoryRows = ref<InventoryRow[]>([])
 
 const movementCards = ref<MovementCard[]>([])
 const movementView = ref<'list' | 'card'>('list')
@@ -987,145 +898,6 @@ async function loadSites() {
   siteOptions.value = (data ?? []).map((row) => ({ value: row.id, label: row.name ?? row.id }))
 }
 
-async function loadInventoryFromInventory() {
-  try {
-    inventoryLoading.value = true
-    const tenant = await ensureTenant()
-    const { data, error } = await supabase
-      .from('inv_inventory')
-      .select('id, site_id, lot_id, qty, uom_id')
-      .eq('tenant_id', tenant)
-      .gt('qty', 0)
-      .order('created_at', { ascending: false })
-    if (error) throw error
-
-    const inventory = data ?? []
-    if (!inventory.length) {
-      inventoryRows.value = []
-      return
-    }
-
-    const lotIds = Array.from(new Set(inventory.map((row: any) => row.lot_id).filter(Boolean)))
-    if (!lotIds.length) {
-      inventoryRows.value = []
-      return
-    }
-
-    const { data: lots, error: lotError } = await supabase
-      .from('lot')
-      .select('id, lot_no, batch_id, package_id, produced_at, status')
-      .eq('tenant_id', tenant)
-      .in('id', lotIds)
-    if (lotError) throw lotError
-
-    const lotMap = new Map<string, any>()
-    ;(lots ?? []).forEach((row: any) => {
-      if (row.status !== 'void') lotMap.set(row.id, row)
-    })
-    if (lotMap.size === 0) {
-      inventoryRows.value = []
-      return
-    }
-
-    const packageIds = Array.from(
-      new Set(
-        Array.from(lotMap.values())
-          .map((row: any) => row.package_id)
-          .filter(Boolean),
-      ),
-    )
-    const batchIds = Array.from(
-      new Set(
-        Array.from(lotMap.values())
-          .map((row: any) => row.batch_id)
-          .filter(Boolean),
-      ),
-    )
-
-    const packageInfoMap = await loadPackageInfo(packageIds)
-    const batchInfoMap = await loadBatchInfo(batchIds)
-
-    type InventoryAccumulator = {
-      key: string
-      siteId: string
-      lotNo: string | null
-      batchCode: string | null
-      beerCategoryId: string | null
-      targetAbv: number | null
-      styleName: string | null
-      packageTypeLabel: string | null
-      productionDate: string | null
-      qtyPackages: number
-      qtyLiters: number
-    }
-
-    const accum = new Map<string, InventoryAccumulator>()
-
-    inventory.forEach((row: any) => {
-      const lot = lotMap.get(row.lot_id)
-      if (!lot) return
-
-      const siteId = row.site_id as string | null
-      if (!siteId) return
-
-      const pkgInfo = lot.package_id ? packageInfoMap.get(lot.package_id) : undefined
-      const batchInfo = lot.batch_id ? batchInfoMap.get(lot.batch_id) : undefined
-      const inventoryQty = toNumber(row.qty)
-      if (inventoryQty == null || inventoryQty <= 0) return
-
-      const inventoryUomCode = row.uom_id ? (uomMap.value.get(row.uom_id) ?? null) : null
-      const qtyLiters = convertToLiters(inventoryQty, inventoryUomCode) ?? 0
-      const unitSizeLiters = pkgInfo?.unitSizeLiters ?? null
-      const qtyPackages =
-        unitSizeLiters != null && unitSizeLiters > 0 ? qtyLiters / unitSizeLiters : 0
-
-      const key = `${siteId}__${lot.id}`
-      if (!accum.has(key)) {
-        accum.set(key, {
-          key,
-          siteId,
-          lotNo: lot.lot_no ?? null,
-          batchCode: pkgInfo?.batchCode ?? batchInfo?.batchCode ?? null,
-          beerCategoryId: batchInfo?.beerCategoryId ?? null,
-          targetAbv: batchInfo?.targetAbv ?? null,
-          styleName: batchInfo?.styleName ?? null,
-          packageTypeLabel: pkgInfo?.packageTypeLabel ?? null,
-          productionDate: lot.produced_at ?? null,
-          qtyPackages: 0,
-          qtyLiters: 0,
-        })
-      }
-
-      const entry = accum.get(key)
-      if (!entry) return
-      entry.qtyLiters += qtyLiters
-      entry.qtyPackages += qtyPackages
-      if (!entry.productionDate && lot.produced_at) entry.productionDate = lot.produced_at
-    })
-
-    inventoryRows.value = Array.from(accum.values())
-      .filter((row) => row.qtyLiters > 0 || row.qtyPackages > 0)
-      .map((row) => ({
-        id: row.key,
-        lotNo: row.lotNo,
-        batchCode: row.batchCode,
-        beerCategoryId: row.beerCategoryId,
-        targetAbv: row.targetAbv,
-        styleName: row.styleName,
-        packageTypeLabel: row.packageTypeLabel,
-        productionDate: row.productionDate,
-        qtyPackages: row.qtyPackages > 0 ? row.qtyPackages : null,
-        qtyLiters: row.qtyLiters > 0 ? row.qtyLiters : null,
-        siteId: row.siteId,
-      }))
-  } catch (err) {
-    console.error(err)
-    toast.error(err instanceof Error ? err.message : String(err))
-  } finally {
-    inventoryLoading.value = false
-  }
-}
-
 async function fetchMovements() {
   try {
     movementLoading.value = true
@@ -1413,10 +1185,6 @@ function openMovementEdit(card: MovementCard) {
   router.push({ path: '/producedBeerMovement', query: { id: card.id } })
 }
 
-async function refreshAll() {
-  await Promise.all([loadInventoryFromInventory(), fetchMovements()])
-}
-
 watch(
   () => ({
     dateFrom: movementFilters.dateFrom,
@@ -1432,7 +1200,6 @@ onMounted(async () => {
   try {
     await ensureTenant()
     await Promise.all([loadSites(), loadCategories(), loadPackageCategories(), loadUoms()])
-    await loadInventoryFromInventory()
     await fetchMovements()
   } catch (err) {
     console.error(err)

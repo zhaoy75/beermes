@@ -1032,7 +1032,7 @@
   },
   "producedBeer": {
     "title": "移出記録",
-    "subtitle": "製品ビールの在庫と移出を管理します。",
+    "subtitle": "製品ビールの移出を管理します。",
     "sections": {
       "inventory": "在庫",
       "movements": "移出"
@@ -1856,6 +1856,39 @@
         "planning": "計画中",
         "waiting": "調整中"
       }
+      }
+    },
+  "producedBeerInventory": {
+    "title": "ビール在庫管理",
+    "subtitle": "製品ビール在庫をロット・バッチ別に確認します。"
+  },
+  "inventorySearchModal": {
+    "title": "在庫検索",
+    "subtitle": "ロット、バッチ、製品、サイト、容器から在庫を横断検索します。",
+    "fields": {
+      "keyword": "Lot / Barcode",
+      "product": "Product",
+      "site": "Site",
+      "container": "Container"
+    },
+    "placeholders": {
+      "keyword": "ロット番号、バーコード、バッチコードなどで検索"
+    },
+    "defaults": {
+      "allProducts": "すべての製品",
+      "allSites": "All Sites",
+      "allContainers": "すべての容器"
+    },
+    "containers": {
+      "tank": "Tank",
+      "keg": "Keg",
+      "case": "Case"
+    },
+    "results": {
+      "count": "{count}件"
+    },
+    "shortcuts": {
+      "closeHint": "Esc で閉じる"
     }
   },
   "sidebar": {
@@ -1883,6 +1916,7 @@
       "recipeRegister": "レシピ登録",
       "recipeList": "レシピ管理",
       "inventory": "在庫管理",
+      "beerInventory": "ビール在庫管理",
       "rawMaterialReceipts": "原材料受入",
       "rawMaterialInventory": "原材料在庫",
       "producedBeer": "移出記録",

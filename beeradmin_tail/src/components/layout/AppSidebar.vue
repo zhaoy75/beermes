@@ -380,6 +380,13 @@ const menuGroups = computed(() => [
           // { name: t('sidebar.items.waste'), path: "/waste", pro: false },
         ],
       },
+      {
+        icon: CalenderIcon,
+        name: t('sidebar.items.inventory'),
+        subItems: [
+          { name: t('sidebar.items.beerInventory'), path: "/producedBeerInventory", pro: false },
+        ],
+      },
       // {
       //   icon: CalenderIcon,
       //   name: t('sidebar.items.producedBeer'),

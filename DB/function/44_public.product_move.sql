@@ -20,6 +20,7 @@ declare
   v_src_lot_id uuid;
   v_qty numeric;
   v_unit numeric;
+  v_tax_rate numeric;
   v_uom_id uuid;
   v_movement_intent text;
   v_tax_decision_code text;
@@ -79,11 +80,12 @@ begin
   v_src_lot_id := nullif(p_doc ->> 'src_lot_id', '')::uuid;
   v_qty := coalesce((p_doc ->> 'qty')::numeric, 0);
   v_unit := nullif(btrim(coalesce(p_doc ->> 'unit', '')), '')::numeric;
+  v_meta := coalesce(p_doc -> 'meta', '{}'::jsonb);
+  v_tax_rate := nullif(btrim(coalesce(p_doc ->> 'tax_rate', v_meta ->> 'tax_rate', '')), '')::numeric;
   v_uom_id := nullif(p_doc ->> 'uom_id', '')::uuid;
   v_tax_decision_code := nullif(btrim(coalesce(p_doc ->> 'tax_decision_code', '')), '');
   v_reason := nullif(p_doc ->> 'reason', '');
   v_notes := nullif(p_doc ->> 'notes', '');
-  v_meta := coalesce(p_doc -> 'meta', '{}'::jsonb);
   v_idempotency_key := nullif(btrim(coalesce(v_meta ->> 'idempotency_key', '')), '');
 
   if v_movement_intent is null
@@ -101,6 +103,10 @@ begin
 
   if v_unit is not null and v_unit <= 0 then
     raise exception 'PM002: unit must be greater than 0';
+  end if;
+
+  if v_tax_rate is not null and v_tax_rate < 0 then
+    raise exception 'PM002: tax_rate must be greater than or equal to 0';
   end if;
 
   select r.spec
@@ -389,7 +395,7 @@ begin
 
   insert into public.inv_movement_lines (
     tenant_id, movement_id, line_no,
-    material_id, package_id, batch_id, qty, unit, uom_id, notes, meta
+    material_id, package_id, batch_id, qty, unit, tax_rate, uom_id, notes, meta
   ) values (
     v_tenant,
     v_movement_id,
@@ -399,6 +405,7 @@ begin
     v_source_batch_id,
     v_qty,
     v_unit,
+    v_tax_rate,
     v_uom_id,
     v_notes,
     jsonb_build_object(

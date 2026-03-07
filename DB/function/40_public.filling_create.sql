@@ -74,7 +74,7 @@ begin
     insert into public.inv_movement_lines (
       tenant_id, movement_id, line_no,
       material_id, package_id, batch_id, lot_id,
-      qty, uom_id, notes, meta
+      qty, unit, tax_rate, uom_id, notes, meta
     ) values (
       v_tenant,
       v_movement_id,
@@ -84,6 +84,8 @@ begin
       nullif(v_line ->> 'batch_id', '')::uuid,
       nullif(v_line ->> 'lot_id', '')::uuid,
       coalesce((v_line ->> 'qty')::numeric, 0),
+      nullif(btrim(coalesce(v_line ->> 'unit', '')), '')::numeric,
+      nullif(btrim(coalesce(v_line ->> 'tax_rate', v_line -> 'meta' ->> 'tax_rate', '')), '')::numeric,
       (v_line ->> 'uom_id')::uuid,
       v_line ->> 'notes',
       coalesce(v_line -> 'meta', '{}'::jsonb)

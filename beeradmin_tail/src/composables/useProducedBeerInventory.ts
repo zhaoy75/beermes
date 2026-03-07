@@ -14,6 +14,7 @@ interface CategoryRow {
 interface SiteOption {
   value: string
   label: string
+  ownerType: string | null
 }
 
 interface PackageCategoryRow {
@@ -33,6 +34,7 @@ interface InventoryRow {
   targetAbv: number | null
   styleName: string | null
   productName: string | null
+  packageId: string | null
   packageTypeLabel: string | null
   packageCode: string | null
   packageBarcode: string | null
@@ -45,6 +47,7 @@ interface InventoryRow {
 }
 
 interface PackageInfo {
+  packageId: string
   packageTypeLabel: string | null
   packageCode: string | null
   packageBarcode: string | null
@@ -106,6 +109,12 @@ export function useProducedBeerInventory() {
     return map
   })
 
+  const ownedSiteOptions = computed(() =>
+    siteOptions.value
+      .filter((item) => item.ownerType === 'OWN')
+      .map((item) => ({ value: item.value, label: item.label })),
+  )
+
   const categoryMap = computed(() => {
     const map = new Map<string, CategoryRow>()
     categories.value.forEach((row) => map.set(row.def_id, row))
@@ -145,6 +154,13 @@ export function useProducedBeerInventory() {
     uoms.value.forEach((row) => map.set(row.id, row.code ?? ''))
     return map
   })
+
+  const packageOptions = computed(() =>
+    packageCategories.value.map((row) => ({
+      value: row.id,
+      label: resolvePackageName(row) || row.package_code || row.id,
+    })),
+  )
 
   const numberFormatter = computed(
     () => new Intl.NumberFormat(locale.value, { maximumFractionDigits: 2 }),
@@ -294,11 +310,15 @@ export function useProducedBeerInventory() {
     const tenant = await ensureTenant()
     const { data, error } = await supabase
       .from('mst_sites')
-      .select('id, name')
+      .select('id, name, owner_type')
       .eq('tenant_id', tenant)
       .order('name', { ascending: true })
     if (error) throw error
-    siteOptions.value = (data ?? []).map((row) => ({ value: row.id, label: row.name ?? row.id }))
+    siteOptions.value = (data ?? []).map((row) => ({
+      value: row.id,
+      label: row.name ?? row.id,
+      ownerType: row.owner_type ?? null,
+    }))
   }
 
   async function loadPackageInfo(packageIds: string[]) {
@@ -310,6 +330,7 @@ export function useProducedBeerInventory() {
       const uomCode = category?.uomId ? uomMap.value.get(category.uomId) : null
       const unitSizeLiters = category?.size != null ? convertToLiters(category.size, uomCode) : null
       infoMap.set(id, {
+        packageId: id,
         packageTypeLabel: category?.label ?? null,
         packageCode: category?.packageCode ?? null,
         packageBarcode: category?.packageBarcode ?? null,
@@ -549,6 +570,7 @@ export function useProducedBeerInventory() {
         targetAbv: number | null
         styleName: string | null
         productName: string | null
+        packageId: string | null
         packageTypeLabel: string | null
         packageCode: string | null
         packageBarcode: string | null
@@ -604,6 +626,7 @@ export function useProducedBeerInventory() {
             targetAbv: batchInfo?.targetAbv ?? null,
             styleName: batchInfo?.styleName ?? null,
             productName: batchInfo?.productName ?? null,
+            packageId: pkgInfo?.packageId ?? null,
             packageTypeLabel: pkgInfo?.packageTypeLabel ?? null,
             packageCode: pkgInfo?.packageCode ?? null,
             packageBarcode: pkgInfo?.packageBarcode ?? null,
@@ -632,6 +655,7 @@ export function useProducedBeerInventory() {
           targetAbv: row.targetAbv,
           styleName: row.styleName,
           productName: row.productName,
+          packageId: row.packageId,
           packageTypeLabel: row.packageTypeLabel,
           packageCode: row.packageCode,
           packageBarcode: row.packageBarcode,
@@ -666,6 +690,8 @@ export function useProducedBeerInventory() {
     inventoryLoading,
     inventoryRows,
     loadInventory,
+    ownedSiteOptions,
+    packageOptions,
     siteLabel,
     siteOptions,
   }

@@ -1864,25 +1864,20 @@
   },
   "inventorySearchModal": {
     "title": "在庫検索",
-    "subtitle": "ロット、バッチ、製品、サイト、容器から在庫を横断検索します。",
+    "subtitle": "ロット、バッチ、製品、サイト、パッケージから在庫を横断検索します。",
     "fields": {
-      "keyword": "Lot / Barcode",
-      "product": "Product",
-      "site": "Site",
-      "container": "Container"
+      "keyword": "キーワード",
+      "product": "製品",
+      "site": "サイト",
+      "package": "パッケージ"
     },
     "placeholders": {
       "keyword": "ロット番号、バーコード、バッチコードなどで検索"
     },
     "defaults": {
       "allProducts": "すべての製品",
-      "allSites": "All Sites",
-      "allContainers": "すべての容器"
-    },
-    "containers": {
-      "tank": "Tank",
-      "keg": "Keg",
-      "case": "Case"
+      "allSites": "すべての自社サイト",
+      "allPackages": "すべてのパッケージ"
     },
     "results": {
       "count": "{count}件"

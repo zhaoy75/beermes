@@ -52,13 +52,10 @@
 - `Site`
   - select dropdown
   - default option: `All Sites`
-- `Container`
+- `Package`
   - select dropdown
-  - default option: all containers
-  - supported visible options in first version:
-    - `Tank`
-    - `Keg`
-    - `Case`
+  - default option: all package
+  - package list from mst_package
 
 ### Layout
 - Show the form above the result grid.
@@ -80,6 +77,7 @@
   - Site
 - Empty-state behavior should match the current inventory page pattern.
 - The grid should update from the active filter state.
+- The grid can be sort by each column
 
 ## Data Contract
 - Base the result set on the same produced beer inventory source used by `ProducedBeerInventory`.
@@ -87,26 +85,22 @@
   - lot
   - batch
   - category
-  - package/container
+  - package
   - production date
   - site
 - The first version may use client-side filtering on top of the current produced beer inventory dataset if performance is acceptable.
 
 ## Filter Semantics
-- `Lot / Barcode`
+- `Keyword`
   - matches lot number
   - should also support barcode-compatible identifiers when such values are available in the inventory source
 - `Product`
   - filters by produced beer / batch product label
 - `Site`
   - filters by site id/name selection
-- `Container`
-  - filters inventory rows into user-facing groups:
-    - `Tank`
-    - `Keg`
-    - `Case`
-- If container mapping is not directly available from current package metadata, define a deterministic mapping rule during implementation and document it in code.
-
+- `Package`
+  - filters inventory rows into package:
+  
 ## Implementation Direction
 - Preferred placement:
   - shortcut state and modal host in a shared layout-level component used by `AdminLayout`

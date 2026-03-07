@@ -12,12 +12,19 @@ create table if not exists public.inv_movement_lines (
   batch_id uuid,                                    -- FK to mes_batches (if defined)
   qty numeric not null check (qty > 0),
   unit numeric,
+  tax_rate numeric,
   uom_id uuid not null,                           -- FK to mst_uom
   notes text,
   meta jsonb default '{}'::jsonb,
   unique (tenant_id, movement_id, line_no),
   constraint inv_mov_line_has_item check (material_id is not null or package_id is not null)
 );
+
+alter table public.inv_movement_lines
+  add column if not exists unit numeric;
+
+alter table public.inv_movement_lines
+  add column if not exists tax_rate numeric;
 
 create index if not exists idx_inv_mov_lines_movement
   on public.inv_movement_lines (movement_id);

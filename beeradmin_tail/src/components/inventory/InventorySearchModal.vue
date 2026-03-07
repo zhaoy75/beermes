@@ -77,7 +77,11 @@
                     class="h-[40px] w-full rounded border border-gray-300 bg-white px-3"
                   >
                     <option value="">{{ t('inventorySearchModal.defaults.allSites') }}</option>
-                    <option v-for="option in siteOptions" :key="option.value" :value="option.value">
+                    <option
+                      v-for="option in ownedSiteOptions"
+                      :key="option.value"
+                      :value="option.value"
+                    >
                       {{ option.label }}
                     </option>
                   </select>
@@ -85,18 +89,14 @@
 
                 <div>
                   <label class="mb-1 block text-sm text-gray-600">
-                    {{ t('inventorySearchModal.fields.container') }}
+                    {{ t('inventorySearchModal.fields.package') }}
                   </label>
                   <select
-                    v-model="filters.container"
+                    v-model="filters.packageId"
                     class="h-[40px] w-full rounded border border-gray-300 bg-white px-3"
                   >
-                    <option value="">{{ t('inventorySearchModal.defaults.allContainers') }}</option>
-                    <option
-                      v-for="option in containerOptions"
-                      :key="option.value"
-                      :value="option.value"
-                    >
+                    <option value="">{{ t('inventorySearchModal.defaults.allPackages') }}</option>
+                    <option v-for="option in packageOptions" :key="option.value" :value="option.value">
                       {{ option.label }}
                     </option>
                   </select>
@@ -107,7 +107,7 @@
             <section class="space-y-3">
               <div class="flex items-center justify-between gap-3">
                 <p class="text-sm text-gray-500">
-                  {{ t('inventorySearchModal.results.count', { count: filteredRows.length }) }}
+                  {{ t('inventorySearchModal.results.count', { count: sortedRows.length }) }}
                 </p>
                 <button
                   class="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
@@ -123,31 +123,55 @@
                 <table class="min-w-full divide-y divide-gray-200 text-sm">
                   <thead class="bg-gray-50 text-xs uppercase text-gray-600">
                     <tr>
-                      <th class="px-3 py-2 text-left">{{ t('producedBeer.inventory.table.lotNo') }}</th>
-                      <th class="px-3 py-2 text-left">{{ t('producedBeer.inventory.table.batchNo') }}</th>
                       <th class="px-3 py-2 text-left">
-                        {{ t('producedBeer.inventory.table.beerCategory') }}
+                        <button class="font-medium" type="button" @click="toggleSort('lotNo')">
+                          {{ t('producedBeer.inventory.table.lotNo') }} {{ sortIndicator('lotNo') }}
+                        </button>
+                      </th>
+                      <th class="px-3 py-2 text-left">
+                        <button class="font-medium" type="button" @click="toggleSort('batchCode')">
+                          {{ t('producedBeer.inventory.table.batchNo') }} {{ sortIndicator('batchCode') }}
+                        </button>
+                      </th>
+                      <th class="px-3 py-2 text-left">
+                        <button class="font-medium" type="button" @click="toggleSort('beerCategory')">
+                          {{ t('producedBeer.inventory.table.beerCategory') }} {{ sortIndicator('beerCategory') }}
+                        </button>
                       </th>
                       <th class="px-3 py-2 text-right">
-                        {{ t('producedBeer.inventory.table.targetAbv') }}
+                        <button class="font-medium" type="button" @click="toggleSort('targetAbv')">
+                          {{ t('producedBeer.inventory.table.targetAbv') }} {{ sortIndicator('targetAbv') }}
+                        </button>
                       </th>
                       <th class="px-3 py-2 text-left">
-                        {{ t('producedBeer.inventory.table.styleName') }}
+                        <button class="font-medium" type="button" @click="toggleSort('styleName')">
+                          {{ t('producedBeer.inventory.table.styleName') }} {{ sortIndicator('styleName') }}
+                        </button>
                       </th>
                       <th class="px-3 py-2 text-left">
-                        {{ t('producedBeer.inventory.table.packageType') }}
+                        <button class="font-medium" type="button" @click="toggleSort('packageType')">
+                          {{ t('producedBeer.inventory.table.packageType') }} {{ sortIndicator('packageType') }}
+                        </button>
                       </th>
                       <th class="px-3 py-2 text-left">
-                        {{ t('producedBeer.inventory.table.productionDate') }}
+                        <button class="font-medium" type="button" @click="toggleSort('productionDate')">
+                          {{ t('producedBeer.inventory.table.productionDate') }} {{ sortIndicator('productionDate') }}
+                        </button>
                       </th>
                       <th class="px-3 py-2 text-right">
-                        {{ t('producedBeer.inventory.table.qtyLiters') }}
+                        <button class="font-medium" type="button" @click="toggleSort('qtyLiters')">
+                          {{ t('producedBeer.inventory.table.qtyLiters') }} {{ sortIndicator('qtyLiters') }}
+                        </button>
                       </th>
                       <th class="px-3 py-2 text-right">
-                        {{ t('producedBeer.inventory.table.qtyPackages') }}
+                        <button class="font-medium" type="button" @click="toggleSort('qtyPackages')">
+                          {{ t('producedBeer.inventory.table.qtyPackages') }} {{ sortIndicator('qtyPackages') }}
+                        </button>
                       </th>
                       <th class="px-3 py-2 text-left">
-                        {{ t('producedBeer.inventory.table.site') }}
+                        <button class="font-medium" type="button" @click="toggleSort('site')">
+                          {{ t('producedBeer.inventory.table.site') }} {{ sortIndicator('site') }}
+                        </button>
                       </th>
                     </tr>
                   </thead>
@@ -157,12 +181,12 @@
                         {{ t('common.loading') }}
                       </td>
                     </tr>
-                    <tr v-else-if="filteredRows.length === 0">
+                    <tr v-else-if="sortedRows.length === 0">
                       <td colspan="10" class="px-3 py-8 text-center text-gray-500">
                         {{ t('common.noData') }}
                       </td>
                     </tr>
-                    <tr v-for="row in filteredRows" v-else :key="row.id" class="hover:bg-gray-50">
+                    <tr v-for="row in sortedRows" v-else :key="row.id" class="hover:bg-gray-50">
                       <td class="px-3 py-2 font-mono text-xs text-gray-600">
                         {{ row.lotNo || '—' }}
                       </td>
@@ -208,7 +232,25 @@ const filters = reactive({
   keyword: '',
   product: '',
   site: '',
-  container: '',
+  packageId: '',
+})
+
+const sortState = reactive<{
+  key:
+    | 'lotNo'
+    | 'batchCode'
+    | 'beerCategory'
+    | 'targetAbv'
+    | 'styleName'
+    | 'packageType'
+    | 'productionDate'
+    | 'qtyLiters'
+    | 'qtyPackages'
+    | 'site'
+  direction: 'asc' | 'desc'
+}>({
+  key: 'productionDate',
+  direction: 'desc',
 })
 
 const {
@@ -220,15 +262,10 @@ const {
   inventoryLoading,
   inventoryRows,
   loadInventory,
+  ownedSiteOptions,
+  packageOptions,
   siteLabel,
-  siteOptions,
 } = useProducedBeerInventory()
-
-const containerOptions = computed(() => [
-  { value: 'tank', label: t('inventorySearchModal.containers.tank') },
-  { value: 'keg', label: t('inventorySearchModal.containers.keg') },
-  { value: 'case', label: t('inventorySearchModal.containers.case') },
-])
 
 function productFilterValue(row: (typeof inventoryRows.value)[number]) {
   return row.productName || row.styleName || row.batchCode || row.lotNo || ''
@@ -260,10 +297,68 @@ const filteredRows = computed(() => {
     if (keyword && !row.keywordIndex.includes(keyword)) return false
     if (filters.product && productFilterValue(row) !== filters.product) return false
     if (filters.site && row.siteId !== filters.site) return false
-    if (filters.container && row.containerKind !== filters.container) return false
+    if (filters.packageId && row.packageId !== filters.packageId) return false
     return true
   })
 })
+
+function normalizeString(value: string | null | undefined) {
+  return (value ?? '').toLowerCase()
+}
+
+function compareValues(a: string | number, b: string | number) {
+  if (typeof a === 'number' && typeof b === 'number') return a - b
+  return String(a).localeCompare(String(b))
+}
+
+function sortValue(
+  row: (typeof inventoryRows.value)[number],
+  key: (typeof sortState)['key'],
+): string | number {
+  switch (key) {
+    case 'lotNo':
+      return normalizeString(row.lotNo)
+    case 'batchCode':
+      return normalizeString(row.batchCode)
+    case 'beerCategory':
+      return normalizeString(categoryLabel(row.beerCategoryId))
+    case 'targetAbv':
+      return row.targetAbv ?? Number.NEGATIVE_INFINITY
+    case 'styleName':
+      return normalizeString(row.styleName || row.productName)
+    case 'packageType':
+      return normalizeString(row.packageTypeLabel)
+    case 'productionDate':
+      return row.productionDate ? Date.parse(row.productionDate) : Number.NEGATIVE_INFINITY
+    case 'qtyLiters':
+      return row.qtyLiters ?? Number.NEGATIVE_INFINITY
+    case 'qtyPackages':
+      return row.qtyPackages ?? Number.NEGATIVE_INFINITY
+    case 'site':
+      return normalizeString(siteLabel(row.siteId))
+  }
+}
+
+const sortedRows = computed(() =>
+  [...filteredRows.value].sort((a, b) => {
+    const result = compareValues(sortValue(a, sortState.key), sortValue(b, sortState.key))
+    return sortState.direction === 'asc' ? result : -result
+  }),
+)
+
+function toggleSort(key: (typeof sortState)['key']) {
+  if (sortState.key === key) {
+    sortState.direction = sortState.direction === 'asc' ? 'desc' : 'asc'
+    return
+  }
+  sortState.key = key
+  sortState.direction = key === 'productionDate' ? 'desc' : 'asc'
+}
+
+function sortIndicator(key: (typeof sortState)['key']) {
+  if (sortState.key !== key) return ''
+  return sortState.direction === 'asc' ? '^' : 'v'
+}
 
 async function focusFirstField() {
   await nextTick()

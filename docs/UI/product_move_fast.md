@@ -288,6 +288,7 @@ STOUT03 10
   "dst_site": "22222222-2222-2222-2222-222222222222",
   "src_lot_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
   "qty": 30.0,
+  "tax_rate": 0.1,
   "uom_id": "44444444-4444-4444-4444-444444444444",
   "tax_decision_code": "NON_TAXABLE_REMOVAL",
   "movement_at": "2026-03-03T12:00:00+09:00",

@@ -38,18 +38,6 @@ const isInventorySearchOpen = ref(false)
 const inventorySearchModalRef = ref<InventorySearchModalExposed | null>(null)
 const previouslyFocusedElement = ref<HTMLElement | null>(null)
 
-function isEditableTarget(target: EventTarget | null) {
-  const element = target as HTMLElement | null
-  if (!element) return false
-  const tagName = element.tagName
-  return (
-    tagName === 'INPUT' ||
-    tagName === 'TEXTAREA' ||
-    tagName === 'SELECT' ||
-    element.isContentEditable
-  )
-}
-
 async function focusInventorySearch() {
   await nextTick()
   await inventorySearchModalRef.value?.focusFirstField?.()
@@ -80,7 +68,6 @@ function handleGlobalKeydown(event: KeyboardEvent) {
     !event.shiftKey
 
   if (isShortcut) {
-    if (!isInventorySearchOpen.value && isEditableTarget(event.target)) return
     event.preventDefault()
     openInventorySearch().catch?.(() => undefined)
     return

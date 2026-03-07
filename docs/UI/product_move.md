@@ -139,6 +139,7 @@ Validation Rules (Dynamic)
 Data Handling
 --------------------------------------------------
 when Post button is clicked, call rpc public.product_move
+- rpc payload may include optional `unit` and `tax_rate`; `tax_rate` must be non-negative when provided
 
 
 --------------------------------------------------

@@ -1865,25 +1865,20 @@
   },
   "inventorySearchModal": {
     "title": "Inventory Search",
-    "subtitle": "Search packaged beer inventory across lots, batches, products, sites, and containers.",
+    "subtitle": "Search packaged beer inventory across lots, batches, products, sites, and packages.",
     "fields": {
-      "keyword": "Lot / Barcode",
+      "keyword": "Keyword",
       "product": "Product",
       "site": "Site",
-      "container": "Container"
+      "package": "Package"
     },
     "placeholders": {
       "keyword": "Search by lot, barcode, batch code, or attributes"
     },
     "defaults": {
       "allProducts": "All Products",
-      "allSites": "All Sites",
-      "allContainers": "All Containers"
-    },
-    "containers": {
-      "tank": "Tank",
-      "keg": "Keg",
-      "case": "Case"
+      "allSites": "All Own Sites",
+      "allPackages": "All Packages"
     },
     "results": {
       "count": "{count} results"

@@ -255,6 +255,7 @@ Warnings:
 - For `product_filling` payload `lines[]`:
   - include only filling lines where `sample_flg = false`
   - exclude all lines where `sample_flg = true` (sample is not inventory)
+  - include `unit` and `tax_rate` when those values are available for the packed line
 - If not found, show error: `product_produce must be executed first`
 - UI must not insert/update `inv_movements`, `inv_movement_lines`, `lot`, `lot_edge` directly
 
@@ -276,6 +277,8 @@ Warnings:
       "line_no": 1,
       "package_id": "...",
       "qty": 120,
+      "unit": 240,
+      "tax_rate": 0.1,
       "lot_no": "BATCH20260218_001"
     }
   ]
@@ -290,12 +293,14 @@ Warnings:
 ### Transfer (社内非納税移出) save rule
 - UI must call stored function `public.product_move(p_doc jsonb)`
 - `movement_intent` must be `INTERNAL_TRANSFER`
+- include `tax_rate` when the selected route/document carries a line tax rate
 - UI must not insert/update `inv_movements`, `inv_movement_lines`, `lot`, `lot_edge` directly
 
 ### Ship (社外非納税移出) save rule
 - UI must call stored function `public.product_move(p_doc jsonb)`
 - `movement_intent` must be `SHIP_DOMESTIC`
 - `tax_decision_code` must be `NON_TAXABLE_REMOVAL`
+- include `tax_rate` when the selected route/document carries a line tax rate
 - UI must not insert/update `inv_movements`, `inv_movement_lines`, `lot`, `lot_edge` directly
 
 ## Suggested Payload Structure

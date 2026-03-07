@@ -306,7 +306,7 @@ begin
 
     insert into public.inv_movement_lines (
       tenant_id, movement_id, line_no,
-      material_id, package_id, batch_id, qty, unit, uom_id, notes, meta
+      material_id, package_id, batch_id, qty, unit, tax_rate, uom_id, notes, meta
     ) values (
       v_tenant,
       v_movement_id,
@@ -316,6 +316,7 @@ begin
       v_batch_id,
       v_line_qty,
       v_line_unit,
+      nullif(btrim(coalesce(v_line ->> 'tax_rate', v_line -> 'meta' ->> 'tax_rate', '')), '')::numeric,
       v_uom_id,
       v_line_notes,
       v_line_meta
@@ -359,7 +360,7 @@ begin
 
     insert into public.inv_movement_lines (
       tenant_id, movement_id, line_no,
-      material_id, package_id, batch_id, qty, unit, uom_id, notes, meta
+      material_id, package_id, batch_id, qty, unit, tax_rate, uom_id, notes, meta
     ) values (
       v_tenant,
       v_movement_id,
@@ -368,6 +369,7 @@ begin
       null,
       v_batch_id,
       v_loss_qty,
+      null,
       null,
       v_uom_id,
       v_notes,

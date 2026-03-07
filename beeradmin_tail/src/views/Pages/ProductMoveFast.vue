@@ -1457,21 +1457,22 @@ function selectQuickBeer(option: BeerOption) {
   nextTick(() => focusQuickAmountInput())
 }
 
-function resolveQuickBeerOption() {
+function resolveQuickBeerOptions() {
   if (quickEntry.beerKey) {
     const selected = beerOptionByKey.value.get(quickEntry.beerKey)
-    if (selected) return selected
+    if (selected) return [selected]
   }
   const keyword = quickEntry.keyword.trim().toLowerCase()
-  if (!keyword) return null
-  const exact = beerOptions.value.find((option) => {
+  if (!keyword) return [] as BeerOption[]
+  const exact = beerOptions.value.filter((option) => {
     return (
       option.beerCode.toLowerCase() === keyword ||
       option.beerName.toLowerCase() === keyword ||
       displayBeerOption(option).toLowerCase() === keyword
     )
   })
-  return exact ?? quickKeywordSuggestions.value[0] ?? null
+  if (exact.length) return exact
+  return beerOptions.value.filter((option) => option.searchIndex.includes(keyword))
 }
 
 function roundQty(value: number) {
@@ -1499,16 +1500,15 @@ function resolveRequestedVolumeLiters() {
 }
 
 function appendAllocatedRows(
-  option: BeerOption,
-  allocations: Array<{ lot: BeerLotOption; qtyLiters: number }>,
+  allocations: Array<{ option: BeerOption; lot: BeerLotOption; qtyLiters: number }>,
 ) {
   const existing = lineRows.value.filter(
     (row) => row.searchText.trim() || row.selectedLotId || row.qtyText.trim() || row.note.trim(),
   )
   const appended = allocations.map((allocation) => {
     const row = createEmptyRow()
-    row.searchText = displayBeerOption(option)
-    row.beerKey = option.key
+    row.searchText = displayBeerOption(allocation.option)
+    row.beerKey = allocation.option.key
     row.selectedLotId = allocation.lot.lotId
     row.qtyText = String(roundQty(allocation.qtyLiters))
     row.note = ''
@@ -1518,13 +1518,24 @@ function appendAllocatedRows(
   ensureTrailingRows()
 }
 
+function draftedQtyByLotId() {
+  const reserved = new Map<string, number>()
+  lineRows.value.forEach((row) => {
+    if (!row.selectedLotId) return
+    const qty = toNumber(row.qtyText)
+    if (qty == null || qty <= 0) return
+    reserved.set(row.selectedLotId, (reserved.get(row.selectedLotId) ?? 0) + qty)
+  })
+  return reserved
+}
+
 function addLineFromQuickEntry() {
   if (!routeForm.fromSiteId) {
     toast.error(t('producedBeer.movementFast.errors.sourceSiteRequiredForLine'))
     return
   }
-  const option = resolveQuickBeerOption()
-  if (!option) {
+  const options = resolveQuickBeerOptions()
+  if (!options.length) {
     toast.error(t('producedBeer.movementFast.errors.beerUnresolved'))
     return
   }
@@ -1537,39 +1548,51 @@ function addLineFromQuickEntry() {
     return
   }
 
-  const packageIds = Array.from(
-    new Set(option.candidateLots.map((lot) => lot.packageId).filter(Boolean)),
-  ) as string[]
-  if (!quickEntry.packageId && packageIds.length > 1) {
-    toast.error(t('producedBeer.movementFast.errors.packageRequired'))
-    return
-  }
+  const reservedByLotId = draftedQtyByLotId()
+  let remaining = requestedVolumeLiters
+  const allocations: Array<{ option: BeerOption; lot: BeerLotOption; qtyLiters: number }> = []
+  let hadCandidateLots = false
+  for (const option of options) {
+    if (remaining <= 0.0001) break
+    const packageFilteredLots = quickEntry.packageId
+      ? candidateLotsForPolicy(option).filter((lot) => lot.packageId === quickEntry.packageId)
+      : candidateLotsForPolicy(option)
+    if (packageFilteredLots.length) hadCandidateLots = true
 
-  const packageFilteredLots = quickEntry.packageId
-    ? candidateLotsForPolicy(option).filter((lot) => lot.packageId === quickEntry.packageId)
-    : candidateLotsForPolicy(option)
-  if (!packageFilteredLots.length) {
+    const availableLots = packageFilteredLots
+      .map((lot) => {
+        const reserved = reservedByLotId.get(lot.lotId) ?? 0
+        return {
+          lot,
+          availableLiters: Math.max(0, lot.qtyLiters - reserved),
+        }
+      })
+      .filter((entry) => entry.availableLiters > 0.0001)
+
+    for (const entry of availableLots) {
+      if (remaining <= 0.0001) break
+      const take = Math.min(remaining, entry.availableLiters)
+      allocations.push({ option, lot: entry.lot, qtyLiters: take })
+      remaining -= take
+    }
+  }
+  if (!allocations.length && quickEntry.packageId && !hadCandidateLots) {
     toast.error(t('producedBeer.movementFast.errors.packageNoStock'))
     return
-  }
-
-  let remaining = requestedVolumeLiters
-  const allocations: Array<{ lot: BeerLotOption; qtyLiters: number }> = []
-  for (const lot of packageFilteredLots) {
-    if (remaining <= 0.0001) break
-    if (lot.qtyLiters <= 0) continue
-    const take = Math.min(remaining, lot.qtyLiters)
-    allocations.push({ lot, qtyLiters: take })
-    remaining -= take
   }
   if (remaining > 0.0001) {
     toast.error(t('producedBeer.movementFast.errors.qtyExceedsStock'))
     return
   }
 
-  quickEntry.beerKey = option.key
-  quickEntry.keyword = displayBeerOption(option)
-  appendAllocatedRows(option, allocations)
+  if (quickEntry.beerKey) {
+    const selected = options.find((entry) => entry.key === quickEntry.beerKey)
+    if (selected) quickEntry.keyword = displayBeerOption(selected)
+  } else if (options.length === 1) {
+    quickEntry.beerKey = options[0].key
+    quickEntry.keyword = displayBeerOption(options[0])
+  }
+  appendAllocatedRows(allocations)
   quickEntry.unitText = ''
   quickEntry.volumeText = ''
   quickSuggestionOpen.value = false
@@ -2101,47 +2124,62 @@ type AllocatedMoveSegment = {
   note: string | null
 }
 
-function allocateLine(line: ValidatedLine) {
-  if (line.selectedLot) {
-    if (line.qtyLiters > line.selectedLot.qtyLiters + 0.0001) {
+function allocateLine(line: ValidatedLine, remainingByLotId?: Map<string, number>) {
+  const availableForLot = (lot: BeerLotOption) => {
+    if (!remainingByLotId) return lot.qtyLiters
+    return remainingByLotId.get(lot.lotId) ?? lot.qtyLiters
+  }
+  const consumeFromLot = (lot: BeerLotOption, qtyLiters: number) => {
+    if (!remainingByLotId) return
+    const current = remainingByLotId.get(lot.lotId) ?? lot.qtyLiters
+    remainingByLotId.set(lot.lotId, Math.max(0, current - qtyLiters))
+  }
+
+  if (routeForm.allocationPolicy === 'MANUAL') {
+    const manualLot = line.selectedLot
+    if (!manualLot) {
+      throw new Error(t('producedBeer.movementFast.errors.manualLotRequired'))
+    }
+    const availableLiters = availableForLot(manualLot)
+    if (line.qtyLiters > availableLiters + 0.0001) {
       throw new Error(t('producedBeer.movementFast.errors.qtyExceedsSelectedLot'))
     }
-    const qtySourceUom = convertFromLiters(line.qtyLiters, line.selectedLot.uomCode)
+    const qtySourceUom = convertFromLiters(line.qtyLiters, manualLot.uomCode)
     if (qtySourceUom == null || !Number.isFinite(qtySourceUom) || qtySourceUom <= 0) {
       throw new Error(t('producedBeer.movementFast.errors.allocationUom'))
     }
-    const resolvedTaxDecisionCode = resolveTaxDecisionCodeForLot(line.selectedLot.lotTaxType)
+    const resolvedTaxDecisionCode = resolveTaxDecisionCodeForLot(manualLot.lotTaxType)
     if (!resolvedTaxDecisionCode) {
       throw new Error(t('producedBeer.movementFast.errors.taxDecisionMissing'))
     }
+    consumeFromLot(manualLot, line.qtyLiters)
     return [
       {
         beerCode: line.option.beerCode,
         beerName: line.option.beerName,
         qtyLiters: line.qtyLiters,
         qtySourceUom,
-        lotId: line.selectedLot.lotId,
-        lotNo: line.selectedLot.lotNo,
-        lotTaxType: line.selectedLot.lotTaxType,
-        uomId: line.selectedLot.uomId,
-        uomCode: line.selectedLot.uomCode,
+        lotId: manualLot.lotId,
+        lotNo: manualLot.lotNo,
+        lotTaxType: manualLot.lotTaxType,
+        uomId: manualLot.uomId,
+        uomCode: manualLot.uomCode,
         taxDecisionCode: resolvedTaxDecisionCode,
         note: line.note,
       },
     ]
   }
 
-  if (routeForm.allocationPolicy === 'MANUAL') {
-    throw new Error(t('producedBeer.movementFast.errors.manualLotRequired'))
-  }
-
-  const orderedLots = candidateLotsForPolicy(line.option)
+  const orderedLotsBase = candidateLotsForPolicy(line.option)
+  const orderedLots = line.selectedLot
+    ? [line.selectedLot, ...orderedLotsBase.filter((lot) => lot.lotId !== line.selectedLot?.lotId)]
+    : orderedLotsBase
   let remainingLiters = line.qtyLiters
   const segments: AllocatedMoveSegment[] = []
 
   for (const lot of orderedLots) {
     if (remainingLiters <= 0.0000001) break
-    const availableLiters = lot.qtyLiters
+    const availableLiters = availableForLot(lot)
     if (availableLiters <= 0) continue
 
     const takeLiters = Math.min(remainingLiters, availableLiters)
@@ -2168,6 +2206,7 @@ function allocateLine(line: ValidatedLine) {
       taxDecisionCode: resolvedTaxDecisionCode,
       note: line.note,
     })
+    consumeFromLot(lot, takeLiters)
     remainingLiters -= takeLiters
   }
 
@@ -2227,7 +2266,6 @@ const validatedLines = computed(() => {
     const qty = toNumber(row.qtyText)
     const selectedLot = selectedLotForRow(row, option)
     if (!option || qty == null || qty <= 0) return
-    if (selectedLot && qty > selectedLot.qtyLiters + 0.0001) return
     if (routeForm.allocationPolicy === 'MANUAL') {
       if (!selectedLot) return
       if (qty > selectedLot.qtyLiters + 0.0001) return
@@ -2263,10 +2301,6 @@ const lineErrorMap = computed(() => {
     }
     if (qty == null || qty <= 0) {
       errors[row.id] = t('producedBeer.movementFast.errors.qtyPositive')
-      return
-    }
-    if (selectedLot && qty > selectedLot.qtyLiters + 0.0001) {
-      errors[row.id] = t('producedBeer.movementFast.errors.qtyExceedsSelectedLot')
       return
     }
     if (routeForm.allocationPolicy === 'MANUAL') {
@@ -2337,13 +2371,27 @@ const routeSummaryText = computed(() => {
   return `${fromSite.value.name} → ${toSite.value.name}`
 })
 
+function buildRemainingLitersByLotId() {
+  const remaining = new Map<string, number>()
+  beerOptions.value.forEach((option) => {
+    option.candidateLots.forEach((lot) => {
+      const existing = remaining.get(lot.lotId)
+      if (existing == null || lot.qtyLiters > existing) {
+        remaining.set(lot.lotId, lot.qtyLiters)
+      }
+    })
+  })
+  return remaining
+}
+
 function buildMovePayloads() {
   const movementAt = new Date(routeForm.movedAt).toISOString()
   const payloads: Array<Record<string, any>> = []
   const idempotencyPrefix = `product_move_fast:${Date.now()}`
+  const remainingByLotId = buildRemainingLitersByLotId()
 
   validatedLines.value.forEach((line, lineIndex) => {
-    const segments = allocateLine(line)
+    const segments = allocateLine(line, remainingByLotId)
     segments.forEach((segment, segmentIndex) => {
       payloads.push({
         movement_intent: INTERNAL_TRANSFER_INTENT,

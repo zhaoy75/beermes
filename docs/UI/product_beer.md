@@ -1,56 +1,41 @@
 ## Purpose
-- Show produced beer inventory by site/package/batch.
-- Show produced beer movement history with filter, view toggle, and CSV export.
-- Provide entry points to create/edit movement records.
+- Show produced beer movement history with filter, list/card view toggle, and CSV export.
+- Provide entry points to create, fast-create, and edit produced beer movement records.
+- Keep inventory browsing on the dedicated `ProducedBeerInventory` page, not on this page.
 
 ## Entry Points
-- Sidebar -> 移動記録 / Produced Craft Beer
+- Sidebar -> `移出記録` / `Produced Craft Beer`
 - Route: `/producedBeer`
+- Create page: `/producedBeerMovement`
+- Fast-create page: `/producedBeerMovementFast`
 
 ## Users and Permissions
-- Tenant User: view inventory and movements in tenant scope.
-- Tenant User: move to movement create/edit page.
+- Tenant User: view movements in tenant scope.
+- Tenant User: navigate to create/edit movement pages.
 
 ## Page Layout
 ### Header
 - Title: `producedBeer.title`
 - Subtitle: `producedBeer.subtitle`
-- Action: Refresh all
+- Action: refresh movements
 
 ### Body
-- 2 sections:
-  1. Inventory section
-  2. Movements section
+- 1 main section:
+  1. Movements section
 
 ### Modal/Dialog
-- None in this page.
-- Create/edit is handled in `/producedBeerMovement`.
+- None on this page.
+- Create/edit flows are handled by route navigation.
 
 ## Field Definitions
-### Inventory section
-- Section title: `producedBeer.sections.inventory`
-- Action: refresh inventory
-- Table columns:
-  - Lot no
-  - Production batch no
-  - ビール分類
-  - 目標ABV
-  - スタイル名
-  - Production date
-  - package
-  - Quantity (L)
-  - Quantity (packages)
-  - Site location
-  
-  retrieve data from inv_inventory and related table
-
-
 ### Movements section
 - Section title: `producedBeer.sections.movements`
-- Default view: List view (table)
+- Subtitle: `producedBeer.movement.subtitle`
+- Default view: list view
 - Actions:
   - List/Card view toggle
   - Export CSV
+  - Fast movement
   - New movement
   - Reset filters
   - Refresh movements
@@ -58,19 +43,19 @@
   - Beer name
   - Category
   - Package type
-  - Production batch no
+  - Batch no
   - Date from
   - Date to
   - Movement type
 
 ### Movement List View columns
-- Date
-- スタイル名
-- 目標ABV
-- package
-- number
-- volume
-- tax rate
+- Movement date
+- Style name
+- Target ABV
+- Package type
+- Quantity (packages)
+- Volume per package
+- Tax rate
 - Source site
 - Destination site
 - Document no
@@ -80,8 +65,16 @@
 - Actions (Edit)
 
 ### Movement Card View
-- Header: document no, movement type, movement date
-- Summary: source site, destination site, total liters, total packages
+- Header:
+  - Document no
+  - Movement type
+  - Movement date
+  - Edit action
+- Summary:
+  - Source site
+  - Destination site
+  - Total liters
+  - Total packages
 - Lines table:
   - Beer
   - Category
@@ -91,17 +84,18 @@
   - Liters
 
 ## Actions
-- Refresh all:
-  - reload inventory and movement list in parallel.
-- Refresh inventory:
-  - reload inventory rows from `inv_inventory` and related lot/master/batch tables.
-- Refresh movements:
+- Refresh header action:
   - reload movement headers and lines.
+- List/Card toggle:
+  - switch local presentation only.
 - Reset filters:
-  - clear all movement filters and set movement type to `all`.
+  - clear beer/category/package/batch/date filters.
+  - set movement type to `all`.
 - Export CSV:
   - exports currently filtered movement cards/lines.
   - file name format: `movements-YYYYMMDD.csv`.
+- Fast movement:
+  - navigate to `/producedBeerMovementFast`.
 - New movement:
   - navigate to `/producedBeerMovement`.
 - Edit movement:
@@ -110,11 +104,6 @@
 ## Business Rules
 - Tenant isolation:
   - all reads are restricted by current session `tenant_id`.
-- Inventory aggregation:
-  - source from `inv_inventory`, linked by `lot_id`.
-  - join `lot` to obtain `batch_id`, `package_id`, and `produced_at`.
-  - aggregate by `(site, package, batch)` for display.
-  - show only rows where quantity is positive.
 - Movement type filter logic:
   - `taxed`: `doc_type = sale` and `meta.tax_type = tax`
   - `notax`: `doc_type = sale` and `meta.tax_type = notax`
@@ -122,9 +111,16 @@
   - `wasteNotax`: `doc_type = waste` and `meta.tax_type = notax`
   - `transferNotax`: `doc_type = transfer` and `meta.tax_type = notax`
 - Filter behavior:
-  - Date range and movement type are applied at query/reload time.
+  - Date range and movement type are applied before loading card lines into the page result.
   - Beer/category/package/batch filters are applied client-side to movement lines.
-  - Cards with zero remaining lines after client filter are hidden.
+  - Cards with zero remaining lines after client-side filtering are hidden.
+- Totals:
+  - card totals are recalculated from the filtered visible lines.
+- Tax rate label:
+  - prefer `inv_movements.meta.tax_rate`.
+  - if tax type is `notax`, show `0%`.
+- Volume per package:
+  - derived from `line.qtyLiters / line.packageQty` when both values are available.
 - Quantity conversion:
   - package unit volume is converted to liters using UOM code.
   - supported conversion in page:
@@ -140,22 +136,40 @@
   - `registry_def` kind=`alcohol_type` (category master)
   - `mst_package` (package master and unit volume)
   - `mst_uom` (uom code mapping)
+  - `attr_def` / `entity_attr` for batch attributes:
+    - `beer_category`
+    - `target_abv`
+    - `style_name`
 - Transactional data:
-  - `inv_inventory` (on-hand balance by site/lot/uom)
-  - `lot` (batch/package/produced date)
   - `inv_movements` (movement header)
   - `inv_movement_lines` (movement lines)
-  - `mes_batches` (batch code + product label from `meta.label`)
+  - `mes_batches` (batch code, product name, recipe link, meta)
 - Derived fields:
   - movement card totals from filtered lines.
   - movement type label from `doc_type` + `meta.tax_type`.
-  - inventory package qty from inventory liters divided by package unit liters.
+  - tax rate label from `inv_movements.meta.tax_rate`.
+  - package quantity from `inv_movement_lines.meta.package_qty`.
+  - liters from line `qty`, or fallback from package quantity x package unit liters.
+  - style/category/ABV from batch attributes first, then recipe/meta fallback.
+
+## Loading Behavior
+- On mount:
+  - resolve tenant
+  - load sites, categories, packages, and UOMs in parallel
+  - load movements
+- On change of `dateFrom`, `dateTo`, or movement type:
+  - automatically reload movements
+- Other filters update the visible result locally without refetching
 
 ## Error Handling
 - On fetch error:
-  - clear affected list when needed.
+  - clear movement list when needed.
   - show toast with error message.
+
+## Non-Scope
+- No inventory table on this page.
+- No inline modal editing on this page.
 
 ## Other
 - This page is multilingual (Japanese/English) via i18n keys under `producedBeer`.
-- UI has both desktop and mobile responsive layout (table/card switch and wrapped toolbar).
+- UI supports responsive layout with wrapped toolbar and list/card presentation.

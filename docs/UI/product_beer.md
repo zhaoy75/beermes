@@ -53,16 +53,15 @@
 - Style name
 - Target ABV
 - Package type
-- Quantity (packages)
-- Volume per package
+- Volume Per Package
+- Unit of Package
+- Total Volume
 - Tax rate
 - Source site
 - Destination site
 - Document no
 - Movement type
-- Total liters
-- Total packages
-- Actions (Edit)
+- Actions (reverse)
 
 ### Movement Card View
 - Header:
@@ -147,8 +146,9 @@
 - Derived fields:
   - movement card totals from filtered lines.
   - movement type label from `doc_type` + `meta.tax_type`.
-  - tax rate label from `inv_movements.meta.tax_rate`.
-  - package quantity from `inv_movement_lines.meta.package_qty`.
+  - Volume Per Package from `mst_uom`.
+  - tax rate label from `inv_movement_lines.tax_rate`.
+  - unit of package from `inv_movement_lines.unit`.
   - liters from line `qty`, or fallback from package quantity x package unit liters.
   - style/category/ABV from batch attributes first, then recipe/meta fallback.
 

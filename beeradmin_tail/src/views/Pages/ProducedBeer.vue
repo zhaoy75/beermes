@@ -212,11 +212,12 @@
                   {{ t('producedBeer.movement.card.linePackageType') }}
                 </th>
                 <th class="px-3 py-2 text-right">
-                  {{ t('producedBeer.movement.card.lineQtyPackages') }}
+                  {{ t('producedBeer.movement.card.volumePerPackage') }}
                 </th>
                 <th class="px-3 py-2 text-right">
-                  {{ t('producedBeer.movement.card.lineQtyLiters') }}
+                  {{ t('producedBeer.movement.card.unitOfPackage') }}
                 </th>
+                <th class="px-3 py-2 text-right">{{ t('producedBeer.movement.card.totalVolume') }}</th>
                 <th class="px-3 py-2 text-right">{{ t('producedBeer.movement.card.taxRate') }}</th>
                 <th class="px-3 py-2 text-left">{{ t('producedBeer.movement.card.source') }}</th>
                 <th class="px-3 py-2 text-left">
@@ -225,12 +226,6 @@
                 <th class="px-3 py-2 text-left">{{ t('producedBeer.movement.card.docNo') }}</th>
                 <th class="px-3 py-2 text-left">
                   {{ t('producedBeer.movement.filters.movementType') }}
-                </th>
-                <th class="px-3 py-2 text-right">
-                  {{ t('producedBeer.movement.card.totalLiters') }}
-                </th>
-                <th class="px-3 py-2 text-right">
-                  {{ t('producedBeer.movement.card.totalPackages') }}
                 </th>
                 <th class="px-3 py-2 text-left">{{ t('common.actions') }}</th>
               </tr>
@@ -246,9 +241,14 @@
                 </td>
                 <td class="px-3 py-2 text-gray-600">{{ movementPackageLabel(card) }}</td>
                 <td class="px-3 py-2 text-right text-gray-600">
-                  {{ formatNumber(card.totalPackages) }}
+                  {{ movementVolumeLabel(card) }}
                 </td>
-                <td class="px-3 py-2 text-right text-gray-600">{{ movementVolumeLabel(card) }}</td>
+                <td class="px-3 py-2 text-right text-gray-600">
+                  {{ movementUnitOfPackageLabel(card) }}
+                </td>
+                <td class="px-3 py-2 text-right font-semibold text-gray-900">
+                  {{ formatNumber(card.totalLiters) }}
+                </td>
                 <td class="px-3 py-2 text-right text-gray-600">{{ movementTaxRateLabel(card) }}</td>
                 <td class="px-3 py-2 text-gray-600">{{ siteLabel(card.sourceSiteId) }}</td>
                 <td class="px-3 py-2 text-gray-600">{{ siteLabel(card.destSiteId) }}</td>
@@ -256,23 +256,22 @@
                 <td class="px-3 py-2 text-gray-600">
                   {{ movementTypeLabel(card.docType, card.taxType) }}
                 </td>
-                <td class="px-3 py-2 text-right font-semibold text-gray-900">
-                  {{ formatNumber(card.totalLiters) }}
-                </td>
-                <td class="px-3 py-2 text-right font-semibold text-gray-900">
-                  {{ formatNumber(card.totalPackages) }}
-                </td>
                 <td class="px-3 py-2">
                   <button
-                    class="px-2 py-1 text-xs rounded border hover:bg-gray-50"
-                    @click="openMovementEdit(card)"
+                    class="px-2 py-1 text-xs rounded border hover:bg-gray-50 disabled:opacity-50 disabled:hover:bg-white"
+                    :disabled="movementLoading || card.status === 'void'"
+                    @click="reverseMovement(card)"
                   >
-                    {{ t('producedBeer.movement.actions.edit') }}
+                    {{
+                      card.status === 'void'
+                        ? t('producedBeer.movement.actions.reversed')
+                        : t('producedBeer.movement.actions.reverse')
+                    }}
                   </button>
                 </td>
               </tr>
               <tr v-if="!movementLoading && filteredMovementCards.length === 0">
-                <td colspan="14" class="px-3 py-8 text-center text-gray-500">
+                <td colspan="13" class="px-3 py-8 text-center text-gray-500">
                   {{ t('common.noData') }}
                 </td>
               </tr>
@@ -302,10 +301,15 @@
                 </p>
                 <p class="text-xs text-gray-500">{{ formatDateTime(card.movementAt) }}</p>
                 <button
-                  class="mt-2 px-3 py-1.5 text-xs rounded border hover:bg-gray-50"
-                  @click="openMovementEdit(card)"
+                  class="mt-2 px-3 py-1.5 text-xs rounded border hover:bg-gray-50 disabled:opacity-50 disabled:hover:bg-white"
+                  :disabled="movementLoading || card.status === 'void'"
+                  @click="reverseMovement(card)"
                 >
-                  {{ t('producedBeer.movement.actions.edit') }}
+                  {{
+                    card.status === 'void'
+                      ? t('producedBeer.movement.actions.reversed')
+                      : t('producedBeer.movement.actions.reverse')
+                  }}
                 </button>
               </div>
             </div>
@@ -437,6 +441,8 @@ interface MovementLineRow {
   package_id: string | null
   batch_id: string | null
   qty: number | null
+  unit: number | null
+  tax_rate: number | null
   uom_id: string | null
   meta?: Record<string, any> | null
 }
@@ -463,6 +469,8 @@ interface MovementLineCard {
   packageTypeId: string | null
   packageTypeLabel: string | null
   packageQty: number | null
+  unitOfPackage: number | null
+  taxRate: number | null
   qtyLiters: number | null
 }
 
@@ -471,7 +479,6 @@ interface MovementCard {
   docNo: string
   docType: string
   taxType: string | null
-  taxRate: number | null
   movementAt: string | null
   status: string
   sourceSiteId: string | null
@@ -707,16 +714,29 @@ function movementPackageLabel(card: MovementCardView) {
   return packages.length ? packages.join(', ') : '—'
 }
 
+function packageVolumePerPackageLabel(packageTypeId: string | null | undefined) {
+  if (!packageTypeId) return null
+  const pkg = packageCategoryMap.value.get(packageTypeId)
+  if (pkg?.size == null || Number.isNaN(pkg.size)) return null
+  const qty = Number(pkg.size)
+  const display = Number.isFinite(qty)
+    ? qty.toLocaleString(locale.value, { maximumFractionDigits: 3 })
+    : String(pkg.size)
+  const uomCode = pkg.uomId ? uomMap.value.get(pkg.uomId) ?? pkg.uomId : null
+  return uomCode ? `${display} ${uomCode}` : display
+}
+
 function movementVolumeLabel(card: MovementCardView) {
-  const unitVolumes = uniqueNumbers(
-    card.lines.map((line) => {
-      if (line.packageQty == null || line.packageQty <= 0) return null
-      if (line.qtyLiters == null || Number.isNaN(line.qtyLiters)) return null
-      return line.qtyLiters / line.packageQty
-    }),
+  const packageVolumes = uniqueNonEmpty(
+    card.lines.map((line) => packageVolumePerPackageLabel(line.packageTypeId)),
   )
-  if (!unitVolumes.length) return '—'
-  return unitVolumes.map((value) => formatNumber(value)).join(', ')
+  return packageVolumes.length ? packageVolumes.join(', ') : '—'
+}
+
+function movementUnitOfPackageLabel(card: MovementCardView) {
+  const units = uniqueNumbers(card.lines.map((line) => line.unitOfPackage))
+  if (!units.length) return '—'
+  return units.map((value) => formatNumber(value)).join(', ')
 }
 
 function normalizeTaxRatePercent(rate: number) {
@@ -726,10 +746,8 @@ function normalizeTaxRatePercent(rate: number) {
 }
 
 function movementTaxRateLabel(card: MovementCardView) {
-  if (card.taxRate != null) {
-    const percent = normalizeTaxRatePercent(card.taxRate)
-    if (percent != null) return `${formatNumber(percent)}%`
-  }
+  const taxRates = uniqueNumbers(card.lines.map((line) => normalizeTaxRatePercent(line.taxRate ?? NaN)))
+  if (taxRates.length) return taxRates.map((value) => `${formatNumber(value)}%`).join(', ')
   if (card.taxType === 'notax') return '0%'
   return '—'
 }
@@ -928,7 +946,7 @@ async function fetchMovements() {
 
     const { data: lines, error: lineError } = await supabase
       .from('inv_movement_lines')
-      .select('id, movement_id, package_id, batch_id, qty, uom_id, meta')
+      .select('id, movement_id, package_id, batch_id, qty, unit, tax_rate, uom_id, meta')
       .in('movement_id', movementIds)
       .order('line_no', { ascending: true })
 
@@ -949,22 +967,11 @@ async function fetchMovements() {
       if (!header) return
       if (!cardMap.has(line.movement_id)) {
         const taxType = typeof header.meta?.tax_type === 'string' ? header.meta.tax_type : null
-        const taxRateRaw = header.meta?.tax_rate
-        const taxRate = (() => {
-          if (taxRateRaw == null) return null
-          if (typeof taxRateRaw === 'number' && Number.isFinite(taxRateRaw)) return taxRateRaw
-          if (typeof taxRateRaw === 'string') {
-            const num = Number(taxRateRaw.replace(/%/g, '').trim())
-            return Number.isFinite(num) ? num : null
-          }
-          return null
-        })()
         cardMap.set(line.movement_id, {
           id: line.movement_id,
           docNo: header.doc_no,
           docType: header.doc_type,
           taxType,
-          taxRate,
           movementAt: header.movement_at ?? null,
           status: header.status,
           sourceSiteId: header.src_site_id ?? null,
@@ -991,6 +998,8 @@ async function fetchMovements() {
         packageTypeId: pkgInfo?.packageTypeId ?? null,
         packageTypeLabel: pkgInfo?.packageTypeLabel ?? null,
         packageQty,
+        unitOfPackage: toNumber(line.unit),
+        taxRate: toNumber(line.tax_rate),
         qtyLiters,
       }
 
@@ -1181,8 +1190,30 @@ function openMovementCreateFast() {
   router.push({ path: '/producedBeerMovementFast' })
 }
 
-function openMovementEdit(card: MovementCard) {
-  router.push({ path: '/producedBeerMovement', query: { id: card.id } })
+async function reverseMovement(card: MovementCard) {
+  if (movementLoading.value || card.status === 'void') return
+
+  const confirmed = window.confirm(
+    t('producedBeer.movement.actions.reverseConfirm', { docNo: card.docNo }),
+  )
+  if (!confirmed) return
+
+  try {
+    movementLoading.value = true
+    const { error } = await supabase.rpc('movement_save', {
+      p_movement_id: card.id,
+      p_doc: { status: 'void' },
+    })
+    if (error) throw error
+
+    toast.success(t('producedBeer.movement.actions.reverseSuccess'))
+    await fetchMovements()
+  } catch (err) {
+    console.error(err)
+    toast.error(err instanceof Error ? err.message : String(err))
+  } finally {
+    movementLoading.value = false
+  }
 }
 
 watch(

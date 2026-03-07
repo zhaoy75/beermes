@@ -1085,6 +1085,10 @@
         "fast": "社内移出(高速入力)",
         "new": "製品ビール移出登録",
         "edit": "移出編集",
+        "reverse": "取消",
+        "reversed": "取消済",
+        "reverseConfirm": "伝票 {docNo} を取り消しますか？",
+        "reverseSuccess": "移出を取り消しました。",
         "exportCsv": "CSV出力"
       },
       "card": {
@@ -1094,6 +1098,9 @@
         "movementDate": "移出日",
         "source": "移出元",
         "destination": "移出先",
+        "volumePerPackage": "容量/本(箱)",
+        "unitOfPackage": "数量(本/箱)",
+        "totalVolume": "総容量(L)",
         "totalLiters": "数量(L)",
         "totalPackages": "数量(本/箱)",
         "lines": "明細",

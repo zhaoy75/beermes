@@ -1085,6 +1085,10 @@
         "fast": "Internal Transfer Fast",
         "new": "Produced Beer Movement Regist...",
         "edit": "Edit movement",
+        "reverse": "Reverse",
+        "reversed": "Reversed",
+        "reverseConfirm": "Reverse document {docNo}?",
+        "reverseSuccess": "Movement reversed.",
         "exportCsv": "Export CSV"
       },
       "card": {
@@ -1094,6 +1098,9 @@
         "movementDate": "Movement date",
         "source": "Source site",
         "destination": "Destination site",
+        "volumePerPackage": "Volume Per Package",
+        "unitOfPackage": "Unit of Package",
+        "totalVolume": "Total Volume",
         "totalLiters": "Total liters",
         "totalPackages": "Total packages",
         "lines": "Movement lines",

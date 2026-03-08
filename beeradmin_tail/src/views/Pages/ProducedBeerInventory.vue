@@ -67,7 +67,7 @@
                 <td class="px-3 py-2 text-xs text-gray-500">
                   {{ formatDate(row.productionDate) }}
                 </td>
-                <td class="px-3 py-2 text-right">{{ formatNumber(row.qtyLiters) }}</td>
+                <td class="px-3 py-2 text-right">{{ formatVolumeNumberValue(row.qtyLiters) }}</td>
                 <td class="px-3 py-2 text-right">{{ formatNumber(row.qtyPackages) }}</td>
                 <td class="px-3 py-2">{{ siteLabel(row.siteId) }}</td>
               </tr>
@@ -99,6 +99,7 @@ const {
   formatAbv,
   formatDate,
   formatNumber,
+  formatVolumeNumberValue,
   initialize,
   inventoryLoading,
   inventoryRows,

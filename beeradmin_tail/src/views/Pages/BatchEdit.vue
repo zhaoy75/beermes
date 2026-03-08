@@ -398,6 +398,7 @@ import { useRoute, useRouter } from 'vue-router'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { supabase } from '@/lib/supabase'
+import { formatVolume } from '@/lib/volumeFormat'
 
 const route = useRoute()
 const router = useRouter()
@@ -493,6 +494,12 @@ interface SiteOption {
   label: string
 }
 
+interface BeerCategoryOption {
+  value: string
+  key: string
+  label: string
+}
+
 interface VolumeUomOption {
   id: string
   code: string
@@ -532,6 +539,8 @@ type PackingEvent = {
 
 const packageCategories = ref<PackageCategoryOption[]>([])
 const siteOptions = ref<SiteOption[]>([])
+const beerCategories = ref<BeerCategoryOption[]>([])
+const recipeCategoryId = ref<string | null>(null)
 const volumeUoms = ref<VolumeUomOption[]>([])
 const uomOptionsRaw = ref<UomOption[]>([])
 const packingEvents = ref<PackingEvent[]>([])
@@ -742,7 +751,7 @@ async function fetchBatch() {
   try {
     loadingBatch.value = true
     await ensureTenant()
-    await Promise.all([loadBatchOptions(), loadBatchStatusOptions(), loadSites(), fetchPackageCategories(), loadVolumeUoms(), loadUoms()])
+    await Promise.all([loadBatchOptions(), loadBatchStatusOptions(), loadSites(), loadBeerCategories(), fetchPackageCategories(), loadVolumeUoms(), loadUoms()])
     const { data, error } = await supabase.rpc('batch_get_detail', {
       p_batch_id: batchId.value,
     })
@@ -761,6 +770,7 @@ async function fetchBatch() {
       batchForm.actual_start = toInputDate(header.actual_start)
       batchForm.actual_end = toInputDate(header.actual_end)
       batchForm.related_batch_id = resolveMetaString(header.meta, 'related_batch_id') ?? ''
+      recipeCategoryId.value = await loadRecipeCategory(header.recipe_id ?? null)
       batchRelations.value = (Array.isArray(detail?.relations) ? detail.relations : []).map((row: any) => ({
         id: row.id,
         src_batch_id: row.src_batch_id,
@@ -775,6 +785,7 @@ async function fetchBatch() {
       await loadBatchAttributes(header.id)
     } else {
       attrFields.value = []
+      recipeCategoryId.value = null
       packingEvents.value = []
       batchRelations.value = []
     }
@@ -1042,6 +1053,47 @@ async function loadSites() {
     }))
   } catch (err) {
     console.error(err)
+  }
+}
+
+async function loadBeerCategories() {
+  try {
+    const { data, error } = await supabase
+      .from('registry_def')
+      .select('def_id, def_key, spec')
+      .eq('kind', 'alcohol_type')
+      .eq('is_active', true)
+      .order('def_key', { ascending: true })
+    if (error) throw error
+    beerCategories.value = (data ?? []).map((row: any) => ({
+      value: String(row.def_id),
+      key: String(row.def_key ?? ''),
+      label: typeof row.spec?.name === 'string' && row.spec.name.trim()
+        ? row.spec.name.trim()
+        : String(row.def_key ?? row.def_id),
+    }))
+  } catch (err) {
+    console.error(err)
+    beerCategories.value = []
+  }
+}
+
+async function loadRecipeCategory(recipeId: string | null | undefined) {
+  if (!recipeId) return null
+  try {
+    const tenant = await ensureTenant()
+    const { data, error } = await supabase
+      .from('mes_recipes')
+      .select('category')
+      .eq('tenant_id', tenant)
+      .eq('id', recipeId)
+      .maybeSingle()
+    if (error) throw error
+    if (!data?.category) return null
+    return String(data.category)
+  } catch (err) {
+    console.error(err)
+    return null
   }
 }
 
@@ -1607,11 +1659,27 @@ function formatPackingDate(value: string) {
   }
 }
 
+function beerCategoryLabel(categoryValue: string | null | undefined) {
+  if (!categoryValue) return '—'
+  const normalized = categoryValue.trim()
+  if (!normalized) return '—'
+  const match = beerCategories.value.find((row) => row.value === normalized || row.key === normalized)
+  return match?.label || normalized
+}
+
 function formatPackingBeerCategory() {
-  const fromForm = batchForm.product_name?.trim()
-  if (fromForm) return fromForm
-  const fromBatch = typeof batch.value?.product_name === 'string' ? batch.value.product_name.trim() : ''
-  if (fromBatch) return fromBatch
+  const attr = attrFields.value.find((field) => field.code === 'beer_category')
+  const attrValue = attr?.value != null ? String(attr.value).trim() : ''
+  if (attrValue) {
+    const option = attr?.options.find((item) => String(item.value) === attrValue)
+    if (option?.label) return option.label
+    return beerCategoryLabel(attrValue)
+  }
+  if (recipeCategoryId.value) return beerCategoryLabel(recipeCategoryId.value)
+  const metaValue =
+    resolveMetaString(batch.value?.meta, 'beer_category') ??
+    resolveMetaString(batch.value?.meta, 'category')
+  if (metaValue) return beerCategoryLabel(metaValue)
   return '—'
 }
 
@@ -1950,15 +2018,13 @@ function convertToLiters(size: number | null | undefined, uomCode: string | null
 }
 
 function formatVolumeValue(value: number | null | undefined) {
-  if (value == null || Number.isNaN(value)) return '—'
-  const display = Number(value)
-  return `${display.toLocaleString(undefined, { maximumFractionDigits: 2 })} L`
+  return formatVolume(value, locale.value)
 }
 
 onMounted(async () => {
   try {
     await ensureTenant()
-    await Promise.all([loadBatchOptions(), loadBatchStatusOptions(), loadSites(), loadVolumeUoms(), loadUoms(), fetchPackageCategories(), loadPackingEvents(), loadBatchRelations()])
+    await Promise.all([loadBatchOptions(), loadBatchStatusOptions(), loadSites(), loadBeerCategories(), loadVolumeUoms(), loadUoms(), fetchPackageCategories(), loadPackingEvents(), loadBatchRelations()])
   } catch (err) {
     console.error(err)
   }

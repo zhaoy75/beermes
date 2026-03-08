@@ -123,6 +123,7 @@ import { useRouter } from 'vue-router'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { supabase } from '@/lib/supabase'
+import { formatVolumeNumber } from '@/lib/volumeFormat'
 
 const FINISHED_STATUSES = ['complete', 'completed', 'done', 'finished', 'released']
 
@@ -214,8 +215,7 @@ const summaryRows = computed(() => {
 })
 
 function formatVolume(value: number | null | undefined) {
-  if (value == null || Number.isNaN(value)) return '—'
-  return `${Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+  return formatVolumeNumber(value, locale.value)
 }
 
 function formatPercent(value: number | null | undefined) {

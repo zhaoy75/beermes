@@ -125,6 +125,7 @@ import { useI18n } from 'vue-i18n'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { supabase } from '@/lib/supabase'
+import { formatVolume as formatVolumeDisplay } from '@/lib/volumeFormat'
 
 Chart.register(...registerables)
 
@@ -243,16 +244,13 @@ function monthLabel(monthIndex: number) {
   return monthFormatter.value.format(new Date(selectedYear.value, monthIndex, 1))
 }
 
-const volumeFormatter = computed(() =>
-  new Intl.NumberFormat(locale.value, { maximumFractionDigits: 2, minimumFractionDigits: 0 }),
-)
 const currencyFormatter = computed(() =>
   new Intl.NumberFormat(locale.value, { style: 'currency', currency: 'JPY', maximumFractionDigits: 0 }),
 )
 
 function formatVolume(value: number) {
   if (!Number.isFinite(value)) return '—'
-  return `${volumeFormatter.value.format(value)} L`
+  return formatVolumeDisplay(value, locale.value)
 }
 
 function formatCurrency(value: number) {

@@ -56,8 +56,10 @@
    - Remaining volume
 2) Packing Event List
    - event list table
-   　 date
+  　 date
       beer category
+      - source: batch attr `beer_category`
+      - fallback: recipe `category`, then batch meta `beer_category` / `category`
       Packing Type
       Tank No
       Tank Fill Start Volume (樽詰め前 容量) 
@@ -125,7 +127,7 @@ For Dispose, if the volume auto fill button is clicked,set Remaining volume to t
 
 
 ### Movement Section
-Shown for: Ship, Filling, Transfer
+Shown for: Ship, Transfer
 
 Fields:
 - Site (dropdown, required)
@@ -142,8 +144,10 @@ Defaults:
   movement quantity defaults to volume quantity
 
 - Filling: 
-  Site type should be BREWERY_MANUFACTUR, BREWERY_STORAGE
-  movement quantity defaults to filling total (only lines where `sample_flg = false`)
+  Movement Section hidden for Filling
+  `src_site_id` is auto-derived from the batch BREWERY_MANUFACTUR site
+  `dest_site_id` defaults to the same value as `src_site_id`
+  movement quantity is derived from filling total (only lines where `sample_flg = false`) and is not user-editable
 
 ### Filling Section (Filling only)
 Components:
@@ -194,7 +198,7 @@ Transfer:
 - Volume section + Movement section
 
 Filling:
-- Filling section + Movement section
+- Filling section only
 - At least one filling line is required
 - `タンク充填終了` button is not shown (tank values are auto-calculated)
 
@@ -212,6 +216,7 @@ Shows:
 - Packing type
 - Volume
 - Movement site and quantity
+  - for Filling: show derived read-only route summary (`src_site_id`, `dest_site_id = src_site_id`) and derived movement quantity, or hide this row if the UI does not display route data for Filling
 - Filling breakdown (if applicable)
 
 ## Validation Rules
@@ -249,6 +254,8 @@ Warnings:
   - function: `public.get_packing_source_lotid`
   - parameter: `p_batch_id = current batch id`
 - Use returned `source_lot_id` as `from_lot_id` in `product_filling` payload
+- `src_site_id` must be auto-derived from the batch BREWERY_MANUFACTUR site
+- `dest_site_id` must default to `src_site_id`
 - `product_filling` RPC payload must include:
   - `tank_id`: selected tank id
   - `loss_qty`: effective filling loss quantity (`Tank_Loss_Volume + Sample_Volume`)
@@ -318,11 +325,8 @@ Warnings:
   "Sample_Volume" : 1,
   "Tank_Loss_Volume" : 10,
   "volume_qty": null,
-	  "movement": {
-	    "site_id": "...",
-	    "qty": 240,
-	    "memo": "..."
-	  },
+	  "src_site_id": "...",
+	  "dest_site_id": "...",
 	  "filling_lines": [
 	    { "package_type_id": "keg_10l", "qty": 24, "sample_flg": false },
 	    { "package_type_id": "bottle_330ml", "qty": 6, "sample_flg": true }
@@ -330,7 +334,9 @@ Warnings:
 	}
 	```
 - In this example:
-  - `movement.qty` should reflect only non-sample filling lines total volume.
+  - `src_site_id` is derived from the batch manufacturing site.
+  - `dest_site_id` should be the same as `src_site_id`.
+  - derived movement quantity should reflect only non-sample filling lines total volume.
   - `loss_qty` sent to `product_filling` should be `Tank_Loss_Volume + Sample_Volume`.
   - any line with `sample_flg = true` must not be included in RPC `lines[]`.
 
@@ -338,6 +344,8 @@ Warnings:
 ### tables
 - `mst_package` for package
 - `mst_equipment_tank` for tank
+- `registry_def` kind=`alcohol_type` for beer category master
+- `attr_def` / `entity_attr` for batch attribute `beer_category`
 - `inv_movements` for movement header
 - `inv_movement_lines` for movement lines
 - `lot` for lot master
@@ -348,6 +356,11 @@ Warnings:
 - Ship: save by `public.product_move(p_doc jsonb)` with `movement_intent = SHIP_DOMESTIC`
 - Transfer: save by `public.product_move(p_doc jsonb)` with `movement_intent = INTERNAL_TRANSFER`
 - Loss / Dispose: save by `inv_movements` + `inv_movement_lines` (until dedicated functions exist)
+
+### derived fields
+- `beer category` in Packing Event List must use batch attr `beer_category` first
+- if batch attr `beer_category` is not available, fallback to recipe `category`, then batch meta `beer_category` / `category`
+- if `beer_category` resolves to a registry id, UI must display the label from `registry_def`
 
 ## Accessibility & i18n
 - Labels for all inputs

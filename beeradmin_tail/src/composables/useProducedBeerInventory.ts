@@ -2,6 +2,7 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue3-toastify'
 import { supabase } from '@/lib/supabase'
+import { formatVolumeNumber } from '@/lib/volumeFormat'
 
 type ContainerKind = 'tank' | 'keg' | 'case' | 'other'
 
@@ -169,6 +170,10 @@ export function useProducedBeerInventory() {
   function formatNumber(value: number | null | undefined) {
     if (value == null || Number.isNaN(value)) return '—'
     return numberFormatter.value.format(value)
+  }
+
+  function formatVolumeNumberValue(value: number | null | undefined) {
+    return formatVolumeNumber(value, locale.value)
   }
 
   function formatAbv(value: number | null | undefined) {
@@ -686,6 +691,7 @@ export function useProducedBeerInventory() {
     formatAbv,
     formatDate,
     formatNumber,
+    formatVolumeNumberValue,
     initialize,
     inventoryLoading,
     inventoryRows,

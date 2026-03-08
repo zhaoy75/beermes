@@ -687,6 +687,7 @@ import { useRoute, useRouter } from 'vue-router'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { supabase } from '@/lib/supabase'
+import { formatVolume, formatVolumeNumber } from '@/lib/volumeFormat'
 
 const route = useRoute()
 const router = useRouter()
@@ -786,6 +787,12 @@ interface SiteOption {
   site_type_key: string | null
 }
 
+interface BeerCategoryOption {
+  value: string
+  key: string
+  label: string
+}
+
 interface TankOption {
   value: string
   code: string
@@ -807,8 +814,8 @@ type UomOption = {
 type PackingType = 'ship' | 'filling' | 'transfer' | 'loss' | 'dispose'
 const MOVEMENT_SITE_TYPE_KEYS: Record<PackingType, string[]> = {
   ship: ['OTHER_BREWERY'],
+  filling: [],
   transfer: ['BREWERY_STORAGE'],
-  filling: ['BREWERY_MANUFACTUR', 'BREWERY_STORAGE'],
   loss: [],
   dispose: [],
 }
@@ -873,6 +880,8 @@ type PackingFormState = {
 const packageCategories = ref<PackageCategoryOption[]>([])
 const tankOptions = ref<TankOption[]>([])
 const allSiteOptions = ref<SiteOption[]>([])
+const beerCategories = ref<BeerCategoryOption[]>([])
+const recipeCategoryId = ref<string | null>(null)
 const volumeUoms = ref<VolumeUomOption[]>([])
 const uomOptionsRaw = ref<UomOption[]>([])
 const packingEvents = ref<PackingEvent[]>([])
@@ -1052,12 +1061,12 @@ function fillingSampleVolumeFromEvent(lines: PackingFillingLine[]) {
 function processedVolumeFromPackingEvent(event: PackingEvent) {
   if (event.packing_type === 'filling') {
     let total = 0
-    const qty = event.movement?.qty
-    if (qty != null && Number.isFinite(qty)) total += qty
-    const sample = event.sample_volume ?? fillingSampleVolumeFromEvent(event.filling_lines)
+    const qty = fillingLinesVolumeFromEvent(event.filling_lines) ?? 0
+    if (Number.isFinite(qty)) total += qty
+    const sample = event.sample_volume ?? fillingSampleVolumeFromEvent(event.filling_lines) ?? 0
     if (Number.isFinite(sample)) total += sample
     if (event.tank_fill_start_volume != null && event.tank_left_volume != null) {
-      const totalFillVolume = fillingLinesVolumeFromEvent(event.filling_lines)
+      const totalFillVolume = fillingLinesVolumeFromEvent(event.filling_lines) ?? 0
       const loss = event.tank_fill_start_volume - event.tank_left_volume - totalFillVolume - sample
       if (Number.isFinite(loss)) total += loss
     }
@@ -1073,10 +1082,7 @@ function processedVolumeFromPackingForm(form: PackingFormState) {
   if (form.packing_type === 'filling') {
     let total = 0
     const fillingTotals = computeFillingTotals(form.filling_lines)
-    const movementQty = toNumber(form.movement_qty)
-    if (movementQty != null && Number.isFinite(movementQty)) {
-      total += movementQty
-    } else if (fillingTotals.totalVolume != null && Number.isFinite(fillingTotals.totalVolume)) {
+    if (fillingTotals.totalVolume != null && Number.isFinite(fillingTotals.totalVolume)) {
       total += fillingTotals.totalVolume
     }
     const sample = toNumber(form.sample_volume) ?? computeFillingSampleVolume(form.filling_lines)
@@ -1165,7 +1171,7 @@ function formatPackageLabel(row: PackageCategoryOption) {
   const name = resolveNameI18n(row.name_i18n)
   const namePart = name ? ` — ${name}` : ''
   const unitVolume = row.unit_volume != null ? convertToLiters(row.unit_volume, resolveUomCode(row.volume_uom)) : null
-  const sizePart = unitVolume != null ? ` (${unitVolume.toLocaleString(undefined, { maximumFractionDigits: 2 })} L)` : ''
+  const sizePart = unitVolume != null ? ` (${formatVolume(unitVolume, locale.value)})` : ''
   return `${row.package_code}${namePart}${sizePart}`
 }
 
@@ -1243,7 +1249,7 @@ const showDisposeVolumeAutoFill = computed(() => packingDialog.form?.packing_typ
 
 const showPackingMovementSection = computed(() => {
   const type = packingDialog.form?.packing_type
-  return type === 'ship' || type === 'filling' || type === 'transfer'
+  return type === 'ship' || type === 'transfer'
 })
 
 const showPackingFillingSection = computed(() => packingDialog.form?.packing_type === 'filling')
@@ -1299,7 +1305,15 @@ const reviewVolumeText = computed(() => {
 })
 
 const reviewMovementText = computed(() => {
-  if (!packingDialog.form || !showPackingMovementSection.value) return '—'
+  if (!packingDialog.form) return '—'
+  if (packingDialog.form.packing_type === 'filling') {
+    const siteId = resolveProduceSiteId(batch.value) ?? null
+    const site = siteLabel(siteId)
+    const qty = packingFillingTotals.value.totalVolume
+    const qtyLabel = qty != null ? formatVolumeValue(qty) : '—'
+    return `${site} -> ${site} / ${qtyLabel}`
+  }
+  if (!showPackingMovementSection.value) return '—'
   const site = siteLabel(packingDialog.form.movement_site_id || null)
   const qty = toNumber(packingDialog.form.movement_qty)
   const qtyLabel = qty != null ? formatVolumeValue(qty) : '—'
@@ -1315,13 +1329,6 @@ const packingMismatchWarning = computed(() => {
   if (!packingDialog.form || !showPackingMovementSection.value) return ''
   const movementQty = toNumber(packingDialog.form.movement_qty)
   if (movementQty == null) return ''
-  if (packingDialog.form.packing_type === 'filling') {
-    const total = packingFillingTotals.value.totalVolume
-    if (total != null && Math.abs(movementQty - total) > 0.0001) {
-      return t('batch.packaging.warnings.movementMismatch')
-    }
-    return ''
-  }
   if (showPackingVolumeSection.value) {
     const volumeQty = formVolumeInLiters(packingDialog.form)
     if (volumeQty != null && Math.abs(movementQty - volumeQty) > 0.0001) {
@@ -1377,7 +1384,7 @@ async function fetchBatch() {
   try {
     loadingBatch.value = true
     await ensureTenant()
-    await Promise.all([loadBatchOptions(), loadBatchStatusOptions(), loadSites(), loadTankOptions(), fetchPackageCategories(), loadVolumeUoms(), loadUoms()])
+    await Promise.all([loadBatchOptions(), loadBatchStatusOptions(), loadSites(), loadBeerCategories(), loadTankOptions(), fetchPackageCategories(), loadVolumeUoms(), loadUoms()])
     const { data, error } = await supabase.rpc('batch_get_detail', {
       p_batch_id: batchId.value,
     })
@@ -1396,6 +1403,7 @@ async function fetchBatch() {
       batchForm.actual_start = toInputDate(header.actual_start)
       batchForm.actual_end = toInputDate(header.actual_end)
       batchForm.related_batch_id = resolveMetaString(header.meta, 'related_batch_id') ?? ''
+      recipeCategoryId.value = await loadRecipeCategory(header.recipe_id ?? null)
       batchRelations.value = (Array.isArray(detail?.relations) ? detail.relations : []).map((row: any) => ({
         id: row.id,
         src_batch_id: row.src_batch_id,
@@ -1410,6 +1418,7 @@ async function fetchBatch() {
       await loadBatchAttributes(header.id)
     } else {
       attrFields.value = []
+      recipeCategoryId.value = null
       packingEvents.value = []
       batchRelations.value = []
     }
@@ -1737,6 +1746,47 @@ async function loadTankOptions() {
   } catch (err) {
     console.error(err)
     tankOptions.value = []
+  }
+}
+
+async function loadBeerCategories() {
+  try {
+    const { data, error } = await supabase
+      .from('registry_def')
+      .select('def_id, def_key, spec')
+      .eq('kind', 'alcohol_type')
+      .eq('is_active', true)
+      .order('def_key', { ascending: true })
+    if (error) throw error
+    beerCategories.value = (data ?? []).map((row: any) => ({
+      value: String(row.def_id),
+      key: String(row.def_key ?? ''),
+      label: typeof row.spec?.name === 'string' && row.spec.name.trim()
+        ? row.spec.name.trim()
+        : String(row.def_key ?? row.def_id),
+    }))
+  } catch (err) {
+    console.error(err)
+    beerCategories.value = []
+  }
+}
+
+async function loadRecipeCategory(recipeId: string | null | undefined) {
+  if (!recipeId) return null
+  try {
+    const tenant = await ensureTenant()
+    const { data, error } = await supabase
+      .from('mes_recipes')
+      .select('category')
+      .eq('tenant_id', tenant)
+      .eq('id', recipeId)
+      .maybeSingle()
+    if (error) throw error
+    if (!data?.category) return null
+    return String(data.category)
+  } catch (err) {
+    console.error(err)
+    return null
   }
 }
 
@@ -2317,7 +2367,7 @@ function isVolumeType(type: PackingType) {
 }
 
 function isMovementType(type: PackingType) {
-  return type === 'ship' || type === 'filling' || type === 'transfer'
+  return type === 'ship' || type === 'transfer'
 }
 
 function normalizeSiteTypeKey(value: unknown) {
@@ -2442,7 +2492,7 @@ function autoFillDisposeVolumeQty() {
   if (remainingLiters == null) return
   const qty = convertFromLiters(remainingLiters, resolveUomCode(packingDialog.form.volume_uom)) ?? remainingLiters
   if (!Number.isFinite(qty)) return
-  packingDialog.form.volume_qty = String(Number(qty.toFixed(6)))
+  packingDialog.form.volume_qty = String(qty)
   delete packingDialog.errors.volume_qty
 }
 
@@ -2687,6 +2737,12 @@ async function persistPackingEvent(form: PackingFormState, isEditing: boolean) {
     lot_code: line.lot_code ? line.lot_code.trim() : null,
     sample_flg: Boolean(line.sample_flg),
   }))
+  const derivedFillingQty = form.packing_type === 'filling'
+    ? computeFillingTotals(form.filling_lines).totalVolume
+    : null
+  const derivedFillingSiteId = form.packing_type === 'filling'
+    ? resolveProduceSiteId(batch.value)
+    : null
   const packingMeta = {
     source: 'packing',
     batch_id: batchId.value,
@@ -2696,9 +2752,15 @@ async function persistPackingEvent(form: PackingFormState, isEditing: boolean) {
     memo: form.memo ? form.memo.trim() : null,
     volume_qty: volumeQty,
     volume_uom: volumeUomId || null,
-    movement_site_id: form.movement_site_id || null,
-    movement_qty: form.movement_qty ? toNumber(form.movement_qty) : null,
-    movement_memo: form.movement_memo ? form.movement_memo.trim() : null,
+    movement_site_id: form.packing_type === 'filling'
+      ? (derivedFillingSiteId || null)
+      : (form.movement_site_id || null),
+    movement_qty: form.packing_type === 'filling'
+      ? derivedFillingQty
+      : (form.movement_qty ? toNumber(form.movement_qty) : null),
+    movement_memo: form.packing_type === 'filling'
+      ? null
+      : (form.movement_memo ? form.movement_memo.trim() : null),
     filling_lines: fillingLinesMeta,
     tank_id: includeTank ? (form.tank_id || null) : null,
     tank_no: includeTank ? (selectedTank?.code ?? null) : null,
@@ -2714,9 +2776,6 @@ async function persistPackingEvent(form: PackingFormState, isEditing: boolean) {
     if (isEditing) {
       throw new Error('Editing Filling events is not supported. Delete and re-create the event.')
     }
-    const siteId = form.movement_site_id || null
-    if (!siteId) throw new Error(t('batch.packaging.errors.siteRequired'))
-
     const sourceLot = await resolveFillingSourceLot(batchId.value)
     if (!sourceLot) {
       throw new Error('Source lot for filling is not found. Run product_produce first.')
@@ -2767,7 +2826,7 @@ async function persistPackingEvent(form: PackingFormState, isEditing: boolean) {
       doc_no: docNo,
       movement_at: movementAt,
       src_site_id: sourceSiteId,
-      dest_site_id: siteId,
+      dest_site_id: sourceSiteId,
       batch_id: batchId.value,
       from_lot_id: sourceLot.id,
       uom_id: sourceUomId,
@@ -2776,6 +2835,7 @@ async function persistPackingEvent(form: PackingFormState, isEditing: boolean) {
       notes: form.memo ? form.memo.trim() : null,
       meta: {
         ...packingMeta,
+        movement_site_id: sourceSiteId,
         movement_qty: totalFillQty,
         movement_intent: 'PACKAGE_FILL',
         idempotency_key: `packing_fill:${batchId.value}:${packingId}`,
@@ -3037,7 +3097,7 @@ function formatFillingUnitVolume(packageTypeId: string) {
   if (!row || row.unit_volume == null) return '—'
   const uomCode = resolveUomCode(row.volume_uom)
   const qty = Number(row.unit_volume)
-  const display = Number.isFinite(qty) ? qty.toLocaleString(undefined, { maximumFractionDigits: 3 }) : String(row.unit_volume)
+  const display = Number.isFinite(qty) ? formatVolumeNumber(qty, locale.value) : String(row.unit_volume)
   return uomCode ? `${display} ${uomCode}` : display
 }
 
@@ -3066,11 +3126,27 @@ function formatPackingDate(value: string) {
   }
 }
 
+function beerCategoryLabel(categoryValue: string | null | undefined) {
+  if (!categoryValue) return '—'
+  const normalized = categoryValue.trim()
+  if (!normalized) return '—'
+  const match = beerCategories.value.find((row) => row.value === normalized || row.key === normalized)
+  return match?.label || normalized
+}
+
 function formatPackingBeerCategory() {
-  const fromForm = batchForm.product_name?.trim()
-  if (fromForm) return fromForm
-  const fromBatch = typeof batch.value?.product_name === 'string' ? batch.value.product_name.trim() : ''
-  if (fromBatch) return fromBatch
+  const attr = attrFields.value.find((field) => field.code === 'beer_category')
+  const attrValue = attr?.value != null ? String(attr.value).trim() : ''
+  if (attrValue) {
+    const option = attr?.options.find((item) => String(item.value) === attrValue)
+    if (option?.label) return option.label
+    return beerCategoryLabel(attrValue)
+  }
+  if (recipeCategoryId.value) return beerCategoryLabel(recipeCategoryId.value)
+  const metaValue =
+    resolveMetaString(batch.value?.meta, 'beer_category') ??
+    resolveMetaString(batch.value?.meta, 'category')
+  if (metaValue) return beerCategoryLabel(metaValue)
   return '—'
 }
 
@@ -3177,8 +3253,8 @@ function formatPackingFillingRemaining(event: PackingEvent) {
 function packingLossFromEvent(event: PackingEvent) {
   if (event.packing_type !== 'filling') return null
   if (event.tank_fill_start_volume == null || event.tank_left_volume == null) return null
-  const sample = event.sample_volume ?? fillingSampleVolumeFromEvent(event.filling_lines)
-  const fillingVolume = fillingLinesVolumeFromEvent(event.filling_lines)
+  const sample = event.sample_volume ?? fillingSampleVolumeFromEvent(event.filling_lines) ?? 0
+  const fillingVolume = fillingLinesVolumeFromEvent(event.filling_lines) ?? 0
   const loss = event.tank_fill_start_volume - event.tank_left_volume - fillingVolume - sample
   return Number.isFinite(loss) ? loss : null
 }
@@ -3263,16 +3339,6 @@ watch(
     if (packingDialog.form.packing_type === 'ship' || packingDialog.form.packing_type === 'transfer') {
       packingDialog.form.movement_qty = packingDialog.form.volume_qty || ''
     }
-  }
-)
-
-watch(
-  () => packingFillingTotals.value.totalVolume,
-  (total) => {
-    if (!packingDialog.form || packingDialog.form.packing_type !== 'filling') return
-    if (packingMovementQtyTouched.value) return
-    if (total == null) return
-    packingDialog.form.movement_qty = String(total)
   }
 )
 
@@ -3514,9 +3580,7 @@ function convertFromLiters(sizeInLiters: number | null | undefined, uomCode: str
 }
 
 function formatVolumeValue(value: number | null | undefined) {
-  if (value == null || Number.isNaN(value)) return '—'
-  const display = Number(value)
-  return `${display.toLocaleString(undefined, { maximumFractionDigits: 2 })} L`
+  return formatVolume(value, locale.value)
 }
 
 function newPackingForm(type: PackingType): PackingFormState {
@@ -3543,7 +3607,7 @@ function newPackingForm(type: PackingType): PackingFormState {
 onMounted(async () => {
   try {
     await ensureTenant()
-    await Promise.all([loadBatchOptions(), loadBatchStatusOptions(), loadSites(), loadTankOptions(), loadVolumeUoms(), loadUoms(), fetchPackageCategories(), loadPackingEvents(), loadBatchRelations()])
+    await Promise.all([loadBatchOptions(), loadBatchStatusOptions(), loadSites(), loadBeerCategories(), loadTankOptions(), loadVolumeUoms(), loadUoms(), fetchPackageCategories(), loadPackingEvents(), loadBatchRelations()])
   } catch (err) {
     console.error(err)
   }

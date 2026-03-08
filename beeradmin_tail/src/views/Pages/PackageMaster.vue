@@ -185,6 +185,7 @@ import { useI18n } from 'vue-i18n'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { supabase } from '@/lib/supabase'
+import { formatVolumeNumber } from '@/lib/volumeFormat'
 
 type PackageRow = {
   id: string
@@ -254,7 +255,7 @@ function resolveName(row: PackageRow) {
 function formatVolume(value: number | null) {
   if (value == null) return '—'
   const num = Number(value)
-  return Number.isFinite(num) ? num.toLocaleString(undefined, { maximumFractionDigits: 6 }) : String(value)
+  return Number.isFinite(num) ? formatVolumeNumber(num, locale.value) : String(value)
 }
 
 function formatTimestamp(value: string | null) {

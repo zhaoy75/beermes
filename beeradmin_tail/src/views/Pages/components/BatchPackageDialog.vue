@@ -60,6 +60,7 @@
 <script setup lang="ts">
 import { computed, reactive, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { formatVolume } from '@/lib/volumeFormat'
 
 type CategoryOption = {
   id: string
@@ -87,7 +88,7 @@ type SiteOption = {
 const props = defineProps<{ open: boolean, editing: boolean, loading: boolean, categories: CategoryOption[], sites: SiteOption[], initial?: PackageFormState | null }>()
 const emit = defineEmits<{ (e: 'close'): void; (e: 'submit', payload: PackageFormState): void }>()
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 const blank = (): PackageFormState => ({
   package_id: '',
@@ -103,7 +104,7 @@ const form = reactive<PackageFormState>(blank())
 const defaultSizeLabel = computed(() => {
   const current = props.categories.find((c) => c.id === form.package_id)
   if (!current?.default_volume_l) return t('batch.packaging.noDefaultSize')
-  return `${current.default_volume_l.toLocaleString(undefined, { maximumFractionDigits: 2 })} L`
+  return formatVolume(current.default_volume_l, locale.value)
 })
 
 watch(() => props.open, (val) => {

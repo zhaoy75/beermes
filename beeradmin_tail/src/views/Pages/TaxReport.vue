@@ -383,6 +383,7 @@ import { useI18n } from 'vue-i18n'
 import { supabase } from '@/lib/supabase'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import { formatVolume as formatVolumeDisplay } from '@/lib/volumeFormat'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
 
@@ -548,8 +549,7 @@ function formatCurrency(value: number | null | undefined) {
 }
 
 function formatVolume(value: number | null | undefined) {
-  if (value == null || Number.isNaN(value)) return '—'
-  return `${new Intl.NumberFormat(locale.value, { maximumFractionDigits: 2 }).format(value)} L`
+  return formatVolumeDisplay(value, locale.value)
 }
 
 function formatAbv(value: number | null | undefined) {

@@ -115,6 +115,7 @@
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { supabase } from '@/lib/supabase'
+import { formatVolumeNumber } from '@/lib/volumeFormat'
 
 interface BatchSummaryBatch {
   id: string
@@ -124,7 +125,7 @@ interface BatchSummaryBatch {
 const props = defineProps<{ open: boolean, batch: BatchSummaryBatch }>()
 const emit = defineEmits(['close'])
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 const loading = ref(false)
 const loadingIngredients = ref(false)
@@ -163,8 +164,7 @@ function resolvePlannedVolume(kpi: any) {
 }
 
 function formatVolume(value: number | null) {
-  if (value == null || Number.isNaN(value)) return '—'
-  return `${Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+  return formatVolumeNumber(value, locale.value)
 }
 
 watch(() => props.open, (val) => {

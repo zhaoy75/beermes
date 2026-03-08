@@ -247,7 +247,7 @@
                   {{ movementUnitOfPackageLabel(card) }}
                 </td>
                 <td class="px-3 py-2 text-right font-semibold text-gray-900">
-                  {{ formatNumber(card.totalLiters) }}
+                  {{ formatVolumeNumberValue(card.totalLiters) }}
                 </td>
                 <td class="px-3 py-2 text-right text-gray-600">{{ movementTaxRateLabel(card) }}</td>
                 <td class="px-3 py-2 text-gray-600">{{ siteLabel(card.sourceSiteId) }}</td>
@@ -325,7 +325,7 @@
               </div>
               <div class="flex justify-between">
                 <dt class="font-medium">{{ t('producedBeer.movement.card.totalLiters') }}</dt>
-                <dd class="font-semibold text-gray-900">{{ formatNumber(card.totalLiters) }}</dd>
+                <dd class="font-semibold text-gray-900">{{ formatVolumeNumberValue(card.totalLiters) }}</dd>
               </div>
               <div class="flex justify-between">
                 <dt class="font-medium">{{ t('producedBeer.movement.card.totalPackages') }}</dt>
@@ -370,7 +370,7 @@
                         {{ line.batchCode || '—' }}
                       </td>
                       <td class="px-2 py-1 text-right">{{ formatNumber(line.packageQty) }}</td>
-                      <td class="px-2 py-1 text-right">{{ formatNumber(line.qtyLiters) }}</td>
+                      <td class="px-2 py-1 text-right">{{ formatVolumeNumberValue(line.qtyLiters) }}</td>
                     </tr>
                     <tr v-if="card.lines.length === 0">
                       <td colspan="6" class="px-2 py-2 text-center text-gray-500">
@@ -399,6 +399,7 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { supabase } from '@/lib/supabase'
+import { formatVolumeNumber } from '@/lib/volumeFormat'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { toast } from 'vue3-toastify'
@@ -594,6 +595,10 @@ function formatNumber(value: number | null | undefined) {
   return numberFormatter.value.format(value)
 }
 
+function formatVolumeNumberValue(value: number | null | undefined) {
+  return formatVolumeNumber(value, locale.value)
+}
+
 function formatAbv(value: number | null | undefined) {
   if (value == null || Number.isNaN(value)) return '—'
   return `${numberFormatter.value.format(value)}%`
@@ -719,9 +724,7 @@ function packageVolumePerPackageLabel(packageTypeId: string | null | undefined) 
   const pkg = packageCategoryMap.value.get(packageTypeId)
   if (pkg?.size == null || Number.isNaN(pkg.size)) return null
   const qty = Number(pkg.size)
-  const display = Number.isFinite(qty)
-    ? qty.toLocaleString(locale.value, { maximumFractionDigits: 3 })
-    : String(pkg.size)
+  const display = Number.isFinite(qty) ? formatVolumeNumberValue(qty) : String(pkg.size)
   const uomCode = pkg.uomId ? uomMap.value.get(pkg.uomId) ?? pkg.uomId : null
   return uomCode ? `${display} ${uomCode}` : display
 }

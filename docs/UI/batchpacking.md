@@ -74,6 +74,12 @@
    - actions: Edit / View / Delete
    - Edit switches to Edit mode with selected row values prefilled
    - View switches to read-only detail mode with selected row values prefilled
+   - Batch Edit page packing history list must show the same derived values and use the same filling calculation rules as this page
+   - In particular, for Filling rows on Batch Edit page:
+     - `明細総容量` must match `Total line volume`
+     - `詰口残数量` must match the same derived remaining quantity
+     - `欠減` must match the same derived loss quantity
+   - These three Batch Edit columns must not use separate or simplified page-specific logic
 3) Toolbar Actions
    - `新規登録` (switch to Edit mode)
 
@@ -185,6 +191,38 @@ Derived values:
 - Tank Loss Volume = Fill Start Volume - Left Volume - Total line volume - Sample Volume
 - Effective Loss Qty (for RPC) = Tank Loss Volume + Sample Volume
 - Loss and Sample Volume must be included in Processed volume
+
+Common filling calculation rules:
+- Batch Packing filling logic is the source of truth for any page that shows filling totals or filling-derived history columns
+- Filling line volume resolution order:
+  - if package type is fixed-volume package: `qty * package unit volume`
+  - otherwise use line `volume`
+  - if line `volume` is not available, fallback to line `qty`
+- `sample_flg = true` lines are sample-only:
+  - excluded from `Total line volume`
+  - excluded from package count shown in packing history
+  - included in `Sample Volume`
+- `sample_flg = false` lines are inventory lines:
+  - included in `Total line volume`
+  - included in package count when package type is qty-based
+- Filling history derived columns must be calculated as:
+  - `詰口払出数量 = Tank Fill Start Volume - Tank Fill Left Volume`
+  - `明細総容量 = sum(filling line volume where sample_flg = false)`
+  - `詰口残数量 = 詰口払出数量 - 明細総容量`
+  - `欠減 = Tank Fill Start Volume - Tank Fill Left Volume - 明細総容量 - Sample Volume`
+- If persisted `sample_volume` is missing, UI must derive `Sample Volume` from sample lines instead of assuming zero
+- These rules apply to:
+  - Batch Packing page
+  - Batch Edit page packing history list
+  - any shared packing/filling history component
+
+Batch Edit consistency requirement:
+- Batch Edit page is a consumer of packing history; it is not allowed to redefine filling-derived columns independently
+- For Filling rows, Batch Edit page must display:
+  - `明細総容量` using the same `sample_flg = false` line-total rule as Batch Packing
+  - `詰口残数量` using the same `詰口払出数量 - 明細総容量` rule as Batch Packing
+  - `欠減` using the same `Tank Fill Start Volume - Tank Fill Left Volume - 明細総容量 - Sample Volume` rule as Batch Packing
+- If a shared component or shared calculation module exists, Batch Edit page should reuse it instead of duplicating logic
 
 Totals:
 - Total units
@@ -361,6 +399,7 @@ Warnings:
 - `beer category` in Packing Event List must use batch attr `beer_category` first
 - if batch attr `beer_category` is not available, fallback to recipe `category`, then batch meta `beer_category` / `category`
 - if `beer_category` resolves to a registry id, UI must display the label from `registry_def`
+- filling-derived history fields must use the common filling calculation rules above and must not implement page-specific variants
 
 ## Accessibility & i18n
 - Labels for all inputs

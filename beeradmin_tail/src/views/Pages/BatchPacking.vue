@@ -686,6 +686,17 @@ import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import {
+  fillingLinesVolumeFromEvent as deriveFillingLinesVolumeFromEvent,
+  fillingSampleVolumeFromEvent as deriveFillingSampleVolumeFromEvent,
+  fillingUnitsFromEvent,
+  packingFillingPayoutFromEvent as derivePackingFillingPayoutFromEvent,
+  packingFillingRemainingFromEvent as derivePackingFillingRemainingFromEvent,
+  packingLossFromEvent as derivePackingLossFromEvent,
+  packingTotalLineVolumeFromEvent as derivePackingTotalLineVolumeFromEvent,
+  processedFillingVolumeFromEvent,
+  resolveFillingLineVolumeFromEvent as deriveResolveFillingLineVolumeFromEvent,
+} from '@/lib/batchFilling'
 import { supabase } from '@/lib/supabase'
 import { formatVolume, formatVolumeNumber } from '@/lib/volumeFormat'
 
@@ -1028,49 +1039,28 @@ function resolveFillingLineVolumeFromForm(line: PackingFillingLineForm) {
   return inputVolume
 }
 
-function resolveFillingLineVolumeFromEvent(line: PackingFillingLine) {
-  if (!line.package_type_id) return null
-  if (isPackageVolumeFixed(line.package_type_id)) {
-    const unit = resolvePackageUnitVolume(line.package_type_id)
-    if (unit == null) return null
-    return (line.qty ?? 0) * unit
+function fillingCalculationOptions() {
+  return {
+    isPackageVolumeFixed,
+    resolvePackageUnitVolume,
   }
-  if (line.volume != null && Number.isFinite(line.volume)) return line.volume
-  if (line.qty != null && Number.isFinite(line.qty)) return line.qty
-  return null
+}
+
+function resolveFillingLineVolumeFromEvent(line: PackingFillingLine) {
+  return deriveResolveFillingLineVolumeFromEvent(line, fillingCalculationOptions())
 }
 
 function fillingLinesVolumeFromEvent(lines: PackingFillingLine[]) {
-  return lines.reduce((sum, line) => {
-    if (line.sample_flg) return sum
-    const volume = resolveFillingLineVolumeFromEvent(line)
-    if (volume == null) return sum
-    return sum + volume
-  }, 0)
+  return deriveFillingLinesVolumeFromEvent(lines, fillingCalculationOptions())
 }
 
 function fillingSampleVolumeFromEvent(lines: PackingFillingLine[]) {
-  return lines.reduce((sum, line) => {
-    if (!line.sample_flg) return sum
-    const volume = resolveFillingLineVolumeFromEvent(line)
-    if (volume == null) return sum
-    return sum + volume
-  }, 0)
+  return deriveFillingSampleVolumeFromEvent(lines, fillingCalculationOptions())
 }
 
 function processedVolumeFromPackingEvent(event: PackingEvent) {
   if (event.packing_type === 'filling') {
-    let total = 0
-    const qty = fillingLinesVolumeFromEvent(event.filling_lines) ?? 0
-    if (Number.isFinite(qty)) total += qty
-    const sample = event.sample_volume ?? fillingSampleVolumeFromEvent(event.filling_lines) ?? 0
-    if (Number.isFinite(sample)) total += sample
-    if (event.tank_fill_start_volume != null && event.tank_left_volume != null) {
-      const totalFillVolume = fillingLinesVolumeFromEvent(event.filling_lines) ?? 0
-      const loss = event.tank_fill_start_volume - event.tank_left_volume - totalFillVolume - sample
-      if (Number.isFinite(loss)) total += loss
-    }
-    return total
+    return processedFillingVolumeFromEvent(event, fillingCalculationOptions())
   }
   const volume = eventVolumeInLiters(event)
   if (volume != null) return volume
@@ -3177,11 +3167,7 @@ function formatPackingPackageInfo(event: PackingEvent) {
 
 function formatPackingNumber(event: PackingEvent) {
   if (!event.filling_lines.length) return '—'
-  const totalUnits = event.filling_lines.reduce((sum, line) => {
-    if (line.sample_flg) return sum
-    if (!isPackageVolumeFixed(line.package_type_id)) return sum
-    return sum + (line.qty ?? 0)
-  }, 0)
+  const totalUnits = fillingUnitsFromEvent(event.filling_lines, fillingCalculationOptions())
   if (!Number.isFinite(totalUnits)) return '—'
   return totalUnits.toLocaleString(undefined, { maximumFractionDigits: 0 })
 }
@@ -3199,25 +3185,17 @@ function packingTankLeftVolumeFromEvent(event: PackingEvent) {
 }
 
 function packingFillingPayoutFromEvent(event: PackingEvent) {
-  const start = packingTankStartVolumeFromEvent(event)
-  const left = packingTankLeftVolumeFromEvent(event)
-  if (start == null || left == null) return null
-  const payout = start - left
-  return Number.isFinite(payout) ? payout : null
+  return derivePackingFillingPayoutFromEvent(event)
 }
 
 function packingTotalLineVolumeFromEvent(event: PackingEvent) {
   if (event.packing_type !== 'filling') return null
-  const total = fillingLinesVolumeFromEvent(event.filling_lines)
-  return Number.isFinite(total) ? total : null
+  return derivePackingTotalLineVolumeFromEvent(event, fillingCalculationOptions())
 }
 
 function packingFillingRemainingFromEvent(event: PackingEvent) {
-  const payout = packingFillingPayoutFromEvent(event)
-  const totalLine = packingTotalLineVolumeFromEvent(event)
-  if (payout == null || totalLine == null) return null
-  const remaining = payout - totalLine
-  return Number.isFinite(remaining) ? remaining : null
+  if (event.packing_type !== 'filling') return null
+  return derivePackingFillingRemainingFromEvent(event, fillingCalculationOptions())
 }
 
 function formatPackingTankStartVolume(event: PackingEvent) {
@@ -3252,11 +3230,7 @@ function formatPackingFillingRemaining(event: PackingEvent) {
 
 function packingLossFromEvent(event: PackingEvent) {
   if (event.packing_type !== 'filling') return null
-  if (event.tank_fill_start_volume == null || event.tank_left_volume == null) return null
-  const sample = event.sample_volume ?? fillingSampleVolumeFromEvent(event.filling_lines) ?? 0
-  const fillingVolume = fillingLinesVolumeFromEvent(event.filling_lines) ?? 0
-  const loss = event.tank_fill_start_volume - event.tank_left_volume - fillingVolume - sample
-  return Number.isFinite(loss) ? loss : null
+  return derivePackingLossFromEvent(event, fillingCalculationOptions())
 }
 
 function formatPackingLoss(event: PackingEvent) {

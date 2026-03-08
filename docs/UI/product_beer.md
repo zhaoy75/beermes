@@ -1,5 +1,5 @@
 ## Purpose
-- Show produced beer movement history with filter, list/card view toggle, and CSV export.
+- Show produced beer movement history with filter, table view, and CSV export.
 - Provide entry points to create, fast-create, and edit produced beer movement records.
 - Keep inventory browsing on the dedicated `ProducedBeerInventory` page, not on this page.
 
@@ -31,9 +31,8 @@
 ### Movements section
 - Section title: `producedBeer.sections.movements`
 - Subtitle: `producedBeer.movement.subtitle`
-- Default view: list view
+- View: table only
 - Actions:
-  - List/Card view toggle
   - Export CSV
   - Fast movement
   - New movement
@@ -63,35 +62,14 @@
 - Movement type
 - Actions (reverse)
 
-### Movement Card View
-- Header:
-  - Document no
-  - Movement type
-  - Movement date
-  - Edit action
-- Summary:
-  - Source site
-  - Destination site
-  - Total liters
-  - Total packages
-- Lines table:
-  - Beer
-  - Category
-  - Package type
-  - Batch no
-  - Packages
-  - Liters
-
 ## Actions
 - Refresh header action:
   - reload movement headers and lines.
-- List/Card toggle:
-  - switch local presentation only.
 - Reset filters:
   - clear beer/category/package/batch/date filters.
   - set movement type to `all`.
 - Export CSV:
-  - exports currently filtered movement cards/lines.
+  - exports currently filtered movement table rows/lines.
   - file name format: `movements-YYYYMMDD.csv`.
 - Fast movement:
   - navigate to `/producedBeerMovementFast`.
@@ -110,11 +88,11 @@
   - `wasteNotax`: `doc_type = waste` and `meta.tax_type = notax`
   - `transferNotax`: `doc_type = transfer` and `meta.tax_type = notax`
 - Filter behavior:
-  - Date range and movement type are applied before loading card lines into the page result.
+  - Date range and movement type are applied before loading movement lines into the page result.
   - Beer/category/package/batch filters are applied client-side to movement lines.
-  - Cards with zero remaining lines after client-side filtering are hidden.
+  - Movement rows with zero remaining lines after client-side filtering are hidden.
 - Totals:
-  - card totals are recalculated from the filtered visible lines.
+  - movement row totals are recalculated from the filtered visible lines.
 - Tax rate label:
   - prefer `inv_movements.meta.tax_rate`.
   - if tax type is `notax`, show `0%`.
@@ -144,7 +122,7 @@
   - `inv_movement_lines` (movement lines)
   - `mes_batches` (batch code, product name, recipe link, meta)
 - Derived fields:
-  - movement card totals from filtered lines.
+  - movement row totals from filtered lines.
   - movement type label from `doc_type` + `meta.tax_type`.
   - Volume Per Package from `mst_uom`.
   - tax rate label from `inv_movement_lines.tax_rate`.
@@ -172,4 +150,4 @@
 
 ## Other
 - This page is multilingual (Japanese/English) via i18n keys under `producedBeer`.
-- UI supports responsive layout with wrapped toolbar and list/card presentation.
+- UI supports responsive layout with wrapped toolbar and table presentation.

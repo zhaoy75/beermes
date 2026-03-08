@@ -535,6 +535,7 @@ async function saveMovement() {
         dst_site: movementForm.dstSite,
         src_lot_id: row.lot.id,
         qty: row.qty,
+        unit: row.packageQty,
         uom_id: row.lot.uomId,
         tax_decision_code: movementForm.taxDecisionCode,
         reason: movementForm.taxDecisionReason.trim() || null,

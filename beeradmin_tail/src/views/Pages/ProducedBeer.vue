@@ -25,34 +25,8 @@
             <p class="text-sm text-gray-500">{{ t('producedBeer.movement.subtitle') }}</p>
           </div>
           <div class="flex flex-wrap items-center gap-2">
-            <div class="inline-flex rounded-lg border border-gray-300 bg-white p-0.5 mr-6">
-              <button
-                class="px-3 py-1.5 text-sm rounded-md"
-                :class="
-                  movementView === 'list'
-                    ? 'bg-gray-900 text-white'
-                    : 'text-gray-600 hover:bg-gray-50'
-                "
-                type="button"
-                @click="movementView = 'list'"
-              >
-                {{ t('producedBeer.movement.viewList') }}
-              </button>
-              <button
-                class="px-3 py-1.5 text-sm rounded-md"
-                :class="
-                  movementView === 'card'
-                    ? 'bg-gray-900 text-white'
-                    : 'text-gray-600 hover:bg-gray-50'
-                "
-                type="button"
-                @click="movementView = 'card'"
-              >
-                {{ t('producedBeer.movement.viewCard') }}
-              </button>
-            </div>
             <button
-              class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-50 disabled:opacity-50 mr-10"
+              class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
               :disabled="movementLoading || filteredMovementCards.length === 0"
               @click="exportMovementsCsv"
             >
@@ -192,10 +166,7 @@
           </form>
         </section>
 
-        <section
-          v-if="movementView === 'list'"
-          class="overflow-x-auto border border-gray-200 rounded-lg"
-        >
+        <section class="overflow-x-auto border border-gray-200 rounded-lg">
           <table class="min-w-full divide-y divide-gray-200 text-sm">
             <thead class="bg-gray-50 text-xs uppercase text-gray-600">
               <tr>
@@ -277,117 +248,6 @@
               </tr>
             </tbody>
           </table>
-        </section>
-
-        <section v-else class="grid gap-4">
-          <article
-            v-for="card in filteredMovementCards"
-            :key="card.id"
-            class="border border-gray-200 rounded-xl shadow-sm p-4 bg-white space-y-3"
-          >
-            <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
-              <div>
-                <p class="text-xs uppercase tracking-wide text-gray-400">
-                  {{ t('producedBeer.movement.card.docNo') }}
-                </p>
-                <h3 class="text-lg font-semibold text-gray-900">{{ card.docNo }}</h3>
-                <p class="text-xs text-gray-500">
-                  {{ movementTypeLabel(card.docType, card.taxType) }}
-                </p>
-              </div>
-              <div class="text-left md:text-right">
-                <p class="text-xs uppercase tracking-wide text-gray-400">
-                  {{ t('producedBeer.movement.card.movementDate') }}
-                </p>
-                <p class="text-xs text-gray-500">{{ formatDateTime(card.movementAt) }}</p>
-                <button
-                  class="mt-2 px-3 py-1.5 text-xs rounded border hover:bg-gray-50 disabled:opacity-50 disabled:hover:bg-white"
-                  :disabled="movementLoading || card.status === 'void'"
-                  @click="reverseMovement(card)"
-                >
-                  {{
-                    card.status === 'void'
-                      ? t('producedBeer.movement.actions.reversed')
-                      : t('producedBeer.movement.actions.reverse')
-                  }}
-                </button>
-              </div>
-            </div>
-
-            <dl class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-600">
-              <div class="flex justify-between">
-                <dt class="font-medium">{{ t('producedBeer.movement.card.source') }}</dt>
-                <dd>{{ siteLabel(card.sourceSiteId) }}</dd>
-              </div>
-              <div class="flex justify-between">
-                <dt class="font-medium">{{ t('producedBeer.movement.card.destination') }}</dt>
-                <dd>{{ siteLabel(card.destSiteId) }}</dd>
-              </div>
-              <div class="flex justify-between">
-                <dt class="font-medium">{{ t('producedBeer.movement.card.totalLiters') }}</dt>
-                <dd class="font-semibold text-gray-900">{{ formatVolumeNumberValue(card.totalLiters) }}</dd>
-              </div>
-              <div class="flex justify-between">
-                <dt class="font-medium">{{ t('producedBeer.movement.card.totalPackages') }}</dt>
-                <dd class="font-semibold text-gray-900">{{ formatNumber(card.totalPackages) }}</dd>
-              </div>
-            </dl>
-
-            <div class="border-t border-gray-100 pt-3">
-              <p class="text-xs uppercase tracking-wide text-gray-400 mb-2">
-                {{ t('producedBeer.movement.card.lines') }}
-              </p>
-              <div class="overflow-x-auto">
-                <table class="min-w-full text-xs">
-                  <thead class="text-[11px] uppercase text-gray-500">
-                    <tr>
-                      <th class="px-2 py-1 text-left">
-                        {{ t('producedBeer.movement.card.lineBeer') }}
-                      </th>
-                      <th class="px-2 py-1 text-left">
-                        {{ t('producedBeer.movement.card.lineCategory') }}
-                      </th>
-                      <th class="px-2 py-1 text-left">
-                        {{ t('producedBeer.movement.card.linePackageType') }}
-                      </th>
-                      <th class="px-2 py-1 text-left">
-                        {{ t('producedBeer.movement.card.lineBatch') }}
-                      </th>
-                      <th class="px-2 py-1 text-right">
-                        {{ t('producedBeer.movement.card.lineQtyPackages') }}
-                      </th>
-                      <th class="px-2 py-1 text-right">
-                        {{ t('producedBeer.movement.card.lineQtyLiters') }}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-gray-100">
-                    <tr v-for="line in card.lines" :key="line.id">
-                      <td class="px-2 py-1 text-gray-800">{{ line.beerName || '—' }}</td>
-                      <td class="px-2 py-1 text-gray-600">{{ categoryLabel(line.categoryId) }}</td>
-                      <td class="px-2 py-1 text-gray-600">{{ line.packageTypeLabel || '—' }}</td>
-                      <td class="px-2 py-1 font-mono text-[11px] text-gray-500">
-                        {{ line.batchCode || '—' }}
-                      </td>
-                      <td class="px-2 py-1 text-right">{{ formatNumber(line.packageQty) }}</td>
-                      <td class="px-2 py-1 text-right">{{ formatVolumeNumberValue(line.qtyLiters) }}</td>
-                    </tr>
-                    <tr v-if="card.lines.length === 0">
-                      <td colspan="6" class="px-2 py-2 text-center text-gray-500">
-                        {{ t('common.noData') }}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </article>
-          <p
-            v-if="!movementLoading && filteredMovementCards.length === 0"
-            class="py-8 text-center text-gray-500"
-          >
-            {{ t('common.noData') }}
-          </p>
         </section>
       </section>
     </div>
@@ -505,8 +365,6 @@ const uoms = ref<Array<{ id: string; code: string | null }>>([])
 const siteOptions = ref<SiteOption[]>([])
 
 const movementCards = ref<MovementCard[]>([])
-const movementView = ref<'list' | 'card'>('list')
-
 const movementFilters = reactive({
   beerName: '',
   category: '',

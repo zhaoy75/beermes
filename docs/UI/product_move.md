@@ -139,7 +139,14 @@ Validation Rules (Dynamic)
 Data Handling
 --------------------------------------------------
 when Post button is clicked, call rpc public.product_move
-- rpc payload may include optional `unit` and `tax_rate`; `tax_rate` must be non-negative when provided
+- rpc payload should include `unit` when package unit count is known for the selected move line
+- rpc payload must not include `tax_rate`
+- `tax_rate` is derived inside `public.product_move` by:
+  - setting `0` for non-taxable movements
+  - only when derived `tax_event = 'TAXABLE_REMOVAL'`:
+    - resolving beer category from batch attr `beer_category`
+    - resolving `registry_def.kind = 'alcohol_type'` to get `tax_category_code`
+    - calling `public.get_current_tax_rate(tax_category_code, movement_at::date)`
 
 
 --------------------------------------------------

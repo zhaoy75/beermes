@@ -33,13 +33,17 @@ Required fields:
 - `tax_decision_code` text
 
 Recommended optional fields:
-- `unit` numeric (`> 0` when provided): movement unit count
-- `tax_rate` numeric (`>= 0` when provided): persisted to `inv_movement_lines.tax_rate`
+- `unit` numeric (`> 0` when provided): movement unit count for this move line
 - `doc_no` text
 - `movement_at` timestamptz (default `now()`)
 - `reason` text
 - `notes` text
 - `meta` jsonb
+
+Not accepted from UI:
+- `tax_rate`
+  - move pages must not send `tax_rate`
+  - `public.product_move` must derive and persist `tax_rate` itself
 
 ## Validation (Rule Engine First)
 1. Assert tenant context (`public._assert_tenant()`).
@@ -60,6 +64,21 @@ Recommended optional fields:
    - `tax_event`
    - `result_lot_tax_type`
    - line constraints (`allow_partial_quantity`, `require_full_lot`, `lot_split_required`, etc.).
+10. Derive `tax_rate`:
+   - if derived `tax_event <> 'TAXABLE_REMOVAL'`, set `tax_rate = 0`
+   - if derived `tax_event = 'TAXABLE_REMOVAL'`:
+     - resolve source beer category from source lot batch context
+     - required source:
+       - batch attr `beer_category`
+     - resolve `registry_def.kind = 'alcohol_type'` for that category and read `spec.tax_category_code`
+       - match candidates by:
+         - `registry_def.def_id`
+         - `registry_def.def_key`
+         - `registry_def.spec.name`
+       - if batch attr uses legacy `entity_attr.value_ref_type_id`, allow fallback lookup from `type_def.meta.tax_category_code`
+       - if the resolved beer category is already a numeric tax category code string, accept it directly
+     - call `public.get_current_tax_rate(spec.tax_category_code, v_movement_at::date)`
+     - persist returned value to `inv_movement_lines.tax_rate`
 
 ## Lot and Quantity Checks
 - Lock source lot row `for update`.
@@ -68,9 +87,10 @@ Recommended optional fields:
 - `uom_id` is required and must match source lot/inventory UOM context.
 - `qty` does not exceed source lot balance.
 - If `unit` is provided, it must be `> 0`.
-- If `tax_rate` is provided, it must be `>= 0`.
 - Source inventory (`inv_inventory`) for `(src_site, src_lot_id, uom_id)` exists and has sufficient quantity.
 - If rule requires full-lot movement, enforce `qty = source_lot_qty`.
+- If derived `tax_event = 'TAXABLE_REMOVAL'` and batch attr `beer_category` or tax category mapping cannot be resolved, posting must fail.
+- If derived `tax_event = 'TAXABLE_REMOVAL'` and `public.get_current_tax_rate` does not return exactly one valid tax rate for the resolved tax category and movement date, posting must fail.
 
 ## Tables Affected
 - Write: `public.inv_inventory`
@@ -84,10 +104,11 @@ Recommended optional fields:
 2. Insert movement header to `inc_movements` with:
    - source/destination site
    - movement timestamp
-   - `movement_intent`, `tax_decision_code`, derived `tax_event` in `meta`.
+   - `movement_intent`, `tax_decision_code`, derived `tax_event`, derived `tax_rate` in `meta`.
 3. Insert one line in `inv_movement_lines`:
-   - `src_lot_id`, `qty`, `unit`, optional `tax_rate`, `uom_id`
-   - include rule snapshot in `meta` (rule version + matched rule keys).
+   - `src_lot_id`, `qty`, `unit`, derived `tax_rate`, `uom_id`
+   - include rule snapshot in `meta` (rule version + matched rule keys)
+   - include resolved `beer_category` and `tax_category_code` in `meta` when taxable derivation runs.
 4. Apply lot movement:
    - Decrease source lot qty.
    - If `unit` is provided, decrease source lot `unit` consistently.
@@ -120,6 +141,8 @@ Recommended optional fields:
 - `PM007`: insufficient source lot/inventory qty
 - `PM008`: full-lot movement required by rule
 - `PM009`: destination lot creation/validation failed
+- `PM010`: batch attr `beer_category` or tax category code could not be resolved for taxable movement
+- `PM011`: tax rate could not be derived from tax master for taxable movement
 
 ## Example Input
 ```json
@@ -132,7 +155,6 @@ Recommended optional fields:
   "src_lot_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
   "qty": 120,
   "unit": 240,
-  "tax_rate": 0.1,
   "uom_id": "44444444-4444-4444-4444-444444444444",
   "tax_decision_code": "TAXABLE_REMOVAL",
   "notes": "Domestic shipment",
@@ -145,4 +167,6 @@ Recommended optional fields:
 ## Notes
 - This specification uses your requested header table name `inc_movements`.
 - In current repository schema, movement headers are stored in `inv_movements`; implementers should map `inc_movements` to the active table name if needed.
-- `inv_movement_lines` persists optional `unit` and `tax_rate`; lot quantity movement continues to apply `unit` when provided.
+- `inv_movement_lines` persists `unit` when provided and persists `tax_rate` from backend derivation; lot quantity movement continues to apply `unit` when provided.
+- For `product_move`, `tax_rate` is `0` for all non-taxable movements and only resolves from tax master when derived `tax_event = 'TAXABLE_REMOVAL'`.
+- `product_move` must treat batch attr `beer_category` as the only business source of taxable category resolution.

@@ -21,6 +21,10 @@ declare
   v_qty numeric;
   v_unit numeric;
   v_tax_rate numeric;
+  v_beer_category text;
+  v_beer_category_type_id bigint;
+  v_tax_category_code text;
+  v_tax_category_match_count int;
   v_uom_id uuid;
   v_movement_intent text;
   v_tax_decision_code text;
@@ -81,7 +85,6 @@ begin
   v_qty := coalesce((p_doc ->> 'qty')::numeric, 0);
   v_unit := nullif(btrim(coalesce(p_doc ->> 'unit', '')), '')::numeric;
   v_meta := coalesce(p_doc -> 'meta', '{}'::jsonb);
-  v_tax_rate := nullif(btrim(coalesce(p_doc ->> 'tax_rate', v_meta ->> 'tax_rate', '')), '')::numeric;
   v_uom_id := nullif(p_doc ->> 'uom_id', '')::uuid;
   v_tax_decision_code := nullif(btrim(coalesce(p_doc ->> 'tax_decision_code', '')), '');
   v_reason := nullif(p_doc ->> 'reason', '');
@@ -103,10 +106,6 @@ begin
 
   if v_unit is not null and v_unit <= 0 then
     raise exception 'PM002: unit must be greater than 0';
-  end if;
-
-  if v_tax_rate is not null and v_tax_rate < 0 then
-    raise exception 'PM002: tax_rate must be greater than or equal to 0';
   end if;
 
   select r.spec
@@ -361,6 +360,112 @@ begin
     end if;
   end if;
 
+  if v_tax_event = 'TAXABLE_REMOVAL' then
+    if v_source_batch_id is null then
+      raise exception 'PM010: source beer category or tax category code could not be resolved for taxable movement';
+    end if;
+
+    select
+      coalesce(
+        nullif(btrim(coalesce(v_batch_attr.value_json ->> 'def_id', '')), ''),
+        nullif(btrim(coalesce(v_batch_attr.value_text, '')), '')
+      ),
+      v_batch_attr.value_ref_type_id
+      into
+        v_beer_category,
+        v_beer_category_type_id
+    from public.mes_batches b
+    left join lateral (
+      select ea.value_text, ea.value_json, ea.value_ref_type_id
+      from public.entity_attr ea
+      join public.attr_def ad
+        on ad.attr_id = ea.attr_id
+      where ea.tenant_id = v_tenant
+        and ea.entity_type = 'batch'
+        and ea.entity_id = b.id
+        and ad.domain = 'batch'
+        and ad.code = 'beer_category'
+        and ad.is_active = true
+      order by ea.updated_at desc
+      limit 1
+    ) v_batch_attr on true
+    where b.tenant_id = v_tenant
+      and b.id = v_source_batch_id
+    limit 1;
+
+    if v_beer_category is null and v_beer_category_type_id is null then
+      raise exception 'PM010: source beer category or tax category code could not be resolved for taxable movement';
+    end if;
+
+    v_tax_category_code := null;
+    v_tax_category_match_count := 0;
+
+    if v_beer_category is not null then
+      with candidates as (
+        select
+          case
+            when r.scope = 'tenant' and r.owner_id = v_tenant then 0
+            else 1
+          end as scope_rank,
+          nullif(btrim(coalesce(r.spec ->> 'tax_category_code', '')), '') as tax_category_code
+        from public.registry_def r
+        where r.kind = 'alcohol_type'
+          and r.is_active = true
+          and (
+            (r.scope = 'tenant' and r.owner_id = v_tenant)
+            or r.scope = 'system'
+          )
+          and (
+            r.def_id::text = v_beer_category
+            or r.def_key = v_beer_category
+            or lower(coalesce(r.spec ->> 'name', '')) = lower(v_beer_category)
+          )
+      ),
+      prioritized as (
+        select c.tax_category_code
+        from candidates c
+        where c.scope_rank = (select min(c2.scope_rank) from candidates c2)
+      )
+      select count(*), max(p.tax_category_code)
+        into v_tax_category_match_count, v_tax_category_code
+      from prioritized p;
+    end if;
+
+    if v_tax_category_match_count > 1 then
+      raise exception 'PM010: source beer category or tax category code could not be resolved for taxable movement';
+    end if;
+
+    if v_tax_category_code is null and v_beer_category_type_id is not null then
+      select nullif(btrim(coalesce(td.meta ->> 'tax_category_code', '')), '')
+        into v_tax_category_code
+      from public.type_def td
+      where td.tenant_id = v_tenant
+        and td.type_id = v_beer_category_type_id
+        and td.is_active = true
+      limit 1;
+    end if;
+
+    if v_tax_category_code is null
+       and v_beer_category is not null
+       and btrim(v_beer_category) ~ '^[0-9]+(\.[0-9]+)?$' then
+      v_tax_category_code := btrim(v_beer_category);
+    end if;
+
+    if v_tax_category_code is null then
+      raise exception 'PM010: source beer category or tax category code could not be resolved for taxable movement';
+    end if;
+
+    begin
+      v_tax_rate := public.get_current_tax_rate(v_tax_category_code, v_movement_at::date);
+    exception
+      when others then
+        raise exception 'PM011: %', sqlerrm;
+    end;
+  else
+    v_tax_rate := 0;
+    v_tax_category_code := null;
+  end if;
+
   if v_doc_no is null then
     v_doc_no := format(
       'PM-%s-%s',
@@ -387,7 +492,8 @@ begin
     v_meta || jsonb_build_object(
       'movement_intent', v_movement_intent,
       'tax_decision_code', v_tax_decision_code,
-      'tax_event', v_tax_event
+      'tax_event', v_tax_event,
+      'tax_rate', v_tax_rate
     ),
     v_notes
   )
@@ -413,10 +519,13 @@ begin
       'movement_intent', v_movement_intent,
       'tax_decision_code', v_tax_decision_code,
       'tax_event', v_tax_event,
+      'tax_rate', v_tax_rate,
       'rule_version', v_rules ->> 'version',
       'src_site_type', v_src_site_type,
       'dst_site_type', v_dst_site_type,
-      'src_lot_tax_type', v_effective_lot_tax_type
+      'src_lot_tax_type', v_effective_lot_tax_type,
+      'beer_category', v_beer_category,
+      'tax_category_code', v_tax_category_code
     )
   )
   returning id into v_movement_line_id;

@@ -2115,6 +2115,7 @@ type AllocatedMoveSegment = {
   beerName: string
   qtyLiters: number
   qtySourceUom: number
+  unit: number | null
   lotId: string
   lotNo: string | null
   lotTaxType: string | null
@@ -2125,6 +2126,14 @@ type AllocatedMoveSegment = {
 }
 
 function allocateLine(line: ValidatedLine, remainingByLotId?: Map<string, number>) {
+  const unitCountForLot = (lot: BeerLotOption, qtyLiters: number) => {
+    if (lot.packageUnitVolumeLiters == null || lot.packageUnitVolumeLiters <= 0) return null
+    const raw = qtyLiters / lot.packageUnitVolumeLiters
+    if (!Number.isFinite(raw) || raw <= 0) return null
+    const rounded = Math.round(raw * 1000000) / 1000000
+    return Math.abs(rounded - Math.round(rounded)) < 0.0000001 ? Math.round(rounded) : rounded
+  }
+
   const availableForLot = (lot: BeerLotOption) => {
     if (!remainingByLotId) return lot.qtyLiters
     return remainingByLotId.get(lot.lotId) ?? lot.qtyLiters
@@ -2159,6 +2168,7 @@ function allocateLine(line: ValidatedLine, remainingByLotId?: Map<string, number
         beerName: line.option.beerName,
         qtyLiters: line.qtyLiters,
         qtySourceUom,
+        unit: unitCountForLot(manualLot, line.qtyLiters),
         lotId: manualLot.lotId,
         lotNo: manualLot.lotNo,
         lotTaxType: manualLot.lotTaxType,
@@ -2198,6 +2208,7 @@ function allocateLine(line: ValidatedLine, remainingByLotId?: Map<string, number
       beerName: line.option.beerName,
       qtyLiters: takeLiters,
       qtySourceUom,
+      unit: unitCountForLot(lot, takeLiters),
       lotId: lot.lotId,
       lotNo: lot.lotNo,
       lotTaxType: lot.lotTaxType,
@@ -2399,6 +2410,7 @@ function buildMovePayloads() {
         dst_site: routeForm.toSiteId,
         src_lot_id: segment.lotId,
         qty: segment.qtySourceUom,
+        unit: segment.unit,
         uom_id: segment.uomId,
         tax_decision_code: segment.taxDecisionCode,
         movement_at: movementAt,
@@ -2411,6 +2423,7 @@ function buildMovePayloads() {
           lot_no: segment.lotNo,
           derived_tax_event: resolveTaxEventForLot(segment.lotTaxType, segment.taxDecisionCode),
           line_note: segment.note,
+          package_qty: segment.unit,
           qty_l: segment.qtyLiters,
           ui_line_index: lineIndex + 1,
           allocation_segment_index: segmentIndex + 1,

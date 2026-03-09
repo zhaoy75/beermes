@@ -150,16 +150,12 @@
                 class="w-full h-[40px] border rounded px-3 bg-white"
               >
                 <option value="all">{{ t('common.all') }}</option>
-                <option value="taxed">{{ t('producedBeer.movement.types.taxed') }}</option>
-                <option value="notax">{{ t('producedBeer.movement.types.notax') }}</option>
-                <option value="returnNotax">
-                  {{ t('producedBeer.movement.types.returnNotax') }}
-                </option>
-                <option value="wasteNotax">
-                  {{ t('producedBeer.movement.types.wasteNotax') }}
-                </option>
-                <option value="transferNotax">
-                  {{ t('producedBeer.movement.types.transferNotax') }}
+                <option
+                  v-for="option in taxEventFilterOptions"
+                  :key="option.value"
+                  :value="option.value"
+                >
+                  {{ option.label }}
                 </option>
               </select>
             </div>
@@ -225,7 +221,7 @@
                 <td class="px-3 py-2 text-gray-600">{{ siteLabel(card.destSiteId) }}</td>
                 <td class="px-3 py-2 font-semibold text-gray-900">{{ card.docNo }}</td>
                 <td class="px-3 py-2 text-gray-600">
-                  {{ movementTypeLabel(card.docType, card.taxType) }}
+                  {{ movementTypeLabel(card.taxEvent) }}
                 </td>
                 <td class="px-3 py-2">
                   <button
@@ -274,6 +270,16 @@ interface CategoryRow {
 interface SiteOption {
   value: string
   label: string
+}
+
+type RuleLabel = {
+  ja?: string
+  en?: string
+}
+
+type MovementRules = {
+  enums?: Record<string, string[]>
+  tax_event_labels?: Record<string, RuleLabel>
 }
 
 interface PackageCategoryRow {
@@ -340,6 +346,7 @@ interface MovementCard {
   docNo: string
   docType: string
   taxType: string | null
+  taxEvent: string | null
   movementAt: string | null
   status: string
   sourceSiteId: string | null
@@ -352,7 +359,7 @@ interface MovementCardView extends MovementCard {
   totalLiters: number | null
 }
 
-const { t, locale, tm } = useI18n()
+const { t, locale } = useI18n()
 const router = useRouter()
 const pageTitle = computed(() => t('producedBeer.title'))
 
@@ -363,6 +370,7 @@ const categories = ref<CategoryRow[]>([])
 const packageCategories = ref<PackageCategoryRow[]>([])
 const uoms = ref<Array<{ id: string; code: string | null }>>([])
 const siteOptions = ref<SiteOption[]>([])
+const movementRules = ref<MovementRules | null>(null)
 
 const movementCards = ref<MovementCard[]>([])
 const movementFilters = reactive({
@@ -375,8 +383,14 @@ const movementFilters = reactive({
 })
 
 const movementTypeFilter = ref<
-  'all' | 'taxed' | 'notax' | 'returnNotax' | 'wasteNotax' | 'transferNotax'
+  'all' | 'TAXABLE_REMOVAL' | 'NON_TAXABLE_REMOVAL' | 'EXPORT_EXEMPT' | 'RETURN_TO_FACTORY'
 >('all')
+
+const taxEventFilterOptions = computed(() => {
+  const allowed = ['TAXABLE_REMOVAL', 'NON_TAXABLE_REMOVAL', 'EXPORT_EXEMPT', 'RETURN_TO_FACTORY']
+  const codes = movementRules.value?.enums?.tax_event?.filter((code) => allowed.includes(code)) ?? allowed
+  return codes.map((code) => ({ value: code, label: taxEventLabel(code) }))
+})
 
 const siteMap = computed(() => {
   const map = new Map<string, SiteOption>()
@@ -528,21 +542,32 @@ function siteLabel(siteId: string | null | undefined) {
   return siteMap.value.get(siteId)?.label ?? '—'
 }
 
-function docTypeLabel(value: string) {
-  const map = tm('producedBeer.movement.docTypeMap') as Record<string, string> | string
-  if (!map || typeof map !== 'object') return value
-  return map[value] || value
+function pickLabel(row: RuleLabel | undefined, fallback: string) {
+  const lang = resolveLang()
+  const label = lang === 'ja' ? row?.ja ?? row?.en : row?.en ?? row?.ja
+  return typeof label === 'string' && label.trim() ? label : fallback
 }
 
-function movementTypeLabel(docType: string, taxType: string | null) {
-  if (docType === 'sale' && taxType === 'tax') return t('producedBeer.movement.types.taxed')
-  if (docType === 'sale' && taxType === 'notax') return t('producedBeer.movement.types.notax')
-  if (docType === 'return' && taxType === 'notax')
-    return t('producedBeer.movement.types.returnNotax')
-  if (docType === 'waste' && taxType === 'notax') return t('producedBeer.movement.types.wasteNotax')
-  if (docType === 'transfer' && taxType === 'notax')
-    return t('producedBeer.movement.types.transferNotax')
-  return docTypeLabel(docType)
+function legacyMovementTaxEvent(docType: string, taxType: string | null) {
+  if (docType === 'sale' && taxType === 'tax') return 'TAXABLE_REMOVAL'
+  if (docType === 'sale' && taxType === 'notax') return 'NON_TAXABLE_REMOVAL'
+  if (docType === 'return' && taxType === 'notax') return 'RETURN_TO_FACTORY'
+  if (docType === 'waste' && taxType === 'notax') return 'NON_TAXABLE_REMOVAL'
+  if (docType === 'transfer' && taxType === 'notax') return 'NON_TAXABLE_REMOVAL'
+  if (docType === 'tax_transfer') return 'EXPORT_EXEMPT'
+  return null
+}
+
+function movementTypeLabel(taxEvent: string | null | undefined) {
+  const normalized = (taxEvent ?? '').trim()
+  if (!normalized.length) return '—'
+  return pickLabel(movementRules.value?.tax_event_labels?.[normalized], normalized)
+}
+
+function taxEventLabel(taxEvent: string | null | undefined) {
+  const normalized = (taxEvent ?? '').trim()
+  if (!normalized.length) return '—'
+  return pickLabel(movementRules.value?.tax_event_labels?.[normalized], normalized)
 }
 
 function uniqueNonEmpty(values: Array<string | null | undefined>) {
@@ -600,16 +625,11 @@ function movementUnitOfPackageLabel(card: MovementCardView) {
   return units.map((value) => formatNumber(value)).join(', ')
 }
 
-function normalizeTaxRatePercent(rate: number) {
-  if (!Number.isFinite(rate)) return null
-  if (Math.abs(rate) <= 1) return rate * 100
-  return rate
-}
-
 function movementTaxRateLabel(card: MovementCardView) {
-  const taxRates = uniqueNumbers(card.lines.map((line) => normalizeTaxRatePercent(line.taxRate ?? NaN)))
-  if (taxRates.length) return taxRates.map((value) => `${formatNumber(value)}%`).join(', ')
-  if (card.taxType === 'notax') return '0%'
+  const taxRates = uniqueNumbers(card.lines.map((line) => line.taxRate ?? NaN))
+  if (taxRates.length) return taxRates.map((value) => `${formatNumber(value)}/kl`).join(', ')
+  if (card.taxEvent && card.taxEvent !== 'TAXABLE_REMOVAL') return '0/kl'
+  if (card.taxType === 'notax') return '0/kl'
   return '—'
 }
 
@@ -644,7 +664,7 @@ function exportMovementsCsv() {
   filteredMovementCards.value.forEach((card) => {
     const base = [
       card.docNo,
-      movementTypeLabel(card.docType, card.taxType),
+      movementTypeLabel(card.taxEvent),
       card.taxType ?? '',
       card.movementAt ?? '',
       siteLabel(card.sourceSiteId),
@@ -683,23 +703,12 @@ function exportMovementsCsv() {
 function matchesMovementType(header: MovementHeader) {
   if (movementTypeFilter.value === 'all') return true
 
-  const docType = header.doc_type
   const taxType = typeof header.meta?.tax_type === 'string' ? header.meta.tax_type : ''
-
-  switch (movementTypeFilter.value) {
-    case 'taxed':
-      return docType === 'sale' && taxType === 'tax'
-    case 'notax':
-      return docType === 'sale' && taxType === 'notax'
-    case 'returnNotax':
-      return docType === 'return' && taxType === 'notax'
-    case 'wasteNotax':
-      return docType === 'waste' && taxType === 'notax'
-    case 'transferNotax':
-      return docType === 'transfer' && taxType === 'notax'
-    default:
-      return true
-  }
+  const taxEvent =
+    typeof header.meta?.tax_event === 'string' && header.meta.tax_event.trim()
+      ? header.meta.tax_event.trim()
+      : legacyMovementTaxEvent(header.doc_type, taxType)
+  return taxEvent === movementTypeFilter.value
 }
 
 function toNumber(value: any): number | null {
@@ -755,6 +764,14 @@ async function loadPackageCategories() {
     .order('package_code', { ascending: true })
   if (error) throw error
   packageCategories.value = data ?? []
+}
+
+async function loadMovementRules() {
+  const { data, error } = await supabase.rpc('movement_get_rules', {
+    p_movement_intent: null,
+  })
+  if (error) throw error
+  movementRules.value = ((Array.isArray(data) ? data[0] : data) ?? null) as MovementRules | null
 }
 
 async function loadUoms() {
@@ -828,11 +845,16 @@ async function fetchMovements() {
       if (!header) return
       if (!cardMap.has(line.movement_id)) {
         const taxType = typeof header.meta?.tax_type === 'string' ? header.meta.tax_type : null
+        const taxEvent =
+          typeof header.meta?.tax_event === 'string' && header.meta.tax_event.trim()
+            ? header.meta.tax_event.trim()
+            : legacyMovementTaxEvent(header.doc_type, taxType)
         cardMap.set(line.movement_id, {
           id: line.movement_id,
           docNo: header.doc_no,
           docType: header.doc_type,
           taxType,
+          taxEvent,
           movementAt: header.movement_at ?? null,
           status: header.status,
           sourceSiteId: header.src_site_id ?? null,
@@ -1091,7 +1113,13 @@ watch(
 onMounted(async () => {
   try {
     await ensureTenant()
-    await Promise.all([loadSites(), loadCategories(), loadPackageCategories(), loadUoms()])
+    await Promise.all([
+      loadSites(),
+      loadCategories(),
+      loadPackageCategories(),
+      loadUoms(),
+      loadMovementRules(),
+    ])
     await fetchMovements()
   } catch (err) {
     console.error(err)

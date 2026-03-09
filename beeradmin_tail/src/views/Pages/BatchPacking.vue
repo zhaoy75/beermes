@@ -698,7 +698,7 @@ import {
   resolveFillingLineVolumeFromEvent as deriveResolveFillingLineVolumeFromEvent,
 } from '@/lib/batchFilling'
 import { supabase } from '@/lib/supabase'
-import { formatVolume, formatVolumeNumber } from '@/lib/volumeFormat'
+import { VOLUME_DISPLAY_DECIMALS, formatVolume, formatVolumeNumber } from '@/lib/volumeFormat'
 
 const route = useRoute()
 const router = useRouter()
@@ -2433,9 +2433,9 @@ async function calculateTankVolume(target: 'start' | 'left') {
     if (volume == null) return
     if (!packingDialog.form) return
     if (target === 'start') {
-      packingDialog.form.tank_fill_start_volume = String(volume)
+      packingDialog.form.tank_fill_start_volume = formatVolumeInputValue(volume)
     } else {
-      packingDialog.form.tank_left_volume = String(volume)
+      packingDialog.form.tank_left_volume = formatVolumeInputValue(volume)
     }
   } catch (err) {
     console.error(err)
@@ -3555,6 +3555,11 @@ function convertFromLiters(sizeInLiters: number | null | undefined, uomCode: str
 
 function formatVolumeValue(value: number | null | undefined) {
   return formatVolume(value, locale.value)
+}
+
+function formatVolumeInputValue(value: number | null | undefined) {
+  if (value == null || Number.isNaN(Number(value))) return ''
+  return Number(value).toFixed(VOLUME_DISPLAY_DECIMALS)
 }
 
 function newPackingForm(type: PackingType): PackingFormState {

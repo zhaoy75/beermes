@@ -1065,11 +1065,11 @@
         "batchNo": "製造バッチ",
         "dateFrom": "開始日",
         "dateTo": "終了日",
-        "movementType": "移出種別"
+        "movementType": "税務移出種別"
       },
       "types": {
         "taxed": "課税移出",
-        "notax": "未納税移出",
+        "notax": "非納税移出",
         "returnNotax": "返品",
         "wasteNotax": "廃棄",
         "transferNotax": "内部移出"

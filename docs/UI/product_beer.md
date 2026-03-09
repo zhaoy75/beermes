@@ -45,7 +45,7 @@
   - Batch no
   - Date from
   - Date to
-  - Movement type
+  - Tax removal type (`税務移出種別`)
 
 ### Movement List View columns
 - Movement date
@@ -59,7 +59,7 @@
 - Source site
 - Destination site
 - Document no
-- Movement type
+- Tax removal type (`税務移出種別`)
 - Actions (reverse)
 
 ## Actions
@@ -67,7 +67,7 @@
   - reload movement headers and lines.
 - Reset filters:
   - clear beer/category/package/batch/date filters.
-  - set movement type to `all`.
+  - set tax removal type to `all`.
 - Export CSV:
   - exports currently filtered movement table rows/lines.
   - file name format: `movements-YYYYMMDD.csv`.
@@ -81,21 +81,22 @@
 ## Business Rules
 - Tenant isolation:
   - all reads are restricted by current session `tenant_id`.
-- Movement type filter logic:
+- Tax removal type filter logic:
   - `taxed`: `doc_type = sale` and `meta.tax_type = tax`
   - `notax`: `doc_type = sale` and `meta.tax_type = notax`
   - `returnNotax`: `doc_type = return` and `meta.tax_type = notax`
   - `wasteNotax`: `doc_type = waste` and `meta.tax_type = notax`
   - `transferNotax`: `doc_type = transfer` and `meta.tax_type = notax`
 - Filter behavior:
-  - Date range and movement type are applied before loading movement lines into the page result.
+  - Date range and tax removal type are applied before loading movement lines into the page result.
   - Beer/category/package/batch filters are applied client-side to movement lines.
   - Movement rows with zero remaining lines after client-side filtering are hidden.
 - Totals:
   - movement row totals are recalculated from the filtered visible lines.
 - Tax rate label:
   - prefer `inv_movements.meta.tax_rate`.
-  - if tax type is `notax`, show `0%`.
+  - if tax type is `notax`, show `0/kl`.
+  - tax rate display must use `/kl` suffix, not `%`.
 - Volume per package:
   - derived from `line.qtyLiters / line.packageQty` when both values are available.
 - Quantity conversion:
@@ -123,9 +124,12 @@
   - `mes_batches` (batch code, product name, recipe link, meta)
 - Derived fields:
   - movement row totals from filtered lines.
-  - movement type label from `doc_type` + `meta.tax_type`.
+  - tax removal type value from `inv_movements.meta.tax_event`.
+  - tax removal type filter value uses raw `tax_event` code.
+  - tax removal type display label must use rule engine `tax_event_labels`.
+  - if label mapping is unavailable, fallback to raw `tax_event` code.
   - Volume Per Package from `mst_uom`.
-  - tax rate label from `inv_movement_lines.tax_rate`.
+  - tax rate label from `inv_movement_lines.tax_rate`, displayed with `/kl` suffix.
   - unit of package from `inv_movement_lines.unit`.
   - liters from line `qty`, or fallback from package quantity x package unit liters.
   - style/category/ABV from batch attributes first, then recipe/meta fallback.
@@ -135,7 +139,7 @@
   - resolve tenant
   - load sites, categories, packages, and UOMs in parallel
   - load movements
-- On change of `dateFrom`, `dateTo`, or movement type:
+- On change of `dateFrom`, `dateTo`, or tax removal type:
   - automatically reload movements
 - Other filters update the visible result locally without refetching
 

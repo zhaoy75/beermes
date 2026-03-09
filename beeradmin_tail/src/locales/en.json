@@ -1065,7 +1065,7 @@
         "batchNo": "Production batch no",
         "dateFrom": "Date from",
         "dateTo": "Date to",
-        "movementType": "Movement type"
+        "movementType": "Tax movement type"
       },
       "types": {
         "taxed": "Taxed shipment",

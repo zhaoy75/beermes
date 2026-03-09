@@ -27,10 +27,17 @@
 - Node:
   - label: `lot_no` (fallback: `id`)
   - sub label: `qty / status`
+  - meta label: `site_name / lot_tax_type`
   - source lot highlighted
 - Edge:
   - line between source and target
-  - label: `edge_type / qty`
+  - primary label on the line: `edge_type / qty`
+  - secondary label under the line: `movement_tax_type`
+  - arrow head shows direction from source lot to target lot
+- Interaction:
+  - on first render, nodes should be auto-arranged to reduce obvious edge crossings
+  - user can drag individual DAG nodes to rearrange the diagram
+  - edge lines and arrow heads must follow the moved node positions immediately
 
 ## Error Handling
 - If RPC fails, show localized load error message.

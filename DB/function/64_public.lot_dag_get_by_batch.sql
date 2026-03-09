@@ -20,12 +20,17 @@ begin
       l.lot_no,
       l.batch_id,
       l.site_id,
+      s.name as site_name,
+      l.lot_tax_type,
       l.qty,
       l.uom_id,
       l.status,
       l.produced_at,
       l.created_at
     from public.lot l
+    left join public.mst_sites s
+      on s.id = l.site_id
+     and s.tenant_id = v_tenant
     where l.tenant_id = v_tenant
       and l.batch_id = p_batch_id
   ),
@@ -38,6 +43,10 @@ begin
       e.qty,
       e.uom_id,
       e.movement_id,
+      coalesce(
+        nullif(btrim(m.meta ->> 'tax_event'), ''),
+        nullif(btrim(m.meta ->> 'tax_type'), '')
+      ) as movement_tax_type,
       e.created_at
     from public.lot_edge e
     left join public.lot lf
@@ -46,6 +55,9 @@ begin
     left join public.lot lt
       on lt.id = e.to_lot_id
      and lt.tenant_id = v_tenant
+    left join public.inv_movements m
+      on m.id = e.movement_id
+     and m.tenant_id = v_tenant
     where e.tenant_id = v_tenant
       and (
         lf.batch_id = p_batch_id

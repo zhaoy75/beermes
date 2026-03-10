@@ -134,8 +134,8 @@ docker exec -i <EC2_DB_CONTAINER> pg_restore -U postgres -d postgres --clean --i
 ## Option postgresのバージョンが異なる場合
 
 ### Export sql from local database
-docker exec -t  supabase_db_beer  pg_dump -U postgres --schema-only --no-owner --no-privileges postgres > schema.sql
-docker exec -t  supabase_db_beer pg_dump -U postgres --data-only --column-inserts --no-owner --no-privileges postgres > data.sql
+docker exec -t  supabase_db_beer  pg_dump -U postgres --schema-only --no-owner --no-privileges -n public postgres > schema.sql
+docker exec -t  supabase_db_beer pg_dump -U postgres --data-only --column-inserts --no-owner --no-privileges -n public postgres > data.sql
 
 ### Copy sql to EC2
 ``` bash
@@ -178,7 +178,6 @@ select
   has_schema_privilege('service_role', 'public', 'USAGE') as service_role_usage;
 "
 ```
-
 
 ------------------------------------------------------------------------
 

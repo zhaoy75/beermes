@@ -28,12 +28,14 @@ Required fields:
 - `doc_no` text: business document number (tenant unique)
 - `movement_at` timestamptz: production timestamp
 - `dest_site_id` uuid: manufacturing site id
+  - must reference `mst_sites.id`
+  - resolved site type must be `BREWERY_MANUFACTUR`
 - `batch_id` uuid: source manufacturing batch id
 - `qty` numeric: produced quantity, must be `> 0`
 - `uom_id` uuid: quantity UOM
 
 Optional fields:
-- `src_site_id` uuid: nullable, may be `NULL` or manufacturing site
+- `src_site_id` uuid: nullable, may be `NULL` or same site as `dest_site_id`
 - `lot_no` text: explicit lot number; if absent, auto-generated from `batch_code` (sanitized).
   - first root lot: `<BATCH_CODE>`
   - if duplicate exists: `<BATCH_CODE>_NNN` (increasing number)
@@ -57,6 +59,7 @@ Optional fields:
 - Tenant exists via `public._assert_tenant()`.
 - `qty > 0`.
 - `dest_site_id`, `batch_id`, `uom_id` are present.
+- `dest_site_id` must resolve to a valid site_type and that site_type must be `BREWERY_MANUFACTUR`.
 - `doc_no` unique per tenant in `inv_movements`.
 - `lot_no` unique per tenant in `lot` (if provided).
 - `src_site_id` is either `NULL` or same as `dest_site_id` for this intent.
@@ -96,7 +99,9 @@ Return `movement_id uuid`.
 - `PP003`: duplicate `doc_no`
 - `PP004`: duplicate `lot_no`
 - `PP005`: invalid `src_site_id`/`dest_site_id` combination for produce intent
-- `PP006`: FK/reference not found (`batch_id`, `uom_id`, `site_id`)
+- `PP006`: `inv_doc_type` does not support BREW_PRODUCE mapping
+- `PP007`: `dest_site_id` not found or site_type is invalid
+- `PP008`: `dest_site_id` is not a `BREWERY_MANUFACTUR` site
 
 ## Idempotency Recommendation
 Support optional `idempotency_key` in `p_doc.meta`:
@@ -122,3 +127,4 @@ Support optional `idempotency_key` in `p_doc.meta`:
 ## Notes
 - Current `inv_doc_type` enum in DDL may need extension/mapping to support `BREW_PRODUCE` literal.
 - Function should run in a single transaction and rely on RLS tenant defaults/policies already defined in DDL.
+- This function is the server-side guard for BatchEdit actual-yield registration and must not accept non-manufacturing sites even if the caller bypasses UI validation.

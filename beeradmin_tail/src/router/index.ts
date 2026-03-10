@@ -58,7 +58,7 @@ const router = createRouter({
       name: 'batchEdit',
       component: () => import('../views/Pages/BatchEdit.vue'),
       meta: {
-        title: 'Batch Edit',
+        title: 'Batch Actual Entry',
         requiresAuth: true,
       },
     },

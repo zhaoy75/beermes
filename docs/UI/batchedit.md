@@ -1,6 +1,6 @@
 ## Purpose
-- Edit batch basic and additional industry (stored in entity_attr_set) information
-- Please Entry Points for add, edit, delete batch
+- Enter and update batch actual results and additional industry attributes (stored in `entity_attr_set`)
+- Manage batch relation and navigate to filling / packing workflow
 
 
 ## Entry Points
@@ -12,7 +12,7 @@
 
 ## Page Layout
 ### Header: バッチ管理
-- Title: バッチ編集
+- Title: バッチ実績入力
 
 ### Body: 
 - There are 5 sections
@@ -40,6 +40,8 @@
     product_name 
 	　actual_yield 
 	  actual_yield_uom dropdown list from uom with domain volume
+      actual_yield site dropdown list from mst_sites
+        only sites with site_type = BREWERY_MANUFACTUR can be shown and selected
     予定開始日  with calendar picker
     予定終了日  with calendar picker
     実績開始日　with calendar picker
@@ -113,12 +115,16 @@
     if not found, show error: product_produce must be executed first
 
 ## Action
-    - add a button to input actual yield, when the button is click, show the input actual yield and uom (select from mst_uom by volume) and site (select form mst_sites).
-    - when 　actual yield is saved, please update the total product volume in filling section and call stored function product_produce.
+    - add a button to input actual yield, when the button is click, show actual yield, uom (select from mst_uom by volume), and site.
+    - actual yield site must be selected from `mst_sites`, but only `BREWERY_MANUFACTUR` sites are allowed.
+    - if existing batch meta has non-manufacturing site id, do not auto-select it in the dialog.
+    - when actual yield is saved, update the total product volume in filling section and call stored function `product_produce`.
+    - if a non-`BREWERY_MANUFACTUR` site is submitted, show validation error and do not save.
 
 ## Business Rules
-  ・
-  ・
+  - Batch actual yield entry is for manufacturing result entry.
+  - Manufacturing site for actual yield must be `BREWERY_MANUFACTUR`.
+  - Stored function `product_produce` is the server-side source of truth and must reject non-manufacturing destination sites.
 
 
 ## Data Handling

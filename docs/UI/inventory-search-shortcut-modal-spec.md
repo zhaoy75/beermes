@@ -9,6 +9,7 @@
 - Frontend only.
 - Applies to the authenticated admin application shell.
 - Initial shortcut is `Ctrl + I`. for mac will be `command + I`
+- Supports caller-provided page context for default filters and row selection callback.
 
 ## Trigger and Availability
 - Register the shortcut globally while the user is inside the authenticated app layout.
@@ -37,6 +38,9 @@
   - preserve the current page in the background
 - When closed:
   - return focus to the element that was focused before opening, when possible
+- When opened with caller context:
+  - apply caller-provided default filters before the first search result is shown
+  - if caller marks a filter as locked, user cannot expand search outside that filter
 
 ## Search Form
 
@@ -98,8 +102,21 @@
   - filters by produced beer / batch product label
 - `Site`
   - filters by site id/name selection
+  - when caller provides a locked `site_id`, results must be constrained to that site
 - `Package`
   - filters inventory rows into package:
+
+## Caller Context Integration
+- Modal may be opened with contextual parameters from the current page.
+- Supported context parameters:
+  - `site_id`: preselected site filter
+  - `site_locked`: locks the site filter to the provided value
+  - `onSelect`: callback payload returned when a result row is selected
+- ProductMoveFast integration:
+  - when ProductMoveFast has selected `From Site`, modal opens with `site_id = From Site`
+  - `site_locked = true`
+  - result grid must show only lots in that source site
+  - double-clicking a result row must call `onSelect(row)` and close the modal
   
 ## Implementation Direction
 - Preferred placement:
@@ -125,3 +142,5 @@
 5. Clicking outside the modal closes it.
 6. The shortcut does not fire while the user is typing in a form control.
 7. Closing the modal returns the user to the same page state they were on before opening it.
+8. If ProductMoveFast opens the modal with selected `From Site`, the modal only shows lots from that site.
+9. If ProductMoveFast user double-clicks a lot row, the modal closes and returns the selected row to the caller page.

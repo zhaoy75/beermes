@@ -182,7 +182,7 @@
       "noSteps": "No steps recorded."
     },
     "edit": {
-      "title": "Batch Editor",
+      "title": "Batch Actual Entry",
       "notFound": "Batch not found or you do not have access.",
       "infoTitle": "Batch Information",
       "infoSubtitle": "Update scheduling, status, and notes for this batch.",
@@ -211,6 +211,7 @@
       "actualYieldUomRequired": "Select an actual yield UOM.",
       "actualYieldSite": "Manufacturing site",
       "actualYieldSiteRequired": "Select a manufacturing site.",
+      "actualYieldSiteInvalid": "Select a BREWERY_MANUFACTUR site.",
       "actualYieldSaveFailed": "Failed to save actual yield.",
       "actualYieldProduceFailed": "Actual yield was saved, but product production registration failed.",
       "actualYieldSaved": "Actual yield saved and product production registered.",
@@ -1903,7 +1904,7 @@
       "dashboard": "Dashboard",
       "production": "Production",
       "batchList": "Batch List",
-      "batchEdit": "Batch Edit",
+      "batchEdit": "Batch Actual Entry",
       "liquorTax": "Liquor Tax",
       "taxYearSummary": "Tax Year Summary",
       "taxReport": "Tax Report",

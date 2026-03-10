@@ -26,6 +26,7 @@ declare
   v_idempotency_key text;
   v_batch_code text;
   v_next_lot_seq int;
+  v_dest_site_type text;
 begin
   if p_doc is null then
     raise exception 'PP001: p_doc is required';
@@ -62,6 +63,24 @@ begin
 
   if v_src_site_id is not null and v_src_site_id <> v_dest_site_id then
     raise exception 'PP005: src_site_id must be NULL or equal to dest_site_id';
+  end if;
+
+  select rd.def_key
+    into v_dest_site_type
+  from public.mst_sites s
+  join public.registry_def rd
+    on rd.def_id = s.site_type_id
+   and rd.kind = 'site_type'
+  where s.tenant_id = v_tenant
+    and s.id = v_dest_site_id
+  limit 1;
+
+  if v_dest_site_type is null then
+    raise exception 'PP007: dest_site_id not found or site_type is invalid';
+  end if;
+
+  if v_dest_site_type <> 'BREWERY_MANUFACTUR' then
+    raise exception 'PP008: dest_site_id must reference a BREWERY_MANUFACTUR site';
   end if;
 
   -- Map BREW_PRODUCE to enum value available in this DB.

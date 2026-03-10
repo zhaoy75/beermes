@@ -182,7 +182,7 @@
       "noSteps": "工程が登録されていません。"
     },
     "edit": {
-      "title": "バッチ編集",
+      "title": "バッチ実績入力",
       "notFound": "バッチが見つからないか、権限がありません。",
       "infoTitle": "バッチ情報",
       "infoSubtitle": "スケジュールやステータス、メモを更新します。",
@@ -211,6 +211,7 @@
       "actualYieldUomRequired": "実績生産単位を選択してください。",
       "actualYieldSite": "製造サイト",
       "actualYieldSiteRequired": "製造サイトを選択してください。",
+      "actualYieldSiteInvalid": "製造場のみ選択できます。",
       "actualYieldSaveFailed": "実績生産量の保存に失敗しました。",
       "actualYieldProduceFailed": "実績生産量は保存されましたが、製品生成登録に失敗しました。",
       "actualYieldSaved": "実績生産量を保存し、製品生成を登録しました。",
@@ -1902,7 +1903,7 @@
       "dashboard": "概要",
       "production": "製造管理",
       "batchList": "バッチ管理",
-      "batchEdit": "バッチ情報更新",
+      "batchEdit": "バッチ実績入力",
       "liquorTax": "税務管理",
       "taxYearSummary": "年間課税概要",
       "taxReport": "酒税申告",

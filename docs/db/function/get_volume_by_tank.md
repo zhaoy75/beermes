@@ -27,13 +27,13 @@ security invoker;
 - `p_tank_id`:
   - required
   - must exist in `mst_equipment_tank.equipment_id`
+  - equipment must belong to a site whose `registry_def.def_key = 'BREWERY_MANUFACTUR'`
 - `p_depth_mm`:
   - required
   - depth in millimeters
   - expected `>= 0`
 - `p_temperature_c`:
-  - not required
-  - if not set, p_temperature_c will be set as default
+  - required
   - measured liquid temperature in Celsius
 
 ## Calibration Table JSON Contract (`mst_equipment_tank.calibration_table`)
@@ -64,10 +64,11 @@ Optional keys:
 
 ## Validation Rules
 1. `p_tank_id`, `p_depth_mm`, `p_temperature_c` are required.
-2. `points` must be present and have at least 2 rows.
-3. `depth_mm` values must be strictly increasing after sort.
-4. `volume_l` values should be non-decreasing.
-5. reject invalid JSON shape or non-numeric values.
+2. `p_tank_id` must resolve to a tank whose equipment site type is `BREWERY_MANUFACTUR`.
+3. `points` must be present and have at least 2 rows.
+4. `depth_mm` values must be strictly increasing after sort.
+5. `volume_l` values should be non-decreasing.
+6. reject invalid JSON shape or non-numeric values.
 
 ## Interpolation Algorithm (Monotone Cubic)
 Given sorted points `(x_i, y_i)` where:
@@ -123,12 +124,17 @@ If no temperature settings exist:
 
 ## Data Access
 - Read: `public.mst_equipment_tank`
+- Read: `public.mst_equipment`
+- Read: `public.mst_sites`
+- Read: `public.registry_def`
 
 ## Output
 - `numeric`: calculated volume in liters after temperature compensation.
 
 ## Error Cases
 - tank not found
+- tank site type is invalid
+- tank does not belong to a `BREWERY_MANUFACTUR` site
 - calibration table missing/invalid
 - calibration points invalid (insufficient, duplicate depth, non-numeric)
 - required parameter is null

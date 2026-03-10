@@ -75,6 +75,7 @@
                   <select
                     v-model="filters.site"
                     class="h-[40px] w-full rounded border border-gray-300 bg-white px-3"
+                    :disabled="siteLocked"
                   >
                     <option value="">{{ t('inventorySearchModal.defaults.allSites') }}</option>
                     <option
@@ -186,7 +187,14 @@
                         {{ t('common.noData') }}
                       </td>
                     </tr>
-                    <tr v-for="row in sortedRows" v-else :key="row.id" class="hover:bg-gray-50">
+                    <tr
+                      v-for="row in sortedRows"
+                      v-else
+                      :key="row.id"
+                      class="hover:bg-gray-50"
+                      :class="{ 'cursor-pointer': selectable }"
+                      @dblclick="handleRowDoubleClick(row)"
+                    >
                       <td class="px-3 py-2 font-mono text-xs text-gray-600">
                         {{ row.lotNo || '—' }}
                       </td>
@@ -216,13 +224,29 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, reactive, ref } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Modal from '@/components/ui/Modal.vue'
 import { useProducedBeerInventory } from '@/composables/useProducedBeerInventory'
 
+import type { InventorySearchSelection } from '@/composables/useInventorySearchModal'
+
+const props = withDefaults(
+  defineProps<{
+    siteId?: string
+    siteLocked?: boolean
+    selectable?: boolean
+  }>(),
+  {
+    siteId: '',
+    siteLocked: false,
+    selectable: false,
+  },
+)
+
 const emit = defineEmits<{
   close: []
+  select: [row: InventorySearchSelection]
 }>()
 
 const { t } = useI18n()
@@ -234,6 +258,9 @@ const filters = reactive({
   site: '',
   packageId: '',
 })
+
+const siteLocked = computed(() => props.siteLocked && !!props.siteId)
+const selectable = computed(() => props.selectable)
 
 const sortState = reactive<{
   key:
@@ -292,11 +319,12 @@ const productOptions = computed(() => {
 
 const filteredRows = computed(() => {
   const keyword = filters.keyword.trim().toLowerCase()
+  const activeSiteFilter = siteLocked.value ? props.siteId : filters.site
 
   return inventoryRows.value.filter((row) => {
     if (keyword && !row.keywordIndex.includes(keyword)) return false
     if (filters.product && productFilterValue(row) !== filters.product) return false
-    if (filters.site && row.siteId !== filters.site) return false
+    if (activeSiteFilter && row.siteId !== activeSiteFilter) return false
     if (filters.packageId && row.packageId !== filters.packageId) return false
     return true
   })
@@ -360,6 +388,21 @@ function sortIndicator(key: (typeof sortState)['key']) {
   return sortState.direction === 'asc' ? '^' : 'v'
 }
 
+function handleRowDoubleClick(row: (typeof inventoryRows.value)[number]) {
+  if (!selectable.value) return
+  emit('select', {
+    id: row.id,
+    lotId: row.lotId,
+    lotNo: row.lotNo,
+    batchCode: row.batchCode,
+    productName: row.productName,
+    styleName: row.styleName,
+    packageId: row.packageId,
+    packageTypeLabel: row.packageTypeLabel,
+    siteId: row.siteId,
+  })
+}
+
 async function focusFirstField() {
   await nextTick()
   keywordInputRef.value?.focus()
@@ -370,8 +413,20 @@ defineExpose({
   focusFirstField,
 })
 
+watch(
+  () => [props.siteId, props.siteLocked] as const,
+  ([siteId, locked]) => {
+    if (!locked) return
+    filters.site = siteId ?? ''
+  },
+  { immediate: true },
+)
+
 onMounted(async () => {
   await initialize()
+  if (siteLocked.value) {
+    filters.site = props.siteId
+  }
   await focusFirstField()
 })
 </script>

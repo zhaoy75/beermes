@@ -503,6 +503,8 @@ interface SiteOption {
   label: string
 }
 
+const MANUFACTURING_SITE_TYPE_KEY = 'BREWERY_MANUFACTUR'
+
 interface BeerCategoryOption {
   value: string
   key: string
@@ -1042,10 +1044,23 @@ async function loadBatchStatusOptions() {
 async function loadSites() {
   try {
     const tenant = await ensureTenant()
+    const { data: siteTypeRow, error: siteTypeError } = await supabase
+      .from('registry_def')
+      .select('def_id')
+      .eq('kind', 'site_type')
+      .eq('def_key', MANUFACTURING_SITE_TYPE_KEY)
+      .eq('is_active', true)
+      .maybeSingle()
+    if (siteTypeError) throw siteTypeError
+    if (!siteTypeRow?.def_id) {
+      siteOptions.value = []
+      return
+    }
     const { data, error } = await supabase
       .from('mst_sites')
       .select('id, name')
       .eq('tenant_id', tenant)
+      .eq('site_type_id', siteTypeRow.def_id)
       .order('name')
     if (error) throw error
     siteOptions.value = (data ?? []).map((row: any) => ({
@@ -1314,7 +1329,8 @@ function openActualYieldDialog() {
   actualYieldDialog.errors = {}
   actualYieldDialog.form.actual_yield = batchForm.actual_yield
   actualYieldDialog.form.actual_yield_uom = batchForm.actual_yield_uom || defaultVolumeUomId()
-  actualYieldDialog.form.site_id = resolveProduceSiteId(batch.value) || ''
+  const resolvedSiteId = resolveProduceSiteId(batch.value)
+  actualYieldDialog.form.site_id = isSelectableManufacturingSite(resolvedSiteId) ? (resolvedSiteId ?? '') : ''
 }
 
 function closeActualYieldDialog() {
@@ -1419,6 +1435,7 @@ async function saveActualYieldDialog() {
   if (qty == null || qty <= 0) errors.actual_yield = t('batch.edit.actualYieldRequired')
   if (!uomId) errors.actual_yield_uom = t('batch.edit.actualYieldUomRequired')
   if (!siteId) errors.site_id = t('batch.edit.actualYieldSiteRequired')
+  else if (!isSelectableManufacturingSite(siteId)) errors.site_id = t('batch.edit.actualYieldSiteInvalid')
   if (Object.keys(errors).length) {
     actualYieldDialog.errors = errors
     return
@@ -1829,6 +1846,12 @@ function siteLabel(siteId?: string | null) {
   if (!siteId) return '—'
   const match = siteOptions.value.find((row) => row.value === siteId)
   return match?.label ?? '—'
+}
+
+function isSelectableManufacturingSite(siteId: string | null | undefined) {
+  const value = siteId?.trim()
+  if (!value) return false
+  return siteOptions.value.some((row) => row.value === value)
 }
 
 function resolveBatchVolume(source: any): number | null {

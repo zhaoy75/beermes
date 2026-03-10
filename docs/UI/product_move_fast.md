@@ -42,6 +42,7 @@
 ### Modal/Dialog
 - No modal in standard flow.
 - Minimal modal or side drawer may be used only for `MANUAL` lot allocation.
+- Inventory search shortcut modal may be opened for source-lot lookup.
 
 ## Field Definitions
 ### Route Bar
@@ -62,6 +63,7 @@
   - `From Site` dropdown must be filtered to site types allowed as `allowed_src_site_types` for `INTERNAL_TRANSFER`
   - `To Site` dropdown must be filtered to site types allowed as `allowed_dst_site_types` for `INTERNAL_TRANSFER`
   - when `From Site` is selected, UI loads source-site inventory and lot candidates for line entry
+  - when `From Site` is selected and inventory shortcut modal is opened, modal result must be limited to lots in the selected `From Site`
   - route values persist after successful `Post` and `Post & Next`
   - block when `From Site = To Site`
   - swap button exchanges From/To site values
@@ -112,6 +114,20 @@
   - `MANUAL`: open lot selection UI and add line(s) after lot selection is confirmed
   - append resulting row(s) to Lines Grid
   - if source-site stock is insufficient for requested amount, do not append rows and show error
+
+### Inventory Shortcut Modal Integration
+- Shortcut: `Ctrl + I` / `Command + I`
+- If `From Site` is selected, open inventory modal in source-site scoped mode.
+- In source-site scoped mode:
+  - modal site filter is set from current `From Site`
+  - modal result grid must show only lots in current `From Site`
+  - user cannot broaden the result outside the selected `From Site`
+- On result row double-click:
+  - close the modal
+  - set fixed input area `keyword` from the selected lot identifier (`lot_no` as primary display value)
+  - set fixed input area `package` from the selected lot package
+  - move focus to fixed input area `unit`
+  - do not append a line automatically until quantity is entered and confirmed
 
 ### Paste Input
 - User can paste multiple lines into `keyword` input.
@@ -196,6 +212,7 @@ STOUT03 10
 | `Enter` | In fixed input area: allocate and append line(s); in grid: move to next editable cell |
 | `Ctrl+Enter` | Post |
 | `Shift+Enter` | Post & Next |
+| `Ctrl+I` | Open inventory shortcut modal; when `From Site` is selected, modal is scoped to that site |
 
 ## Business Rules
 - This page is dedicated to `movement_intent = INTERNAL_TRANSFER`.
@@ -228,6 +245,7 @@ STOUT03 10
   - if package is specified, allocation candidates must be filtered by package first
   - in `MANUAL`, selected lot must belong to the selected beer and source site
   - in `MANUAL`, selected lot available quantity must be `>=` line quantity
+  - inventory shortcut modal selection must also be restricted to the current source site when `From Site` is selected
 - Soft warnings:
   - low available stock
   - allocation split across many lots
@@ -411,6 +429,14 @@ STOUT03 10
   - Then system continues allocation from next eligible lot and appends split rows
 - Keyword suggestion:
   - Suggestion list includes beer basic info and `entity_attr`
+- Inventory shortcut modal:
+  - Given `From Site` is selected
+  - When user presses `Ctrl + I`
+  - Then inventory modal opens and shows only lots from the selected `From Site`
+- Inventory shortcut row selection:
+  - Given ProductMoveFast inventory modal is open
+  - When user double-clicks one lot row
+  - Then modal closes, `keyword` and `package` are filled from the selected lot, and focus moves to `unit`
 - FEFO/FIFO post:
   - Given valid route and lines
   - When user clicks `Post`

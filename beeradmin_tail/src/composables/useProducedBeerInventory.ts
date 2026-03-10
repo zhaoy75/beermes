@@ -29,6 +29,7 @@ interface PackageCategoryRow {
 
 interface InventoryRow {
   id: string
+  lotId: string
   lotNo: string | null
   batchCode: string | null
   beerCategoryId: string | null
@@ -568,6 +569,7 @@ export function useProducedBeerInventory() {
 
       type InventoryAccumulator = {
         key: string
+        lotId: string
         siteId: string
         lotNo: string | null
         batchCode: string | null
@@ -624,6 +626,7 @@ export function useProducedBeerInventory() {
 
           accum.set(key, {
             key,
+            lotId: String(lot.id),
             siteId,
             lotNo: lot.lot_no ?? null,
             batchCode: batchInfo?.batchCode ?? null,
@@ -654,6 +657,7 @@ export function useProducedBeerInventory() {
         .filter((row) => row.qtyLiters > 0 || row.qtyPackages > 0)
         .map((row) => ({
           id: row.key,
+          lotId: row.lotId,
           lotNo: row.lotNo,
           batchCode: row.batchCode,
           beerCategoryId: row.beerCategoryId,

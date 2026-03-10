@@ -15,7 +15,11 @@
     <InventorySearchModal
       v-if="isInventorySearchOpen"
       ref="inventorySearchModalRef"
+      :site-id="inventorySearchOptions.siteId ?? ''"
+      :site-locked="Boolean(inventorySearchOptions.siteLocked)"
+      :selectable="Boolean(inventorySearchOptions.onSelect)"
       @close="closeInventorySearch"
+      @select="handleInventorySearchSelect"
     />
   </div>
 </template>
@@ -23,6 +27,13 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import InventorySearchModal from '@/components/inventory/InventorySearchModal.vue'
+import {
+  closeInventorySearch as closeInventorySearchState,
+  openInventorySearch as openInventorySearchState,
+  resolveInventorySearchOpenOptions,
+  useInventorySearchModal,
+  type InventorySearchSelection,
+} from '@/composables/useInventorySearchModal'
 import { useSidebar } from '@/composables/useSidebar'
 import AppSidebar from './AppSidebar.vue'
 import AppHeader from './AppHeader.vue'
@@ -34,7 +45,7 @@ type InventorySearchModalExposed = {
 
 const { isExpanded, isHovered } = useSidebar()
 
-const isInventorySearchOpen = ref(false)
+const { isInventorySearchOpen, inventorySearchOptions } = useInventorySearchModal()
 const inventorySearchModalRef = ref<InventorySearchModalExposed | null>(null)
 const previouslyFocusedElement = ref<HTMLElement | null>(null)
 
@@ -47,20 +58,32 @@ async function openInventorySearch() {
   if (!isInventorySearchOpen.value) {
     previouslyFocusedElement.value =
       document.activeElement instanceof HTMLElement ? document.activeElement : null
-    isInventorySearchOpen.value = true
+    openInventorySearchState(resolveInventorySearchOpenOptions())
   }
   await focusInventorySearch()
 }
 
-async function closeInventorySearch() {
-  isInventorySearchOpen.value = false
+async function closeInventorySearch(focusOverride?: (() => void) | null) {
+  closeInventorySearchState()
   const previous = previouslyFocusedElement.value
   previouslyFocusedElement.value = null
   await nextTick()
+  if (focusOverride) {
+    focusOverride()
+    return
+  }
   if (previous && previous.isConnected) previous.focus()
 }
 
+async function handleInventorySearchSelect(row: InventorySearchSelection) {
+  const onSelect = inventorySearchOptions.value.onSelect
+  const afterSelectFocus = inventorySearchOptions.value.afterSelectFocus
+  onSelect?.(row)
+  await closeInventorySearch(afterSelectFocus ?? null)
+}
+
 function handleGlobalKeydown(event: KeyboardEvent) {
+  if (event.defaultPrevented) return
   const isShortcut =
     event.key.toLowerCase() === 'i' &&
     (event.ctrlKey || event.metaKey) &&

@@ -11,6 +11,7 @@ as $$
 declare
   v_tenant uuid;
   v_calibration jsonb;
+  v_site_type text;
 
   v_ref_temp numeric := 20;
   v_alpha numeric := 0;
@@ -59,16 +60,31 @@ begin
   v_tenant := public._assert_tenant();
 
   select t.calibration_table
-    into v_calibration
+    , rd.def_key
+    into v_calibration, v_site_type
   from public.mst_equipment_tank t
   join public.mst_equipment e
     on e.id = t.equipment_id
+  left join public.mst_sites s
+    on s.id = e.site_id
+   and s.tenant_id = e.tenant_id
+  left join public.registry_def rd
+    on rd.def_id = s.site_type_id
+   and rd.kind = 'site_type'
   where t.equipment_id = p_tank_id
     and e.tenant_id = v_tenant
   limit 1;
 
   if v_calibration is null then
     raise exception 'tank not found or calibration_table is null';
+  end if;
+
+  if v_site_type is null then
+    raise exception 'tank site_type is invalid';
+  end if;
+
+  if v_site_type <> 'BREWERY_MANUFACTUR' then
+    raise exception 'tank must belong to a BREWERY_MANUFACTUR site';
   end if;
 
   if jsonb_typeof(v_calibration) <> 'object' then

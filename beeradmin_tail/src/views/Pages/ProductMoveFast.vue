@@ -602,6 +602,10 @@ import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import {
+  registerInventorySearchContext,
+  type InventorySearchSelection,
+} from '@/composables/useInventorySearchModal'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
@@ -737,6 +741,7 @@ const quickAmountInputRef = ref<HTMLInputElement | null>(null)
 const quickSuggestionOpen = ref(false)
 const uomDefinitionsByKey = new Map<string, UomDefinition>()
 const uomDefinitionsLoaded = ref(false)
+let unregisterInventorySearchContext: (() => void) | null = null
 
 const routeForm = reactive({
   fromSiteId: '',
@@ -1359,6 +1364,26 @@ function focusQuickAmountInput() {
   if (!target) return
   target.focus()
   target.select()
+}
+
+function handleInventorySearchSelection(row: InventorySearchSelection) {
+  const matchedOption = beerOptions.value.find((option) =>
+    option.candidateLots.some((lot) => lot.lotId === row.lotId),
+  )
+  if (!matchedOption) {
+    toast.error(t('producedBeer.movementFast.errors.beerUnresolved'))
+    return
+  }
+
+  quickEntry.beerKey = matchedOption.key
+  quickEntry.keyword = row.lotNo?.trim() || displayBeerOption(matchedOption)
+  quickEntry.packageId =
+    row.packageId && matchedOption.candidateLots.some((lot) => lot.packageId === row.packageId)
+      ? row.packageId
+      : ''
+  quickEntry.unitText = ''
+  quickEntry.volumeText = ''
+  quickSuggestionOpen.value = false
 }
 
 const quickKeywordSuggestions = computed(() => {
@@ -2584,6 +2609,15 @@ onMounted(async () => {
     await ensureTenant()
     await Promise.all([loadUomDefinitions(), loadSites(), loadMovementRules()])
     loadStoredRoutes()
+    unregisterInventorySearchContext = registerInventorySearchContext(() => {
+      if (!routeForm.fromSiteId) return undefined
+      return {
+        siteId: routeForm.fromSiteId,
+        siteLocked: true,
+        onSelect: handleInventorySearchSelection,
+        afterSelectFocus: focusQuickAmountInput,
+      }
+    })
     window.addEventListener('keydown', handleGlobalKeydown)
     nextTick(() => focusQuickKeywordInput())
   } catch (err) {
@@ -2593,6 +2627,8 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  unregisterInventorySearchContext?.()
+  unregisterInventorySearchContext = null
   window.removeEventListener('keydown', handleGlobalKeydown)
 })
 </script>

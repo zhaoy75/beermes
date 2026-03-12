@@ -405,8 +405,6 @@ exception
   when unique_violation then
     if strpos(sqlerrm, 'inv_movements_tenant_id_doc_no_key') > 0 then
       raise exception 'PF003: duplicate doc_no';
-    elsif strpos(sqlerrm, 'lot_tenant_id_lot_no_key') > 0 then
-      raise exception 'PF004: duplicate destination lot_no';
     else
       raise;
     end if;

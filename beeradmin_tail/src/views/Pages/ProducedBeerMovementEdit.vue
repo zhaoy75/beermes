@@ -163,6 +163,7 @@
                     <div class="text-xs text-gray-500">
                       {{ lot.styleName || '—' }} / {{ lot.batchCode || '—' }} / {{ formatNumber(displayLotQuantity(lot)) }} {{ movementInputUomLabel(lot) }}
                     </div>
+                    <div class="text-[11px] text-gray-400">{{ lotDisambiguationText(lot) }}</div>
                   </button>
                 </div>
                 <p v-if="lotLookupQuery && !lotSuggestions.length" class="mt-1 text-xs text-amber-600">
@@ -177,6 +178,7 @@
                 <span class="ml-2">{{ selectedLookupLot.styleName || '—' }}</span>
                 <span class="ml-2">{{ formatNumber(displayLotQuantity(selectedLookupLot)) }} {{ movementInputUomLabel(selectedLookupLot) }}</span>
                 <span class="ml-2">{{ formatNumber(selectedLookupLot.packageVolume) }} {{ selectedLookupLot.packageUom || '' }}</span>
+                <div class="mt-1 text-xs text-gray-500">{{ lotDisambiguationText(selectedLookupLot) }}</div>
               </div>
               <div class="overflow-x-auto border border-gray-200 rounded-lg">
                 <table class="min-w-full text-sm divide-y divide-gray-200">
@@ -205,7 +207,10 @@
                       <td class="px-3 py-2">
                         <input v-model="movementForm.srcLots" type="checkbox" :value="lot.id" />
                       </td>
-                      <td class="px-3 py-2 text-gray-700">{{ lot.lotCode || lot.label }}</td>
+                      <td class="px-3 py-2 text-gray-700">
+                        <div>{{ lot.lotCode || lot.label }}</div>
+                        <div class="text-[11px] text-gray-400">{{ lotDisambiguationText(lot) }}</div>
+                      </td>
                       <td class="px-3 py-2 text-gray-700">{{ alcoholTypeLabel(lot.beerCategoryId) }}</td>
                       <td class="px-3 py-2 text-right text-gray-700">{{ formatAbv(lot.targetAbv) }}</td>
                       <td class="px-3 py-2 text-gray-700">{{ lot.styleName || '—' }}</td>
@@ -363,6 +368,9 @@ type LotOption = {
   label: string
   lotTaxType: string | null
   lotCode: string | null
+  siteId: string | null
+  siteName: string | null
+  producedAt: string | null
   batchCode: string | null
   beerCategoryId: string | null
   targetAbv: number | null
@@ -520,6 +528,29 @@ function movementInputUomLabel(lot: LotOption) {
   return lot.uomCode || '—'
 }
 
+function formatDateValue(value: string | null | undefined) {
+  if (!value) return null
+  try {
+    return new Intl.DateTimeFormat(locale.value).format(new Date(value))
+  } catch {
+    return value
+  }
+}
+
+function shortLotId(lotId: string | null | undefined) {
+  if (!lotId) return '—'
+  return lotId.slice(0, 8)
+}
+
+function lotDisambiguationText(lot: LotOption) {
+  const parts: string[] = []
+  if (lot.siteName) parts.push(lot.siteName)
+  const producedAt = formatDateValue(lot.producedAt)
+  if (producedAt) parts.push(producedAt)
+  parts.push(`ID ${shortLotId(lot.id)}`)
+  return parts.join(' / ')
+}
+
 function toNumber(value: any): number | null {
   if (value == null || value === '') return null
   const num = Number(value)
@@ -632,18 +663,22 @@ const selectedIntentRule = computed(() => {
 const allowedSrcSiteTypes = computed(() => selectedIntentRule.value?.allowed_src_site_types ?? [])
 const allowedDstSiteTypes = computed(() => selectedIntentRule.value?.allowed_dst_site_types ?? [])
 
-const taxDecisionOptions = computed(() => {
-  const defs = new Map<string, { name_ja?: string; name_en?: string }>()
-  ;(rules.value?.tax_decision_definitions ?? []).forEach((row: any) => {
-    defs.set(row.tax_decision_code, { name_ja: row.name_ja, name_en: row.name_en })
-  })
-  const candidates = (rules.value?.tax_transformation_rules ?? []).filter((rule: any) => {
+const matchingTaxTransformationRules = computed(() =>
+  (rules.value?.tax_transformation_rules ?? []).filter((rule: any) => {
     if (movementForm.intent && rule.movement_intent !== movementForm.intent) return false
     if (movementForm.srcSiteType && rule.src_site_type !== movementForm.srcSiteType) return false
     if (movementForm.dstSiteType && rule.dst_site_type !== movementForm.dstSiteType) return false
     if (movementForm.srcLotTaxType && rule.lot_tax_type !== movementForm.srcLotTaxType) return false
     return true
+  }),
+)
+
+const taxDecisionOptions = computed(() => {
+  const defs = new Map<string, { name_ja?: string; name_en?: string }>()
+  ;(rules.value?.tax_decision_definitions ?? []).forEach((row: any) => {
+    defs.set(row.tax_decision_code, { name_ja: row.name_ja, name_en: row.name_en })
   })
+  const candidates = matchingTaxTransformationRules.value
   const codes = new Set<string>()
   candidates.forEach((rule: any) => {
     ;(rule.allowed_tax_decisions ?? []).forEach((decision: any) => {
@@ -661,15 +696,16 @@ const taxDecisionOptions = computed(() => {
 })
 
 const defaultTaxDecisionCode = computed(() => {
-  const ruleset = rules.value?.tax_transformation_rules ?? []
-  if (!movementForm.intent || !movementForm.srcSiteType || !movementForm.dstSiteType) return ''
-  const rule = ruleset.find((item: any) =>
-    item.movement_intent === movementForm.intent &&
-    item.src_site_type === movementForm.srcSiteType &&
-    item.dst_site_type === movementForm.dstSiteType
+  const defaultCodes = Array.from(
+    new Set(
+      matchingTaxTransformationRules.value.flatMap((rule: any) =>
+        (rule.allowed_tax_decisions ?? [])
+          .filter((decision: any) => decision?.default && decision?.tax_decision_code)
+          .map((decision: any) => String(decision.tax_decision_code)),
+      ),
+    ),
   )
-  const defaultDecision = rule?.allowed_tax_decisions?.find((d: any) => d.default)
-  return defaultDecision?.tax_decision_code ?? ''
+  return defaultCodes.length === 1 ? defaultCodes[0] : ''
 })
 
 const derivedTaxRule = computed(() => {
@@ -707,6 +743,12 @@ const filteredDstSiteOptions = computed(() => {
   return siteOptions.value.filter((site) => site.siteTypeKey === movementForm.dstSiteType)
 })
 
+const siteNameMap = computed(() => {
+  const map = new Map<string, string>()
+  siteOptions.value.forEach((site) => map.set(site.id, site.name || site.id))
+  return map
+})
+
 const isLotLookupMode = computed(() => lotSelectionSource.value === 'lot')
 
 const lotSuggestions = computed(() => {
@@ -715,8 +757,17 @@ const lotSuggestions = computed(() => {
   if (!keyword) return [] as LotOption[]
   return lotOptions.value
     .filter((lot) => {
-      const code = String(lot.lotCode ?? lot.label ?? '').toLowerCase()
-      return code.includes(keyword)
+      const haystack = [
+        lot.lotCode,
+        lot.label,
+        lot.batchCode,
+        lot.styleName,
+        lot.siteName,
+        lot.id,
+      ]
+        .map((value) => String(value ?? '').toLowerCase())
+        .join(' ')
+      return haystack.includes(keyword)
     })
     .sort((a, b) => {
       const aCode = String(a.lotCode ?? a.label ?? '').toLowerCase()
@@ -739,9 +790,16 @@ const filteredLotOptions = computed(() => {
       lot.label,
       lot.batchCode,
       lot.styleName,
+      lot.siteName,
+      lot.id,
       alcoholTypeLabel(lot.beerCategoryId),
     ].some((value) => String(value ?? '').toLowerCase().includes(productKeyword))
-    const matchesLot = !lotKeyword || String(lot.lotCode ?? lot.label ?? '').toLowerCase().includes(lotKeyword)
+    const matchesLot = !lotKeyword || [
+      lot.lotCode,
+      lot.label,
+      lot.siteName,
+      lot.id,
+    ].some((value) => String(value ?? '').toLowerCase().includes(lotKeyword))
     return matchesProduct && matchesLot
   })
 })
@@ -1260,6 +1318,9 @@ function buildLotOptionsFromInventoryRows(rows: any[], refs: LotReferenceMaps) {
       label: lotRow?.lot_no ?? lotId,
       lotTaxType: typeof lotRow?.lot_tax_type === 'string' ? lotRow.lot_tax_type : null,
       lotCode: lotRow?.lot_no ?? null,
+      siteId: row.site_id ? String(row.site_id) : null,
+      siteName: row.site_id ? siteNameMap.value.get(String(row.site_id)) ?? String(row.site_id) : null,
+      producedAt: typeof lotRow?.produced_at === 'string' ? lotRow.produced_at : null,
       batchCode: batchId ? refs.batchMap.get(batchId) ?? null : null,
       beerCategoryId: batchId ? refs.batchCategoryMap.get(batchId) ?? null : null,
       targetAbv: batchId ? refs.batchTargetAbvMap.get(batchId) ?? null : null,
@@ -1273,7 +1334,9 @@ function buildLotOptionsFromInventoryRows(rows: any[], refs: LotReferenceMaps) {
     })
   })
 
-  return Array.from(optionMap.values()).sort((a, b) => (a.lotCode ?? '').localeCompare(b.lotCode ?? ''))
+  return Array.from(optionMap.values()).sort((a, b) =>
+    `${a.lotCode ?? ''} ${a.siteName ?? ''} ${a.id}`.localeCompare(`${b.lotCode ?? ''} ${b.siteName ?? ''} ${b.id}`),
+  )
 }
 
 function buildLotOptionsFromLotRows(rows: any[], refs: LotReferenceMaps) {
@@ -1287,6 +1350,9 @@ function buildLotOptionsFromLotRows(rows: any[], refs: LotReferenceMaps) {
         label: row.lot_no ?? lotId,
         lotTaxType: typeof row.lot_tax_type === 'string' ? row.lot_tax_type : null,
         lotCode: row.lot_no ?? null,
+        siteId: row.site_id ? String(row.site_id) : null,
+        siteName: row.site_id ? siteNameMap.value.get(String(row.site_id)) ?? String(row.site_id) : null,
+        producedAt: typeof row.produced_at === 'string' ? row.produced_at : null,
         batchCode: batchId ? refs.batchMap.get(batchId) ?? null : null,
         beerCategoryId: batchId ? refs.batchCategoryMap.get(batchId) ?? null : null,
         targetAbv: batchId ? refs.batchTargetAbvMap.get(batchId) ?? null : null,
@@ -1300,14 +1366,16 @@ function buildLotOptionsFromLotRows(rows: any[], refs: LotReferenceMaps) {
       } satisfies LotOption
     })
     .filter((row): row is LotOption => row != null)
-    .sort((a, b) => (a.lotCode ?? '').localeCompare(b.lotCode ?? ''))
+    .sort((a, b) =>
+      `${a.lotCode ?? ''} ${a.siteName ?? ''} ${a.id}`.localeCompare(`${b.lotCode ?? ''} ${b.siteName ?? ''} ${b.id}`),
+    )
 }
 
 async function loadLotsForSite(siteId: string) {
   const tenant = await ensureTenant()
   const { data: inventoryRows, error } = await supabase
     .from('inv_inventory')
-    .select('id, lot_id, qty, uom_id, lot:lot_id ( id, lot_no, batch_id, package_id, lot_tax_type, status )')
+    .select('id, site_id, lot_id, qty, uom_id, lot:lot_id ( id, lot_no, batch_id, package_id, lot_tax_type, status, produced_at )')
     .eq('tenant_id', tenant)
     .eq('site_id', siteId)
     .gt('qty', 0)
@@ -1336,7 +1404,7 @@ async function loadLotsForSite(siteId: string) {
 
   const { data: scopedLotRows, error: scopedLotError } = await supabase
     .from('lot')
-    .select('id, lot_no, batch_id, package_id, lot_tax_type, status, qty, uom_id')
+    .select('id, lot_no, site_id, produced_at, batch_id, package_id, lot_tax_type, status, qty, uom_id')
     .eq('tenant_id', tenant)
     .or(`site_id.eq.${siteId},site_id.is.null`)
     .neq('status', 'void')
@@ -1349,7 +1417,7 @@ async function loadLotsForSite(siteId: string) {
   if (!activeLots.length) {
     const { data: tenantLotRows, error: tenantLotError } = await supabase
       .from('lot')
-      .select('id, lot_no, batch_id, package_id, lot_tax_type, status, qty, uom_id')
+      .select('id, lot_no, site_id, produced_at, batch_id, package_id, lot_tax_type, status, qty, uom_id')
       .eq('tenant_id', tenant)
       .neq('status', 'void')
       .gt('qty', 0)

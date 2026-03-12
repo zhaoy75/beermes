@@ -8,7 +8,7 @@
 
 ## Users and Permissions
 - Admin: edit and delete batch of all states
-- Tenant User: add, edit and delete batch not in in_progress and completed status
+- Tenant User: can not delete in in_progress and completed status
 
 ## Page Layout
 ### Header: バッチ管理

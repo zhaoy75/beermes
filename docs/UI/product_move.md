@@ -88,6 +88,8 @@ UI:
 - In lot lookup mode:
   - user inputs `lot no` in the existing row UI
   - type-ahead / suggestion list should be shown while typing
+  - because `lot_no` may duplicate, suggestion rows must include enough attributes to distinguish candidates
+    - recommended: `batch code`, `site`, `package`, `produced_at`, and short `lot.id`
   - selected lot populates row display fields using lot/batch/package master data
   - the row should continue to show the same information area as the current page
     - lot code
@@ -128,8 +130,9 @@ System behavior:
   - entered unit count is numeric and within allowable range
   - derived / entered volume is valid
   - lot/package combination is consistent
-- For `RETURN_FROM_CUSTOMER`, allowable quantity must be validated from the source lot balance even when source `inv_inventory` does not exist, because customer-side sites are non-inventory-ledger sites.
+- For `RETURN_FROM_CUSTOMER`, allowable quantity must be validated from the source lot balance even when source `inv_inventory` does not exist.
 - If multiple matching lots exist for the entered lot code, the user must select one explicitly from suggestions.
+- Once a candidate is selected, the UI must bind and post using `lot.id`, not `lot_no`.
 
 --------------------------------------------------
 Step 4: Fill necessary information（詳細情報入力）

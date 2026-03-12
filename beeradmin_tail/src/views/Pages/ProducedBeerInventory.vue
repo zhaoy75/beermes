@@ -25,7 +25,7 @@
         </header>
 
         <section class="rounded-xl border border-gray-200 bg-gray-50/70 p-4">
-          <form class="grid grid-cols-1 gap-4 md:grid-cols-4" @submit.prevent>
+          <form class="grid grid-cols-1 gap-4 md:grid-cols-5" @submit.prevent>
             <div>
               <label class="mb-1 block text-sm text-gray-600">
                 {{ t('producedBeerInventory.filters.keyword') }}
@@ -86,6 +86,15 @@
                 </option>
               </select>
             </div>
+
+            <label class="flex items-center gap-2 pt-7 text-sm text-gray-700">
+              <input
+                v-model="filters.showNonPackage"
+                type="checkbox"
+                class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span>{{ t('producedBeerInventory.filters.showNonPackage') }}</span>
+            </label>
           </form>
         </section>
 
@@ -405,6 +414,7 @@ const filters = reactive({
   product: '',
   site: '',
   packageId: '',
+  showNonPackage: false,
 })
 
 const sortState = reactive<{
@@ -454,6 +464,7 @@ const filteredRows = computed(() => {
     if (filters.product && productFilterValue(row) !== filters.product) return false
     if (filters.site && row.siteId !== filters.site) return false
     if (filters.packageId && row.packageId !== filters.packageId) return false
+    if (!filters.showNonPackage && !row.packageId) return false
     return true
   })
 })

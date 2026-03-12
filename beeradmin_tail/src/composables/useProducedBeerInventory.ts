@@ -616,6 +616,7 @@ export function useProducedBeerInventory() {
           const keywordParts = new Set<string>()
 
           pushKeyword(keywordParts, lot.lot_no)
+          pushKeyword(keywordParts, lot.id)
           pushKeyword(keywordParts, batchInfo?.batchCode)
           pushKeyword(keywordParts, batchInfo?.productName)
           pushKeyword(keywordParts, batchInfo?.styleName)

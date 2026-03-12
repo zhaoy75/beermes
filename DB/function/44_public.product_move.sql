@@ -696,8 +696,6 @@ exception
   when unique_violation then
     if strpos(sqlerrm, 'inv_movements_tenant_id_doc_no_key') > 0 then
       raise exception 'PM001: duplicate doc_no';
-    elsif strpos(sqlerrm, 'lot_tenant_id_lot_no_key') > 0 then
-      raise exception 'PM009: destination lot creation/validation failed (duplicate lot_no)';
     else
       raise;
     end if;

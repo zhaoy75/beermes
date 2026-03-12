@@ -1899,7 +1899,8 @@
       "keyword": "Keyword",
       "product": "Product",
       "site": "Site",
-      "package": "Package"
+      "package": "Package",
+      "showNonPackage": "Show Non-Package"
     },
     "placeholders": {
       "keyword": "Search by lot number, batch code, or beer name"

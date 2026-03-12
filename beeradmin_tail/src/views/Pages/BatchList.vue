@@ -754,10 +754,6 @@ function isRestrictedStatus(status: string | null | undefined) {
 }
 
 function goEdit(batch: BatchRow) {
-  if (!isAdmin.value && isRestrictedStatus(batch.status)) {
-    window.alert(tOr('batch.list.editBlocked', 'This batch cannot be edited in its current status.'))
-    return
-  }
   router.push({ path: `/batches/${batch.id}` })
 }
 

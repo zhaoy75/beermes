@@ -38,7 +38,8 @@ Optional fields:
 - `src_site_id` uuid: nullable, may be `NULL` or same site as `dest_site_id`
 - `lot_no` text: explicit lot number; if absent, auto-generated from `batch_code` (sanitized).
   - first root lot: `<BATCH_CODE>`
-  - if duplicate exists: `<BATCH_CODE>_NNN` (increasing number)
+  - auto-generated lot number should prefer `<BATCH_CODE>_NNN` style suffixing when the base code already exists
+  - `lot_no` is a business-visible label and may duplicate within a tenant; system identity is always `lot.id`
 - `produced_at` timestamptz: defaults to `movement_at`
 - `expires_at` timestamptz
 - `notes` text
@@ -61,7 +62,6 @@ Optional fields:
 - `dest_site_id`, `batch_id`, `uom_id` are present.
 - `dest_site_id` must resolve to a valid site_type and that site_type must be `BREWERY_MANUFACTUR`.
 - `doc_no` unique per tenant in `inv_movements`.
-- `lot_no` unique per tenant in `lot` (if provided).
 - `src_site_id` is either `NULL` or same as `dest_site_id` for this intent.
 - `uom_id` consistency across movement line, lot, lot_edge, inventory row.
 
@@ -97,7 +97,6 @@ Return `movement_id uuid`.
 - `PP001`: missing required field
 - `PP002`: invalid quantity (`qty <= 0`)
 - `PP003`: duplicate `doc_no`
-- `PP004`: duplicate `lot_no`
 - `PP005`: invalid `src_site_id`/`dest_site_id` combination for produce intent
 - `PP006`: `inv_doc_type` does not support BREW_PRODUCE mapping
 - `PP007`: `dest_site_id` not found or site_type is invalid
@@ -128,3 +127,4 @@ Support optional `idempotency_key` in `p_doc.meta`:
 - Current `inv_doc_type` enum in DDL may need extension/mapping to support `BREW_PRODUCE` literal.
 - Function should run in a single transaction and rely on RLS tenant defaults/policies already defined in DDL.
 - This function is the server-side guard for BatchEdit actual-yield registration and must not accept non-manufacturing sites even if the caller bypasses UI validation.
+- Downstream UI/search flows must treat `lot.id` as the canonical key and `lot_no` as a non-unique display/search attribute.

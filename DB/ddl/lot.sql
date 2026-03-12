@@ -4,7 +4,7 @@ create table if not exists public.lot (
   id                uuid primary key default gen_random_uuid(),
   tenant_id         uuid not null,
 
-  lot_no            text not null, -- business lot number
+  lot_no            text not null, -- business lot number (not unique; use id as canonical identifier)
   material_id       uuid null,     -- FK to mst_materials (if defined)
   package_id        uuid null,     -- FK to mst_package (if defined)
   batch_id          uuid null,     -- FK to mes_batches (if defined)
@@ -25,11 +25,13 @@ create table if not exists public.lot (
   created_at        timestamptz default now(),
   updated_at        timestamptz default now(),
 
-  unique (tenant_id, lot_no)
 );
 
+alter table public.lot
+  drop constraint if exists lot_tenant_id_lot_no_key;
+
 create index if not exists idx_lot_tenant_lotno
-  on public.lot (tenant_id, lot_no);
+  on public.lot (tenant_id, lot_no, id);
 create index if not exists idx_lot_tenant_status
   on public.lot (tenant_id, status);
 create index if not exists idx_lot_batch

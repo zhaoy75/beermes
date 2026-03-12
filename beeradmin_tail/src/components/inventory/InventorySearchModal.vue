@@ -206,8 +206,9 @@
                       @dblclick.stop.prevent="handleRowDoubleClick(row)"
                       @keydown.enter.prevent="handleRowDoubleClick(row)"
                     >
-                      <td class="px-3 py-2 font-mono text-xs text-gray-600">
-                        {{ row.lotNo || '—' }}
+                      <td class="px-3 py-2 text-gray-600">
+                        <div class="font-mono text-xs">{{ row.lotNo || '—' }}</div>
+                        <div class="text-[11px] text-gray-400">{{ rowDisambiguationText(row) }}</div>
                       </td>
                       <td class="px-3 py-2 font-mono text-xs text-gray-600">
                         {{ row.batchCode || '—' }}
@@ -353,6 +354,21 @@ function compareValues(a: string | number, b: string | number) {
   return String(a).localeCompare(String(b))
 }
 
+function shortLotId(value: string | null | undefined) {
+  if (!value) return '—'
+  return value.slice(0, 8)
+}
+
+function rowDisambiguationText(row: (typeof inventoryRows.value)[number]) {
+  const parts: string[] = []
+  const site = row.siteId ? siteLabel(row.siteId) : ''
+  if (site && site !== '—') parts.push(site)
+  const producedAt = formatDate(row.productionDate)
+  if (producedAt && producedAt !== '—') parts.push(producedAt)
+  parts.push(`ID ${shortLotId(row.lotId)}`)
+  return parts.join(' / ')
+}
+
 function sortValue(
   row: (typeof inventoryRows.value)[number],
   key: (typeof sortState)['key'],
@@ -384,7 +400,8 @@ function sortValue(
 const sortedRows = computed(() =>
   [...filteredRows.value].sort((a, b) => {
     const result = compareValues(sortValue(a, sortState.key), sortValue(b, sortState.key))
-    return sortState.direction === 'asc' ? result : -result
+    if (result !== 0) return sortState.direction === 'asc' ? result : -result
+    return a.lotId.localeCompare(b.lotId)
   }),
 )
 

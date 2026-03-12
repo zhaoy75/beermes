@@ -69,10 +69,16 @@
     - filter by site id / site label
   - `Package`
     - filter by package type
+  - `Show Non-Package`
+    - checkbox
+    - controls whether rows without `package_id` are visible
+    - default value: `off`
 - Behavior:
   - filters are shown inline above the grid
   - filtering updates the visible grid rows without requiring page navigation
   - refresh button reloads the underlying inventory dataset
+  - when `Show Non-Package` is `off`, rows with `package_id is null` are hidden
+  - when `Show Non-Package` is `on`, rows with `package_id is null` may appear together with packaged rows
 
 ### Inventory Grid Sort
 - Every visible data column in the inventory grid must support sort toggle.
@@ -133,9 +139,10 @@
 2. Clicking `在庫管理` opens a dedicated page showing the same produced-beer inventory table previously shown on `ProducedBeer`.
 3. `ProducedBeer` no longer renders the inventory section.
 4. `ProducedBeer` still supports movement listing, filtering, export, and creation flows.
-5. The inventory page includes a search section with `Keyword`, `Product`, `Site`, and `Package` filters.
-6. The inventory grid supports sort on each visible data column.
-7. Each inventory row includes `関連履歴` and `数量0` actions.
-8. `関連履歴` shows all related movement / lot genealogy for the selected row.
-9. `数量0` executes through backend business logic and removes the row from the visible positive inventory list after refresh.
-10. The new page and existing movement page both load successfully without TypeScript or build regressions.
+5. The inventory page includes a search section with `Keyword`, `Product`, `Site`, `Package`, and `Show Non-Package` filters.
+6. `Show Non-Package` defaults to `off`, and rows without `package_id` are hidden until the checkbox is turned on.
+7. The inventory grid supports sort on each visible data column.
+8. Each inventory row includes `関連履歴` and `数量0` actions.
+9. `関連履歴` shows all related movement / lot genealogy for the selected row.
+10. `数量0` executes through backend business logic and removes the row from the visible positive inventory list after refresh.
+11. The new page and existing movement page both load successfully without TypeScript or build regressions.

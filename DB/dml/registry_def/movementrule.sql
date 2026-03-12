@@ -164,6 +164,10 @@ VALUES (
     "RETURN_TO_FACTORY": {
       "ja": "戻入",
       "en": "Return to Factory"
+    },
+    "RETURN_TO_FACTORY_NON_TAXABLE": {
+      "ja": "移入",
+      "en": "Import"
     }
   },
   "edge_type_labels": {
@@ -208,6 +212,10 @@ VALUES (
     "RETURN_TO_FACTORY": {
       "ja": "戻入",
       "en": "Return to Factory"
+    },
+    "RETURN_TO_FACTORY_NON_TAXABLE": {
+      "ja": "移入",
+      "en": "Import"
     }
   },
   "tax_decision_definitions": [
@@ -270,6 +278,18 @@ VALUES (
       "requires_approval": true,
       "requires_reference_document": true,
       "description": "Return adjustment for tax reconciliation (e.g., returned goods)."
+    },
+    {
+      "tax_decision_code": "RETURN_TO_FACTORY_NON_TAXABLE",
+      "name_en": "Import",
+      "name_ja": "移入",
+      "tax_event": "RETURN_TO_FACTORY_NON_TAXABLE",
+      "affects_tax_ledger": false,
+      "requires_tax_declaration": true,
+      "changes_lot_tax_type": false,
+      "requires_approval": true,
+      "requires_reference_document": true,
+      "description": "Non-taxable import/return into brewery stock from export-exempt or equivalent lots."
     }
   ],
   "movement_intent_rules": [
@@ -1192,21 +1212,6 @@ VALUES (
             "require_reference_document": true,
             "require_reason_code": false
           }
-        },
-        {
-          "tax_decision_code": "NONE",
-          "tax_event": "NONE",
-          "result_lot_tax_type": "TAX_PAID",
-          "default": true,
-          "lines_rules": {
-            "allow_partial_quantity": true,
-            "require_full_lot": false,
-            "allow_multiple_lots": false,
-            "lot_split_required": false,
-            "approval_required": true,
-            "require_reference_document": true,
-            "require_reason_code": false
-          }
         }
       ]
     },
@@ -1496,5 +1501,6 @@ VALUES (
     }
   }
 }
+
 '::jsonb
 );

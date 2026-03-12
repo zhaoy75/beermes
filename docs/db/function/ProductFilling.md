@@ -45,6 +45,7 @@ Optional line fields:
 - `tax_rate` numeric: stored on `inv_movement_lines.tax_rate` when provided
 - `lot_no` text: destination filled lot number; generated if absent from root lot:
   - `<ROOT_LOT_NO>_NNN` (increasing number)
+  - `lot_no` is a business-visible label and may duplicate within a tenant; system identity is always `lot.id`
 - `package_id` uuid
 - `expires_at` timestamptz
 - `notes` text
@@ -71,7 +72,6 @@ Optional header fields:
 - Source lot exists, tenant-visible, and has enough balance for `sum(lines.qty)`.
 - `src_site_id` and `dest_site_id` must be same for filling intent (or explicitly allowed by your rule).
 - `doc_no` unique per tenant in `inv_movements`.
-- Destination `lot_no` unique per tenant (if provided).
 - `uom_id` consistency across movement lines, lot, lot_edge, inventory.
 
 ## Transaction Behavior (Atomic)
@@ -109,7 +109,6 @@ Return `movement_id uuid`.
 - `PF001`: missing required field
 - `PF002`: invalid quantity (`qty <= 0`)
 - `PF003`: duplicate `doc_no`
-- `PF004`: duplicate destination `lot_no`
 - `PF005`: source lot insufficient quantity
 - `PF006`: invalid site combination for filling intent
 - `PF007`: source lot not found
@@ -160,3 +159,4 @@ Support optional `idempotency_key` in `p_doc.meta`:
 - This specification is aligned to `lot_edge`-based lineage (no `lot_event` / `lot_event_line`).
 - If `inv_doc_type` does not include `PACKAGE_FILL`, map to your available enum (commonly `production_receipt`).
 - `inv_movement_lines` persists per-line `unit` and optional `tax_rate`; `lot` persists the per-line `unit` value when provided.
+- Downstream UI/search flows must treat `lot.id` as the canonical key and `lot_no` as a non-unique display/search attribute.

@@ -3,9 +3,11 @@
     <template #body>
       <div class="relative z-[100000] w-full max-w-7xl px-4 py-6">
         <section
+          ref="dialogRef"
           class="mx-auto max-h-[85vh] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl"
           role="dialog"
           aria-modal="true"
+          tabindex="-1"
           :aria-label="t('inventorySearchModal.title')"
           @keydown.capture="handleModalKeydown"
         >
@@ -121,7 +123,7 @@
                 </button>
               </div>
 
-              <div class="overflow-x-auto rounded-xl border border-gray-200">
+              <div class="max-h-[48vh] overflow-auto rounded-xl border border-gray-200">
                 <table class="min-w-full divide-y divide-gray-200 text-sm">
                   <thead class="bg-gray-50 text-xs uppercase text-gray-600">
                     <tr>
@@ -198,8 +200,11 @@
                         'cursor-pointer': selectable,
                         'bg-blue-50 ring-1 ring-inset ring-blue-200': activeRowId === row.id,
                       }"
+                      :tabindex="selectable ? 0 : -1"
+                      :role="selectable ? 'button' : undefined"
                       @click="setActiveRow(row.id)"
-                      @dblclick="handleRowDoubleClick(row)"
+                      @dblclick.stop.prevent="handleRowDoubleClick(row)"
+                      @keydown.enter.prevent="handleRowDoubleClick(row)"
                     >
                       <td class="px-3 py-2 font-mono text-xs text-gray-600">
                         {{ row.lotNo || '—' }}
@@ -230,7 +235,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Modal from '@/components/ui/Modal.vue'
 import { useProducedBeerInventory } from '@/composables/useProducedBeerInventory'
@@ -257,6 +262,7 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const keywordInputRef = ref<HTMLInputElement | null>(null)
+const dialogRef = ref<HTMLElement | null>(null)
 const activeRowId = ref('')
 const resultRowRefs = new Map<string, HTMLTableRowElement>()
 
@@ -450,7 +456,6 @@ function handleModalKeydown(event: KeyboardEvent) {
   if (event.altKey || event.ctrlKey || event.metaKey) return
   const activeElement = document.activeElement
   if (
-    activeElement instanceof HTMLButtonElement ||
     activeElement instanceof HTMLSelectElement ||
     activeElement instanceof HTMLTextAreaElement ||
     (activeElement instanceof HTMLElement && activeElement.isContentEditable)
@@ -473,6 +478,13 @@ function handleModalKeydown(event: KeyboardEvent) {
   }
 }
 
+function handleWindowKeydown(event: KeyboardEvent) {
+  if (!dialogRef.value) return
+  const target = event.target
+  if (target instanceof Node && !dialogRef.value.contains(target)) return
+  handleModalKeydown(event)
+}
+
 function handleRowDoubleClick(row: (typeof inventoryRows.value)[number]) {
   if (!selectable.value) return
   emit('select', {
@@ -492,6 +504,7 @@ function handleRowDoubleClick(row: (typeof inventoryRows.value)[number]) {
 
 async function focusFirstField() {
   await nextTick()
+  dialogRef.value?.focus()
   keywordInputRef.value?.focus()
   keywordInputRef.value?.select()
 }
@@ -524,6 +537,11 @@ onMounted(async () => {
     filters.site = props.siteId
   }
   await focusFirstField()
+  window.addEventListener('keydown', handleWindowKeydown, true)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleWindowKeydown, true)
 })
 </script>
 

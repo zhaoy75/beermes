@@ -445,7 +445,7 @@
                   inputmode="numeric"
                   class="w-full h-[38px] border rounded-lg px-3 text-right bg-white"
                   :placeholder="t('producedBeer.movementFast.placeholders.unit')"
-                  @keydown.enter.prevent="addLineFromQuickEntry"
+                  @keydown.enter.exact.prevent="addLineFromQuickEntry"
                 />
               </div>
 
@@ -462,7 +462,7 @@
                   inputmode="decimal"
                   class="w-full h-[38px] border rounded-lg px-3 text-right bg-white"
                   :placeholder="t('producedBeer.movementFast.placeholders.volume')"
-                  @keydown.enter.prevent="addLineFromQuickEntry"
+                  @keydown.enter.exact.prevent="addLineFromQuickEntry"
                 />
               </div>
 
@@ -1676,6 +1676,7 @@ function addLineFromQuickEntry() {
 }
 
 function handleQuickKeywordKeydown(event: KeyboardEvent) {
+  if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return
   if (event.key !== 'Enter') return
   event.preventDefault()
   if (quickSuggestionOpen.value && quickKeywordSuggestions.value.length) {
@@ -2683,7 +2684,7 @@ function handleGlobalKeydown(event: KeyboardEvent) {
 
   if (event.key === 'Enter' && event.ctrlKey) {
     event.preventDefault()
-    submit('post').catch?.(() => undefined)
+    submit('next').catch?.(() => undefined)
     return
   }
   if (event.key === 'Enter' && event.shiftKey) {

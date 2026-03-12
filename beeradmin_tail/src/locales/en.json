@@ -1206,7 +1206,7 @@
       "actions": {
         "back": "Back",
         "post": "Post",
-        "postNext": "Post & Next",
+        "postNext": "Post & Next (Ctrl+Enter)",
         "swap": "Swap",
         "addLine": "Add",
         "clearLines": "Clear lines",

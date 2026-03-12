@@ -1206,7 +1206,7 @@
       "actions": {
         "back": "戻る",
         "post": "確定",
-        "postNext": "確定して次へ",
+        "postNext": "確定して次へ(Ctrl+Enter)",
         "swap": "入替",
         "addLine": "追加",
         "clearLines": "明細クリア",

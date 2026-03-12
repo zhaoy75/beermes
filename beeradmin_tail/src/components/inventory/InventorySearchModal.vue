@@ -7,6 +7,7 @@
           role="dialog"
           aria-modal="true"
           :aria-label="t('inventorySearchModal.title')"
+          @keydown.capture="handleModalKeydown"
         >
           <header
             class="flex flex-col gap-3 border-b border-gray-200 px-5 py-4 md:flex-row md:items-start md:justify-between"
@@ -191,8 +192,13 @@
                       v-for="row in sortedRows"
                       v-else
                       :key="row.id"
+                      :ref="(el) => setResultRowRef(row.id, el)"
                       class="hover:bg-gray-50"
-                      :class="{ 'cursor-pointer': selectable }"
+                      :class="{
+                        'cursor-pointer': selectable,
+                        'bg-blue-50 ring-1 ring-inset ring-blue-200': activeRowId === row.id,
+                      }"
+                      @click="setActiveRow(row.id)"
                       @dblclick="handleRowDoubleClick(row)"
                     >
                       <td class="px-3 py-2 font-mono text-xs text-gray-600">
@@ -251,6 +257,8 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const keywordInputRef = ref<HTMLInputElement | null>(null)
+const activeRowId = ref('')
+const resultRowRefs = new Map<string, HTMLTableRowElement>()
 
 const filters = reactive({
   keyword: '',
@@ -374,6 +382,55 @@ const sortedRows = computed(() =>
   }),
 )
 
+function setResultRowRef(id: string, el: unknown) {
+  if (el instanceof HTMLTableRowElement) {
+    resultRowRefs.set(id, el)
+    return
+  }
+  resultRowRefs.delete(id)
+}
+
+function setActiveRow(id: string) {
+  activeRowId.value = id
+}
+
+function scrollActiveRowIntoView() {
+  const target = resultRowRefs.get(activeRowId.value)
+  if (!target) return
+  target.scrollIntoView({ block: 'nearest' })
+}
+
+function ensureActiveRow() {
+  if (!sortedRows.value.length) {
+    activeRowId.value = ''
+    return
+  }
+  if (sortedRows.value.some((row) => row.id === activeRowId.value)) return
+  activeRowId.value = sortedRows.value[0]?.id ?? ''
+}
+
+function moveActiveRow(direction: 1 | -1) {
+  if (!sortedRows.value.length) return
+  const currentIndex = sortedRows.value.findIndex((row) => row.id === activeRowId.value)
+  if (currentIndex < 0) {
+    activeRowId.value = direction > 0 ? sortedRows.value[0].id : sortedRows.value[sortedRows.value.length - 1].id
+  } else {
+    const nextIndex = Math.min(
+      sortedRows.value.length - 1,
+      Math.max(0, currentIndex + direction),
+    )
+    activeRowId.value = sortedRows.value[nextIndex].id
+  }
+  nextTick(() => scrollActiveRowIntoView())
+}
+
+function selectActiveRow() {
+  if (!selectable.value || !activeRowId.value) return
+  const row = sortedRows.value.find((entry) => entry.id === activeRowId.value)
+  if (!row) return
+  handleRowDoubleClick(row)
+}
+
 function toggleSort(key: (typeof sortState)['key']) {
   if (sortState.key === key) {
     sortState.direction = sortState.direction === 'asc' ? 'desc' : 'asc'
@@ -388,6 +445,34 @@ function sortIndicator(key: (typeof sortState)['key']) {
   return sortState.direction === 'asc' ? '^' : 'v'
 }
 
+function handleModalKeydown(event: KeyboardEvent) {
+  if (event.defaultPrevented) return
+  if (event.altKey || event.ctrlKey || event.metaKey) return
+  const activeElement = document.activeElement
+  if (
+    activeElement instanceof HTMLButtonElement ||
+    activeElement instanceof HTMLSelectElement ||
+    activeElement instanceof HTMLTextAreaElement ||
+    (activeElement instanceof HTMLElement && activeElement.isContentEditable)
+  ) {
+    return
+  }
+  if (event.key === 'ArrowDown') {
+    event.preventDefault()
+    moveActiveRow(1)
+    return
+  }
+  if (event.key === 'ArrowUp') {
+    event.preventDefault()
+    moveActiveRow(-1)
+    return
+  }
+  if (event.key === 'Enter' && selectable.value && activeRowId.value) {
+    event.preventDefault()
+    selectActiveRow()
+  }
+}
+
 function handleRowDoubleClick(row: (typeof inventoryRows.value)[number]) {
   if (!selectable.value) return
   emit('select', {
@@ -400,6 +485,8 @@ function handleRowDoubleClick(row: (typeof inventoryRows.value)[number]) {
     packageId: row.packageId,
     packageTypeLabel: row.packageTypeLabel,
     siteId: row.siteId,
+    qtyLiters: row.qtyLiters,
+    qtyPackages: row.qtyPackages,
   })
 }
 
@@ -418,6 +505,15 @@ watch(
   ([siteId, locked]) => {
     if (!locked) return
     filters.site = siteId ?? ''
+  },
+  { immediate: true },
+)
+
+watch(
+  sortedRows,
+  () => {
+    ensureActiveRow()
+    nextTick(() => scrollActiveRowIntoView())
   },
   { immediate: true },
 )

@@ -1868,7 +1868,50 @@
     },
   "producedBeerInventory": {
     "title": "ビール在庫管理",
-    "subtitle": "製品ビール在庫をロット・バッチ別に確認します。"
+    "subtitle": "製品ビール在庫をロット・バッチ別に確認します。",
+    "filters": {
+      "keyword": "キーワード",
+      "product": "製品",
+      "site": "サイト",
+      "package": "パッケージ"
+    },
+    "placeholders": {
+      "keyword": "ロット番号、バッチコード、銘柄名などで検索"
+    },
+    "defaults": {
+      "allProducts": "すべての製品",
+      "allSites": "すべての自社サイト",
+      "allPackages": "すべてのパッケージ"
+    },
+    "results": {
+      "count": "{count}件"
+    },
+    "actions": {
+      "showDag": "関連履歴",
+      "void": "数量0"
+    },
+    "dag": {
+      "title": "関連履歴",
+      "subtitle": "選択したロットに関連する移動履歴を表示します。",
+      "rootLot": "対象ロット",
+      "movementsTitle": "関連移動",
+      "relatedLotsTitle": "関連ロット",
+      "noData": "関連履歴はありません。",
+      "loadFailed": "関連履歴の取得に失敗しました。",
+      "table": {
+        "occurredAt": "発生日時",
+        "relationType": "関連種別",
+        "docNo": "伝票番号",
+        "docType": "伝票種別",
+        "source": "移動元",
+        "destination": "移動先",
+        "relatedLot": "関連ロット",
+        "status": "ステータス"
+      }
+    },
+    "voidConfirm": "{lot} の数量を0にします。よろしいですか？",
+    "voidSuccess": "在庫数量を0にしました。",
+    "voidFailed": "在庫数量を0にできませんでした。"
   },
   "inventorySearchModal": {
     "title": "在庫検索",

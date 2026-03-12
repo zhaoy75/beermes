@@ -74,11 +74,14 @@
   - UI must call Supabase RPC `movement_get_rules` with `p_movement_intent = 'INTERNAL_TRANSFER'`
   - if multiple tax decisions are allowed for the resolved `INTERNAL_TRANSFER` route, UI shows selectable tax decision list and defaults to the rule default
   - default focus after page load is `keyword` field in fixed input area, not route bar
-  - click favorites button adds current route to favorites
+  - favorite registration button is rendered on the right side of `Note` (`摘要`) in the route bar
+  - clicking the favorite registration button adds current route bar values to favorites
 
 ### Recent / Favorites Panel
 - Shows recently used routes for the current user.
 - Supports favorite route presets.
+- Favorite route items must include a delete icon.
+- Clicking the delete icon removes only that favorite item and must not apply the route.
 - Item layout:
   - desktop/tablet: items are arranged in 2 columns
   - mobile: items are stacked in 1 column
@@ -126,7 +129,9 @@
   - close the modal
   - set fixed input area `keyword` from the selected lot identifier (`lot_no` as primary display value)
   - set fixed input area `package` from the selected lot package
-  - move focus to fixed input area `unit`
+  - if selected lot has package, fill fixed input area `unit` from selected lot quantity and move focus to `unit`
+  - if selected lot has no package, fill fixed input area `volume` from selected lot quantity and move focus to `volume`
+  - when available, selected lot volume should also be reflected in fixed input area `volume`
   - do not append a line automatically until quantity is entered and confirmed
 
 ### Paste Input
@@ -369,6 +374,10 @@ STOUT03 10
   - last used route
   - recent routes
   - favorite routes
+  - favorites are persisted in `tenant_members.meta`
+    - storage owner is the current `(tenant_id, user_id)` membership row
+    - suggested key: `meta.product_move_fast.favorite_routes`
+    - recent routes may remain in current client-side storage unless separately migrated
 - Derived UI state:
   - route validity
   - resolved source site type
@@ -407,6 +416,17 @@ STOUT03 10
   - if route has no matching `INTERNAL_TRANSFER` rule, UI must explain that the selected site combination is not allowed
   - do not block route only because derived tax movement type is taxable/tax-storage-related
 
+## DDL Requirement
+- `tenant_members` requires a `meta jsonb not null default '{}'::jsonb` column to store favorite routes.
+- Required DDL direction:
+  - `alter table public.tenant_members add column if not exists meta jsonb not null default '{}'::jsonb;`
+- Favorite route payload should store enough data to reconstruct one preset item:
+  - `from_site_id`
+  - `to_site_id`
+  - optional display labels cached for UI
+  - `created_at`
+  - optional `sort_order`
+
 ## Other
 - This page is multilingual (Japanese/English).
 - Layout must work on desktop and mobile.
@@ -436,7 +456,16 @@ STOUT03 10
 - Inventory shortcut row selection:
   - Given ProductMoveFast inventory modal is open
   - When user double-clicks one lot row
-  - Then modal closes, `keyword` and `package` are filled from the selected lot, and focus moves to `unit`
+  - Then modal closes and `keyword` and `package` are filled from the selected lot
+  - And if the selected lot is a package lot, quantity is filled and focus moves to `unit`
+  - And if the selected lot has no package, volume is filled and focus moves to `volume`
+- Favorite registration and delete:
+  - Given route bar has valid `From Site` and `To Site`
+  - When user clicks favorite registration button at the right side of `Note`
+  - Then current route is saved to `tenant_members.meta`
+  - And the saved route appears in Favorites panel
+  - When user clicks delete icon on one favorite item
+  - Then only that favorite route is removed from `tenant_members.meta`
 - FEFO/FIFO post:
   - Given valid route and lines
   - When user clicks `Post`

@@ -82,6 +82,21 @@
 - Empty-state behavior should match the current inventory page pattern.
 - The grid should update from the active filter state.
 - The grid can be sort by each column
+- The grid should support keyboard row navigation.
+
+### Result Grid Keyboard Behavior
+- `ArrowDown`
+  - moves the active row highlight to the next visible result row
+  - if no row is active and results exist, activates the first row
+- `ArrowUp`
+  - moves the active row highlight to the previous visible result row
+  - if no row is active and results exist, activates the last row
+- `Enter`
+  - when a result row is active, behaves the same as double-click on that row
+  - must call `onSelect(row)` when caller selection mode is enabled
+  - must close the modal after selection
+- The active row should remain visible by scrolling into view when needed.
+- Mouse and keyboard selection must use the same result payload.
 
 ## Data Contract
 - Base the result set on the same produced beer inventory source used by `ProducedBeerInventory`.
@@ -117,6 +132,10 @@
   - `site_locked = true`
   - result grid must show only lots in that source site
   - double-clicking a result row must call `onSelect(row)` and close the modal
+  - selection payload should include quantity values needed by the caller page
+  - ProductMoveFast may route focus after close based on selected row:
+    - package lot -> `unit`
+    - non-package lot -> `volume`
   
 ## Implementation Direction
 - Preferred placement:
@@ -144,3 +163,7 @@
 7. Closing the modal returns the user to the same page state they were on before opening it.
 8. If ProductMoveFast opens the modal with selected `From Site`, the modal only shows lots from that site.
 9. If ProductMoveFast user double-clicks a lot row, the modal closes and returns the selected row to the caller page.
+10. ProductMoveFast can use returned quantity values to prefill quantity inputs on the caller page.
+11. ProductMoveFast focuses `unit` for package lots and `volume` for non-package lots after modal close.
+12. Pressing `ArrowDown` / `ArrowUp` in the modal moves the active result row selection.
+13. Pressing `Enter` while a result row is active behaves the same as double-clicking that row.

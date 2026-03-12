@@ -21,5 +21,7 @@ create index if not exists idx_tenant_members_user on tenant_members(user_id);
 create index if not exists idx_tenant_members_tenant_role on tenant_members(tenant_id, role);
 
 alter table tenant_members
-  alter column tenant_id set default (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid;
+  add column if not exists meta jsonb not null default '{}'::jsonb;
 
+alter table tenant_members
+  alter column tenant_id set default (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid;

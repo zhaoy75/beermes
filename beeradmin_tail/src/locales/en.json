@@ -1869,7 +1869,50 @@
     },
   "producedBeerInventory": {
     "title": "Beer Inventory Management",
-    "subtitle": "Review packaged beer inventory by lot and batch."
+    "subtitle": "Review packaged beer inventory by lot and batch.",
+    "filters": {
+      "keyword": "Keyword",
+      "product": "Product",
+      "site": "Site",
+      "package": "Package"
+    },
+    "placeholders": {
+      "keyword": "Search by lot number, batch code, or beer name"
+    },
+    "defaults": {
+      "allProducts": "All Products",
+      "allSites": "All Own Sites",
+      "allPackages": "All Packages"
+    },
+    "results": {
+      "count": "{count} results"
+    },
+    "actions": {
+      "showDag": "Show DAG",
+      "void": "Set Qty 0"
+    },
+    "dag": {
+      "title": "Related History",
+      "subtitle": "Show movement history related to the selected lot.",
+      "rootLot": "Selected lot",
+      "movementsTitle": "Related movements",
+      "relatedLotsTitle": "Related lots",
+      "noData": "No related history found.",
+      "loadFailed": "Failed to load related history.",
+      "table": {
+        "occurredAt": "Occurred At",
+        "relationType": "Relation Type",
+        "docNo": "Document No",
+        "docType": "Document Type",
+        "source": "Source",
+        "destination": "Destination",
+        "relatedLot": "Related Lot",
+        "status": "Status"
+      }
+    },
+    "voidConfirm": "Set quantity of {lot} to 0?",
+    "voidSuccess": "Inventory quantity was set to 0.",
+    "voidFailed": "Failed to set inventory quantity to 0."
   },
   "inventorySearchModal": {
     "title": "Inventory Search",

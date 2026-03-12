@@ -67,23 +67,9 @@
             </button>
           </div>
           <div class="lg:col-span-3">
-            <div class="flex items-center justify-between">
-              <label class="block text-sm text-gray-600 mb-1">{{
-                t('producedBeer.movementFast.fields.toSite')
-              }}</label>
-              <button
-                class="text-xs text-gray-500 hover:text-gray-900"
-                type="button"
-                :disabled="!canToggleFavorite"
-                @click="toggleCurrentRouteFavorite"
-              >
-                {{
-                  isCurrentRouteFavorite
-                    ? t('producedBeer.movementFast.actions.unfavorite')
-                    : t('producedBeer.movementFast.actions.favorite')
-                }}
-              </button>
-            </div>
+            <label class="block text-sm text-gray-600 mb-1">{{
+              t('producedBeer.movementFast.fields.toSite')
+            }}</label>
             <select
               v-model="routeForm.toSiteId"
               class="w-full h-[42px] border rounded-lg px-3 bg-white"
@@ -118,14 +104,30 @@
             </select>
           </div>
           <div class="lg:col-span-1">
-            <label class="block text-sm text-gray-600 mb-1">{{
-              t('producedBeer.movementFast.fields.lines')
-            }}</label>
-            <div
-              class="h-[42px] rounded-lg border border-dashed border-gray-300 flex items-center justify-center text-sm text-gray-600"
+            <label class="mb-1 block select-none text-sm text-transparent">
+              &nbsp;
+            </label>
+            <button
+              class="flex h-[42px] w-full items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-500 hover:bg-gray-50 hover:text-amber-500 disabled:opacity-50"
+              type="button"
+              :disabled="!canToggleFavorite"
+              :title="
+                isCurrentRouteFavorite
+                  ? t('producedBeer.movementFast.actions.unfavorite')
+                  : t('producedBeer.movementFast.actions.favorite')
+              "
+              :aria-label="
+                isCurrentRouteFavorite
+                  ? t('producedBeer.movementFast.actions.unfavorite')
+                  : t('producedBeer.movementFast.actions.favorite')
+              "
+              @click="toggleCurrentRouteFavorite"
             >
-              {{ validLineCount }}
-            </div>
+              <StaredIcon
+                class="h-5 w-5"
+                :class="isCurrentRouteFavorite ? 'text-amber-500' : 'text-gray-300'"
+              />
+            </button>
           </div>
           <div class="lg:col-span-4">
             <label class="block text-sm text-gray-600 mb-1">{{
@@ -204,17 +206,30 @@
                 {{ t('producedBeer.movementFast.panels.favorites') }}
               </h3>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-1 max-h-32 overflow-auto pr-1">
-                <button
+                <div
                   v-for="preset in favoriteRoutes.slice(0, 6)"
                   :key="`fav-${preset.key}`"
-                  class="w-full text-left rounded-md border border-gray-200 px-2 py-1.5 hover:bg-gray-50"
-                  type="button"
-                  @click="applyRoutePreset(preset)"
+                  class="flex items-center gap-1 rounded-md border border-gray-200 px-1.5 py-1"
                 >
-                  <div class="text-xs font-medium text-gray-900 truncate">
-                    {{ preset.fromSiteName }} → {{ preset.toSiteName }}
-                  </div>
-                </button>
+                  <button
+                    class="min-w-0 flex-1 text-left rounded-md px-1 py-0.5 hover:bg-gray-50"
+                    type="button"
+                    @click="applyRoutePreset(preset)"
+                  >
+                    <div class="text-xs font-medium text-gray-900 truncate">
+                      {{ preset.fromSiteName }} → {{ preset.toSiteName }}
+                    </div>
+                  </button>
+                  <button
+                    class="inline-flex h-7 w-7 items-center justify-center rounded-md text-gray-400 hover:bg-red-50 hover:text-red-600"
+                    type="button"
+                    :title="t('common.delete')"
+                    :aria-label="t('common.delete')"
+                    @click="removeFavoriteRoute(preset.key)"
+                  >
+                    <TrashIcon class="h-4 w-4" />
+                  </button>
+                </div>
                 <p v-if="favoriteRoutes.length === 0" class="text-xs text-gray-500 md:col-span-2">
                   {{ t('common.noData') }}
                 </p>
@@ -299,10 +314,13 @@
                   {{ t('producedBeer.movementFast.panels.validation') }}
                 </h3>
                 <div class="space-y-2">
-                  <p v-if="allErrors.length === 0" class="text-sm text-emerald-700">
+                  <p v-if="displayErrors.length === 0 && validLineCount > 0" class="text-sm text-emerald-700">
                     {{ t('producedBeer.movementFast.labels.ready') }}
                   </p>
-                  <p v-for="error in allErrors" :key="error" class="text-sm text-red-600">
+                  <p v-else-if="displayErrors.length === 0" class="text-sm text-gray-500">
+                    {{ t('common.noData') }}
+                  </p>
+                  <p v-for="error in displayErrors" :key="error" class="text-sm text-red-600">
                     {{ error }}
                   </p>
                 </div>
@@ -436,6 +454,7 @@
                   {{ t('producedBeer.movementFast.fields.volume') }}
                 </label>
                 <input
+                  ref="quickVolumeInputRef"
                   v-model.trim="quickEntry.volumeText"
                   type="number"
                   min="0"
@@ -602,6 +621,7 @@ import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import { StaredIcon, TrashIcon } from '@/icons'
 import {
   registerInventorySearchContext,
   type InventorySearchSelection,
@@ -715,10 +735,14 @@ type RoutePreset = {
   favorite: boolean
 }
 
+type JsonRecord = Record<string, unknown>
+
 type SubmitMode = 'post' | 'next'
 
 const WARNING_NEAR_EXPIRY_DAYS = 30
 const ROUTE_STORAGE_PREFIX = 'product-move-fast-routes'
+const ROUTE_META_KEY = 'product_move_fast'
+const ROUTE_FAVORITES_META_KEY = 'favorite_routes'
 const INTERNAL_TRANSFER_INTENT = 'INTERNAL_TRANSFER'
 
 const router = useRouter()
@@ -730,14 +754,18 @@ const userId = ref<string | null>(null)
 const siteOptions = ref<SiteOption[]>([])
 const beerOptions = ref<BeerOption[]>([])
 const storedRoutes = ref<RoutePreset[]>([])
+const favoriteRoutePresets = ref<RoutePreset[]>([])
+const tenantMemberMeta = ref<JsonRecord>({})
 const movementRules = ref<MovementRules | null>(null)
 const inventoryLoading = ref(false)
 const saving = ref(false)
+const validationRequested = ref(false)
 const activeSuggestionRowId = ref<string | null>(null)
 const beerInputRefs = new Map<string, HTMLInputElement>()
 const qtyInputRefs = new Map<string, HTMLInputElement>()
 const quickKeywordInputRef = ref<HTMLInputElement | null>(null)
 const quickAmountInputRef = ref<HTMLInputElement | null>(null)
+const quickVolumeInputRef = ref<HTMLInputElement | null>(null)
 const quickSuggestionOpen = ref(false)
 const uomDefinitionsByKey = new Map<string, UomDefinition>()
 const uomDefinitionsLoaded = ref(false)
@@ -1366,6 +1394,13 @@ function focusQuickAmountInput() {
   target.select()
 }
 
+function focusQuickVolumeInput() {
+  const target = quickVolumeInputRef.value
+  if (!target) return
+  target.focus()
+  target.select()
+}
+
 function handleInventorySearchSelection(row: InventorySearchSelection) {
   const matchedOption = beerOptions.value.find((option) =>
     option.candidateLots.some((lot) => lot.lotId === row.lotId),
@@ -1381,9 +1416,25 @@ function handleInventorySearchSelection(row: InventorySearchSelection) {
     row.packageId && matchedOption.candidateLots.some((lot) => lot.packageId === row.packageId)
       ? row.packageId
       : ''
-  quickEntry.unitText = ''
-  quickEntry.volumeText = ''
+  const qtyPackages = toNumber(row.qtyPackages)
+  const qtyLiters = toNumber(row.qtyLiters)
+
+  if (quickEntry.packageId && qtyPackages != null && qtyPackages > 0) {
+    quickEntry.unitText = String(roundQty(qtyPackages))
+    quickEntry.volumeText = qtyLiters != null && qtyLiters > 0 ? String(roundQty(qtyLiters)) : ''
+  } else {
+    quickEntry.unitText = ''
+    quickEntry.volumeText = qtyLiters != null && qtyLiters > 0 ? String(roundQty(qtyLiters)) : ''
+  }
   quickSuggestionOpen.value = false
+}
+
+function focusAfterInventorySearchSelection(row: InventorySearchSelection) {
+  if (row.packageId) {
+    focusQuickAmountInput()
+    return
+  }
+  focusQuickVolumeInput()
 }
 
 const quickKeywordSuggestions = computed(() => {
@@ -1815,6 +1866,7 @@ function handleQtyKeydown(event: KeyboardEvent, index: number) {
 
 function resetLines() {
   lineRows.value = createInitialRows()
+  validationRequested.value = false
   activeSuggestionRowId.value = null
   quickEntry.keyword = ''
   quickEntry.beerKey = ''
@@ -1849,14 +1901,57 @@ function currentRouteKey(fromSiteId: string, toSiteId: string) {
   return `${fromSiteId}__${toSiteId}`
 }
 
+function normalizeRoutePreset(input: unknown): RoutePreset | null {
+  if (!input || typeof input !== 'object') return null
+  const row = input as Record<string, unknown>
+  const key = typeof row.key === 'string' ? row.key.trim() : ''
+  const fromSiteId = typeof row.fromSiteId === 'string' ? row.fromSiteId.trim() : ''
+  const toSiteId = typeof row.toSiteId === 'string' ? row.toSiteId.trim() : ''
+  if (!key || !fromSiteId || !toSiteId) return null
+  return {
+    key,
+    fromSiteId,
+    toSiteId,
+    fromSiteName: typeof row.fromSiteName === 'string' ? row.fromSiteName : fromSiteId,
+    toSiteName: typeof row.toSiteName === 'string' ? row.toSiteName : toSiteId,
+    lastUsedAt: typeof row.lastUsedAt === 'string' ? row.lastUsedAt : new Date(0).toISOString(),
+    useCount: Number.isFinite(Number(row.useCount)) ? Number(row.useCount) : 0,
+    favorite: Boolean(row.favorite),
+  }
+}
+
+function normalizeRoutePresetList(input: unknown, favorite: boolean) {
+  if (!Array.isArray(input)) return []
+  return input
+    .map((entry) => normalizeRoutePreset(entry))
+    .filter((entry): entry is RoutePreset => !!entry)
+    .map((entry) => ({ ...entry, favorite }))
+    .sort((a, b) => Date.parse(b.lastUsedAt) - Date.parse(a.lastUsedAt))
+}
+
+function routeMetaPayload() {
+  const currentMeta = tenantMemberMeta.value
+  const currentSection =
+    currentMeta[ROUTE_META_KEY] && typeof currentMeta[ROUTE_META_KEY] === 'object'
+      ? (currentMeta[ROUTE_META_KEY] as JsonRecord)
+      : {}
+  return {
+    ...currentMeta,
+    [ROUTE_META_KEY]: {
+      ...currentSection,
+      [ROUTE_FAVORITES_META_KEY]: favoriteRoutePresets.value.slice(0, 20),
+    },
+  } satisfies JsonRecord
+}
+
 const canToggleFavorite = computed(() => !!routeForm.fromSiteId && !!routeForm.toSiteId)
 const currentRouteStorageKey = computed(() =>
   currentRouteKey(routeForm.fromSiteId, routeForm.toSiteId),
 )
-const favoriteRoutes = computed(() => storedRoutes.value.filter((route) => route.favorite))
+const favoriteRoutes = computed(() => favoriteRoutePresets.value)
 const recentRoutes = computed(() => storedRoutes.value.slice(0, 8))
 const isCurrentRouteFavorite = computed(() =>
-  storedRoutes.value.some((route) => route.key === currentRouteStorageKey.value && route.favorite),
+  favoriteRoutePresets.value.some((route) => route.key === currentRouteStorageKey.value),
 )
 
 function getRouteStorageKey() {
@@ -1867,7 +1962,7 @@ function loadStoredRoutes() {
   if (typeof window === 'undefined') return
   try {
     const raw = window.localStorage.getItem(getRouteStorageKey())
-    storedRoutes.value = raw ? (JSON.parse(raw) as RoutePreset[]) : []
+    storedRoutes.value = normalizeRoutePresetList(raw ? JSON.parse(raw) : [], false)
   } catch {
     storedRoutes.value = []
   }
@@ -1878,12 +1973,51 @@ function persistStoredRoutes() {
   window.localStorage.setItem(getRouteStorageKey(), JSON.stringify(storedRoutes.value.slice(0, 20)))
 }
 
+async function loadFavoriteRoutes() {
+  const auth = await ensureTenant()
+  try {
+    const { data, error } = await supabase
+      .from('tenant_members')
+      .select('meta')
+      .eq('tenant_id', auth.tenantId)
+      .eq('user_id', auth.userId)
+      .maybeSingle()
+    if (error) throw error
+    const meta =
+      data?.meta && typeof data.meta === 'object' && !Array.isArray(data.meta)
+        ? (data.meta as JsonRecord)
+        : {}
+    tenantMemberMeta.value = meta
+    const section =
+      meta[ROUTE_META_KEY] && typeof meta[ROUTE_META_KEY] === 'object'
+        ? (meta[ROUTE_META_KEY] as JsonRecord)
+        : {}
+    favoriteRoutePresets.value = normalizeRoutePresetList(section[ROUTE_FAVORITES_META_KEY], true)
+  } catch (error) {
+    tenantMemberMeta.value = {}
+    favoriteRoutePresets.value = []
+    console.warn('Failed to load ProductMoveFast favorites from tenant_members.meta', error)
+  }
+}
+
+async function persistFavoriteRoutes() {
+  const auth = await ensureTenant()
+  const nextMeta = routeMetaPayload()
+  const { error } = await supabase
+    .from('tenant_members')
+    .update({ meta: nextMeta })
+    .eq('tenant_id', auth.tenantId)
+    .eq('user_id', auth.userId)
+  if (error) throw error
+  tenantMemberMeta.value = nextMeta
+}
+
 function applyRoutePreset(route: RoutePreset) {
   routeForm.fromSiteId = route.fromSiteId
   routeForm.toSiteId = route.toSiteId
 }
 
-function touchRoutePreset(favorite = false) {
+function touchRoutePreset() {
   const fromSiteValue = fromSite.value
   const toSiteValue = toSite.value
   if (!fromSiteValue || !toSiteValue) return
@@ -1892,7 +2026,6 @@ function touchRoutePreset(favorite = false) {
   if (existing) {
     existing.lastUsedAt = new Date().toISOString()
     existing.useCount += 1
-    if (favorite) existing.favorite = true
   } else {
     storedRoutes.value.unshift({
       key,
@@ -1902,7 +2035,7 @@ function touchRoutePreset(favorite = false) {
       toSiteName: toSiteValue.name,
       lastUsedAt: new Date().toISOString(),
       useCount: 1,
-      favorite,
+      favorite: false,
     })
   }
   storedRoutes.value = [...storedRoutes.value].sort(
@@ -1911,25 +2044,46 @@ function touchRoutePreset(favorite = false) {
   persistStoredRoutes()
 }
 
-function toggleCurrentRouteFavorite() {
+async function toggleCurrentRouteFavorite() {
   const key = currentRouteStorageKey.value
   if (!key || !fromSite.value || !toSite.value) return
-  const existing = storedRoutes.value.find((route) => route.key === key)
+  const existing = favoriteRoutePresets.value.find((route) => route.key === key)
   if (existing) {
-    existing.favorite = !existing.favorite
+    favoriteRoutePresets.value = favoriteRoutePresets.value.filter((route) => route.key !== key)
   } else {
-    storedRoutes.value.unshift({
-      key,
-      fromSiteId: fromSite.value.id,
-      toSiteId: toSite.value.id,
-      fromSiteName: fromSite.value.name,
-      toSiteName: toSite.value.name,
-      lastUsedAt: new Date().toISOString(),
-      useCount: 0,
-      favorite: true,
-    })
+    favoriteRoutePresets.value = [
+      {
+        key,
+        fromSiteId: fromSite.value.id,
+        toSiteId: toSite.value.id,
+        fromSiteName: fromSite.value.name,
+        toSiteName: toSite.value.name,
+        lastUsedAt: new Date().toISOString(),
+        useCount: 0,
+        favorite: true,
+      },
+      ...favoriteRoutePresets.value,
+    ].sort((a, b) => Date.parse(b.lastUsedAt) - Date.parse(a.lastUsedAt))
   }
-  persistStoredRoutes()
+  try {
+    await persistFavoriteRoutes()
+  } catch (error) {
+    console.error(error)
+    toast.error(error instanceof Error ? error.message : String(error))
+    await loadFavoriteRoutes()
+  }
+}
+
+async function removeFavoriteRoute(key: string) {
+  const current = favoriteRoutePresets.value
+  favoriteRoutePresets.value = current.filter((route) => route.key !== key)
+  try {
+    await persistFavoriteRoutes()
+  } catch (error) {
+    console.error(error)
+    favoriteRoutePresets.value = current
+    toast.error(error instanceof Error ? error.message : String(error))
+  }
 }
 
 function allocationPolicyLabel(value: string) {
@@ -2368,6 +2522,14 @@ const allErrors = computed(() => {
   return Array.from(new Set(errors))
 })
 
+const displayErrors = computed(() => {
+  const errors = [...routeErrors.value, ...Object.values(lineErrorMap.value)]
+  if (errors.length === 0 && validatedLines.value.length === 0 && validationRequested.value) {
+    errors.push(t('producedBeer.movementFast.errors.lineRequired'))
+  }
+  return Array.from(new Set(errors))
+})
+
 const warnings = computed(() => {
   const messages: string[] = []
   validatedLines.value.forEach((line) => {
@@ -2463,6 +2625,7 @@ function buildMovePayloads() {
 
 async function submit(mode: SubmitMode) {
   if (saving.value) return
+  validationRequested.value = true
   if (allErrors.value.length) {
     toast.error(allErrors.value[0])
     return
@@ -2480,7 +2643,7 @@ async function submit(mode: SubmitMode) {
     const postedCount =
       movementIds.length > 0 ? movementIds.length : Number((data as any)?.count ?? payloads.length)
 
-    touchRoutePreset(false)
+    touchRoutePreset()
     if (routeForm.fromSiteId) {
       await loadBeerOptionsForSite(routeForm.fromSiteId)
     }
@@ -2609,13 +2772,14 @@ onMounted(async () => {
     await ensureTenant()
     await Promise.all([loadUomDefinitions(), loadSites(), loadMovementRules()])
     loadStoredRoutes()
+    await loadFavoriteRoutes()
     unregisterInventorySearchContext = registerInventorySearchContext(() => {
       if (!routeForm.fromSiteId) return undefined
       return {
         siteId: routeForm.fromSiteId,
         siteLocked: true,
         onSelect: handleInventorySearchSelection,
-        afterSelectFocus: focusQuickAmountInput,
+        afterSelectFocus: focusAfterInventorySearchSelection,
       }
     })
     window.addEventListener('keydown', handleGlobalKeydown)

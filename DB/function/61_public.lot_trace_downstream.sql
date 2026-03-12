@@ -28,13 +28,19 @@ begin
 
   if v_batch_id is null then
     return query
-    select 1, p_lot_id, null::uuid, 'movement'::text, m.id, m.lot_event_id, m.movement_at
+    select 1,
+           p_lot_id,
+           e.to_lot_id,
+           lower(e.edge_type::text),
+           m.id,
+           m.lot_event_id,
+           m.movement_at
     from public.inv_movements m
-    join public.inv_movement_lines ml
-      on ml.movement_id = m.id
-     and ml.tenant_id = v_tenant
+    join public.lot_edge e
+      on e.movement_id = m.id
+     and e.tenant_id = v_tenant
     where m.tenant_id = v_tenant
-      and ml.lot_id = p_lot_id
+      and e.from_lot_id = p_lot_id
     order by m.movement_at desc;
     return;
   end if;
@@ -57,13 +63,19 @@ begin
   )
   select * from rel
   union all
-  select 1, p_lot_id, null::uuid, 'movement'::text, m.id, m.lot_event_id, m.movement_at
+  select 1,
+         p_lot_id,
+         e.to_lot_id,
+         lower(e.edge_type::text),
+         m.id,
+         m.lot_event_id,
+         m.movement_at
   from public.inv_movements m
-  join public.inv_movement_lines ml
-    on ml.movement_id = m.id
-   and ml.tenant_id = v_tenant
+  join public.lot_edge e
+    on e.movement_id = m.id
+   and e.tenant_id = v_tenant
   where m.tenant_id = v_tenant
-    and ml.lot_id = p_lot_id
+    and e.from_lot_id = p_lot_id
   order by occurred_at desc;
 end;
 $$;

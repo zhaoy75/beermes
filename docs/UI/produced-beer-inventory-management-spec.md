@@ -86,7 +86,7 @@
 ### Row Actions
 - Each inventory row must show:
   - `関連履歴` / `Show DAG`
-  - `Void`
+  - `数量0` / `Set Qty 0`
 
 #### `関連履歴` / `Show DAG`
 - Purpose:
@@ -99,18 +99,19 @@
   - preferred read source is `public.lot_trace_full(p_lot_id uuid, p_max_depth int default 10)`
   - UI may render graph, table, or mixed representation as long as all related movement is traceable from the selected lot
 
-#### `Void`
+#### `数量0` / `Set Qty 0`
 - Purpose:
-  - void the selected inventory lot record through a backend business action
+  - set the remaining quantity of the selected inventory lot to `0` through a backend business action
 - UI behavior:
-  - show confirmation dialog before void execution
-  - after successful void, refresh inventory grid and remove the voided row from visible positive inventory result
-  - if void is rejected by backend business rules, show an explicit error message
+  - show confirmation dialog before execution
+  - after success, refresh inventory grid and remove the zeroed row from visible positive inventory result
+  - if the action is rejected by backend business rules, show an explicit error message
 - Backend direction:
   - UI must not update `inv_inventory` or `lot` directly
-  - implement or call a backend endpoint / RPC that performs transactional lot void logic
-  - backend must enforce that only valid void targets can be voided
-  - backend should mark related business status as `void` instead of deleting rows
+  - implement or call a backend endpoint / RPC that creates an `adjustment` movement to set inventory quantity to `0`
+  - the generated movement uses `dest_site_id = '00000000-0000-0000-0000-000000000000'::uuid`
+  - backend should update inventory / lot quantity consistently and keep audit metadata
+  - backend should not delete rows
 
 ## ProducedBeer Page Changes
 - Remove the inventory section from `ProducedBeer.vue`.
@@ -125,7 +126,7 @@
   - the new sidebar label if a distinct label is needed
 - Reuse search/filter behavior from `inventory-search-shortcut-modal-spec.md` where practical.
 - Reuse lot genealogy backend from `public.lot_trace_full` for `関連履歴`.
-- Add new locale keys for row actions and confirmation/error messages related to `Void` if they do not already exist.
+- Add new locale keys for row actions and confirmation/error messages related to `数量0` if they do not already exist.
 
 ## Acceptance Criteria
 1. `在庫管理` appears in the sidebar directly under `製造管理`.
@@ -134,7 +135,7 @@
 4. `ProducedBeer` still supports movement listing, filtering, export, and creation flows.
 5. The inventory page includes a search section with `Keyword`, `Product`, `Site`, and `Package` filters.
 6. The inventory grid supports sort on each visible data column.
-7. Each inventory row includes `関連履歴` and `Void` actions.
+7. Each inventory row includes `関連履歴` and `数量0` actions.
 8. `関連履歴` shows all related movement / lot genealogy for the selected row.
-9. `Void` executes through backend business logic and removes the voided inventory from the visible positive inventory list after refresh.
+9. `数量0` executes through backend business logic and removes the row from the visible positive inventory list after refresh.
 10. The new page and existing movement page both load successfully without TypeScript or build regressions.

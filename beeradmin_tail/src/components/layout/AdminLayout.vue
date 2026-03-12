@@ -79,7 +79,7 @@ async function handleInventorySearchSelect(row: InventorySearchSelection) {
   const onSelect = inventorySearchOptions.value.onSelect
   const afterSelectFocus = inventorySearchOptions.value.afterSelectFocus
   onSelect?.(row)
-  await closeInventorySearch(afterSelectFocus ?? null)
+  await closeInventorySearch(afterSelectFocus ? () => afterSelectFocus(row) : null)
 }
 
 function handleGlobalKeydown(event: KeyboardEvent) {

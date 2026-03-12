@@ -13,7 +13,7 @@ export const supabase =
   globalForSupabase.__supabase ??
   createClient<any>(url, anon, {
   auth: {
-    persistSession: false, // we'll persist via Pinia
+    persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
   },

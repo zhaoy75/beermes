@@ -538,11 +538,12 @@ export function useProducedBeerInventory() {
         .select('id, lot_no, batch_id, package_id, produced_at, status')
         .eq('tenant_id', tenant)
         .in('id', lotIds)
+        .neq('status', 'void')
       if (lotError) throw lotError
 
       const lotMap = new Map<string, any>()
       ;(lots ?? []).forEach((row: any) => {
-        if (row.status !== 'void') lotMap.set(row.id, row)
+        if (String(row.status ?? '').toLowerCase() !== 'void') lotMap.set(row.id, row)
       })
       if (lotMap.size === 0) {
         inventoryRows.value = []

@@ -93,7 +93,43 @@ Displayed only when Equipment Kind = Tank
 | Jacketed | No | Boolean |
 | CIP Supported | No | Boolean |
 | Tank Attributes | No | Advanced JSON |
-| Calibration Table | No | JSONB (depth/volume calibration map) |
+| Calibration Table | No | Table editor backed by JSONB (depth/volume calibration map) |
+
+#### Calibration Table Editor
+
+The calibration table must be entered through a dedicated row-based editor, not a raw JSON textarea as the primary UI.
+
+**Header fields**
+- Reference Temperature C (`reference_temperature_c`)
+- Thermal Expansion Coefficient per C (`thermal_expansion_coef_per_c`)
+
+**Grid columns**
+- Row No
+- Depth (mm)
+- Volume (L)
+- Action
+  - Delete row
+
+**Grid actions**
+- Add row
+- Paste CSV / TSV rows
+- Sort by Depth
+- Reset to template
+- Optional raw JSON preview / advanced editor in collapsed area
+
+**Default row template**
+- first row should default to `depth_mm = 0`, `volume_l = 0`
+- editor should start with at least 2 rows
+
+**Keyboard behavior**
+- Enter on the last row adds a new row
+- Tab moves across editable cells
+- Paste of two-column spreadsheet data should map to `depth_mm`, `volume_l`
+
+**JSON mapping**
+- UI rows are converted to `calibration_table.points`
+- header fields are converted to top-level JSON keys
+- saved JSON contract must remain compatible with `public.get_volume_by_tank`
 
 ## Action
 
@@ -119,6 +155,11 @@ Displayed only when Equipment Kind = Tank
    - Non-tank → Tank requires tank profile
    - Tank → Non-tank requires confirmation
 6. Tank max working volume must not exceed capacity
+7. Calibration table must have at least 2 valid points
+8. `depth_mm` values must be numeric, non-negative, unique, and strictly increasing after sort
+9. `volume_l` values must be numeric, non-negative, and non-decreasing
+10. Invalid calibration rows must block save with row-level error display
+11. Capacity mismatch against the last calibration point may show warning but does not have to block save
 
 ## Data Handling
 
@@ -129,10 +170,25 @@ Displayed only when Equipment Kind = Tank
 ### Save behavior
 - One Save action upserts base + tank profile
 - Failure in tank save must rollback or compensate
+- Calibration table editor rows must be serialized into `mst_equipment_tank.calibration_table`
+- Raw JSON input is optional advanced mode only; normal users should complete calibration entry through the table editor
 
 ### Read behavior
 - List view joins equipment + tank profile
 - Filters apply to base fields
+- Existing `calibration_table` JSON must be expanded into header fields + point rows on load
+
+## Validation UX
+
+- Row-level validation errors must be shown inline near the affected row
+- Page-level validation summary may show calibration issues in aggregated form
+- Empty optional rows should be ignored until user enters data
+- Save must be blocked if calibration JSON shape would violate `public.get_volume_by_tank` contract
+
+## Integration Note
+
+- `mst_equipment_tank.calibration_table` must continue to follow the JSON contract documented in [`public.get_volume_by_tank`](/Users/zhao/dev/other/beer/docs/db/function/get_volume_by_tank.md)
+- This UI change is a presentation/input improvement only; no DB schema change is required for the calibration table itself
 
 ## Other
 

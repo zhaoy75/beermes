@@ -10,13 +10,15 @@ export type InventorySearchSelection = {
   packageId: string | null
   packageTypeLabel: string | null
   siteId: string | null
+  qtyLiters: number | null
+  qtyPackages: number | null
 }
 
 export type InventorySearchOpenOptions = {
   siteId?: string | null
   siteLocked?: boolean
   onSelect?: ((row: InventorySearchSelection) => void) | null
-  afterSelectFocus?: (() => void) | null
+  afterSelectFocus?: ((row: InventorySearchSelection) => void) | null
 }
 
 const isInventorySearchOpen = ref(false)

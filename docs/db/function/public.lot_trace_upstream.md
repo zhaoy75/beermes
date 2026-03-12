@@ -10,10 +10,11 @@ Trace upstream genealogy (source lots/events/movements).
 - Lot exists.
 
 ## Data Access
-- Read: `lot`, `lot_event`, `lot_event_line`, `inv_movements`, `inv_movement_lines`, `mes_batch_relation`.
+- Read: `lot`, `inv_movements`, `lot_edge`, `mes_batch_relation`.
 
 ## Behavior
-- Recursive traversal toward origin.
+- Trace toward origin lots via `lot_edge.to_lot_id = p_lot_id`.
+- Also include upstream batch relations via `mes_batch_relation`.
 - Emit one row per discovered edge with depth.
 
 ## Output

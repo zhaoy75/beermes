@@ -1355,6 +1355,8 @@
       "lots": {
         "title": "ステップ3：移出商品（Lot）選択",
         "subtitle": "ロット税区分により税イベントが変わる場合があります。",
+        "lookupModeHint": "在庫台帳が無いサイトのため、Lot情報から候補を表示しています。",
+        "noSuggestion": "一致するLot候補がありません。",
         "multiTaxTypeWarning": "複数のロット税区分が選択されています。選択により税イベントが変わる可能性があります。",
         "multiEventWarning": "候補ロットにより税イベントのプレビューが変化します"
       },
@@ -1376,6 +1378,8 @@
         "reasonNonDefault": "理由（既定値以外を選択した場合必須）",
         "reasonNonDefaultHint": "既定値以外を選択した場合は理由の入力が必要です。",
         "product": "製品",
+        "lotNo": "Lot No",
+        "lotNoPlaceholder": "Lot No を入力して候補を検索",
         "sourceLotTaxType": "移出元ロット税区分",
         "unitPrice": "単価",
         "price": "価格",

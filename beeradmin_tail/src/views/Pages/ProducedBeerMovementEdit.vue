@@ -119,6 +119,9 @@
               <header>
                 <h3 class="text-base font-semibold">{{ t('producedBeer.movementWizard.lots.title') }}</h3>
                 <p class="text-sm text-gray-500">{{ t('producedBeer.movementWizard.lots.subtitle') }}</p>
+                <p v-if="lotSelectionSource === 'lot'" class="text-xs text-amber-600">
+                  {{ t('producedBeer.movementWizard.lots.lookupModeHint') }}
+                </p>
               </header>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
@@ -132,6 +135,48 @@
                     <option v-for="lotType in lotTaxTypeOptions" :key="lotType" :value="lotType">{{ lotTaxTypeLabel(lotType) }}</option>
                   </select>
                 </div>
+              </div>
+              <div v-if="isLotLookupMode" class="max-w-xl relative">
+                <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.movementWizard.fields.lotNo') }}</label>
+                <input
+                  v-model.trim="lotLookupQuery"
+                  class="w-full h-[40px] border rounded px-3"
+                  :placeholder="t('producedBeer.movementWizard.fields.lotNoPlaceholder')"
+                  @focus="openLotSuggestions"
+                  @input="handleLotLookupInput"
+                  @keydown="handleLotLookupKeydown"
+                  @blur="handleLotLookupBlur"
+                />
+                <div
+                  v-if="showLotSuggestions && lotSuggestions.length"
+                  class="absolute z-20 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg overflow-hidden"
+                >
+                  <button
+                    v-for="(lot, index) in lotSuggestions"
+                    :key="`${lot.id}:${index}`"
+                    type="button"
+                    class="w-full px-3 py-2 text-left text-sm border-b last:border-b-0"
+                    :class="index === activeLotSuggestionIndex ? 'bg-blue-50 text-blue-700' : 'hover:bg-gray-50 text-gray-700'"
+                    @mousedown.prevent="selectLotSuggestion(lot)"
+                  >
+                    <div class="font-medium">{{ lot.lotCode || lot.label }}</div>
+                    <div class="text-xs text-gray-500">
+                      {{ lot.styleName || '—' }} / {{ lot.batchCode || '—' }} / {{ formatNumber(displayLotQuantity(lot)) }} {{ movementInputUomLabel(lot) }}
+                    </div>
+                  </button>
+                </div>
+                <p v-if="lotLookupQuery && !lotSuggestions.length" class="mt-1 text-xs text-amber-600">
+                  {{ t('producedBeer.movementWizard.lots.noSuggestion') }}
+                </p>
+              </div>
+              <div
+                v-if="isLotLookupMode && selectedLookupLot"
+                class="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-sm text-gray-700"
+              >
+                <span class="font-medium">{{ selectedLookupLot.lotCode || selectedLookupLot.label }}</span>
+                <span class="ml-2">{{ selectedLookupLot.styleName || '—' }}</span>
+                <span class="ml-2">{{ formatNumber(displayLotQuantity(selectedLookupLot)) }} {{ movementInputUomLabel(selectedLookupLot) }}</span>
+                <span class="ml-2">{{ formatNumber(selectedLookupLot.packageVolume) }} {{ selectedLookupLot.packageUom || '' }}</span>
               </div>
               <div class="overflow-x-auto border border-gray-200 rounded-lg">
                 <table class="min-w-full text-sm divide-y divide-gray-200">
@@ -153,7 +198,7 @@
                   </thead>
                   <tbody class="divide-y divide-gray-100">
                     <tr
-                      v-for="lot in lotOptions"
+                      v-for="lot in filteredLotOptions"
                       :key="lot.id"
                       :class="['hover:bg-gray-50', isLotEventDivergent(lot) ? 'bg-amber-50' : '']"
                     >
@@ -176,13 +221,14 @@
                           :step="isPackagedMoveInput(lot) ? '1' : '0.001'"
                           min="0"
                           :max="displayLotQuantity(lot) ?? undefined"
+                          :data-lot-move-input="lot.id"
                           class="w-28 h-[34px] border rounded px-2 text-right disabled:bg-gray-100 disabled:text-gray-400"
                           :disabled="!movementForm.srcLots.includes(lot.id)"
                         />
                       </td>
                       <td class="px-3 py-2 text-gray-700">{{ movementInputUomLabel(lot) }}</td>
                     </tr>
-                    <tr v-if="lotOptions.length === 0">
+                    <tr v-if="filteredLotOptions.length === 0">
                       <td class="px-3 py-6 text-center text-gray-500" colspan="12">{{ t('producedBeer.movementWizard.table.noLotsFound') }}</td>
                     </tr>
                   </tbody>
@@ -262,7 +308,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
@@ -329,8 +375,22 @@ type LotOption = {
   uomCode: string | null
 }
 
+type LotReferenceMaps = {
+  batchMap: Map<string, string | null>
+  batchCategoryMap: Map<string, string | null>
+  batchTargetAbvMap: Map<string, number | null>
+  batchStyleMap: Map<string, string | null>
+  uomMap: Map<string, string>
+  packageVolumeMap: Map<string, number | null>
+  packageUomMap: Map<string, string | null>
+}
+
 const siteOptions = ref<SiteOption[]>([])
 const lotOptions = ref<LotOption[]>([])
+const lotSelectionSource = ref<'none' | 'inventory' | 'lot'>('none')
+const lotLookupQuery = ref('')
+const showLotSuggestions = ref(false)
+const activeLotSuggestionIndex = ref(0)
 const alcoholTypeLabels = ref<Record<string, string>>({})
 const saving = ref(false)
 
@@ -647,7 +707,115 @@ const filteredDstSiteOptions = computed(() => {
   return siteOptions.value.filter((site) => site.siteTypeKey === movementForm.dstSiteType)
 })
 
+const isLotLookupMode = computed(() => lotSelectionSource.value === 'lot')
+
+const lotSuggestions = computed(() => {
+  if (!isLotLookupMode.value) return [] as LotOption[]
+  const keyword = lotLookupQuery.value.trim().toLowerCase()
+  if (!keyword) return [] as LotOption[]
+  return lotOptions.value
+    .filter((lot) => {
+      const code = String(lot.lotCode ?? lot.label ?? '').toLowerCase()
+      return code.includes(keyword)
+    })
+    .sort((a, b) => {
+      const aCode = String(a.lotCode ?? a.label ?? '').toLowerCase()
+      const bCode = String(b.lotCode ?? b.label ?? '').toLowerCase()
+      const aStarts = aCode.startsWith(keyword) ? 0 : 1
+      const bStarts = bCode.startsWith(keyword) ? 0 : 1
+      if (aStarts !== bStarts) return aStarts - bStarts
+      return aCode.localeCompare(bCode)
+    })
+    .slice(0, 8)
+})
+
+const filteredLotOptions = computed(() => {
+  const productKeyword = movementForm.product.trim().toLowerCase()
+  const lotKeyword = lotLookupQuery.value.trim().toLowerCase()
+  if (isLotLookupMode.value && !lotKeyword && movementForm.srcLots.length === 0) return [] as LotOption[]
+  return lotOptions.value.filter((lot) => {
+    const matchesProduct = !productKeyword || [
+      lot.lotCode,
+      lot.label,
+      lot.batchCode,
+      lot.styleName,
+      alcoholTypeLabel(lot.beerCategoryId),
+    ].some((value) => String(value ?? '').toLowerCase().includes(productKeyword))
+    const matchesLot = !lotKeyword || String(lot.lotCode ?? lot.label ?? '').toLowerCase().includes(lotKeyword)
+    return matchesProduct && matchesLot
+  })
+})
+
+const selectedLookupLot = computed(() => {
+  if (!isLotLookupMode.value || movementForm.srcLots.length !== 1) return null
+  return lotOptions.value.find((lot) => lot.id === movementForm.srcLots[0]) ?? null
+})
+
 const selectedLots = computed(() => lotOptions.value.filter((lot) => movementForm.srcLots.includes(lot.id)))
+
+function focusMovementQtyInput(lotId: string) {
+  nextTick(() => {
+    const input = document.querySelector<HTMLInputElement>(`[data-lot-move-input="${lotId}"]`)
+    input?.focus()
+    input?.select()
+  })
+}
+
+function openLotSuggestions() {
+  if (!isLotLookupMode.value || !lotLookupQuery.value.trim()) return
+  showLotSuggestions.value = lotSuggestions.value.length > 0
+  activeLotSuggestionIndex.value = 0
+}
+
+function handleLotLookupInput() {
+  if (!isLotLookupMode.value) return
+  activeLotSuggestionIndex.value = 0
+  showLotSuggestions.value = lotSuggestions.value.length > 0
+}
+
+function handleLotLookupBlur() {
+  window.setTimeout(() => {
+    showLotSuggestions.value = false
+  }, 120)
+}
+
+function selectLotSuggestion(lot: LotOption) {
+  const existingQty = movementForm.srcLotMoveQty[lot.id] ?? ''
+  lotLookupQuery.value = lot.lotCode ?? lot.label ?? ''
+  movementForm.srcLots = [lot.id]
+  movementForm.srcLotMoveQty = { [lot.id]: existingQty }
+  showLotSuggestions.value = false
+  activeLotSuggestionIndex.value = 0
+  focusMovementQtyInput(lot.id)
+}
+
+function handleLotLookupKeydown(event: KeyboardEvent) {
+  if (!isLotLookupMode.value) return
+  if (event.key === 'ArrowDown') {
+    if (!lotSuggestions.value.length) return
+    event.preventDefault()
+    showLotSuggestions.value = true
+    activeLotSuggestionIndex.value = Math.min(activeLotSuggestionIndex.value + 1, lotSuggestions.value.length - 1)
+    return
+  }
+  if (event.key === 'ArrowUp') {
+    if (!lotSuggestions.value.length) return
+    event.preventDefault()
+    showLotSuggestions.value = true
+    activeLotSuggestionIndex.value = Math.max(activeLotSuggestionIndex.value - 1, 0)
+    return
+  }
+  if (event.key === 'Enter') {
+    if (!showLotSuggestions.value || !lotSuggestions.value.length) return
+    event.preventDefault()
+    selectLotSuggestion(lotSuggestions.value[activeLotSuggestionIndex.value] ?? lotSuggestions.value[0])
+    return
+  }
+  if (event.key === 'Escape') {
+    showLotSuggestions.value = false
+  }
+}
+
 
 const selectedLotTaxTypeSet = computed(() => {
   const set = new Set<string>()
@@ -718,6 +886,9 @@ watch(
     movementForm.srcLotMoveQty = {}
     movementForm.srcLotTaxType = ''
     lotOptions.value = []
+    lotSelectionSource.value = 'none'
+    lotLookupQuery.value = ''
+    showLotSuggestions.value = false
 
     if (!value) {
       rules.value = null
@@ -746,11 +917,19 @@ watch(
   async (value) => {
     if (!value) {
       lotOptions.value = []
+      lotSelectionSource.value = 'none'
+      lotLookupQuery.value = ''
+      showLotSuggestions.value = false
       movementForm.srcLots = []
       movementForm.srcLotMoveQty = {}
       movementForm.srcLotTaxType = ''
       return
     }
+    lotLookupQuery.value = ''
+    showLotSuggestions.value = false
+    movementForm.srcLots = []
+    movementForm.srcLotMoveQty = {}
+    movementForm.srcLotTaxType = ''
     await loadLotsForSite(value)
   }
 )
@@ -894,29 +1073,12 @@ async function loadAlcoholTypes() {
   alcoholTypeLabels.value = map
 }
 
-async function loadLotsForSite(siteId: string) {
-  const tenant = await ensureTenant()
-  const { data: inventoryRows, error } = await supabase
-    .from('inv_inventory')
-    .select('id, lot_id, qty, uom_id, lot:lot_id ( id, lot_no, batch_id, package_id, lot_tax_type, status )')
-    .eq('tenant_id', tenant)
-    .eq('site_id', siteId)
-    .gt('qty', 0)
-  if (error) throw error
-
-  const activeRows = (inventoryRows ?? []).filter((row: any) => {
-    const lotRow = Array.isArray(row.lot) ? row.lot[0] : row.lot
-    return !lotRow || lotRow.status !== 'void'
-  })
-
-  const batchIds = Array.from(new Set(activeRows
-    .map((row: any) => (Array.isArray(row.lot) ? row.lot[0] : row.lot)?.batch_id)
-    .filter(Boolean)))
-  const uomIds = Array.from(new Set(activeRows.map((row: any) => row.uom_id).filter(Boolean)))
-  const packageIds = Array.from(new Set(activeRows
-    .map((row: any) => (Array.isArray(row.lot) ? row.lot[0] : row.lot)?.package_id)
-    .filter(Boolean)))
-
+async function loadLotReferenceMaps(
+  tenant: string,
+  batchIds: string[],
+  uomIds: string[],
+  packageIds: string[],
+): Promise<LotReferenceMaps> {
   const batchMap = new Map<string, string | null>()
   const batchCategoryMap = new Map<string, string | null>()
   const batchTargetAbvMap = new Map<string, number | null>()
@@ -1068,8 +1230,20 @@ async function loadLotsForSite(siteId: string) {
     })
   }
 
+  return {
+    batchMap,
+    batchCategoryMap,
+    batchTargetAbvMap,
+    batchStyleMap,
+    uomMap,
+    packageVolumeMap,
+    packageUomMap,
+  }
+}
+
+function buildLotOptionsFromInventoryRows(rows: any[], refs: LotReferenceMaps) {
   const optionMap = new Map<string, LotOption>()
-  activeRows.forEach((row: any) => {
+  rows.forEach((row: any) => {
     const lotRow = Array.isArray(row.lot) ? row.lot[0] : row.lot
     const lotId = lotRow?.id ?? row.lot_id ?? row.id
     if (!lotId) return
@@ -1086,20 +1260,116 @@ async function loadLotsForSite(siteId: string) {
       label: lotRow?.lot_no ?? lotId,
       lotTaxType: typeof lotRow?.lot_tax_type === 'string' ? lotRow.lot_tax_type : null,
       lotCode: lotRow?.lot_no ?? null,
-      batchCode: batchId ? batchMap.get(batchId) ?? null : null,
-      beerCategoryId: batchId ? batchCategoryMap.get(batchId) ?? null : null,
-      targetAbv: batchId ? batchTargetAbvMap.get(batchId) ?? null : null,
-      styleName: batchId ? batchStyleMap.get(batchId) ?? null : null,
+      batchCode: batchId ? refs.batchMap.get(batchId) ?? null : null,
+      beerCategoryId: batchId ? refs.batchCategoryMap.get(batchId) ?? null : null,
+      targetAbv: batchId ? refs.batchTargetAbvMap.get(batchId) ?? null : null,
+      styleName: batchId ? refs.batchStyleMap.get(batchId) ?? null : null,
       packageId: lotRow?.package_id ? String(lotRow.package_id) : null,
-      packageVolume: lotRow?.package_id ? packageVolumeMap.get(lotRow.package_id) ?? null : null,
-      packageUom: lotRow?.package_id ? packageUomMap.get(lotRow.package_id) ?? null : null,
+      packageVolume: lotRow?.package_id ? refs.packageVolumeMap.get(lotRow.package_id) ?? null : null,
+      packageUom: lotRow?.package_id ? refs.packageUomMap.get(lotRow.package_id) ?? null : null,
       quantity: qty,
       uomId: row.uom_id ? String(row.uom_id) : null,
-      uomCode: row.uom_id ? uomMap.get(row.uom_id) ?? null : null,
+      uomCode: row.uom_id ? refs.uomMap.get(row.uom_id) ?? null : null,
     })
   })
 
-  lotOptions.value = Array.from(optionMap.values()).sort((a, b) => (a.lotCode ?? '').localeCompare(b.lotCode ?? ''))
+  return Array.from(optionMap.values()).sort((a, b) => (a.lotCode ?? '').localeCompare(b.lotCode ?? ''))
+}
+
+function buildLotOptionsFromLotRows(rows: any[], refs: LotReferenceMaps) {
+  return rows
+    .map((row: any) => {
+      const batchId = typeof row.batch_id === 'string' ? row.batch_id : null
+      const lotId = String(row.id ?? '')
+      if (!lotId) return null
+      return {
+        id: lotId,
+        label: row.lot_no ?? lotId,
+        lotTaxType: typeof row.lot_tax_type === 'string' ? row.lot_tax_type : null,
+        lotCode: row.lot_no ?? null,
+        batchCode: batchId ? refs.batchMap.get(batchId) ?? null : null,
+        beerCategoryId: batchId ? refs.batchCategoryMap.get(batchId) ?? null : null,
+        targetAbv: batchId ? refs.batchTargetAbvMap.get(batchId) ?? null : null,
+        styleName: batchId ? refs.batchStyleMap.get(batchId) ?? null : null,
+        packageId: row.package_id ? String(row.package_id) : null,
+        packageVolume: row.package_id ? refs.packageVolumeMap.get(row.package_id) ?? null : null,
+        packageUom: row.package_id ? refs.packageUomMap.get(row.package_id) ?? null : null,
+        quantity: toNumber(row.qty),
+        uomId: row.uom_id ? String(row.uom_id) : null,
+        uomCode: row.uom_id ? refs.uomMap.get(row.uom_id) ?? null : null,
+      } satisfies LotOption
+    })
+    .filter((row): row is LotOption => row != null)
+    .sort((a, b) => (a.lotCode ?? '').localeCompare(b.lotCode ?? ''))
+}
+
+async function loadLotsForSite(siteId: string) {
+  const tenant = await ensureTenant()
+  const { data: inventoryRows, error } = await supabase
+    .from('inv_inventory')
+    .select('id, lot_id, qty, uom_id, lot:lot_id ( id, lot_no, batch_id, package_id, lot_tax_type, status )')
+    .eq('tenant_id', tenant)
+    .eq('site_id', siteId)
+    .gt('qty', 0)
+  if (error) throw error
+
+  const activeRows = (inventoryRows ?? []).filter((row: any) => {
+    const lotRow = Array.isArray(row.lot) ? row.lot[0] : row.lot
+    return !lotRow || lotRow.status !== 'void'
+  })
+
+  if (activeRows.length) {
+    const batchIds = Array.from(new Set(activeRows
+      .map((row: any) => (Array.isArray(row.lot) ? row.lot[0] : row.lot)?.batch_id)
+      .filter(Boolean)))
+    const uomIds = Array.from(new Set(activeRows.map((row: any) => row.uom_id).filter(Boolean)))
+    const packageIds = Array.from(new Set(activeRows
+      .map((row: any) => (Array.isArray(row.lot) ? row.lot[0] : row.lot)?.package_id)
+      .filter(Boolean)))
+    const refs = await loadLotReferenceMaps(tenant, batchIds, uomIds, packageIds)
+    lotOptions.value = buildLotOptionsFromInventoryRows(activeRows, refs)
+    lotSelectionSource.value = 'inventory'
+    return
+  }
+
+  lotSelectionSource.value = 'lot'
+
+  const { data: scopedLotRows, error: scopedLotError } = await supabase
+    .from('lot')
+    .select('id, lot_no, batch_id, package_id, lot_tax_type, status, qty, uom_id')
+    .eq('tenant_id', tenant)
+    .or(`site_id.eq.${siteId},site_id.is.null`)
+    .neq('status', 'void')
+    .gt('qty', 0)
+    .order('lot_no')
+    .limit(500)
+  if (scopedLotError) throw scopedLotError
+
+  let activeLots = (scopedLotRows ?? []).filter((row: any) => row?.status !== 'void')
+  if (!activeLots.length) {
+    const { data: tenantLotRows, error: tenantLotError } = await supabase
+      .from('lot')
+      .select('id, lot_no, batch_id, package_id, lot_tax_type, status, qty, uom_id')
+      .eq('tenant_id', tenant)
+      .neq('status', 'void')
+      .gt('qty', 0)
+      .order('lot_no')
+      .limit(500)
+    if (tenantLotError) throw tenantLotError
+    activeLots = (tenantLotRows ?? []).filter((row: any) => row?.status !== 'void')
+  }
+
+  if (!activeLots.length) {
+    lotOptions.value = []
+    return
+  }
+
+  const batchIds = Array.from(new Set(activeLots.map((row: any) => row.batch_id).filter(Boolean)))
+  const uomIds = Array.from(new Set(activeLots.map((row: any) => row.uom_id).filter(Boolean)))
+  const packageIds = Array.from(new Set(activeLots.map((row: any) => row.package_id).filter(Boolean)))
+  const refs = await loadLotReferenceMaps(tenant, batchIds, uomIds, packageIds)
+  lotOptions.value = buildLotOptionsFromLotRows(activeLots, refs)
+  lotSelectionSource.value = 'lot'
 }
 
 function nextStep() {

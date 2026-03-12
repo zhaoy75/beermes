@@ -1355,6 +1355,8 @@
       "lots": {
         "title": "Step 3: Select Lots",
         "subtitle": "Tax result may change depending on lot tax type.",
+        "lookupModeHint": "This site does not keep inventory ledger rows, so lot candidates are loaded from lot master data.",
+        "noSuggestion": "No matching lot candidates found.",
         "multiTaxTypeWarning": "Multiple lot tax types are selected. Tax event may change by selection.",
         "multiEventWarning": "Different lot candidates produce different tax event previews"
       },
@@ -1376,6 +1378,8 @@
         "reasonNonDefault": "Reason (required for non-default)",
         "reasonNonDefaultHint": "Reason is required when selecting a non-default code.",
         "product": "Product",
+        "lotNo": "Lot No",
+        "lotNoPlaceholder": "Enter lot number to search candidates",
         "sourceLotTaxType": "Source Lot Tax Type",
         "unitPrice": "Unit Price",
         "price": "Price",

@@ -81,21 +81,55 @@ System behavior:
 Step 3: Select lot　（移出商品選択）
 --------------------------------------------------
 UI:
-- Select Lot(s) from inventory (inv_inventory) for Source Site
-  - lot code
-  - ビール分類
-  - 目標ABV
-  - スタイル名
-  - batch code
-  - package volume
-  - package uom
-  - quantity
-  - removal quantity (for input)
+- Keep the current Step 3 layout and row/grid style used by the existing page.
+- The UI must not switch to a different dialog/page layout for return / put-back intents.
+- When source stock exists in `inv_inventory`, Step 3 may still resolve rows from inventory.
+- When `movement_intent = RETURN_FROM_CUSTOMER` and source stock does not exist in `inv_inventory`, Step 3 must switch to lot lookup mode while keeping the same visual structure.
+- In lot lookup mode:
+  - user inputs `lot no` in the existing row UI
+  - type-ahead / suggestion list should be shown while typing
+  - selected lot populates row display fields using lot/batch/package master data
+  - the row should continue to show the same information area as the current page
+    - lot code
+    - ビール分類
+    - 目標ABV
+    - スタイル名
+    - batch code
+    - package volume
+    - package uom
+    - quantity
+    - removal quantity (for input)
+- If the selected lot has package information:
+  - system shows package info automatically
+  - user inputs package unit count
+  - system derives volume
+- If the selected lot does not have package information:
+  - user inputs volume directly
+- Row-level validation and inline error style must remain consistent with the current page UX.
 - If multiple lots have different `lot_tax_type`, show tax preview changes.
 
 System behavior:
 - find `src_lot_tax_type` from selected lot.
 - If multiple candidates change tax event, highlight options.
+- In lot lookup mode, the system must resolve lot candidate data from lot-oriented sources, not only from `inv_inventory`.
+- Suggested source data for lot lookup mode:
+  - `lot`
+  - batch / product master data
+  - package master data
+  - movement / lot linkage needed to determine returnable quantity
+- After lot selection, the system should determine:
+  - product / style display data
+  - package metadata
+  - allowable return quantity
+  - whether unit-entry or volume-entry is required
+- The system must validate that:
+  - lot exists
+  - lot is eligible for the selected movement intent
+  - entered unit count is numeric and within allowable range
+  - derived / entered volume is valid
+  - lot/package combination is consistent
+- For `RETURN_FROM_CUSTOMER`, allowable quantity must be validated from the source lot balance even when source `inv_inventory` does not exist, because customer-side sites are non-inventory-ledger sites.
+- If multiple matching lots exist for the entered lot code, the user must select one explicitly from suggestions.
 
 --------------------------------------------------
 Step 4: Fill necessary information（詳細情報入力）

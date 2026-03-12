@@ -88,6 +88,8 @@ Not accepted from UI:
 - `qty` does not exceed source lot balance.
 - If `unit` is provided, it must be `> 0`.
 - Source inventory (`inv_inventory`) for `(src_site, src_lot_id, uom_id)` exists and has sufficient quantity.
+  - Exception: when `movement_intent = 'RETURN_FROM_CUSTOMER'` and the source site type has `inventory_count_flg = true`, source `inv_inventory` is not required.
+  - In that exception path, quantity/unit validation is performed against the locked source lot balance (`lot.qty`, `lot.unit`) instead.
 - If rule requires full-lot movement, enforce `qty = source_lot_qty`.
 - If derived `tax_event = 'TAXABLE_REMOVAL'` and batch attr `beer_category` or tax category mapping cannot be resolved, posting must fail.
 - If derived `tax_event = 'TAXABLE_REMOVAL'` and `public.get_current_tax_rate` does not return exactly one valid tax rate for the resolved tax category and movement date, posting must fail.
@@ -123,7 +125,8 @@ Not accepted from UI:
    - `from_lot_id = src_lot_id`.
    - `to_lot_id = dst_lot_id` (or `NULL` for consume-style intents if applicable).
 6. Update `inv_inventory`:
-   - decrement source inventory
+   - decrement source inventory when source site uses inventory ledger rows
+   - skip source inventory decrement for `RETURN_FROM_CUSTOMER` from non-inventory-ledger source sites
    - increment destination inventory when destination lot exists
 7. If source lot qty becomes `0`, set source lot status to `consumed`.
 8. Return created movement id.
@@ -170,3 +173,4 @@ Not accepted from UI:
 - `inv_movement_lines` persists `unit` when provided and persists `tax_rate` from backend derivation; lot quantity movement continues to apply `unit` when provided.
 - For `product_move`, `tax_rate` is `0` for all non-taxable movements and only resolves from tax master when derived `tax_event = 'TAXABLE_REMOVAL'`.
 - `product_move` must treat batch attr `beer_category` as the only business source of taxable category resolution.
+- `RETURN_FROM_CUSTOMER` is the only intent allowed to post from a non-inventory-ledger source site without a source `inv_inventory` row.

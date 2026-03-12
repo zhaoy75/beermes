@@ -318,19 +318,21 @@ begin
     raise exception 'PM008: partial quantity is not allowed by rule';
   end if;
 
-  select i.id, i.qty
-    into v_source_inv_id, v_source_inv_qty
-  from public.inv_inventory i
-  where i.tenant_id = v_tenant
-    and i.site_id = v_src_site_id
-    and i.lot_id = v_src_lot_id
-    and i.uom_id = v_uom_id
-  order by i.created_at, i.id
-  limit 1
-  for update;
+  if v_movement_intent <> 'RETURN_FROM_CUSTOMER' then
+    select i.id, i.qty
+      into v_source_inv_id, v_source_inv_qty
+    from public.inv_inventory i
+    where i.tenant_id = v_tenant
+      and i.site_id = v_src_site_id
+      and i.lot_id = v_src_lot_id
+      and i.uom_id = v_uom_id
+    order by i.created_at, i.id
+    limit 1
+    for update;
 
-  if not found or coalesce(v_source_inv_qty, 0) < v_qty then
-    raise exception 'PM007: source inventory insufficient quantity';
+    if not found or coalesce(v_source_inv_qty, 0) < v_qty then
+      raise exception 'PM007: source inventory insufficient quantity';
+    end if;
   end if;
 
   v_doc_type_text := case v_movement_intent
@@ -635,9 +637,11 @@ begin
     )
   );
 
-  update public.inv_inventory i
-     set qty = i.qty - v_qty
-   where i.id = v_source_inv_id;
+  if v_source_inv_id is not null then
+    update public.inv_inventory i
+       set qty = i.qty - v_qty
+     where i.id = v_source_inv_id;
+  end if;
 
   if v_edge_type <> 'CONSUME' then
     select i.id

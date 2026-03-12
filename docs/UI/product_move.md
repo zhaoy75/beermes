@@ -7,9 +7,11 @@ The UI must get rules from server call and never hardcode movement intents, tax 
 
 Key principles:
 - Movement intent is chosen first.
-- Site types and default tax are derived by the system from the rules file.
+- Site types are derived from selected sites.
+- Default tax decision is derived only after the source lot tax type is known.
 - Product/Lot selection can change tax results when multiple candidates exist.
 - Final confirmation must explain derived tax event and rule source.
+- Movement intents shown in this wizard must be controlled by ruleengine visibility flags, not by UI hardcode.
 
 ## Entry Point
 - ProducedBeer page -> button: "製品ビール移出登録" (Tax Removal Register...)
@@ -38,8 +40,8 @@ Key principles:
 
 ## Flow Overview (Wizard)
 Step 1 → movement_intent  
-Step 2 → select src/dst site (system derives site_type + default tax)  
-Step 3 → select product/lot (tax may be adjusted if multiple candidates)  
+Step 2 → select src/dst site (system derives site_type)  
+Step 3 → select product/lot + source lot tax type + tax decision code  
 Step 4 → fill necessary information  
 Step 5 → confirmation
 
@@ -52,9 +54,11 @@ UI:
 System behavior:
 - movement_get_movement_UI_intent
 - list the movement intents in return json
+- Only movement intents with `movement_intent_labels.<code>.show_in_movement_wizard = true` are shown in this wizard.
+- For this wizard, `INTERNAL_TRANSFER` and `SHIP_DOMESTIC` must be hidden by rule configuration.
 
 --------------------------------------------------
-Step 2: Select src/dst site（移出元先酒税情報入力）
+Step 2: Select src/dst site（移出元先選択）
 --------------------------------------------------
 UI:
 - Select Source Site (required)
@@ -67,15 +71,10 @@ UI:
   - select destination site (dropdown list)
   - destination site name should be shown as the label (get from movement_get_rules) 
 
-- Tax Decision Code 
-  - set default Tax Decision Code from tax_transformation_rules based on movement_intent, src site type and dst site type
-  - if user want to choose other allowed_tax_decision. user need to input reason 
-  - decision code should be shown as the label (get from movement_get_rules) 
-
 System behavior:
 - call movement_get_rules to get rules for the movement intent which user input in Step 1
-- Compute default tax decision code (if rule requires a decision).
-- Preview derived tax event using `tax_transformation_rules`.
+- Derive site_type from the selected source/destination sites.
+- Do not finalize default tax decision code in this step because `src_lot_tax_type` is not yet fixed.
 
 --------------------------------------------------
 Step 3: Select lot　（移出商品選択）
@@ -109,9 +108,22 @@ UI:
   - user inputs volume directly
 - Row-level validation and inline error style must remain consistent with the current page UX.
 - If multiple lots have different `lot_tax_type`, show tax preview changes.
+- `移出元ロット税区分` is determined from the selected lot set.
+- After `移出元ロット税区分` is determined, show `税務判定コード`.
+  - decision code options must be filtered from `tax_transformation_rules` by:
+    - `movement_intent`
+    - `src_site_type`
+    - `dst_site_type`
+    - `src_lot_tax_type`
+  - show the default decision label in the Step 3 area
+  - if only one decision is allowed, auto-select it
+  - if user selects a non-default decision, show `理由` input in Step 3 and make it required
+  - if user selects the default decision, `理由` is not required
+- If the selected lots contain mixed `lot_tax_type`, the page should not finalize tax decision selection until the selection is reduced to a single compatible tax type set.
 
 System behavior:
 - find `src_lot_tax_type` from selected lot.
+- Compute default tax decision code only after `src_lot_tax_type` is determined.
 - If multiple candidates change tax event, highlight options.
 - In lot lookup mode, the system must resolve lot candidate data from lot-oriented sources, not only from `inv_inventory`.
 - Suggested source data for lot lookup mode:
@@ -122,6 +134,9 @@ System behavior:
 - After lot selection, the system should determine:
   - product / style display data
   - package metadata
+  - source lot tax type
+  - allowed tax decision code list
+  - default tax decision code
   - allowable return quantity
   - whether unit-entry or volume-entry is required
 - The system must validate that:
@@ -130,6 +145,7 @@ System behavior:
   - entered unit count is numeric and within allowable range
   - derived / entered volume is valid
   - lot/package combination is consistent
+  - non-default `tax_decision_code` requires `reason`
 - For `RETURN_FROM_CUSTOMER`, allowable quantity must be validated from the source lot balance even when source `inv_inventory` does not exist.
 - If multiple matching lots exist for the entered lot code, the user must select one explicitly from suggestions.
 - Once a candidate is selected, the UI must bind and post using `lot.id`, not `lot_no`.
@@ -171,6 +187,8 @@ Validation Rules (Dynamic)
   - allow_new_lot
   - allow_same_lot
 - tax decision code must be selected when multiple options exist.
+- tax decision code must be resolved from the same rule context as the selected `src_lot_tax_type`.
+- reason is required only when selected `tax_decision_code` is not the default decision for that rule context.
 
 --------------------------------------------------
 Data Handling
@@ -190,5 +208,9 @@ when Post button is clicked, call rpc public.product_move
 Notes
 --------------------------------------------------
 - UI must re-evaluate tax event when any of steps 1-3 change.
+- Changing selected lot(s) or source lot tax type must re-evaluate:
+  - allowed tax decision list
+  - default tax decision
+  - whether `reason` is required
 - If rule changes invalidate current selection, prompt user to reselect.
 - the page should be multi-languaged

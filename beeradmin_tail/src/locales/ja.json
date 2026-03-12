@@ -1374,6 +1374,7 @@
         "sourceSite": "移出元サイト",
         "destinationSite": "移出先サイト",
         "taxDecisionCode": "税務判定コード",
+        "taxDecisionCodeHint": "移出元ロット税区分を確定すると選択できます。",
         "defaultTaxDecision": "既定値",
         "reasonNonDefault": "理由（既定値以外を選択した場合必須）",
         "reasonNonDefaultHint": "既定値以外を選択した場合は理由の入力が必要です。",

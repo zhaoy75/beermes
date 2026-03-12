@@ -1374,6 +1374,7 @@
         "sourceSite": "Source Site",
         "destinationSite": "Destination Site",
         "taxDecisionCode": "Tax Decision Code",
+        "taxDecisionCodeHint": "Select source lot tax type first to enable this field.",
         "defaultTaxDecision": "Default",
         "reasonNonDefault": "Reason (required for non-default)",
         "reasonNonDefaultHint": "Reason is required when selecting a non-default code.",

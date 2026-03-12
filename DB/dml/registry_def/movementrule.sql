@@ -1,4 +1,6 @@
 -- System-wide Japanese address definition
+delete from registry_def where kind = 'ruleengine' and def_key = 'beer_movement_rule';
+
 INSERT INTO registry_def (kind, def_key, scope, owner_id, spec)
 VALUES (
   'ruleengine',
@@ -64,12 +66,12 @@ VALUES (
     "INTERNAL_TRANSFER": {
       "ja": "社内移動",
       "en": "Internal Transfer",
-      "show_in_movement_wizard": true
+      "show_in_movement_wizard": false
     },
     "SHIP_DOMESTIC": {
       "ja": "国内出荷",
       "en": "Domestic Shipment",
-      "show_in_movement_wizard": true
+      "show_in_movement_wizard": false
     },
     "SHIP_EXPORT": {
       "ja": "輸出（免税）",

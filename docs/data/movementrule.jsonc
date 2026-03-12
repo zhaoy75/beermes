@@ -57,12 +57,12 @@
     "INTERNAL_TRANSFER": {
       "ja": "社内移動",
       "en": "Internal Transfer",
-      "show_in_movement_wizard": true
+      "show_in_movement_wizard": false
     },
     "SHIP_DOMESTIC": {
       "ja": "国内出荷",
       "en": "Domestic Shipment",
-      "show_in_movement_wizard": true
+      "show_in_movement_wizard": false
     },
     "SHIP_EXPORT": {
       "ja": "輸出（免税）",

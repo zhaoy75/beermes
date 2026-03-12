@@ -94,25 +94,6 @@
                 </div>
               </div>
 
-              <div v-if="taxDecisionOptions.length" class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.movementWizard.fields.taxDecisionCode') }}</label>
-                  <p class="text-xs text-gray-500 mb-2">
-                    {{ t('producedBeer.movementWizard.fields.defaultTaxDecision') }}: {{ taxDecisionLabel(defaultTaxDecisionCode) }}
-                  </p>
-                  <select v-model="movementForm.taxDecisionCode" class="w-full h-[40px] border rounded px-3 bg-white">
-                    <option value="">{{ t('common.select') }}</option>
-                    <option v-for="option in taxDecisionOptions" :key="option.value" :value="option.value">
-                      {{ option.label }}
-                    </option>
-                  </select>
-                </div>
-                <div v-if="movementForm.taxDecisionCode && movementForm.taxDecisionCode !== defaultTaxDecisionCode">
-                  <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.movementWizard.fields.reasonNonDefault') }}</label>
-                  <input v-model.trim="movementForm.taxDecisionReason" class="w-full h-[40px] border rounded px-3" />
-                  <p v-if="!movementForm.taxDecisionReason" class="mt-1 text-xs text-amber-600">{{ t('producedBeer.movementWizard.fields.reasonNonDefaultHint') }}</p>
-                </div>
-              </div>
             </section>
 
             <section v-if="currentStep === 3" class="space-y-4">
@@ -134,6 +115,32 @@
                     <option value="">{{ t('common.select') }}</option>
                     <option v-for="lotType in lotTaxTypeOptions" :key="lotType" :value="lotType">{{ lotTaxTypeLabel(lotType) }}</option>
                   </select>
+                </div>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.movementWizard.fields.taxDecisionCode') }}</label>
+                  <p class="text-xs text-gray-500 mb-2">
+                    {{ t('producedBeer.movementWizard.fields.defaultTaxDecision') }}: {{ taxDecisionLabel(defaultTaxDecisionCode) }}
+                  </p>
+                  <select
+                    v-model="movementForm.taxDecisionCode"
+                    class="w-full h-[40px] border rounded px-3 bg-white disabled:bg-gray-100 disabled:text-gray-400"
+                    :disabled="!taxDecisionSelectable"
+                  >
+                    <option value="">{{ t('common.select') }}</option>
+                    <option v-for="option in taxDecisionOptions" :key="option.value" :value="option.value">
+                      {{ option.label }}
+                    </option>
+                  </select>
+                  <p v-if="!taxDecisionSelectable" class="mt-1 text-xs text-gray-500">
+                    {{ t('producedBeer.movementWizard.fields.taxDecisionCodeHint') }}
+                  </p>
+                </div>
+                <div v-if="taxDecisionReasonRequired">
+                  <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.movementWizard.fields.reasonNonDefault') }}</label>
+                  <input v-model.trim="movementForm.taxDecisionReason" class="w-full h-[40px] border rounded px-3" />
+                  <p v-if="!movementForm.taxDecisionReason" class="mt-1 text-xs text-amber-600">{{ t('producedBeer.movementWizard.fields.reasonNonDefaultHint') }}</p>
                 </div>
               </div>
               <div v-if="isLotLookupMode" class="max-w-xl relative">
@@ -583,7 +590,7 @@ async function saveMovement() {
     if (!movementForm.srcSite || !movementForm.dstSite) throw new Error('src/dst site is required')
     if (!movementForm.taxDecisionCode) throw new Error('tax_decision_code is required')
     if (!movementForm.srcLots.length) throw new Error('select at least one lot')
-    if (movementForm.taxDecisionCode !== defaultTaxDecisionCode.value && !movementForm.taxDecisionReason.trim()) {
+    if (taxDecisionReasonRequired.value && !movementForm.taxDecisionReason.trim()) {
       throw new Error('reason is required for non-default tax decision')
     }
 
@@ -729,6 +736,12 @@ const derivedTaxDecision = computed(() => {
 
 const derivedTaxEvent = computed(() => derivedTaxDecision.value?.tax_event ?? '')
 const derivedRuleId = computed(() => derivedTaxRule.value?.movement_intent ? `${derivedTaxRule.value.movement_intent}` : '')
+const taxDecisionSelectable = computed(() => !!movementForm.srcLotTaxType && taxDecisionOptions.value.length > 0)
+const taxDecisionReasonRequired = computed(() =>
+  !!movementForm.taxDecisionCode &&
+  !!defaultTaxDecisionCode.value &&
+  movementForm.taxDecisionCode !== defaultTaxDecisionCode.value,
+)
 
 const srcSiteTypeOptions = computed(() => allowedSrcSiteTypes.value)
 const dstSiteTypeOptions = computed(() => allowedDstSiteTypes.value)
@@ -1033,7 +1046,7 @@ async function loadMovementIntents() {
   try {
     const { data, error } = await supabase.rpc('movement_get_movement_ui_intent')
     if (error) throw error
-    intentOptions.value = (data ?? [])
+    const nextIntentOptions = (data ?? [])
       .map((row: any) => ({
         value: String(row?.movement_intent ?? ''),
         label: String(
@@ -1043,6 +1056,14 @@ async function loadMovementIntents() {
         ),
       }))
       .filter((row: { value: string }) => !!row.value)
+    intentOptions.value = nextIntentOptions
+
+    if (
+      movementForm.intent &&
+      !nextIntentOptions.some((option: { value: string }) => option.value === movementForm.intent)
+    ) {
+      movementForm.intent = ''
+    }
   } catch (err: any) {
     console.error(err)
     intentOptions.value = []

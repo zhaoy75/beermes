@@ -247,10 +247,147 @@
                 <textarea v-model.trim="tankForm.tank_attr_doc" rows="4" class="w-full border rounded px-3 py-2 font-mono text-xs"></textarea>
                 <p v-if="errors.tank_attr_doc" class="text-xs text-red-600 mt-1">{{ errors.tank_attr_doc }}</p>
               </div>
-              <div class="md:col-span-2">
+              <div class="md:col-span-2 space-y-3">
                 <label class="block text-sm text-gray-600 mb-1">{{ t('equipment.tank.calibrationTable') }}</label>
-                <textarea v-model.trim="tankForm.calibration_table" rows="4" class="w-full border rounded px-3 py-2 font-mono text-xs"></textarea>
-                <p v-if="errors.calibration_table" class="text-xs text-red-600 mt-1">{{ errors.calibration_table }}</p>
+                <div class="rounded-xl border border-gray-200 bg-gray-50 p-3 space-y-3">
+                  <div class="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_16rem] gap-3">
+                    <div>
+                      <label class="block text-xs text-gray-500 mb-1">
+                        {{ t('equipment.tank.calibration.referenceTemperature') }}
+                      </label>
+                      <input
+                        v-model.trim="calibrationEditor.reference_temperature_c"
+                        type="number"
+                        step="0.001"
+                        class="w-full h-[38px] border rounded px-3 bg-white"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-xs text-gray-500 mb-1">
+                        {{ t('equipment.tank.calibration.thermalExpansion') }}
+                      </label>
+                      <input
+                        v-model.trim="calibrationEditor.thermal_expansion_coef_per_c"
+                        type="number"
+                        step="0.000001"
+                        class="w-full h-[38px] border rounded px-3 bg-white"
+                        :placeholder="t('equipment.tank.calibration.optional')"
+                      />
+                    </div>
+                    <div class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-600 space-y-1">
+                      <div class="flex items-center justify-between gap-3">
+                        <span>{{ t('equipment.tank.calibration.pointCount') }}</span>
+                        <span class="font-medium text-gray-900">{{ calibrationPointCount }}</span>
+                      </div>
+                      <div class="flex items-center justify-between gap-3">
+                        <span>{{ t('equipment.tank.calibration.maxDepth') }}</span>
+                        <span class="font-medium text-gray-900">{{ formatCalibrationMetric(calibrationMaxDepth) }}</span>
+                      </div>
+                      <div class="flex items-center justify-between gap-3">
+                        <span>{{ t('equipment.tank.calibration.maxVolume') }}</span>
+                        <span class="font-medium text-gray-900">{{ formatCalibrationMetric(calibrationMaxVolume) }}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="overflow-x-auto rounded-lg border border-gray-200 bg-white">
+                    <table class="min-w-full text-sm">
+                      <thead class="bg-gray-100 text-xs uppercase text-gray-500">
+                        <tr>
+                          <th class="px-3 py-2 text-left w-14">#</th>
+                          <th class="px-3 py-2 text-left min-w-[10rem]">
+                            {{ t('equipment.tank.calibration.depthMm') }}
+                          </th>
+                          <th class="px-3 py-2 text-left min-w-[10rem]">
+                            {{ t('equipment.tank.calibration.volumeL') }}
+                          </th>
+                          <th class="px-3 py-2 text-left w-24">
+                            {{ t('common.actions') }}
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody class="divide-y divide-gray-100">
+                        <tr
+                          v-for="(row, index) in calibrationRows"
+                          :key="row.id"
+                          class="align-top"
+                        >
+                          <td class="px-3 py-2 text-xs text-gray-500">{{ index + 1 }}</td>
+                          <td class="px-3 py-2">
+                            <input
+                              v-model.trim="row.depth_mm"
+                              type="number"
+                              step="0.001"
+                              class="w-full h-[36px] border rounded px-3"
+                              :class="calibrationRowErrors[row.id]?.depth_mm ? 'border-red-300 bg-red-50' : ''"
+                              @keydown.enter.prevent="handleCalibrationEnter(index)"
+                            />
+                            <p v-if="calibrationRowErrors[row.id]?.depth_mm" class="mt-1 text-xs text-red-600">
+                              {{ calibrationRowErrors[row.id]?.depth_mm }}
+                            </p>
+                          </td>
+                          <td class="px-3 py-2">
+                            <input
+                              v-model.trim="row.volume_l"
+                              type="number"
+                              step="0.001"
+                              class="w-full h-[36px] border rounded px-3"
+                              :class="calibrationRowErrors[row.id]?.volume_l ? 'border-red-300 bg-red-50' : ''"
+                              @keydown.enter.prevent="handleCalibrationEnter(index)"
+                            />
+                            <p v-if="calibrationRowErrors[row.id]?.volume_l" class="mt-1 text-xs text-red-600">
+                              {{ calibrationRowErrors[row.id]?.volume_l }}
+                            </p>
+                          </td>
+                          <td class="px-3 py-2">
+                            <button
+                              class="px-2 py-1 text-xs rounded border hover:bg-gray-50"
+                              type="button"
+                              @click="removeCalibrationRow(index)"
+                            >
+                              {{ t('common.delete') }}
+                            </button>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div class="flex flex-wrap items-center gap-2">
+                    <button
+                      class="px-3 py-2 text-xs rounded border border-gray-300 bg-white hover:bg-gray-50"
+                      type="button"
+                      @click="addCalibrationRow"
+                    >
+                      {{ t('equipment.tank.calibration.addRow') }}
+                    </button>
+                    <button
+                      class="px-3 py-2 text-xs rounded border border-gray-300 bg-white hover:bg-gray-50"
+                      type="button"
+                      @click="sortCalibrationRows"
+                    >
+                      {{ t('equipment.tank.calibration.sortByDepth') }}
+                    </button>
+                    <button
+                      class="px-3 py-2 text-xs rounded border border-gray-300 bg-white hover:bg-gray-50"
+                      type="button"
+                      @click="resetCalibrationEditor"
+                    >
+                      {{ t('common.reset') }}
+                    </button>
+                  </div>
+
+                  <p v-if="errors.calibration_table" class="text-xs text-red-600">
+                    {{ errors.calibration_table }}
+                  </p>
+
+                  <details class="rounded-lg border border-dashed border-gray-300 bg-white p-3">
+                    <summary class="cursor-pointer text-xs font-medium text-gray-600">
+                      {{ t('equipment.tank.calibration.jsonPreview') }}
+                    </summary>
+                    <pre class="mt-3 overflow-x-auto rounded bg-gray-50 p-3 text-xs text-gray-700">{{ calibrationTablePreview || '{}' }}</pre>
+                  </details>
+                </div>
               </div>
             </div>
           </div>
@@ -355,6 +492,17 @@ type UomRow = {
   dimension: string | null
 }
 
+type CalibrationEditorRow = {
+  id: string
+  depth_mm: string
+  volume_l: string
+}
+
+type CalibrationRowError = {
+  depth_mm?: string
+  volume_l?: string
+}
+
 const TABLE = 'mst_equipment'
 const TANK_TABLE = 'mst_equipment_tank'
 const { t, locale } = useI18n()
@@ -406,6 +554,13 @@ const tankForm = reactive({
   calibration_table: '',
 })
 
+const calibrationEditor = reactive({
+  reference_temperature_c: '20',
+  thermal_expansion_coef_per_c: '',
+})
+
+const calibrationRows = ref<CalibrationEditorRow[]>([])
+
 const maintenanceDialog = reactive({
   open: false,
   status: 'available',
@@ -417,6 +572,7 @@ const deleteDialog = reactive({
 })
 
 const errors = reactive<Record<string, string>>({})
+let calibrationRowSequence = 0
 
 const statusOptions = [
   { value: 'available', label: t('equipment.status.available') },
@@ -508,6 +664,204 @@ function statusBadgeClass(status: string) {
   return 'bg-gray-100 text-gray-600'
 }
 
+function nextCalibrationRowId() {
+  calibrationRowSequence += 1
+  return `calibration-${calibrationRowSequence}`
+}
+
+function createCalibrationRow(depth = '', volume = ''): CalibrationEditorRow {
+  return {
+    id: nextCalibrationRowId(),
+    depth_mm: depth,
+    volume_l: volume,
+  }
+}
+
+function ensureCalibrationRowMinimum() {
+  while (calibrationRows.value.length < 2) {
+    calibrationRows.value.push(createCalibrationRow())
+  }
+}
+
+function resetCalibrationEditor() {
+  calibrationEditor.reference_temperature_c = '20'
+  calibrationEditor.thermal_expansion_coef_per_c = ''
+  calibrationRows.value = [createCalibrationRow('0', '0'), createCalibrationRow()]
+  tankForm.calibration_table = ''
+}
+
+function rowHasCalibrationValue(row: CalibrationEditorRow) {
+  return (
+    normalizeTextValue(row.depth_mm).trim() !== '' ||
+    normalizeTextValue(row.volume_l).trim() !== ''
+  )
+}
+
+function isCalibrationTemplateOnly(row: CalibrationEditorRow) {
+  return parseNumber(row.depth_mm) === 0 && parseNumber(row.volume_l) === 0
+}
+
+function isCalibrationEditorEmpty() {
+  const activeRows = calibrationRows.value.filter((row) => rowHasCalibrationValue(row))
+  if (activeRows.length === 0) return true
+  if (
+    activeRows.length === 1 &&
+    isCalibrationTemplateOnly(activeRows[0]) &&
+    (parseNumber(calibrationEditor.reference_temperature_c) ?? 20) === 20 &&
+    normalizeTextValue(calibrationEditor.thermal_expansion_coef_per_c).trim() === ''
+  ) {
+    return true
+  }
+  return false
+}
+
+function hydrateCalibrationEditor(calibrationTable: Record<string, any> | null) {
+  if (!calibrationTable || typeof calibrationTable !== 'object') {
+    resetCalibrationEditor()
+    return
+  }
+
+  const referenceTemperature = parseNumber(String(calibrationTable.reference_temperature_c ?? ''))
+  const thermalExpansion = parseNumber(String(calibrationTable.thermal_expansion_coef_per_c ?? ''))
+  calibrationEditor.reference_temperature_c =
+    referenceTemperature != null ? String(referenceTemperature) : '20'
+  calibrationEditor.thermal_expansion_coef_per_c =
+    thermalExpansion != null ? String(thermalExpansion) : ''
+
+  const points = Array.isArray(calibrationTable.points) ? calibrationTable.points : []
+  calibrationRows.value = points.map((point) =>
+    createCalibrationRow(
+      point?.depth_mm != null ? String(point.depth_mm) : '',
+      point?.volume_l != null ? String(point.volume_l) : '',
+    ),
+  )
+  if (calibrationRows.value.length === 0) {
+    calibrationRows.value = [createCalibrationRow('0', '0')]
+  }
+  ensureCalibrationRowMinimum()
+  tankForm.calibration_table = JSON.stringify(calibrationTable, null, 2)
+}
+
+function buildCalibrationTablePayload() {
+  if (isCalibrationEditorEmpty()) return null
+  const activeRows = calibrationRows.value.filter((row) => rowHasCalibrationValue(row))
+
+  const points = activeRows
+    .map((row) => ({
+      depth_mm: parseNumber(row.depth_mm),
+      volume_l: parseNumber(row.volume_l),
+    }))
+    .filter(
+      (
+        point,
+      ): point is {
+        depth_mm: number
+        volume_l: number
+      } => point.depth_mm != null && point.volume_l != null,
+    )
+    .sort((a, b) => a.depth_mm - b.depth_mm)
+
+  const payload: Record<string, any> = {
+    version: 1,
+    reference_temperature_c: parseNumber(calibrationEditor.reference_temperature_c) ?? 20,
+    points,
+  }
+
+  const thermalExpansion = parseNumber(calibrationEditor.thermal_expansion_coef_per_c)
+  if (thermalExpansion != null) {
+    payload.thermal_expansion_coef_per_c = thermalExpansion
+  }
+
+  return payload
+}
+
+const calibrationValidation = computed(() => {
+  if (isCalibrationEditorEmpty()) {
+    return {
+      rowErrors: {} as Record<string, CalibrationRowError>,
+      formError: '',
+      activeCount: 0,
+      maxDepth: null,
+      maxVolume: null,
+    }
+  }
+  const rowErrors: Record<string, CalibrationRowError> = {}
+  const activeRows = calibrationRows.value.filter((row) => rowHasCalibrationValue(row))
+
+  const parsedRows = activeRows.map((row) => {
+    const depth = parseNumber(row.depth_mm)
+    const volume = parseNumber(row.volume_l)
+    const error: CalibrationRowError = {}
+
+    if (depth == null) error.depth_mm = t('equipment.errors.calibrationDepthNumeric')
+    else if (depth < 0) error.depth_mm = t('equipment.errors.calibrationDepthNonNegative')
+
+    if (volume == null) error.volume_l = t('equipment.errors.calibrationVolumeNumeric')
+    else if (volume < 0) error.volume_l = t('equipment.errors.calibrationVolumeNonNegative')
+
+    if (error.depth_mm || error.volume_l) rowErrors[row.id] = error
+
+    return {
+      row,
+      depth,
+      volume,
+      invalid: Boolean(error.depth_mm || error.volume_l),
+    }
+  })
+
+  const validRows = parsedRows
+    .filter((entry) => !entry.invalid && entry.depth != null && entry.volume != null)
+    .sort((a, b) => (a.depth as number) - (b.depth as number))
+
+  for (let index = 1; index < validRows.length; index += 1) {
+    const prev = validRows[index - 1]
+    const current = validRows[index]
+    if ((current.depth as number) === (prev.depth as number)) {
+      rowErrors[current.row.id] = {
+        ...(rowErrors[current.row.id] ?? {}),
+        depth_mm: t('equipment.errors.calibrationDepthUnique'),
+      }
+    }
+    if ((current.volume as number) < (prev.volume as number)) {
+      rowErrors[current.row.id] = {
+        ...(rowErrors[current.row.id] ?? {}),
+        volume_l: t('equipment.errors.calibrationVolumeMonotone'),
+      }
+    }
+  }
+
+  const maxDepth = validRows.length
+    ? Math.max(...validRows.map((entry) => entry.depth as number))
+    : null
+  const maxVolume = validRows.length
+    ? Math.max(...validRows.map((entry) => entry.volume as number))
+    : null
+
+  let formError = ''
+  if (activeRows.length > 0 && activeRows.length < 2) {
+    formError = t('equipment.errors.calibrationMinPoints')
+  } else if (Object.keys(rowErrors).length > 0) {
+    formError = t('equipment.errors.calibrationReview')
+  }
+
+  return {
+    rowErrors,
+    formError,
+    activeCount: activeRows.length,
+    maxDepth,
+    maxVolume,
+  }
+})
+
+const calibrationRowErrors = computed(() => calibrationValidation.value.rowErrors)
+const calibrationPointCount = computed(() => calibrationValidation.value.activeCount)
+const calibrationMaxDepth = computed(() => calibrationValidation.value.maxDepth)
+const calibrationMaxVolume = computed(() => calibrationValidation.value.maxVolume)
+const calibrationTablePreview = computed(() => {
+  const payload = buildCalibrationTablePayload()
+  return payload ? JSON.stringify(payload, null, 2) : ''
+})
+
 function resetForm() {
   Object.assign(form, {
     id: '',
@@ -535,6 +889,7 @@ function resetForm() {
     tank_attr_doc: '',
     calibration_table: '',
   })
+  resetCalibrationEditor()
   Object.keys(errors).forEach((key) => delete errors[key])
   tankLoaded.value = false
   hasTankProfile.value = false
@@ -560,10 +915,51 @@ function handleKindChange() {
   }
 }
 
-function parseNumber(value: string) {
-  if (value === '' || value == null) return null
-  const num = Number(value)
+function normalizeTextValue(value: unknown) {
+  if (value == null) return ''
+  return String(value)
+}
+
+function parseNumber(value: unknown) {
+  const normalized = normalizeTextValue(value).trim()
+  if (normalized === '') return null
+  const num = Number(normalized)
   return Number.isFinite(num) ? num : null
+}
+
+function formatCalibrationMetric(value: number | null) {
+  if (value == null) return '—'
+  return Number.isInteger(value) ? String(value) : value.toFixed(3)
+}
+
+function addCalibrationRow() {
+  calibrationRows.value.push(createCalibrationRow())
+}
+
+function removeCalibrationRow(index: number) {
+  calibrationRows.value.splice(index, 1)
+  ensureCalibrationRowMinimum()
+}
+
+function sortCalibrationRows() {
+  const activeRows = calibrationRows.value.filter((row) => rowHasCalibrationValue(row))
+  const emptyRows = calibrationRows.value.filter((row) => !rowHasCalibrationValue(row))
+  activeRows.sort((a, b) => {
+    const aDepth = parseNumber(a.depth_mm)
+    const bDepth = parseNumber(b.depth_mm)
+    if (aDepth == null && bDepth == null) return 0
+    if (aDepth == null) return 1
+    if (bDepth == null) return -1
+    return aDepth - bDepth
+  })
+  calibrationRows.value = [...activeRows, ...emptyRows]
+  ensureCalibrationRowMinimum()
+}
+
+function handleCalibrationEnter(index: number) {
+  if (index === calibrationRows.value.length - 1) {
+    addCalibrationRow()
+  }
 }
 
 function parseJsonInput(value: string, field: string) {
@@ -627,8 +1023,10 @@ async function fetchTank(equipmentId: string) {
         tank_attr_doc: row.tank_attr_doc ? JSON.stringify(row.tank_attr_doc, null, 2) : '',
         calibration_table: row.calibration_table ? JSON.stringify(row.calibration_table, null, 2) : '',
       })
+      hydrateCalibrationEditor(row.calibration_table ?? null)
       hasTankProfile.value = true
     } else {
+      resetCalibrationEditor()
       hasTankProfile.value = false
     }
   } catch (err) {
@@ -738,8 +1136,9 @@ function validateForm() {
     if (tankForm.tank_attr_doc.trim()) {
       parseJsonInput(tankForm.tank_attr_doc, 'tank_attr_doc')
     }
-    if (tankForm.calibration_table.trim()) {
-      parseJsonInput(tankForm.calibration_table, 'calibration_table')
+    const calibrationError = calibrationValidation.value.formError
+    if (calibrationError) {
+      errors.calibration_table = calibrationError
     }
   }
 
@@ -802,9 +1201,10 @@ async function saveRecord() {
 
     if (isTank.value) {
       const tankAttrDoc = tankForm.tank_attr_doc.trim() ? parseJsonInput(tankForm.tank_attr_doc, 'tank_attr_doc') : null
-      const calibrationTable = tankForm.calibration_table.trim() ? parseJsonInput(tankForm.calibration_table, 'calibration_table') : null
+      const calibrationTable = buildCalibrationTablePayload()
+      tankForm.calibration_table = calibrationTable ? JSON.stringify(calibrationTable, null, 2) : ''
       if (errors.tank_attr_doc) throw new Error(t('equipment.errors.jsonObject'))
-      if (errors.calibration_table) throw new Error(t('equipment.errors.jsonObject'))
+      if (errors.calibration_table) throw new Error(errors.calibration_table)
       const tankPayload = {
         equipment_id: equipmentId,
         capacity_volume: parseNumber(tankForm.capacity_volume),

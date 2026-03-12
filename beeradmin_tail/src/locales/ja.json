@@ -87,7 +87,20 @@
       "jacketed": "ジャケット付き",
       "cipSupported": "CIP対応",
       "attributes": "タンク属性（JSON）",
-      "calibrationTable": "キャリブレーションテーブル（JSON）"
+      "calibrationTable": "キャリブレーションテーブル",
+      "calibration": {
+        "referenceTemperature": "基準温度 (C)",
+        "thermalExpansion": "熱膨張係数 (/C)",
+        "optional": "任意",
+        "pointCount": "点数",
+        "maxDepth": "最大深さ (mm)",
+        "maxVolume": "最大容量 (L)",
+        "depthMm": "深さ (mm)",
+        "volumeL": "容量 (L)",
+        "addRow": "行追加",
+        "sortByDepth": "深さ順に並び替え",
+        "jsonPreview": "JSON プレビュー"
+      }
     },
     "maintenance": {
       "title": "メンテナンス"
@@ -101,7 +114,15 @@
       "capacity": "容量は0より大きい必要があります。",
       "maxWorkOverCapacity": "最大作業容量は容量以下にしてください。",
       "decommissionedAfter": "廃止日は稼働開始日以降にしてください。",
-      "jsonObject": "正しいJSONオブジェクトを入力してください。"
+      "jsonObject": "正しいJSONオブジェクトを入力してください。",
+      "calibrationMinPoints": "キャリブレーション点は少なくとも2件必要です。",
+      "calibrationDepthNumeric": "深さは数値で入力してください。",
+      "calibrationVolumeNumeric": "容量は数値で入力してください。",
+      "calibrationDepthNonNegative": "深さは0以上で入力してください。",
+      "calibrationVolumeNonNegative": "容量は0以上で入力してください。",
+      "calibrationDepthUnique": "深さは重複できません。",
+      "calibrationVolumeMonotone": "容量は深さに対して減少できません。",
+      "calibrationReview": "キャリブレーションテーブルの入力内容を確認してください。"
     }
   },
   "batch": {

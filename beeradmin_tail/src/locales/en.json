@@ -87,7 +87,20 @@
       "jacketed": "Jacketed",
       "cipSupported": "CIP supported",
       "attributes": "Tank attributes (JSON)",
-      "calibrationTable": "Calibration table (JSON)"
+      "calibrationTable": "Calibration table",
+      "calibration": {
+        "referenceTemperature": "Reference temperature (C)",
+        "thermalExpansion": "Thermal expansion coefficient (/C)",
+        "optional": "Optional",
+        "pointCount": "Point count",
+        "maxDepth": "Max depth (mm)",
+        "maxVolume": "Max volume (L)",
+        "depthMm": "Depth (mm)",
+        "volumeL": "Volume (L)",
+        "addRow": "Add row",
+        "sortByDepth": "Sort by depth",
+        "jsonPreview": "JSON preview"
+      }
     },
     "maintenance": {
       "title": "Maintenance"
@@ -101,7 +114,15 @@
       "capacity": "Capacity must be greater than 0.",
       "maxWorkOverCapacity": "Max working volume must be less than or equal to capacity.",
       "decommissionedAfter": "Decommissioned date must be after commissioned date.",
-      "jsonObject": "Enter a valid JSON object."
+      "jsonObject": "Enter a valid JSON object.",
+      "calibrationMinPoints": "At least 2 calibration points are required.",
+      "calibrationDepthNumeric": "Depth must be numeric.",
+      "calibrationVolumeNumeric": "Volume must be numeric.",
+      "calibrationDepthNonNegative": "Depth must be greater than or equal to 0.",
+      "calibrationVolumeNonNegative": "Volume must be greater than or equal to 0.",
+      "calibrationDepthUnique": "Depth values must be unique.",
+      "calibrationVolumeMonotone": "Volume cannot decrease as depth increases.",
+      "calibrationReview": "Review the calibration table rows."
     }
   },
   "batch": {

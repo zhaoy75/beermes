@@ -5,7 +5,6 @@
       <header class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 class="text-xl font-semibold">{{ t('producedBeer.movementWizard.title') }}</h1>
-          <p class="text-sm text-gray-500">{{ t('producedBeer.movementWizard.subtitle') }}</p>
         </div>
         <div class="flex flex-wrap items-center gap-2">
           <button class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-50" @click="goBack">{{ t('producedBeer.movementWizard.back') }}</button>
@@ -16,7 +15,6 @@
         <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <h2 class="text-lg font-semibold">{{ t('producedBeer.movementWizard.wizardTitle') }}</h2>
-            <p class="text-sm text-gray-500">{{ t('producedBeer.movementWizard.wizardSubtitle') }}</p>
           </div>
           <div class="inline-flex rounded-lg border border-gray-300 bg-white p-0.5">
             <button
@@ -37,7 +35,6 @@
             <section v-if="currentStep === 1" class="space-y-4">
               <header>
                 <h3 class="text-base font-semibold">{{ t('producedBeer.movementWizard.intent.title') }}</h3>
-                <p class="text-sm text-gray-500">{{ t('producedBeer.movementWizard.intent.subtitle') }}</p>
               </header>
               <p v-if="intentLoadError" class="text-xs text-red-600">{{ intentLoadError }}</p>
               <p v-else-if="intentsLoading" class="text-xs text-gray-500">{{ t('producedBeer.movementWizard.intent.loading') }}</p>
@@ -59,7 +56,6 @@
             <section v-if="currentStep === 2" class="space-y-4">
               <header>
                 <h3 class="text-base font-semibold">{{ t('producedBeer.movementWizard.sites.title') }}</h3>
-                <p class="text-sm text-gray-500">{{ t('producedBeer.movementWizard.sites.subtitle') }}</p>
               </header>
               <p v-if="rulesLoadError" class="text-xs text-red-600">{{ rulesLoadError }}</p>
               <p v-else-if="rulesLoading" class="text-xs text-gray-500">{{ t('producedBeer.movementWizard.sites.loading') }}</p>
@@ -99,30 +95,27 @@
             <section v-if="currentStep === 3" class="space-y-4">
               <header>
                 <h3 class="text-base font-semibold">{{ t('producedBeer.movementWizard.lots.title') }}</h3>
-                <p class="text-sm text-gray-500">{{ t('producedBeer.movementWizard.lots.subtitle') }}</p>
                 <p v-if="lotSelectionSource === 'lot'" class="text-xs text-amber-600">
                   {{ t('producedBeer.movementWizard.lots.lookupModeHint') }}
                 </p>
               </header>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.movementWizard.fields.product') }}</label>
-                  <input v-model.trim="movementForm.product" class="w-full h-[40px] border rounded px-3" />
-                </div>
-                <div>
                   <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.movementWizard.fields.sourceLotTaxType') }}</label>
-                  <select v-model="movementForm.srcLotTaxType" class="w-full h-[40px] border rounded px-3 bg-white">
+                  <select
+                    v-model="movementForm.srcLotTaxType"
+                    class="w-full h-[40px] border rounded px-3 bg-white disabled:bg-gray-100 disabled:text-gray-400"
+                    :disabled="sourceLotTaxTypeOptions.length === 0"
+                  >
                     <option value="">{{ t('common.select') }}</option>
-                    <option v-for="lotType in lotTaxTypeOptions" :key="lotType" :value="lotType">{{ lotTaxTypeLabel(lotType) }}</option>
+                    <option v-for="lotType in sourceLotTaxTypeOptions" :key="lotType" :value="lotType">{{ lotTaxTypeLabel(lotType) }}</option>
                   </select>
+                  <p v-if="!movementForm.srcLotTaxType" class="mt-1 text-xs text-gray-500">
+                    {{ t('producedBeer.movementWizard.fields.sourceLotTaxTypeHint') }}
+                  </p>
                 </div>
-              </div>
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                   <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.movementWizard.fields.taxDecisionCode') }}</label>
-                  <p class="text-xs text-gray-500 mb-2">
-                    {{ t('producedBeer.movementWizard.fields.defaultTaxDecision') }}: {{ taxDecisionLabel(defaultTaxDecisionCode) }}
-                  </p>
                   <select
                     v-model="movementForm.taxDecisionCode"
                     class="w-full h-[40px] border rounded px-3 bg-white disabled:bg-gray-100 disabled:text-gray-400"
@@ -133,49 +126,58 @@
                       {{ option.label }}
                     </option>
                   </select>
+                  <p class="mt-1 text-xs text-gray-500">
+                    {{ t('producedBeer.movementWizard.fields.defaultTaxDecision') }}: {{ taxDecisionLabel(defaultTaxDecisionCode) }}
+                  </p>
                   <p v-if="!taxDecisionSelectable" class="mt-1 text-xs text-gray-500">
                     {{ t('producedBeer.movementWizard.fields.taxDecisionCodeHint') }}
                   </p>
+                </div>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                <div v-if="isLotLookupMode" class="relative">
+                  <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.movementWizard.fields.lotNo') }}</label>
+                  <input
+                    v-model.trim="lotLookupQuery"
+                    class="w-full h-[40px] border rounded px-3"
+                    :placeholder="t('producedBeer.movementWizard.fields.lotNoPlaceholder')"
+                    @focus="openLotSuggestions"
+                    @input="handleLotLookupInput"
+                    @keydown="handleLotLookupKeydown"
+                    @blur="handleLotLookupBlur"
+                  />
+                  <div
+                    v-if="showLotSuggestions && lotSuggestions.length"
+                    class="absolute z-20 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg overflow-hidden"
+                  >
+                    <button
+                      v-for="(lot, index) in lotSuggestions"
+                      :key="`${lot.id}:${index}`"
+                      type="button"
+                      class="w-full px-3 py-2 text-left text-sm border-b last:border-b-0"
+                      :class="index === activeLotSuggestionIndex ? 'bg-blue-50 text-blue-700' : 'hover:bg-gray-50 text-gray-700'"
+                      @mousedown.prevent="selectLotSuggestion(lot)"
+                    >
+                      <div class="font-medium">{{ lot.lotCode || lot.label }}</div>
+                      <div class="text-xs text-gray-500">
+                        {{ lot.styleName || '—' }} / {{ lot.batchCode || '—' }} / {{ formatNumber(displayLotQuantity(lot)) }} {{ movementInputUomLabel(lot) }}
+                      </div>
+                      <div class="text-[11px] text-gray-400">{{ lotDisambiguationText(lot) }}</div>
+                    </button>
+                  </div>
+                  <p v-if="lotLookupQuery && !lotSuggestions.length" class="mt-1 text-xs text-amber-600">
+                    {{ t('producedBeer.movementWizard.lots.noSuggestion') }}
+                  </p>
+                </div>
+                <div>
+                  <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.movementWizard.fields.product') }}</label>
+                  <input v-model.trim="movementForm.product" class="w-full h-[40px] border rounded px-3" />
                 </div>
                 <div v-if="taxDecisionReasonRequired">
                   <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.movementWizard.fields.reasonNonDefault') }}</label>
                   <input v-model.trim="movementForm.taxDecisionReason" class="w-full h-[40px] border rounded px-3" />
                   <p v-if="!movementForm.taxDecisionReason" class="mt-1 text-xs text-amber-600">{{ t('producedBeer.movementWizard.fields.reasonNonDefaultHint') }}</p>
                 </div>
-              </div>
-              <div v-if="isLotLookupMode" class="max-w-xl relative">
-                <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.movementWizard.fields.lotNo') }}</label>
-                <input
-                  v-model.trim="lotLookupQuery"
-                  class="w-full h-[40px] border rounded px-3"
-                  :placeholder="t('producedBeer.movementWizard.fields.lotNoPlaceholder')"
-                  @focus="openLotSuggestions"
-                  @input="handleLotLookupInput"
-                  @keydown="handleLotLookupKeydown"
-                  @blur="handleLotLookupBlur"
-                />
-                <div
-                  v-if="showLotSuggestions && lotSuggestions.length"
-                  class="absolute z-20 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg overflow-hidden"
-                >
-                  <button
-                    v-for="(lot, index) in lotSuggestions"
-                    :key="`${lot.id}:${index}`"
-                    type="button"
-                    class="w-full px-3 py-2 text-left text-sm border-b last:border-b-0"
-                    :class="index === activeLotSuggestionIndex ? 'bg-blue-50 text-blue-700' : 'hover:bg-gray-50 text-gray-700'"
-                    @mousedown.prevent="selectLotSuggestion(lot)"
-                  >
-                    <div class="font-medium">{{ lot.lotCode || lot.label }}</div>
-                    <div class="text-xs text-gray-500">
-                      {{ lot.styleName || '—' }} / {{ lot.batchCode || '—' }} / {{ formatNumber(displayLotQuantity(lot)) }} {{ movementInputUomLabel(lot) }}
-                    </div>
-                    <div class="text-[11px] text-gray-400">{{ lotDisambiguationText(lot) }}</div>
-                  </button>
-                </div>
-                <p v-if="lotLookupQuery && !lotSuggestions.length" class="mt-1 text-xs text-amber-600">
-                  {{ t('producedBeer.movementWizard.lots.noSuggestion') }}
-                </p>
               </div>
               <div
                 v-if="isLotLookupMode && selectedLookupLot"
@@ -258,7 +260,6 @@
             <section v-if="currentStep === 4" class="space-y-4">
               <header>
                 <h3 class="text-base font-semibold">{{ t('producedBeer.movementWizard.info.title') }}</h3>
-                <p class="text-sm text-gray-500">{{ t('producedBeer.movementWizard.info.subtitle') }}</p>
               </header>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
@@ -279,7 +280,6 @@
             <section v-if="currentStep === 5" class="space-y-4">
               <header>
                 <h3 class="text-base font-semibold">{{ t('producedBeer.movementWizard.confirm.title') }}</h3>
-                <p class="text-sm text-gray-500">{{ t('producedBeer.movementWizard.confirm.subtitle') }}</p>
               </header>
               <div class="rounded-lg border border-gray-200 p-4 space-y-2 text-sm text-gray-600">
                 <div>{{ t('producedBeer.movementWizard.confirmRows.movementIntent') }}: <span class="text-gray-900">{{ intentLabel(movementForm.intent) }}</span></div>
@@ -588,6 +588,7 @@ async function saveMovement() {
   try {
     if (!movementForm.intent) throw new Error('movement_intent is required')
     if (!movementForm.srcSite || !movementForm.dstSite) throw new Error('src/dst site is required')
+    if (!movementForm.srcLotTaxType) throw new Error('src_lot_tax_type is required')
     if (!movementForm.taxDecisionCode) throw new Error('tax_decision_code is required')
     if (!movementForm.srcLots.length) throw new Error('select at least one lot')
     if (taxDecisionReasonRequired.value && !movementForm.taxDecisionReason.trim()) {
@@ -660,8 +661,6 @@ async function saveMovement() {
   }
 }
 
-const lotTaxTypeOptions = computed(() => rules.value?.enums?.lot_tax_type ?? [])
-
 const selectedIntentRule = computed(() => {
   if (!movementForm.intent) return null
   return (rules.value?.movement_intent_rules ?? []).find((rule: any) => rule.movement_intent === movementForm.intent) ?? null
@@ -670,11 +669,27 @@ const selectedIntentRule = computed(() => {
 const allowedSrcSiteTypes = computed(() => selectedIntentRule.value?.allowed_src_site_types ?? [])
 const allowedDstSiteTypes = computed(() => selectedIntentRule.value?.allowed_dst_site_types ?? [])
 
-const matchingTaxTransformationRules = computed(() =>
+const contextTaxTransformationRules = computed(() =>
   (rules.value?.tax_transformation_rules ?? []).filter((rule: any) => {
     if (movementForm.intent && rule.movement_intent !== movementForm.intent) return false
     if (movementForm.srcSiteType && rule.src_site_type !== movementForm.srcSiteType) return false
     if (movementForm.dstSiteType && rule.dst_site_type !== movementForm.dstSiteType) return false
+    return true
+  }),
+)
+
+const sourceLotTaxTypeOptions = computed(() =>
+  Array.from(
+    new Set(
+      contextTaxTransformationRules.value
+        .map((rule: any) => (typeof rule?.lot_tax_type === 'string' ? rule.lot_tax_type : ''))
+        .filter((value: string) => !!value),
+    ),
+  ),
+)
+
+const matchingTaxTransformationRules = computed(() =>
+  contextTaxTransformationRules.value.filter((rule: any) => {
     if (movementForm.srcLotTaxType && rule.lot_tax_type !== movementForm.srcLotTaxType) return false
     return true
   }),
@@ -764,11 +779,17 @@ const siteNameMap = computed(() => {
 
 const isLotLookupMode = computed(() => lotSelectionSource.value === 'lot')
 
+const taxTypeFilteredLotOptions = computed(() => {
+  if (!movementForm.srcLotTaxType) return [] as LotOption[]
+  return lotOptions.value.filter((lot) => lot.lotTaxType === movementForm.srcLotTaxType)
+})
+
 const lotSuggestions = computed(() => {
   if (!isLotLookupMode.value) return [] as LotOption[]
+  if (!movementForm.srcLotTaxType) return [] as LotOption[]
   const keyword = lotLookupQuery.value.trim().toLowerCase()
   if (!keyword) return [] as LotOption[]
-  return lotOptions.value
+  return taxTypeFilteredLotOptions.value
     .filter((lot) => {
       const haystack = [
         lot.lotCode,
@@ -794,10 +815,11 @@ const lotSuggestions = computed(() => {
 })
 
 const filteredLotOptions = computed(() => {
+  if (!movementForm.srcLotTaxType) return [] as LotOption[]
   const productKeyword = movementForm.product.trim().toLowerCase()
   const lotKeyword = lotLookupQuery.value.trim().toLowerCase()
   if (isLotLookupMode.value && !lotKeyword && movementForm.srcLots.length === 0) return [] as LotOption[]
-  return lotOptions.value.filter((lot) => {
+  return taxTypeFilteredLotOptions.value.filter((lot) => {
     const matchesProduct = !productKeyword || [
       lot.lotCode,
       lot.label,
@@ -971,6 +993,20 @@ watch(
 )
 
 watch(
+  sourceLotTaxTypeOptions,
+  (options) => {
+    if (!options.length) {
+      movementForm.srcLotTaxType = ''
+      return
+    }
+    if (!options.includes(movementForm.srcLotTaxType)) {
+      movementForm.srcLotTaxType = options.length === 1 ? options[0] : ''
+    }
+  },
+  { immediate: true },
+)
+
+watch(
   () => [movementForm.intent, movementForm.srcSiteType, movementForm.dstSiteType, movementForm.srcLotTaxType],
   () => {
     const decisions = taxDecisionOptions.value
@@ -981,6 +1017,22 @@ watch(
       movementForm.taxDecisionCode = defaultTaxDecisionCode.value || ''
     }
   }
+)
+
+watch(
+  () => movementForm.srcLotTaxType,
+  (value) => {
+    const selected = new Set(
+      movementForm.srcLots.filter((lotId) => {
+        const lot = lotOptions.value.find((row) => row.id === lotId)
+        return !!lot && lot.lotTaxType === value
+      }),
+    )
+    movementForm.srcLots = movementForm.srcLots.filter((lotId) => selected.has(lotId))
+    Object.keys(movementForm.srcLotMoveQty).forEach((lotId) => {
+      if (!selected.has(lotId)) delete movementForm.srcLotMoveQty[lotId]
+    })
+  },
 )
 
 watch(
@@ -1012,12 +1064,6 @@ watch(
     Object.keys(movementForm.srcLotMoveQty).forEach((lotId) => {
       if (!selected.has(lotId)) delete movementForm.srcLotMoveQty[lotId]
     })
-    const types = selectedLotTaxTypeSet.value
-    if (types.length === 1) {
-      movementForm.srcLotTaxType = types[0]
-    } else {
-      movementForm.srcLotTaxType = ''
-    }
   },
   { deep: true }
 )

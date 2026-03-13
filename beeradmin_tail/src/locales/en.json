@@ -1382,6 +1382,7 @@
         "lotNo": "Lot No",
         "lotNoPlaceholder": "Enter lot number to search candidates",
         "sourceLotTaxType": "Source Lot Tax Type",
+        "sourceLotTaxTypeHint": "Select one of the tax types allowed by the chosen source and destination site types.",
         "unitPrice": "Unit Price",
         "price": "Price",
         "date": "Date",

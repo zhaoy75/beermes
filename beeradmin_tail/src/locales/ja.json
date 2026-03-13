@@ -407,8 +407,8 @@
         "beerCategory": "ビールカテゴリ",
         "tankNo": "タンクNo",
         "packingType": "種別",
-        "tankFillStartVolume": "樽詰め前 容量",
-        "tankFillLeftVolume": "タンク残 容量",
+        "tankFillStartVolume": "タンク詰め前 容量 (L)",
+        "tankFillLeftVolume": "タンク残 容量(L)",
         "fillingPayoutQty": "詰口払出数量",
         "packageInfo": "パッケージ情報",
         "number": "本数",
@@ -458,10 +458,10 @@
         "movementMemo": "メモ（任意）",
         "fillingSection": "詰口",
         "tankNo": "タンクNo",
-        "tankFillStartDepth": "樽詰め前 深さ",
-        "tankFillStart": "樽詰め前 容量",
-        "tankFillLeftDepth": "タンク残 深さ",
-        "tankLeft": "タンク残 容量",
+        "tankFillStartDepth": "タンク詰め前 深さ (mm)",
+        "tankFillStart": "タンク詰め前 容量 (L)",
+        "tankFillLeftDepth": "タンク残 深さ(mm)",
+        "tankLeft": "タンク残 容量(L)",
         "sampleVolume": "サンプル容量",
         "tankLoss": "欠減容量",
         "tankFillEnd": "タンク充填終了",
@@ -470,7 +470,7 @@
         "fillingTable": {
           "packageType": "詰口種別",
           "lotCode": "ロットコード",
-          "input": "数量 / 容量",
+          "input": "個数/容量(L)",
           "qty": "数量",
           "sampleFlg": "サンプル",
           "unitVolume": "単位容量",
@@ -1104,8 +1104,8 @@
         "waste": "廃棄"
       },
       "actions": {
-        "fast": "社内移出(高速入力)",
-        "new": "製品ビール移出登録",
+        "fast": "社内移入出",
+        "new": "他の移入出",
         "edit": "移出編集",
         "reverse": "取消",
         "reversed": "取消済",
@@ -1331,10 +1331,8 @@
     },
     "movementWizard": {
       "title": "製品ビール移出登録",
-      "subtitle": "registry_def からルールを動的に読み込みます。",
       "back": "戻る",
       "wizardTitle": "製品ビール移出登録ウィザード",
-      "wizardSubtitle": "ステップ1〜5を順に入力してください。",
       "steps": {
         "step1": "ステップ1",
         "step2": "ステップ2",
@@ -1344,29 +1342,24 @@
       },
       "intent": {
         "title": "ステップ1：移出目的",
-        "subtitle": "movement_get_movement_ui_intent で移出目的一覧を取得します。",
         "loading": "移出目的を読み込み中..."
       },
       "sites": {
         "title": "ステップ2：移出元/移出先の選択",
-        "subtitle": "movement_get_rules で選択した移出目的のルールを取得します。",
         "loading": "移出ルールを読み込み中..."
       },
       "lots": {
         "title": "ステップ3：移出商品（Lot）選択",
-        "subtitle": "ロット税区分により税イベントが変わる場合があります。",
         "lookupModeHint": "在庫台帳が無いサイトのため、Lot情報から候補を表示しています。",
         "noSuggestion": "一致するLot候補がありません。",
         "multiTaxTypeWarning": "複数のロット税区分が選択されています。選択により税イベントが変わる可能性があります。",
         "multiEventWarning": "候補ロットにより税イベントのプレビューが変化します"
       },
       "info": {
-        "title": "ステップ4：必要情報の入力",
-        "subtitle": "単価・価格・摘要を入力します。"
+        "title": "ステップ4：必要情報の入力"
       },
       "confirm": {
-        "title": "ステップ5：確認",
-        "subtitle": "導出された税イベントと適用ルールを確認します。"
+        "title": "ステップ5：確認"
       },
       "fields": {
         "sourceSiteType": "移出元サイト種別",
@@ -1382,6 +1375,7 @@
         "lotNo": "Lot No",
         "lotNoPlaceholder": "Lot No を入力して候補を検索",
         "sourceLotTaxType": "移出元ロット税区分",
+        "sourceLotTaxTypeHint": "移出元サイト種別と移出先サイト種別から許可される税区分を選択してください。",
         "unitPrice": "単価",
         "price": "価格",
         "date": "日付",

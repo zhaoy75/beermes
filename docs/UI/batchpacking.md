@@ -62,8 +62,8 @@
       - fallback: recipe `category`, then batch meta `beer_category` / `category`
       Packing Type
       Tank No
-      Tank Fill Start Volume (樽詰め前 容量) 
-      Tank Fill Left Volume (タンク残)
+      Tank Fill Start Volume (タンク詰め前 容量 (L))
+      Tank Fill Left Volume (タンク残 容量(L))
       詰口払出数量　= Tank Fill Start Volume - Tank Fill Left Volume
       package info
       number
@@ -159,10 +159,10 @@ Defaults:
 Components:
 - Tank No (dropdown list to choose tank from mst_equipment and mst_equipement_tank)
 
-- Tank Fill Start Depth 
-- Tank Fill Start Volume (樽詰め前 容量)  autocaculated by can be modify
-- Tank Fill Left Depth 
-- Tank Fill Left Volume　 (タンク残) autocaculated by can be modify
+- Tank Fill Start Depth (タンク詰め前 深さ (mm))
+- Tank Fill Start Volume (タンク詰め前 容量 (L)) autocaculated by can be modify
+- Tank Fill Left Depth (タンク残 深さ(mm))
+- Tank Fill Left Volume (タンク残 容量(L)) autocaculated by can be modify
 - Sample Volume (サンプル) auto-calculated from filling lines where `sample_flg = true`
 - Tank Loss Volume (欠減)
 - horizontal line

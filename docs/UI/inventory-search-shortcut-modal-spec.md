@@ -69,7 +69,8 @@
 ## Result Grid
 - Render a searchable result grid below the filters.
 - Columns should match the `ProducedBeerInventory` page as closely as possible:
-  - Lot No
+  - Lot Code
+  - Lot Tax Type
   - Batch No
   - Beer Category
   - Target ABV

@@ -1062,7 +1062,8 @@
     "inventory": {
       "subtitle": "Inventory of produced craft beer by lot and batch.",
       "table": {
-        "lotNo": "Lot no",
+        "lotNo": "Lot Code",
+        "lotTaxType": "Lot tax type",
         "beerCategory": "Beer category",
         "targetAbv": "Target ABV",
         "styleName": "Style name",
@@ -1230,7 +1231,7 @@
       },
       "columns": {
         "beer": "Beer (code / name)",
-        "lotNo": "Lot No",
+        "lotNo": "Lot Code",
         "packageInfo": "Package info",
         "unit": "Unit",
         "volume": "Volume (L)",
@@ -1379,8 +1380,8 @@
         "reasonNonDefault": "Reason (required for non-default)",
         "reasonNonDefaultHint": "Reason is required when selecting a non-default code.",
         "product": "Product",
-        "lotNo": "Lot No",
-        "lotNoPlaceholder": "Enter lot number to search candidates",
+        "lotNo": "Lot Code",
+        "lotNoPlaceholder": "Enter lot code to search candidates",
         "sourceLotTaxType": "Source Lot Tax Type",
         "sourceLotTaxTypeHint": "Select one of the tax types allowed by the chosen source and destination site types.",
         "unitPrice": "Unit Price",

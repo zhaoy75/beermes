@@ -133,6 +133,12 @@
                         </button>
                       </th>
                       <th class="px-3 py-2 text-left">
+                        <button class="font-medium" type="button" @click="toggleSort('lotTaxType')">
+                          {{ t('producedBeer.inventory.table.lotTaxType') }}
+                          {{ sortIndicator('lotTaxType') }}
+                        </button>
+                      </th>
+                      <th class="px-3 py-2 text-left">
                         <button class="font-medium" type="button" @click="toggleSort('batchCode')">
                           {{ t('producedBeer.inventory.table.batchNo') }} {{ sortIndicator('batchCode') }}
                         </button>
@@ -181,12 +187,12 @@
                   </thead>
                   <tbody class="divide-y divide-gray-100 bg-white">
                     <tr v-if="inventoryLoading">
-                      <td colspan="10" class="px-3 py-8 text-center text-gray-500">
+                      <td colspan="11" class="px-3 py-8 text-center text-gray-500">
                         {{ t('common.loading') }}
                       </td>
                     </tr>
                     <tr v-else-if="sortedRows.length === 0">
-                      <td colspan="10" class="px-3 py-8 text-center text-gray-500">
+                      <td colspan="11" class="px-3 py-8 text-center text-gray-500">
                         {{ t('common.noData') }}
                       </td>
                     </tr>
@@ -209,6 +215,9 @@
                       <td class="px-3 py-2 text-gray-600">
                         <div class="font-mono text-xs">{{ row.lotNo || '—' }}</div>
                         <div class="text-[11px] text-gray-400">{{ rowDisambiguationText(row) }}</div>
+                      </td>
+                      <td class="px-3 py-2 font-mono text-xs text-gray-600">
+                        {{ row.lotTaxType || '—' }}
                       </td>
                       <td class="px-3 py-2 font-mono text-xs text-gray-600">
                         {{ row.batchCode || '—' }}
@@ -280,6 +289,7 @@ const selectable = computed(() => props.selectable)
 const sortState = reactive<{
   key:
     | 'lotNo'
+    | 'lotTaxType'
     | 'batchCode'
     | 'beerCategory'
     | 'targetAbv'
@@ -376,6 +386,8 @@ function sortValue(
   switch (key) {
     case 'lotNo':
       return normalizeString(row.lotNo)
+    case 'lotTaxType':
+      return normalizeString(row.lotTaxType)
     case 'batchCode':
       return normalizeString(row.batchCode)
     case 'beerCategory':

@@ -112,7 +112,7 @@ UI:
 - The Step 3 area shows the default `税務判定コード`.
 - If the selected `税務判定コード` is non-default, show `理由` input in the second row.
 - In lot lookup mode:
-  - show `Lot No` input
+  - show `ロットコード` input
   - show type-ahead suggestion list while typing
   - suggestion row must include disambiguation information because `lot_no` may duplicate
   - current implementation uses:
@@ -138,8 +138,9 @@ UI:
   - movement quantity
   - UOM
 - `movement quantity` input is enabled only for checked rows.
-- The lot table and lot suggestions must be filtered to the selected `移出元ロット税区分`.
-- If no `移出元ロット税区分` is selected, the lot table shows no candidates.
+- By default, the lot table and lot suggestions must be filtered to the selected `移出元ロット税区分`.
+- By default, if no `移出元ロット税区分` is selected, the lot table shows no candidates.
+- Exception: when `src_site_type = DOMESTIC_CUSTOMER` or `src_site_type = OTHER_BREWERY`, Step 3 candidate search must not apply site filtering or `移出元ロット税区分` filtering.
 - The page may show warning messages below the table for:
   - multiple selected lot tax types
   - multiple candidate tax events
@@ -172,6 +173,8 @@ System behavior:
   - `src_lot_tax_type`
 - When source stock exists in `inv_inventory`, Step 3 resolves candidates from inventory rows.
 - When `movement_intent = RETURN_FROM_CUSTOMER` and source stock does not exist in `inv_inventory`, Step 3 switches to lot lookup mode and resolves candidates from `lot`-based data.
+- When `src_site_type = DOMESTIC_CUSTOMER` or `src_site_type = OTHER_BREWERY`, Step 3 must search the tenant `lot` table instead of `inv_inventory`, without site filtering and without `src_lot_tax_type` candidate filtering, because `SHIP_DOMESTIC` is not registered in this system.
+- For this special case, filled-lot lookup means tenant `lot` rows where `package_id` is present.
 - In lot lookup mode, the page still posts using `lot.id`, not `lot_no`.
 - Changing `src_lot_tax_type` must:
   - re-evaluate allowed `tax_decision_code`

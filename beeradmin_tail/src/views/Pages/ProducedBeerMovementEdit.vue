@@ -299,7 +299,7 @@
             <button class="px-3 py-2 rounded border hover:bg-gray-50" type="button" @click="prevStep" :disabled="currentStep === 1">
               {{ t('producedBeer.movementWizard.actions.prev') }}
             </button>
-            <button class="px-3 py-2 rounded border hover:bg-gray-50" type="button" @click="nextStep" :disabled="currentStep === wizardSteps.length">
+            <button class="px-3 py-2 rounded border hover:bg-gray-50 disabled:opacity-50" type="button" @click="nextStep" :disabled="isNextDisabled">
               {{ t('producedBeer.movementWizard.actions.next') }}
             </button>
           </div>
@@ -778,6 +778,10 @@ const siteNameMap = computed(() => {
 })
 
 const isLotLookupMode = computed(() => lotSelectionSource.value === 'lot')
+const tenantWideFilledLotSourceSiteTypes = new Set(['DOMESTIC_CUSTOMER', 'OTHER_BREWERY'])
+const bypassLotTaxTypeCandidateFilter = computed(() =>
+  tenantWideFilledLotSourceSiteTypes.has(movementForm.srcSiteType),
+)
 
 const taxTypeFilteredLotOptions = computed(() => {
   if (!movementForm.srcLotTaxType) return [] as LotOption[]
@@ -786,10 +790,12 @@ const taxTypeFilteredLotOptions = computed(() => {
 
 const lotSuggestions = computed(() => {
   if (!isLotLookupMode.value) return [] as LotOption[]
-  if (!movementForm.srcLotTaxType) return [] as LotOption[]
   const keyword = lotLookupQuery.value.trim().toLowerCase()
   if (!keyword) return [] as LotOption[]
-  return taxTypeFilteredLotOptions.value
+  const candidates = bypassLotTaxTypeCandidateFilter.value
+    ? lotOptions.value
+    : taxTypeFilteredLotOptions.value
+  return candidates
     .filter((lot) => {
       const haystack = [
         lot.lotCode,
@@ -815,11 +821,14 @@ const lotSuggestions = computed(() => {
 })
 
 const filteredLotOptions = computed(() => {
-  if (!movementForm.srcLotTaxType) return [] as LotOption[]
+  if (!bypassLotTaxTypeCandidateFilter.value && !movementForm.srcLotTaxType) return [] as LotOption[]
   const productKeyword = movementForm.product.trim().toLowerCase()
   const lotKeyword = lotLookupQuery.value.trim().toLowerCase()
   if (isLotLookupMode.value && !lotKeyword && movementForm.srcLots.length === 0) return [] as LotOption[]
-  return taxTypeFilteredLotOptions.value.filter((lot) => {
+  const candidates = bypassLotTaxTypeCandidateFilter.value
+    ? lotOptions.value
+    : taxTypeFilteredLotOptions.value
+  return candidates.filter((lot) => {
     const matchesProduct = !productKeyword || [
       lot.lotCode,
       lot.label,
@@ -843,6 +852,37 @@ const selectedLookupLot = computed(() => {
   if (!isLotLookupMode.value || movementForm.srcLots.length !== 1) return null
   return lotOptions.value.find((lot) => lot.id === movementForm.srcLots[0]) ?? null
 })
+
+const hasStep1Input = computed(() => !!movementForm.intent)
+
+const hasStep2Input = computed(() =>
+  !!movementForm.srcSiteType ||
+  !!movementForm.dstSiteType ||
+  !!movementForm.srcSite ||
+  !!movementForm.dstSite,
+)
+
+const hasStep3Input = computed(() =>
+  !!movementForm.srcLotTaxType ||
+  !!movementForm.taxDecisionCode ||
+  !!movementForm.product.trim() ||
+  !!movementForm.taxDecisionReason.trim() ||
+  !!lotLookupQuery.value.trim() ||
+  movementForm.srcLots.length > 0 ||
+  Object.values(movementForm.srcLotMoveQty).some((value) => String(value ?? '').trim().length > 0),
+)
+
+const currentStepHasInput = computed(() => {
+  if (currentStep.value === 1) return hasStep1Input.value
+  if (currentStep.value === 2) return hasStep2Input.value
+  if (currentStep.value === 3) return hasStep3Input.value
+  if (currentStep.value === 4) return true
+  return true
+})
+
+const isNextDisabled = computed(() =>
+  currentStep.value === wizardSteps.value.length || !currentStepHasInput.value,
+)
 
 const selectedLots = computed(() => lotOptions.value.filter((lot) => movementForm.srcLots.includes(lot.id)))
 
@@ -1036,9 +1076,9 @@ watch(
 )
 
 watch(
-  () => movementForm.srcSite,
-  async (value) => {
-    if (!value) {
+  () => [movementForm.srcSite, movementForm.srcSiteType] as const,
+  async ([siteId]) => {
+    if (!siteId) {
       lotOptions.value = []
       lotSelectionSource.value = 'none'
       lotLookupQuery.value = ''
@@ -1053,7 +1093,7 @@ watch(
     movementForm.srcLots = []
     movementForm.srcLotMoveQty = {}
     movementForm.srcLotTaxType = ''
-    await loadLotsForSite(value)
+    await loadLotsForSite(siteId)
   }
 )
 
@@ -1440,58 +1480,77 @@ function buildLotOptionsFromLotRows(rows: any[], refs: LotReferenceMaps) {
 
 async function loadLotsForSite(siteId: string) {
   const tenant = await ensureTenant()
-  const { data: inventoryRows, error } = await supabase
-    .from('inv_inventory')
-    .select('id, site_id, lot_id, qty, uom_id, lot:lot_id ( id, lot_no, batch_id, package_id, lot_tax_type, status, produced_at )')
-    .eq('tenant_id', tenant)
-    .eq('site_id', siteId)
-    .gt('qty', 0)
-  if (error) throw error
+  const useTenantWideFilledLotLookup = tenantWideFilledLotSourceSiteTypes.has(movementForm.srcSiteType)
 
-  const activeRows = (inventoryRows ?? []).filter((row: any) => {
-    const lotRow = Array.isArray(row.lot) ? row.lot[0] : row.lot
-    return !lotRow || lotRow.status !== 'void'
-  })
+  if (!useTenantWideFilledLotLookup) {
+    const { data: inventoryRows, error } = await supabase
+      .from('inv_inventory')
+      .select('id, site_id, lot_id, qty, uom_id, lot:lot_id ( id, lot_no, batch_id, package_id, lot_tax_type, status, produced_at )')
+      .eq('tenant_id', tenant)
+      .eq('site_id', siteId)
+      .gt('qty', 0)
+    if (error) throw error
 
-  if (activeRows.length) {
-    const batchIds = Array.from(new Set(activeRows
-      .map((row: any) => (Array.isArray(row.lot) ? row.lot[0] : row.lot)?.batch_id)
-      .filter(Boolean)))
-    const uomIds = Array.from(new Set(activeRows.map((row: any) => row.uom_id).filter(Boolean)))
-    const packageIds = Array.from(new Set(activeRows
-      .map((row: any) => (Array.isArray(row.lot) ? row.lot[0] : row.lot)?.package_id)
-      .filter(Boolean)))
-    const refs = await loadLotReferenceMaps(tenant, batchIds, uomIds, packageIds)
-    lotOptions.value = buildLotOptionsFromInventoryRows(activeRows, refs)
-    lotSelectionSource.value = 'inventory'
-    return
+    const activeRows = (inventoryRows ?? []).filter((row: any) => {
+      const lotRow = Array.isArray(row.lot) ? row.lot[0] : row.lot
+      return !lotRow || lotRow.status !== 'void'
+    })
+
+    if (activeRows.length) {
+      const batchIds = Array.from(new Set(activeRows
+        .map((row: any) => (Array.isArray(row.lot) ? row.lot[0] : row.lot)?.batch_id)
+        .filter(Boolean)))
+      const uomIds = Array.from(new Set(activeRows.map((row: any) => row.uom_id).filter(Boolean)))
+      const packageIds = Array.from(new Set(activeRows
+        .map((row: any) => (Array.isArray(row.lot) ? row.lot[0] : row.lot)?.package_id)
+        .filter(Boolean)))
+      const refs = await loadLotReferenceMaps(tenant, batchIds, uomIds, packageIds)
+      lotOptions.value = buildLotOptionsFromInventoryRows(activeRows, refs)
+      lotSelectionSource.value = 'inventory'
+      return
+    }
   }
 
   lotSelectionSource.value = 'lot'
 
-  const { data: scopedLotRows, error: scopedLotError } = await supabase
-    .from('lot')
-    .select('id, lot_no, site_id, produced_at, batch_id, package_id, lot_tax_type, status, qty, uom_id')
-    .eq('tenant_id', tenant)
-    .or(`site_id.eq.${siteId},site_id.is.null`)
-    .neq('status', 'void')
-    .gt('qty', 0)
-    .order('lot_no')
-    .limit(500)
-  if (scopedLotError) throw scopedLotError
-
-  let activeLots = (scopedLotRows ?? []).filter((row: any) => row?.status !== 'void')
-  if (!activeLots.length) {
-    const { data: tenantLotRows, error: tenantLotError } = await supabase
+  let activeLots: any[] = []
+  if (useTenantWideFilledLotLookup) {
+    const { data: tenantFilledLotRows, error: tenantFilledLotError } = await supabase
       .from('lot')
       .select('id, lot_no, site_id, produced_at, batch_id, package_id, lot_tax_type, status, qty, uom_id')
       .eq('tenant_id', tenant)
+      .not('package_id', 'is', null)
       .neq('status', 'void')
       .gt('qty', 0)
       .order('lot_no')
       .limit(500)
-    if (tenantLotError) throw tenantLotError
-    activeLots = (tenantLotRows ?? []).filter((row: any) => row?.status !== 'void')
+    if (tenantFilledLotError) throw tenantFilledLotError
+    activeLots = (tenantFilledLotRows ?? []).filter((row: any) => row?.status !== 'void')
+  } else {
+    const { data: scopedLotRows, error: scopedLotError } = await supabase
+      .from('lot')
+      .select('id, lot_no, site_id, produced_at, batch_id, package_id, lot_tax_type, status, qty, uom_id')
+      .eq('tenant_id', tenant)
+      .or(`site_id.eq.${siteId},site_id.is.null`)
+      .neq('status', 'void')
+      .gt('qty', 0)
+      .order('lot_no')
+      .limit(500)
+    if (scopedLotError) throw scopedLotError
+
+    activeLots = (scopedLotRows ?? []).filter((row: any) => row?.status !== 'void')
+    if (!activeLots.length) {
+      const { data: tenantLotRows, error: tenantLotError } = await supabase
+        .from('lot')
+        .select('id, lot_no, site_id, produced_at, batch_id, package_id, lot_tax_type, status, qty, uom_id')
+        .eq('tenant_id', tenant)
+        .neq('status', 'void')
+        .gt('qty', 0)
+        .order('lot_no')
+        .limit(500)
+      if (tenantLotError) throw tenantLotError
+      activeLots = (tenantLotRows ?? []).filter((row: any) => row?.status !== 'void')
+    }
   }
 
   if (!activeLots.length) {
@@ -1508,6 +1567,7 @@ async function loadLotsForSite(siteId: string) {
 }
 
 function nextStep() {
+  if (isNextDisabled.value) return
   if (currentStep.value < wizardSteps.value.length) currentStep.value += 1
 }
 

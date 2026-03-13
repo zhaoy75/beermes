@@ -31,6 +31,7 @@ interface InventoryRow {
   id: string
   lotId: string
   lotNo: string | null
+  lotTaxType: string | null
   batchCode: string | null
   beerCategoryId: string | null
   targetAbv: number | null
@@ -535,7 +536,7 @@ export function useProducedBeerInventory() {
 
       const { data: lots, error: lotError } = await supabase
         .from('lot')
-        .select('id, lot_no, batch_id, package_id, produced_at, status')
+        .select('id, lot_no, lot_tax_type, batch_id, package_id, produced_at, status')
         .eq('tenant_id', tenant)
         .in('id', lotIds)
         .neq('status', 'void')
@@ -573,6 +574,7 @@ export function useProducedBeerInventory() {
         lotId: string
         siteId: string
         lotNo: string | null
+        lotTaxType: string | null
         batchCode: string | null
         beerCategoryId: string | null
         targetAbv: number | null
@@ -616,6 +618,7 @@ export function useProducedBeerInventory() {
           const keywordParts = new Set<string>()
 
           pushKeyword(keywordParts, lot.lot_no)
+          pushKeyword(keywordParts, lot.lot_tax_type)
           pushKeyword(keywordParts, lot.id)
           pushKeyword(keywordParts, batchInfo?.batchCode)
           pushKeyword(keywordParts, batchInfo?.productName)
@@ -631,6 +634,7 @@ export function useProducedBeerInventory() {
             lotId: String(lot.id),
             siteId,
             lotNo: lot.lot_no ?? null,
+            lotTaxType: lot.lot_tax_type ?? null,
             batchCode: batchInfo?.batchCode ?? null,
             beerCategoryId: batchInfo?.beerCategoryId ?? null,
             targetAbv: batchInfo?.targetAbv ?? null,
@@ -661,6 +665,7 @@ export function useProducedBeerInventory() {
           id: row.key,
           lotId: row.lotId,
           lotNo: row.lotNo,
+          lotTaxType: row.lotTaxType,
           batchCode: row.batchCode,
           beerCategoryId: row.beerCategoryId,
           targetAbv: row.targetAbv,

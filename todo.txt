@@ -658,5 +658,12 @@ docker run -d \
   -e POSTFIX_smtp_tls_mandatory_protocols="TLSv1.2 TLSv1.3" \
   boky/postfix
 
-🔳状態の整理
-🔳
+🔳既存の開発
+　🔳移入、戻入のロット、数量のチェック
+　🔳パッケージの解体(パッケージからバルクにする)
+　🔳権限
+🔳残りの開発
+　🔳製造かんり
+　🔳詰口簿（酒類の充填記録）
+
+

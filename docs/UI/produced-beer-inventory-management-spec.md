@@ -42,7 +42,7 @@
 - Add sortable column headers in the inventory grid.
 - Add row-level action buttons in the inventory grid.
 - Keep the current inventory table columns:
-  - Lot No
+  - Lot Code
   - Batch No
   - Beer Category
   - Target ABV

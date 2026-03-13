@@ -114,6 +114,12 @@
                   </button>
                 </th>
                 <th class="px-3 py-2 text-left">
+                  <button class="font-medium" type="button" @click="toggleSort('lotTaxType')">
+                    {{ t('producedBeer.inventory.table.lotTaxType') }}
+                    {{ sortIndicator('lotTaxType') }}
+                  </button>
+                </th>
+                <th class="px-3 py-2 text-left">
                   <button class="font-medium" type="button" @click="toggleSort('batchCode')">
                     {{ t('producedBeer.inventory.table.batchNo') }} {{ sortIndicator('batchCode') }}
                   </button>
@@ -163,17 +169,20 @@
             </thead>
             <tbody class="divide-y divide-gray-100 bg-white">
               <tr v-if="inventoryLoading">
-                <td colspan="11" class="px-3 py-8 text-center text-gray-500">
+                <td colspan="12" class="px-3 py-8 text-center text-gray-500">
                   {{ t('common.loading') }}
                 </td>
               </tr>
               <tr v-else-if="sortedRows.length === 0">
-                <td colspan="11" class="px-3 py-8 text-center text-gray-500">
+                <td colspan="12" class="px-3 py-8 text-center text-gray-500">
                   {{ t('common.noData') }}
                 </td>
               </tr>
               <tr v-for="row in sortedRows" v-else :key="row.id" class="hover:bg-gray-50">
                 <td class="px-3 py-2 font-mono text-xs text-gray-600">{{ row.lotNo || '—' }}</td>
+                <td class="px-3 py-2 font-mono text-xs text-gray-600">
+                  {{ row.lotTaxType || '—' }}
+                </td>
                 <td class="px-3 py-2 font-mono text-xs text-gray-600">
                   {{ row.batchCode || '—' }}
                 </td>
@@ -243,10 +252,14 @@
                     <h3 class="text-sm font-semibold text-gray-900">
                       {{ t('producedBeerInventory.dag.rootLot') }}
                     </h3>
-                    <div class="mt-2 grid grid-cols-1 gap-3 md:grid-cols-4 text-sm">
+                    <div class="mt-2 grid grid-cols-1 gap-3 md:grid-cols-5 text-sm">
                       <div>
                         <div class="text-xs text-gray-500">{{ t('producedBeer.inventory.table.lotNo') }}</div>
                         <div class="font-mono text-gray-700">{{ dagDialog.rootLot?.lotNo || '—' }}</div>
+                      </div>
+                      <div>
+                        <div class="text-xs text-gray-500">{{ t('producedBeer.inventory.table.lotTaxType') }}</div>
+                        <div class="font-mono text-gray-700">{{ dagDialog.rootLot?.lotTaxType || '—' }}</div>
                       </div>
                       <div>
                         <div class="text-xs text-gray-500">{{ t('producedBeer.inventory.table.site') }}</div>
@@ -316,6 +329,7 @@
                         <thead class="bg-gray-50 text-xs uppercase text-gray-600">
                           <tr>
                             <th class="px-3 py-2 text-left">{{ t('producedBeer.inventory.table.lotNo') }}</th>
+                            <th class="px-3 py-2 text-left">{{ t('producedBeer.inventory.table.lotTaxType') }}</th>
                             <th class="px-3 py-2 text-left">{{ t('producedBeer.inventory.table.site') }}</th>
                             <th class="px-3 py-2 text-right">{{ t('producedBeer.inventory.table.qtyLiters') }}</th>
                             <th class="px-3 py-2 text-left">{{ t('producedBeerInventory.dag.table.status') }}</th>
@@ -323,12 +337,13 @@
                         </thead>
                         <tbody class="divide-y divide-gray-100 bg-white">
                           <tr v-if="dagDialog.relatedLots.length === 0">
-                            <td colspan="4" class="px-3 py-8 text-center text-gray-500">
+                            <td colspan="5" class="px-3 py-8 text-center text-gray-500">
                               {{ t('producedBeerInventory.dag.noData') }}
                             </td>
                           </tr>
                           <tr v-for="row in dagDialog.relatedLots" v-else :key="row.id" class="hover:bg-gray-50">
                             <td class="px-3 py-2 font-mono text-xs text-gray-600">{{ row.lotNo || '—' }}</td>
+                            <td class="px-3 py-2 font-mono text-xs text-gray-600">{{ row.lotTaxType || '—' }}</td>
                             <td class="px-3 py-2 text-gray-700">{{ siteLabel(row.siteId) }}</td>
                             <td class="px-3 py-2 text-right text-gray-700">{{ formatVolumeNumberValue(row.qty) }}</td>
                             <td class="px-3 py-2 text-gray-700">{{ row.status || '—' }}</td>
@@ -379,6 +394,7 @@ type InventoryPageRow = (typeof inventoryRows.value)[number]
 
 type SortKey =
   | 'lotNo'
+  | 'lotTaxType'
   | 'batchCode'
   | 'beerCategory'
   | 'targetAbv'
@@ -392,6 +408,7 @@ type SortKey =
 type TraceLotNode = {
   id: string
   lotNo: string | null
+  lotTaxType: string | null
   siteId: string | null
   qty: number | null
   status: string | null
@@ -482,6 +499,8 @@ function sortValue(row: InventoryPageRow, key: SortKey): string | number {
   switch (key) {
     case 'lotNo':
       return normalizeString(row.lotNo)
+    case 'lotTaxType':
+      return normalizeString(row.lotTaxType)
     case 'batchCode':
       return normalizeString(row.batchCode)
     case 'beerCategory':
@@ -591,6 +610,7 @@ async function openDagDialog(row: InventoryPageRow) {
           .map((node: any) => ({
             id: String(node?.id ?? ''),
             lotNo: node?.lot_no != null ? String(node.lot_no) : null,
+            lotTaxType: node?.lot_tax_type != null ? String(node.lot_tax_type) : null,
             siteId: node?.site_id != null ? String(node.site_id) : null,
             qty: toNumber(node?.qty),
             status: node?.status != null ? String(node.status) : null,
@@ -601,6 +621,7 @@ async function openDagDialog(row: InventoryPageRow) {
     const rootLot = nodes.find((node: TraceLotNode) => node.id === row.lotId) ?? {
       id: row.lotId,
       lotNo: row.lotNo,
+      lotTaxType: row.lotTaxType,
       siteId: row.siteId,
       qty: row.qtyLiters,
       status: 'active',

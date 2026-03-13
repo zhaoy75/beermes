@@ -161,7 +161,7 @@ STOUT03 10
 | Column | Required | Notes |
 | --- | --- | --- |
 | Beer | Yes | Search by beer code or name |
-| Lot No | Conditional | Required only for `MANUAL`; read-only/auto for `FEFO` and `FIFO` |
+| Lot Code | Conditional | Required only for `MANUAL`; read-only/auto for `FEFO` and `FIFO` |
 | Package Info | Conditional | only if package is choosen |
 | Unit         | Conditional | package unit or qty        |
 | Volume (L) | Yes | Numeric, `> 0`; width should comfortably fit values in the range of `9999.999` but stay visually compact |
@@ -174,8 +174,8 @@ STOUT03 10
   - pressing `Enter` in Quantity moves to next editable row
   - empty trailing rows should be auto-added as needed
   - rows with no beer and no quantity are ignored
-  - when allocation policy is `MANUAL`, `Lot No` is user-selectable from available lots in source site stock for the selected beer
-  - when allocation policy is `FEFO` or `FIFO`, `Lot No` is display-only and determined by backend allocation result
+  - when allocation policy is `MANUAL`, `Lot Code` is user-selectable from available lots in source site stock for the selected beer
+  - when allocation policy is `FEFO` or `FIFO`, `Lot Code` is display-only and determined by backend allocation result
   - changing policy from `MANUAL` to `FEFO`/`FIFO` clears manual lot selections for all lines
   - Quantity cell width should balance entry speed and table density; avoid both cramped and oversized presentation
 
@@ -404,7 +404,7 @@ STOUT03 10
   - invalid site combination for `INTERNAL_TRANSFER`
   - unresolved beer code/name
   - requested amount exceeds allocatable source-site stock
-  - `MANUAL` selected but `Lot No` missing for any valid line
+  - `MANUAL` selected but `Lot Code` missing for any valid line
   - selected lot does not match beer/source site
   - selected lot has insufficient available quantity
   - backend transaction failed; no movements committed

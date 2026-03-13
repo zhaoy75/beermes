@@ -1062,7 +1062,8 @@
     "inventory": {
       "subtitle": "ロット・バッチ別の製品在庫。",
       "table": {
-        "lotNo": "ロット番号",
+        "lotNo": "ロットコード",
+        "lotTaxType": "ロット税区分",
         "beerCategory": "ビール分類",
         "targetAbv": "目標ABV",
         "styleName": "スタイル名",
@@ -1230,7 +1231,7 @@
       },
       "columns": {
         "beer": "ビール（コード / 名称）",
-        "lotNo": "ロット番号",
+        "lotNo": "ロットコード",
         "packageInfo": "容器情報",
         "unit": "単位",
         "volume": "容量(L)",
@@ -1372,8 +1373,8 @@
         "reasonNonDefault": "理由（既定値以外を選択した場合必須）",
         "reasonNonDefaultHint": "既定値以外を選択した場合は理由の入力が必要です。",
         "product": "製品",
-        "lotNo": "Lot No",
-        "lotNoPlaceholder": "Lot No を入力して候補を検索",
+        "lotNo": "ロットコード",
+        "lotNoPlaceholder": "ロットコードを入力して候補を検索",
         "sourceLotTaxType": "移出元ロット税区分",
         "sourceLotTaxTypeHint": "移出元サイト種別と移出先サイト種別から許可される税区分を選択してください。",
         "unitPrice": "単価",
@@ -1897,7 +1898,7 @@
       "showNonPackage": "非パッケージを表示"
     },
     "placeholders": {
-      "keyword": "ロット番号、バッチコード、銘柄名などで検索"
+      "keyword": "ロットコード、バッチコード、銘柄名などで検索"
     },
     "defaults": {
       "allProducts": "すべての製品",
@@ -1944,7 +1945,7 @@
       "package": "パッケージ"
     },
     "placeholders": {
-      "keyword": "ロット番号、バーコード、バッチコードなどで検索"
+      "keyword": "ロットコード、バーコード、バッチコードなどで検索"
     },
     "defaults": {
       "allProducts": "すべての製品",

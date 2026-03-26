@@ -7,7 +7,7 @@
 - Keep report totals consistent with the existing Batch Packing and Batch Edit filling logic.
 
 ## Entry Points
-- Sidebar -> `製造管理` -> `帳票一覧` -> `詰口一覧表`
+- Sidebar -> `製造管理` -> `詰口一覧表`
 - Route: `/fillingReport`
 - Route name: `FillingReport`
 
@@ -46,7 +46,7 @@
 - None in v1
 
 ## UI Flow Line
-1. User opens `詰口一覧表` from `製造管理 > 帳票一覧`.
+1. User opens `詰口一覧表` from `製造管理`.
 2. Page resolves current tenant context.
 3. Page loads batch rows with filling history.
 4. User may narrow the visible rows by `年度`, `month`, and `酒類コード`.

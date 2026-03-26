@@ -182,6 +182,15 @@ export const tenantRoutes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/taxableRemovalReport',
+    name: 'TaxableRemovalReport',
+    component: () => import('@/views/Pages/TaxableRemovalReport.vue'),
+    meta: {
+      title: 'Taxable Removal Report',
+      requiresAuth: true,
+    },
+  },
+  {
     path: '/siteMovements',
     name: 'SiteMovements',
     component: () => import('@/views/Pages/SiteMovement.vue'),

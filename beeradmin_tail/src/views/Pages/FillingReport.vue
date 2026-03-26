@@ -342,7 +342,12 @@ import {
   type FillingHistoryLine,
   type FillingHistoryEvent,
 } from '@/lib/batchFilling'
-import { createWorkbookBlob, type WorkbookCell, type WorkbookSheet } from '@/lib/fillingReportExport'
+import {
+  createWorkbookBlob,
+  type WorkbookCell,
+  type WorkbookCellValue,
+  type WorkbookSheet,
+} from '@/lib/fillingReportExport'
 import { supabase } from '@/lib/supabase'
 import { formatVolumeNumber } from '@/lib/volumeFormat'
 
@@ -770,8 +775,15 @@ function buildExportFilterSummary() {
   return [businessYear, month, liquorCode].join(' / ')
 }
 
+function borderedRow(values: WorkbookCellValue[]): WorkbookCell[] {
+  return values.map((value) => ({
+    style: 'border',
+    value,
+  }))
+}
+
 function buildSummarySheetRows(createdAtLabel: string): WorkbookCell[][] {
-  const header: WorkbookCell[] = [
+  const header: WorkbookCellValue[] = [
     t('fillingReport.table.batchCode'),
     t('fillingReport.table.name'),
     t('fillingReport.table.latestFillingAt'),
@@ -784,25 +796,27 @@ function buildSummarySheetRows(createdAtLabel: string): WorkbookCell[][] {
     t('fillingReport.table.lossVolume'),
   ]
 
-  const rows = sortedRows.value.map<WorkbookCell[]>((row) => [
-    row.batchCode ?? '',
-    row.displayName ?? '',
-    row.latestFillingAt ? formatDateTime(row.latestFillingAt) : '',
-    row.totalVolume ?? null,
-    row.liquorCode ?? '',
-    row.abv == null ? '' : formatAbv(row.abv),
-    ...packageColumns.value.map((packageCode) => row.packageNumbers[packageCode] ?? null),
-    row.sampleVolume ?? null,
-    row.tankLeftVolume ?? null,
-    row.lossVolume ?? null,
-  ])
+  const rows = sortedRows.value.map<WorkbookCell[]>((row) =>
+    borderedRow([
+      row.batchCode ?? '',
+      row.displayName ?? '',
+      row.latestFillingAt ? formatDateTime(row.latestFillingAt) : '',
+      row.totalVolume ?? null,
+      row.liquorCode ?? '',
+      row.abv == null ? '' : formatAbv(row.abv),
+      ...packageColumns.value.map((packageCode) => row.packageNumbers[packageCode] ?? null),
+      row.sampleVolume ?? null,
+      row.tankLeftVolume ?? null,
+      row.lossVolume ?? null,
+    ]),
+  )
 
   return [
     [t('fillingReport.title')],
     [t('fillingReport.export.generatedAt'), createdAtLabel],
     [t('fillingReport.export.filters'), buildExportFilterSummary()],
     [],
-    header,
+    borderedRow(header),
     ...rows,
   ]
 }
@@ -812,7 +826,7 @@ function buildDetailSheetRows(row: FillingReportRow): WorkbookCell[][] {
   const detailRows = orderedDetailRowsFor(row)
   const totals = buildDetailTotals(detailRows, packageCodes)
 
-  const headerRow1: WorkbookCell[] = [
+  const headerRow1: WorkbookCellValue[] = [
     t('fillingReport.detail.table.date'),
     t('fillingReport.detail.table.beforeFilling'),
     ...packageCodes.flatMap((packageCode) => [packageCode, null]),
@@ -823,7 +837,7 @@ function buildDetailSheetRows(row: FillingReportRow): WorkbookCell[][] {
     t('fillingReport.detail.table.tankLeftVolume'),
     t('fillingReport.detail.table.lossVolume'),
   ]
-  const headerRow2: WorkbookCell[] = [
+  const headerRow2: WorkbookCellValue[] = [
     null,
     null,
     ...packageCodes.flatMap(() => [
@@ -838,25 +852,27 @@ function buildDetailSheetRows(row: FillingReportRow): WorkbookCell[][] {
     null,
   ]
 
-  const movementRows = detailRows.map<WorkbookCell[]>((detailRow) => [
-    detailRow.movementAt ? formatDateTime(detailRow.movementAt) : '',
-    [
-      `${t('fillingReport.detail.depth')}: ${formatNumberValue(detailRow.tankFillStartDepth)}`,
-      `${t('fillingReport.detail.quantity')}: ${formatVolumeValue(detailRow.tankFillStartVolume)}`,
-    ].join('\n'),
-    ...packageCodes.flatMap((packageCode) => [
-      detailRow.packageNumbers[packageCode] ?? null,
-      detailRow.packageVolumes[packageCode] ?? null,
+  const movementRows = detailRows.map<WorkbookCell[]>((detailRow) =>
+    borderedRow([
+      detailRow.movementAt ? formatDateTime(detailRow.movementAt) : '',
+      [
+        `${t('fillingReport.detail.depth')}: ${formatNumberValue(detailRow.tankFillStartDepth)}`,
+        `${t('fillingReport.detail.quantity')}: ${formatVolumeValue(detailRow.tankFillStartVolume)}`,
+      ].join('\n'),
+      ...packageCodes.flatMap((packageCode) => [
+        detailRow.packageNumbers[packageCode] ?? null,
+        detailRow.packageVolumes[packageCode] ?? null,
+      ]),
+      detailRow.sampleVolume ?? null,
+      detailRow.kegUnits ?? null,
+      detailRow.canBottleUnits ?? null,
+      detailRow.totalQuantity ?? null,
+      detailRow.tankLeftVolume ?? null,
+      detailRow.lossVolume ?? null,
     ]),
-    detailRow.sampleVolume ?? null,
-    detailRow.kegUnits ?? null,
-    detailRow.canBottleUnits ?? null,
-    detailRow.totalQuantity ?? null,
-    detailRow.tankLeftVolume ?? null,
-    detailRow.lossVolume ?? null,
-  ])
+  )
 
-  const totalRow: WorkbookCell[] = [
+  const totalRow: WorkbookCellValue[] = [
     null,
     null,
     ...packageCodes.flatMap((packageCode) => [
@@ -876,10 +892,10 @@ function buildDetailSheetRows(row: FillingReportRow): WorkbookCell[][] {
     [t('fillingReport.table.liquorCode'), row.liquorCode ?? '', t('fillingReport.table.abv'), row.abv == null ? '' : formatAbv(row.abv)],
     [t('fillingReport.detail.fillingTank'), formatTankSummary(row.fillingTanks)],
     [],
-    headerRow1,
-    headerRow2,
+    borderedRow(headerRow1),
+    borderedRow(headerRow2),
     ...movementRows,
-    totalRow,
+    borderedRow(totalRow),
   ]
 }
 

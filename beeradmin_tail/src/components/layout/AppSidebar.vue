@@ -386,12 +386,7 @@ const menuGroups = computed<MenuGroup[]>(() => [
         subItems: [
           { name: t('sidebar.items.recipeList'), path: "/recipeList", pro: false },
           { name: t('sidebar.items.batchList'), path: "/batches", pro: false },
-          {
-            name: t('sidebar.items.reportList'),
-            subItems: [
-              { name: t('sidebar.items.fillingReport'), path: "/fillingReport", pro: false },
-            ],
-          },
+          { name: t('sidebar.items.fillingReport'), path: "/fillingReport", pro: false },
           // { name: t('sidebar.items.waste'), path: "/waste", pro: false },
         ],
       },
@@ -413,6 +408,12 @@ const menuGroups = computed<MenuGroup[]>(() => [
         subItems: [
           { name: t('sidebar.items.producedBeer'), path: "/producedBeer", pro: false },
           { name: t('sidebar.items.taxReport'), path: "/taxReports", pro: false },
+          {
+            name: t('sidebar.items.reportList'),
+            subItems: [
+              { name: t('sidebar.items.taxableRemovalReport'), path: "/taxableRemovalReport", pro: false },
+            ],
+          },
           { name: t('sidebar.items.taxYearSummary'), path: "/taxYearSummary", pro: false },
           // { name: t('sidebar.items.siteMovements'), path: "/siteMovements", pro: false }
         ],

@@ -2106,6 +2106,7 @@
       "liquorTax": "Liquor Tax",
       "taxYearSummary": "Tax Year Summary",
       "taxReport": "Tax Report",
+      "taxableRemovalReport": "Taxable Removal Report",
       "packing": "Packing",
       "taxCalc": "Tax Calculation",
       "unpaidMove": "Unpaid Movement",
@@ -2490,6 +2491,56 @@
       "taxMonthRequired": "Month is required.",
       "statusRequired": "Status is required.",
       "breakdownRequired": "Production data is required."
+    }
+  },
+  "taxableRemovalReport": {
+    "title": "Taxable Removal Report",
+    "subtitle": "Review taxable-removal records with business-year summary and detail rows.",
+    "filters": {
+      "businessYear": "Business year",
+      "month": "Month",
+      "liquorCode": "Liquor code"
+    },
+    "defaults": {
+      "allMonths": "All",
+      "allLiquorCodes": "All",
+      "taxableRemovalType": "Taxable removal"
+    },
+    "results": {
+      "count": "{count} rows"
+    },
+    "summary": {
+      "title": "Business Year Summary",
+      "subtitle": "Aggregate taxable removals for the selected business year by liquor code and ABV.",
+      "columns": {
+        "liquorCode": "Liquor code",
+        "abv": "ABV",
+        "quantityMl": "Quantity (mL)",
+        "packageCount": "Package count",
+        "taxRate": "Tax rate",
+        "taxAmount": "Tax amount"
+      }
+    },
+    "table": {
+      "title": "Taxable Removal Details",
+      "columns": {
+        "item": "Item",
+        "brand": "Brand",
+        "abv": "Alcohol (%)",
+        "movementAt": "Date",
+        "container": "Container",
+        "quantityMl": "Quantity (mL)",
+        "unitPrice": "Unit price (JPY)",
+        "amount": "Amount (JPY)",
+        "removalType": "Removal type",
+        "destinationAddress": "Destination address",
+        "destinationName": "Destination name",
+        "lotNo": "Lot no",
+        "notes": "Notes"
+      }
+    },
+    "errors": {
+      "loadFailed": "Failed to load the taxable removal report."
     }
   },
   "recipe": {

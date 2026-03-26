@@ -90,6 +90,9 @@
 - Export blank values as blank cells, not `—`.
 - Keep datetime and numeric formatting readable.
 - Preserve grouped headers where practical for detail sheets.
+- Apply cell borders to the exported table area in each sheet:
+  - `Summary` header row and data rows
+  - each batch detail sheet header rows, movement rows, and total row
 
 ## Validation Plan
 - Confirm export button is visible on `詰口一覧表`.
@@ -99,6 +102,7 @@
 - Confirm one batch detail sheet is created for each exported batch.
 - Confirm each batch detail sheet matches the page’s `バッチ詰口明細`.
 - Confirm invalid or duplicate sheet names are sanitized safely.
+- Confirm exported table cells show visible borders in Excel.
 
 ## Risks
 - Excel sheet-name limits require sanitization.

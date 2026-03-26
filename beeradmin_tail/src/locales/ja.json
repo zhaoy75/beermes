@@ -2098,6 +2098,7 @@
       "liquorTax": "税務管理",
       "taxYearSummary": "年間課税概要",
       "taxReport": "酒税申告",
+      "taxableRemovalReport": "課税移出一覧表",
       "packing": "充填管理",
       "taxCalc": "課税計算",
       "unpaidMove": "未納税搬入出",
@@ -2482,6 +2483,56 @@
       "taxMonthRequired": "月は必須です。",
       "statusRequired": "ステータスは必須です。",
       "breakdownRequired": "生産量の集計が必要です。"
+    }
+  },
+  "taxableRemovalReport": {
+    "title": "課税移出一覧表",
+    "subtitle": "課税移出の記録を年度サマリーと明細で確認します。",
+    "filters": {
+      "businessYear": "年度",
+      "month": "month",
+      "liquorCode": "酒類コード"
+    },
+    "defaults": {
+      "allMonths": "すべて",
+      "allLiquorCodes": "すべて",
+      "taxableRemovalType": "課税移出"
+    },
+    "results": {
+      "count": "{count}件"
+    },
+    "summary": {
+      "title": "年度サマリー",
+      "subtitle": "選択年度の課税移出を酒類コード・ABV別に集計します。",
+      "columns": {
+        "liquorCode": "酒類コード",
+        "abv": "ABV",
+        "quantityMl": "数量(ml)",
+        "packageCount": "存在数",
+        "taxRate": "税率",
+        "taxAmount": "酒税"
+      }
+    },
+    "table": {
+      "title": "課税移出明細",
+      "columns": {
+        "item": "品目",
+        "brand": "銘柄",
+        "abv": "アルコール分（％）",
+        "movementAt": "年月日",
+        "container": "容器",
+        "quantityMl": "数量（mℓ）",
+        "unitPrice": "単価（円）",
+        "amount": "価格（円）",
+        "removalType": "移出区分",
+        "destinationAddress": "移出先所在地",
+        "destinationName": "移出先氏名又は名称",
+        "lotNo": "ロット番号",
+        "notes": "摘要"
+      }
+    },
+    "errors": {
+      "loadFailed": "課税移出一覧表の読み込みに失敗しました。"
     }
   },
   "recipe": {

@@ -1,278 +1,228 @@
 # Current Task Spec
 
 ## Goal
-- Create a tenant-scoped Vue report page named `詰口一覧表`.
-- Expose the page under `製造管理 > 帳票一覧`.
-- Show filling results across all batches in one read-only table.
-- Reuse the existing filling calculation rules already defined for Batch Packing / Batch Edit so report totals stay consistent with the operational screens.
-- Add Excel export for `詰口一覧表`.
+- Create a tenant-scoped Vue report page named `課税移出一覧表`.
+- Expose the page under `税務管理 > 帳票一覧`.
+- Show all taxable-removal records derived from `inv_movements` and `inv_movement_lines`.
+- Provide a business-year summary grouped by `酒類コード` and `ABV`.
+- Provide a searchable detail table of taxable-removal records.
 
 ## Scope
 - Frontend only.
+- Replace the previous current-task scope with this new taxable-removal report task.
 - Add a UI specification document for the new page under `docs/UI`.
-- Add a dedicated design document for Excel export behavior under `docs/UI`.
 - Add one new route, one new page component, and the related sidebar/i18n entries.
-- Add one report table that lists batches with filling history.
-- Add a search section above the report table.
-- Add a batch filling detail section below the main report table.
-- Row granularity for v1:
-  - one row per batch that has at least one non-void filling event
-- Include these columns:
-  - `ロット番号`
-  - `名前`
-  - `最終充填日`
-  - `総量 (L)`
+- Add a search section with:
+  - `年度`
+  - `month`
   - `酒類コード`
-  - `ABV`
-  - dynamic package-type columns
-    - each package type is a column header
-    - each cell shows that package type's aggregated package number for the batch
-  - `サンプル(Liter)`
-  - `タンク残(Liter)`
-  - `欠減(Liter)`
-- Use existing batch/filling persistence without adding a new backend API.
+- Add a business-year summary section above the detail table.
+- Add a detail table for taxable-removal records.
 - Keep the page read-only in v1.
-- Allow drill-down on a batch by clicking `ロット番号` in the main report table.
-- Add a page-level Excel export button.
-- Generate a downloadable `.xlsx` workbook from the current page data.
-- Show a download link after successful workbook generation.
 
 ## Non-Goals
-- Creating, editing, or deleting filling records from this report.
-- Adding print or CSV behavior as part of this Excel-export design task.
-- Adding new database schema, SQL functions, or RLS policies.
-- Refactoring unrelated menu/layout code.
-- Building the other production report pages mentioned in `todo.txt`.
+- Creating, editing, reversing, or deleting product movements from this report.
+- Adding Excel export in this task.
+- Adding new backend RPCs, SQL functions, or schema changes.
+- Refactoring unrelated tax-management pages.
 
 ## Affected Files
 - `specs/current-task.md`
-- `docs/UI/filling-report.md`
-- `docs/UI/filling-report-excel-export.md`
-- `beeradmin_tail/src/lib/fillingReportExport.ts`
+- `docs/UI/tax-removal-report.md`
 - `beeradmin_tail/src/router/tenant-routes.ts`
 - `beeradmin_tail/src/components/layout/AppSidebar.vue`
-- `beeradmin_tail/src/views/Pages/FillingReport.vue`
+- `beeradmin_tail/src/views/Pages/TaxableRemovalReport.vue`
 - `beeradmin_tail/src/locales/ja.json`
 - `beeradmin_tail/src/locales/en.json`
-- Optional if implementation benefits from extraction:
-  - `beeradmin_tail/src/lib/batchFilling.ts`
-  - `beeradmin_tail/src/lib/fillingReport.ts`
+- Optional extraction only if implementation becomes materially simpler:
+  - `beeradmin_tail/src/lib/taxRemovalReport.ts`
 
 ## Data Model / API Changes
 - No backend schema change in v1.
 - No new RPC in v1.
 
 ### Source-of-Truth Decision
-- The current application writes filling event details through `public.product_filling(...)` and persists the operational filling payload into:
-  - `inv_movements`
-  - `inv_movement_lines`
-  - `inv_movements.meta`
-- `mes_batch_steps` exists in schema, but the current filling UI does not use it as the primary persisted source for filling report values.
-- Therefore, v1 of `詰口一覧表` must treat `inv_movements` + `inv_movement_lines` + `inv_movements.meta` as the source of truth for filling facts.
-- `mes_batch_steps` may be read only if implementation confirms real tenant data is populated there and that the values are required for a fallback or reconciliation path.
-
-### Batch Selection
-- Include only batches that have at least one non-void filling movement.
-- Filling movement definition for this page:
+- This page must use `inv_movements` and `inv_movement_lines` as the transactional source of truth.
+- Taxable-removal filtering must be based on persisted tax movement metadata, not Japanese display text.
+- Include movement rows when either of the following is true:
+  - `inv_movements.meta->>'tax_event' = 'TAXABLE_REMOVAL'`
+  - fallback: `inv_movements.meta->>'tax_decision_code' = 'TAXABLE_REMOVAL'`
+- Exclude void rows:
   - `inv_movements.status != 'void'`
-  - `inv_movements.meta->>'source' = 'packing'`
-  - `inv_movements.meta->>'packing_type' = 'filling'`
-- If needed for compatibility, implementation may also accept:
-  - `inv_movements.meta->>'movement_intent' = 'PACKAGE_FILL'`
+- Supporting master/detail lookups are allowed for display fields:
+  - `mes_batches`
+  - `mst_package`
+  - `mst_sites`
+  - `mst_uom`
+  - `registry_def` kind=`alcohol_type`
+  - `entity_attr` / `attr_def`
+  - `lot` when `src_lot_id` exists in line meta and lot number display is needed
+
+### Row Granularity
+- Business-year summary:
+  - one row per `酒類コード + ABV` group
+- Detail table:
+  - one row per taxable-removal `inv_movement_lines` row
+  - rows without package or batch context may still appear if the required detail fields can be resolved from movement/line data
+
+### Search / Filter Rules
+- `年度`
+  - required visible field
+  - default: current business year
+  - business year definition: April 1 to March 31
+- `month`
+  - values: `1` to `12`
+  - default: blank
+  - interpreted as calendar month inside the selected business year range
+- `酒類コード`
+  - default: blank
+  - filters by the code value shown in the page
+- Summary section filter scope:
+  - use the selected `年度` only
+  - do not narrow summary rows by `month`
+  - do not narrow summary rows by `酒類コード`
+- Detail table filter scope:
+  - use selected `年度`
+  - use selected `month` when not blank
+  - use selected `酒類コード` when not blank
 
 ### Column Mapping
-- `ロット番号`
-  - `mes_batches.batch_code`
-- `名前`
+#### Summary Section
+- `酒類コード`
+  - resolve from batch/category metadata using the same order already used in produced-beer pages:
+    - batch attribute `beer_category`
+    - recipe/category fallback
+    - `mes_batches.meta.beer_category`
+    - `mes_batches.meta.category`
+- `ABV`
+  - resolve from batch metadata using the same order already used in produced-beer pages:
+    - batch attribute `target_abv`
+    - recipe target ABV
+    - `mes_batches.meta.target_abv`
+- `数量(ml)`
+  - sum taxable-removal line quantity converted to milliliters
+  - primary source: `inv_movement_lines.qty` using `uom_id` / `mst_uom.code`
+  - fallback: package count × package unit volume when line quantity is missing but package quantity and package master are available
+- `存在数`
+  - sum package-count style value per line
+  - prefer `inv_movement_lines.meta.package_qty`
+  - fallback to `inv_movement_lines.unit`
+- `税率`
+  - use persisted `inv_movement_lines.tax_rate`
+  - fallback: `inv_movements.meta.tax_rate`
+  - display as raw numeric `/kl` rate
+- `酒税`
+  - calculate from taxable-removal volume and rate
+  - formula: `quantity_ml / 1000000 * tax_rate`
+  - aggregate by `酒類コード + ABV`
+
+#### Detail Table
+- `品目`
+  - alcohol type label resolved from `registry_def.kind = 'alcohol_type'` for the displayed `酒類コード`
+  - fallback to raw `酒類コード`
+- `銘柄`
   - `mes_batches.product_name`
   - fallback: `mes_batches.batch_label`
-- `最終充填日`
-  - latest `inv_movements.movement_at` among the batch's filling movements
-- `総量 (L)`
-  - `mes_batches.actual_yield`
-- `酒類コード`
-  - use the same batch metadata resolution order already used by produced-beer pages:
-    - batch attribute `beer_category`
-    - fallback recipe/category
-    - fallback `mes_batches.meta.beer_category`
-    - fallback `mes_batches.meta.category`
-- `ABV`
-  - use the same resolution order already used by produced-beer pages:
-    - batch attribute `target_abv`
-    - fallback recipe target ABV
-    - fallback `mes_batches.meta.target_abv`
-- Dynamic package-type columns
-  - aggregate non-sample filling lines by package type across all filling movements in the batch
-  - package label source: `mst_package.package_code`
-  - package number source:
-    - fixed-volume package: sum of unit count / package count
-    - non-fixed-volume package: sum of line `qty` when no unit-count style value exists
-  - the page must build the package columns from the distinct package types that exist in the loaded result
-  - package columns must be ordered by `mst_package.package_code` ascending
-  - if a batch does not use a package type shown in the table, the corresponding cell is blank
-- `サンプル(Liter)`
-  - sum of sample volume across all filling movements for the batch
-  - if persisted `meta.sample_volume` is missing, derive from `meta.filling_lines` where `sample_flg = true`
-- `タンク残(Liter)`
-  - `tank_left_volume` from the latest filling movement only
-  - this is intentionally not summed across movements
-- `欠減(Liter)`
-  - use persisted `inv_movements.meta.tank_loss_volume` when available
-  - otherwise derive filling loss with the same rule as Batch Packing / Batch Edit:
-    - `tank_fill_start_volume - tank_left_volume - non_sample_line_volume - sample_volume`
-
-### Filling Calculation Rules
-- Reuse the existing shared rules in `beeradmin_tail/src/lib/batchFilling.ts`.
-- Non-sample lines contribute to packaged total.
-- Sample lines do not contribute to package count columns.
-- Sample lines do contribute to sample volume.
-- Loss must remain aligned with the current Batch Packing spec.
+  - fallback: batch/style name resolved on the produced-beer pages
+- `アルコール分（％）`
+  - displayed ABV value for the line
+- `年月日`
+  - `inv_movements.movement_at`
+- `容器`
+  - `mst_package.package_code`
+  - fallback: package localized name
+- `数量（mℓ）`
+  - line quantity converted to milliliters using the same conversion rule as summary
+- `単価（円）`
+  - blank in v1
+- `価格（円）`
+  - blank in v1
+- `移出区分`
+  - tax event display label for the movement
+  - for this page it should normally display `課税移出`
+- `移出先所在地`
+  - `mst_sites.address` formatted into a readable single-line string
+  - fallback: blank when address is missing
+- `移出先氏名又は名称`
+  - `mst_sites.name`
+- `ロット番号`
+  - prefer source lot number resolved from `lot.id = inv_movement_lines.meta.src_lot_id`
+  - fallback: `mes_batches.batch_code`
+- `摘要`
+  - prefer `inv_movement_lines.notes`
+  - fallback: `inv_movement_lines.meta.line_note`
+  - fallback: `inv_movements.notes`
 
 ## UI / Navigation
-- Add a new production submenu entry:
-  - parent: `製造管理`
+- Add a new tax-management submenu path:
+  - parent: `税務管理`
   - child group: `帳票一覧`
-  - page item: `詰口一覧表`
-- Use the existing nested sidebar pattern already supported by `AppSidebar.vue`.
+  - page item: `課税移出一覧表`
 - New route:
-  - path: `/fillingReport`
-  - name: `FillingReport`
-  - component: `@/views/Pages/FillingReport.vue`
-- Page shell should match the existing admin pages:
+  - path: `/taxableRemovalReport`
+  - name: `TaxableRemovalReport`
+  - component: `@/views/Pages/TaxableRemovalReport.vue`
+- Page shell should match existing admin pages:
   - `PageBreadcrumb`
   - page title and subtitle
   - search section
-- top-level refresh action
-- top-level Excel export action
+  - top-level refresh action
 
 ## Page Behavior
-- Load report rows on mount.
+- Load report data on mount.
 - Restrict all reads to the current tenant.
+- Default detail-table sort:
+  - `年月日` descending
+  - tie-breaker by document/line order when needed
 - Search section fields:
   - `年度`
-    - default value: current business year
-    - business year range: April 1 to March 31
   - `month`
-    - values: `1` to `12`
-    - default value: blank
-    - interpreted as calendar month within the selected business year range
   - `酒類コード`
-    - filter by liquor code value
-- Default sort:
-  - `最終充填日` descending
-- All visible table columns must support sort toggle.
-- Main table interaction:
-  - `ロット番号` is a clickable control
-  - clicking a batch row target loads or reveals the selected batch's filling movement details in the section below the main table
-- Batch filling detail section:
-  - appears under the main report table
-  - header line shows:
-    - `ロット番号`
-    - `名前`
-    - `酒類コード`
-    - `ABV`
-    - `Filling Tank`
-  - `Filling Tank` displays the distinct tank numbers used by the selected batch's filling movements, joined in display order
-  - detail row granularity:
-    - one row per related `inv_movements` filling movement
-  - detail row order:
-    - `日付` ascending
-  - detail total row:
-    - append one total row after the movement rows
-    - `日付`: blank
-    - `樽詰め前 深さ、数量`: blank
-    - package-type sub columns:
-      - `本数`: sum across the selected batch's detail rows
-      - `容量 (L)`: sum across the selected batch's detail rows
-    - `サンプル`: sum across the selected batch's detail rows
-    - `総数量` sub columns:
-      - `樽`: sum of keg unit counts across the selected batch's detail rows
-      - `缶・瓶`: sum of non-keg unit counts across the selected batch's detail rows
-      - `総量 (L)`: sum of packaged liters across the selected batch's detail rows
-    - `タンク残`: use the last detail row's `タンク残`
-    - `欠減`: sum across the selected batch's detail rows
-  - detail table columns:
-    - `日付`
-    - `樽詰め前 深さ、数量`
-    - dynamic package-type columns
-      - header uses the package type code
-      - each package type header expands to two sub columns:
-        - `本数`
-        - `容量 (L)`
-      - `本数` shows that movement row's package number for the package type
-      - `容量 (L)` shows that movement row's packaged volume in liters for the package type
-    - `サンプル`
-    - `総数量`
-      - expands to three sub columns:
-        - `樽`
-        - `缶・瓶`
-        - `総量 (L)`
-  - `タンク残`
-  - `欠減`
-  - detail `総数量` definition:
-    - `樽`: keg unit count for that movement
-    - `缶・瓶`: non-keg unit count for that movement
-    - `総量 (L)`: packaged non-sample filling volume for that movement in liters
-  - detail `樽詰め前 深さ、数量` definition:
-    - show the persisted `tank_fill_start_depth` and `tank_fill_start_volume` together in one display cell
+- Summary section:
+  - displayed above the detail table
+  - grouped by `酒類コード` and `ABV`
+  - calculated from the selected business year only
+- Detail table:
+  - shows all matching taxable-removal line rows
+  - updates based on selected `年度`, `month`, and `酒類コード`
 - Empty state:
-  - show a normal empty table state when no filling batches exist
+  - show standard no-data state when no records match
 - Error handling:
   - clear rows on fatal fetch failure
   - show toast with the error message
-- Excel export behavior:
-  - add an export button in the page header
-  - generate a workbook from the current page state without a separate export-only fetch
-  - file name format:
-    - `詰口一覧表_YYYYMMDD.xlsx`
-  - workbook structure:
-    - first sheet: `Summary`
-    - one detail sheet per exported batch
-  - after successful generation:
-    - show a download link for the generated file
 
 ## Implementation Notes
-- Prefer reusing the batch info resolution already present in `ProducedBeer.vue` for:
-  - beer name
-  - beer category / code
-  - ABV
-- Prefer reusing `batchFilling.ts` for all sample/loss/volume derivations instead of re-implementing formulas in the page.
-- The page query may fetch:
-  - batch master rows first
-  - filling movement headers next
-  - filling movement lines next
-  - package master data in parallel
-- Keep the first implementation scoped:
-  - no server-side filtering
-  - no pagination unless the dataset size makes it immediately necessary
+- Prefer reusing existing produced-beer movement helpers/patterns for:
+  - tenant resolution
+  - batch beer-category and ABV resolution
+  - UOM to liters conversion
+  - tax-event label mapping
+- Milliliter conversion must support at least:
+  - `L`
+  - `mL`
+  - `kL`
+  - `gal_us`
+- If `mst_sites.address` is stored as structured JSON, format it by joining non-empty string values in field order.
+- Keep implementation scoped:
+  - no server-side filtering beyond the taxable-removal movement query itself
+  - no pagination unless the dataset size immediately requires it
 
 ## Validation Plan
 - Functional validation:
-  - confirm the page appears under `製造管理 > 帳票一覧`
+  - confirm the page appears under `税務管理 > 帳票一覧`
   - confirm the route opens successfully
   - confirm the search section shows `年度`, `month`, and `酒類コード`
   - confirm `年度` defaults to the current business year based on April 1 to March 31
   - confirm `month` defaults to blank
-  - confirm only batches with filling history appear
-  - confirm latest filling date is the newest filling event per batch
-  - confirm year/month filters use `最終充填日`
-  - confirm liquor-code filter matches the displayed liquor-code value
-  - confirm `総量 (L)` displays `mes_batches.actual_yield`
-  - confirm `サンプル(Liter)`, `タンク残(Liter)`, and `欠減(Liter)` match Batch Packing / Batch Edit calculations
-  - confirm package columns are created from actual existing package types
-  - confirm package cells show package numbers per batch and stay blank when a batch does not use that package type
-  - confirm static columns and dynamic package columns can all be sorted
-  - confirm `ロット番号` is clickable in the main table
-  - confirm clicking a batch shows the selected batch's detail section below the main table
-  - confirm the detail header shows `ロット番号`, `名前`, `酒類コード`, `ABV`, and `Filling Tank`
-  - confirm the detail table renders one row per related filling movement
-  - confirm the detail table package columns are based only on package types present in the selected batch's movements
-  - confirm detail `総数量` matches non-sample packaged liters for the movement
-  - confirm detail `樽詰め前 深さ、数量` shows the stored start depth and start volume values together
-  - confirm the detail table appends one total row
-  - confirm the total row leaves `日付` and `樽詰め前 深さ、数量` blank
-  - confirm the total row sums package columns, `サンプル`, `総数量`, and `欠減`
-  - confirm the total row `タンク残` matches the last movement row in ascending `日付` order
+  - confirm only taxable-removal movements appear
+  - confirm summary rows are grouped by `酒類コード` and `ABV`
+  - confirm summary uses selected `年度` only
+  - confirm detail table uses selected `年度`, `month`, and `酒類コード`
+  - confirm `数量(ml)` and detail `数量（mℓ）` convert from persisted movement quantity correctly
+  - confirm `税率` is read from persisted movement-line/header tax rate
+  - confirm `酒税` is calculated from `mL -> kL` conversion and tax rate
+  - confirm `単価（円）` and `価格（円）` remain blank
+  - confirm destination name/address and lot number degrade gracefully when missing
 - Required checks before finishing implementation:
   - unit tests
   - lint
@@ -283,148 +233,51 @@
 
 ## Planned File Changes
 - `specs/current-task.md`
-  - keep the `詰口一覧表` task spec aligned with UI-document and implementation scope
-- `docs/UI/filling-report.md`
-  - add the dedicated UI specification for the `詰口一覧表` page
-- `docs/UI/filling-report-excel-export.md`
-  - add the dedicated design document for Excel export behavior
-- `beeradmin_tail/src/lib/fillingReportExport.ts`
-  - add a lightweight workbook builder for the filling report export
+  - replace the previous task scope with the taxable-removal report spec
+- `docs/UI/tax-removal-report.md`
+  - add the dedicated UI specification for `課税移出一覧表`
 - `beeradmin_tail/src/router/tenant-routes.ts`
   - add the new report route
 - `beeradmin_tail/src/components/layout/AppSidebar.vue`
-  - add `帳票一覧 > 詰口一覧表` under `製造管理`
-- `beeradmin_tail/src/views/Pages/FillingReport.vue`
-  - add the new report page and report-table loading logic
+  - add `帳票一覧 > 課税移出一覧表` under `税務管理`
+- `beeradmin_tail/src/views/Pages/TaxableRemovalReport.vue`
+  - add the new report page and report loading logic
 - `beeradmin_tail/src/locales/ja.json`
   - add sidebar/page labels in Japanese
 - `beeradmin_tail/src/locales/en.json`
   - add sidebar/page labels in English
-- Optional extraction only if it keeps the page simpler:
-  - `beeradmin_tail/src/lib/fillingReport.ts`
-  - `beeradmin_tail/src/lib/batchFilling.ts`
 
 ## Open Decisions / Risks
-- The user request mentions `mes_batch_steps` as a source, but the live filling workflow currently persists reportable filling facts in movement tables and movement meta. Implementation must not ignore that mismatch.
-- `酒類コード` is specified as a code, while the current UI often resolves category labels. v1 should display the stored code/value, not a translated label, unless the user asks otherwise.
-- If some historic data lacks `meta.filling_lines`, `meta.sample_volume`, or tank fields, the page must degrade gracefully and show blanks rather than inventing values.
-- If the tenant has many distinct package types, the table may become horizontally wide and rely on horizontal scrolling.
-- Some batches may use multiple filling tanks across separate movements. The detail header must present that as a joined display string rather than pretending there is only one tank.
+- `movement type = 課税移出` is a UI/business label, while persisted data uses `tax_event` / `tax_decision_code`; implementation must not filter by translated text.
+- Some historical movement rows may lack `meta.src_lot_id`, `meta.package_qty`, destination address, or line notes; the page must degrade gracefully.
+- If some line quantities are stored in unusual UOMs, summary/detail quantity conversion depends on correct `mst_uom.code` mapping.
+- `存在数` is interpreted in v1 as package count, using `meta.package_qty` first and `unit` as fallback.
 
 ## Final Decisions
-- Added a dedicated UI specification document at `docs/UI/filling-report.md`.
-- The UI document follows the existing `docs/UI` structure and treats the page as a read-only production report page.
-- The UI document keeps the same source-of-truth rule as this task spec:
-  - batch master fields from `mes_batches`
-  - filling event facts from `inv_movements`, `inv_movement_lines`, and `inv_movements.meta`
-- Implemented the new report page at `beeradmin_tail/src/views/Pages/FillingReport.vue`.
-- Added a batch filling detail section below the main report table.
-- `ロット番号` in the main report table is now clickable and selects the batch shown in the detail section.
-- The detail section summary line shows:
-  - `ロット番号`
-  - `名前`
-  - `酒類コード`
-  - `ABV`
-  - `Filling Tank`
-- The detail table uses one row per related filling movement.
-- The detail table package columns are dynamic and built only from package types present in the selected batch's movement rows.
-- Detail `総数量` is implemented as packaged non-sample liters per movement via the shared filling calculation helper.
-- Detail `樽詰め前 深さ、数量` is implemented as one cell showing persisted `tank_fill_start_depth` and `tank_fill_start_volume`.
-- The detail summary `Filling Tank` value is implemented as the distinct tank numbers from the selected batch's movement rows joined into one display string.
+- Added a dedicated UI specification document at `docs/UI/tax-removal-report.md`.
+- Implemented the new report page at `beeradmin_tail/src/views/Pages/TaxableRemovalReport.vue`.
 - Added the new tenant route:
-  - `/fillingReport`
-  - route name: `FillingReport`
+  - `/taxableRemovalReport`
+  - route name: `TaxableRemovalReport`
 - Added the new sidebar navigation path under:
-  - `製造管理 > 帳票一覧 > 詰口一覧表`
-- Added locale keys for:
-  - page title/subtitle
-  - result count
-  - filter labels/defaults
-  - report-table static column labels
-- Validation run after the detail-section change:
-  - `npm run type-check`
-  - `npm exec eslint src/views/Pages/FillingReport.vue src/router/tenant-routes.ts src/components/layout/AppSidebar.vue`
-  - locale JSON parse check for `ja.json` and `en.json`
-  - `npm run test` still fails because no `test` script exists in `beeradmin_tail/package.json`
-  - sidebar labels
+  - `税務管理 > 帳票一覧 > 課税移出一覧表`
 - The implemented page uses:
-  - `mes_batches` for batch master fields
-  - `mes_batches.actual_yield` for `総量 (L)`
-  - `inv_movements` for filling movement headers and latest filling datetime
-  - `inv_movement_lines` as fallback detail source when movement meta filling lines are missing
-  - `mst_package` for package code / fixed-volume metadata
-  - `attr_def` and `entity_attr` for liquor code and ABV resolution
-- Updated the page to use dynamic package-type columns instead of a fixed 15-column package layout.
-- In the updated layout:
-  - package type is the column header
-  - package number is the row value
-- Added a search section with:
-  - business year filter
-  - month filter
-  - liquor-code filter
-- Search/filter semantics implemented on the page:
-  - `年度` defaults to the current business year
-  - business year is calculated as April 1 to March 31
-  - `month` defaults to blank and is interpreted as calendar month `1..12` inside the selected business-year range
-  - `酒類コード` filters by the liquor-code value shown in the table
-- Added sortable table headers for:
-  - static columns
-  - dynamic package-type columns
-- Removed the earlier fixed package-pair locale pattern from the page implementation.
-- Filling totals on the page reuse `beeradmin_tail/src/lib/batchFilling.ts` to stay aligned with Batch Packing / Batch Edit calculations.
-- `総量 (L)` now comes from `mes_batches.actual_yield`, not from derived filling-line totals.
-- Corrected the fallback movement-line reconstruction used by the report:
-  - for non-fixed packages, fallback line volume must prefer `inv_movement_lines.meta.input_volume_l`
-  - for fixed packages, fallback package count must prefer `inv_movement_lines.meta.unit_count`
-  - this keeps fallback `総数量` and `欠減(Liter)` aligned with the operational filling save behavior
-- Corrected report `欠減(Liter)` source priority:
-  - prefer persisted `inv_movements.meta.tank_loss_volume`
-  - only derive loss when that saved value is absent
-- Updated the batch detail table package layout:
-  - each package type now renders two sub columns
-  - `本数`
-  - `容量 (L)`
-- Added a batch detail total row:
-  - blank `日付`
-  - blank `樽詰め前 深さ、数量`
-  - summarized package totals, `サンプル`, `総数量`, and `欠減`
-  - `タンク残` copied from the last movement row
-- The total row is rendered after the ascending `日付` movement rows in the batch detail table.
-- Updated the batch detail `総数量` column to a grouped layout:
-  - `樽`
-  - `缶・瓶`
-  - `総量 (L)`
-- `樽` is derived from package types classified as keg by package code and displayed as unit count.
-- `缶・瓶` is derived from the remaining non-keg package types and displayed as unit count.
-- `総量 (L)` remains packaged liters.
-- Corrected report `容量(L)` normalization:
-  - non-fixed filling-line volume values from movement meta are converted to liters using the package master `volume_uom`
-  - this normalized liter value is then reused by detail package volume, `総量 (L)`, and derived loss calculations on the report page
-  - when `mst_package.volume_uom` is stored as a UOM id instead of a literal code, resolve it through `mst_uom` before conversion
-- Implemented Excel export for `詰口一覧表` directly in `beeradmin_tail/src/views/Pages/FillingReport.vue`.
-- The export flow reuses the existing page data source and computed state instead of defining a separate export-only query path.
-- Added an export button in the page header:
-  - disabled while the report is loading
-  - disabled while export generation is running
-  - disabled when there is no visible report data to export
-- After workbook generation, the page shows a download link for the generated file.
-- The export file name format is:
-  - `詰口一覧表_YYYYMMDD.xlsx`
-- Added a lightweight in-repo workbook generator at `beeradmin_tail/src/lib/fillingReportExport.ts`:
-  - builds a valid `.xlsx` workbook in the browser
-  - sanitizes and deduplicates sheet names for Excel limits
-  - avoids adding a new third-party Excel dependency
-- Workbook layout implemented as:
-  - first sheet `Summary`
-  - one detail sheet per visible batch row in the report
-- The `Summary` sheet exports the same visible data as the main report table, including dynamic package columns.
-- Each batch detail sheet exports the same visible data as `バッチ詰口明細`, including:
-  - the batch summary line
-  - dynamic package columns with `本数` and `容量 (L)`
-  - grouped `総数量` sub columns
-  - the detail total row
+  - `inv_movements` and `inv_movement_lines` as the taxable-removal source of truth
+  - `mes_batches` plus batch attributes for `酒類コード`, `銘柄`, and `ABV`
+  - `mst_package` and `mst_uom` for package label and quantity conversion
+  - `mst_sites` for destination site name and address
+  - `lot` for lot number fallback when `src_lot_id` exists
+- Taxable-removal filtering is implemented by persisted tax metadata:
+  - `meta.tax_event = 'TAXABLE_REMOVAL'`
+  - fallback: `meta.tax_decision_code = 'TAXABLE_REMOVAL'`
+- The summary section is implemented as a business-year aggregation grouped by `酒類コード` and `ABV`.
+- The detail table is implemented as one row per taxable-removal movement line filtered by `年度`, `month`, and `酒類コード`.
+- `数量(ml)` and `数量（mℓ）` are derived from persisted line quantity with UOM conversion, with package-volume fallback when needed.
+- `税率` is read from persisted movement-line tax rate with movement-header fallback.
+- `酒税` is calculated as `quantity_ml / 1000000 * tax_rate`.
+- `単価（円）` and `価格（円）` are intentionally rendered blank in v1.
 - Validation outcome:
   - `npm run type-check` in `beeradmin_tail`: passed
-  - `npm exec eslint src/views/Pages/FillingReport.vue src/lib/fillingReportExport.ts src/router/tenant-routes.ts src/components/layout/AppSidebar.vue` in `beeradmin_tail`: passed
+  - `npm exec eslint src/views/Pages/TaxableRemovalReport.vue src/router/tenant-routes.ts src/components/layout/AppSidebar.vue` in `beeradmin_tail`: passed
   - locale JSON parse check for `src/locales/ja.json` and `src/locales/en.json`: passed
   - `npm run test` in `beeradmin_tail`: failed because `package.json` does not define a `test` script

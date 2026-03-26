@@ -1,4 +1,13 @@
-export type WorkbookCell = string | number | null | undefined
+export type WorkbookCellStyle = 'default' | 'border'
+
+export type WorkbookCellValue = string | number | null | undefined
+
+export type WorkbookCellObject = {
+  style?: WorkbookCellStyle
+  value: WorkbookCellValue
+}
+
+export type WorkbookCell = WorkbookCellValue | WorkbookCellObject
 
 export type WorkbookSheet = {
   name: string
@@ -78,13 +87,19 @@ function buildWorksheetXml(rows: WorkbookCell[][]) {
 }
 
 function buildCellXml(cell: WorkbookCell, rowIndex: number, columnIndex: number) {
-  if (cell == null || cell === '') return ''
-  const ref = `${columnName(columnIndex)}${rowIndex}`
-  if (typeof cell === 'number' && Number.isFinite(cell)) {
-    return `<c r="${ref}"><v>${cell}</v></c>`
+  const normalized = normalizeCell(cell)
+  if (normalized.value == null || normalized.value === '') {
+    if (!normalized.styleIndex) return ''
+    const ref = `${columnName(columnIndex)}${rowIndex}`
+    return `<c r="${ref}" s="${normalized.styleIndex}"/>`
   }
-  const text = escapeXml(String(cell))
-  return `<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${text}</t></is></c>`
+  const ref = `${columnName(columnIndex)}${rowIndex}`
+  const styleAttr = normalized.styleIndex ? ` s="${normalized.styleIndex}"` : ''
+  if (typeof normalized.value === 'number' && Number.isFinite(normalized.value)) {
+    return `<c r="${ref}"${styleAttr}><v>${normalized.value}</v></c>`
+  }
+  const text = escapeXml(String(normalized.value))
+  return `<c r="${ref}"${styleAttr} t="inlineStr"><is><t xml:space="preserve">${text}</t></is></c>`
 }
 
 function buildWorkbookXml(sheets: WorkbookSheet[]) {
@@ -145,11 +160,40 @@ function buildStylesXml() {
 <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
   <fonts count="1"><font><sz val="11"/><name val="Calibri"/></font></fonts>
   <fills count="1"><fill><patternFill patternType="none"/></fill></fills>
-  <borders count="1"><border/></borders>
+  <borders count="2">
+    <border/>
+    <border>
+      <left style="thin"><color auto="1"/></left>
+      <right style="thin"><color auto="1"/></right>
+      <top style="thin"><color auto="1"/></top>
+      <bottom style="thin"><color auto="1"/></bottom>
+    </border>
+  </borders>
   <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
-  <cellXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/></cellXfs>
+  <cellXfs count="2">
+    <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
+    <xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1"/>
+  </cellXfs>
   <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
 </styleSheet>`
+}
+
+function normalizeCell(cell: WorkbookCell) {
+  if (typeof cell === 'object' && cell !== null && 'value' in cell) {
+    return {
+      styleIndex: resolveStyleIndex(cell.style),
+      value: cell.value,
+    }
+  }
+  return {
+    styleIndex: 0,
+    value: cell,
+  }
+}
+
+function resolveStyleIndex(style: WorkbookCellStyle | undefined) {
+  if (style === 'border') return 1
+  return 0
 }
 
 function buildAppXml(sheetNames: string[]) {

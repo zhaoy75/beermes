@@ -1959,6 +1959,76 @@
       "closeHint": "Esc で閉じる"
     }
   },
+  "systemAdmin": {
+    "nav": {
+      "group": "システムスコープ",
+      "dashboard": "概要",
+      "tenants": "テナント管理",
+      "audit": "監査",
+      "noticeTitle": "分離された境界",
+      "noticeBody": "System Admin は専用のルートツリー、レイアウト、ガードで構成します。"
+    },
+    "metrics": {
+      "tenants": "テナント数",
+      "users": "ユーザー数",
+      "owners": "オーナー数"
+    },
+    "actions": {
+      "viewTenants": "テナントを見る",
+      "createTenant": "テナント作成"
+    },
+    "filters": {
+      "allStatuses": "すべての状態"
+    },
+    "fields": {
+      "users": "ユーザー数",
+      "owners": "オーナー数",
+      "createdAt": "作成日時",
+      "defaultLocale": "既定ロケール",
+      "timezone": "タイムゾーン",
+      "masterDataProfile": "マスタデータプロファイル"
+    },
+    "status": {
+      "active": "有効",
+      "suspended": "停止",
+      "voided": "無効"
+    },
+    "empty": {
+      "tenants": "条件に一致するテナントがありません。",
+      "invitations": "このテナントに招待はありません。"
+    },
+    "pages": {
+      "home": {
+        "title": "System Admin",
+        "tenantsTitle": "テナント概要",
+        "tenantsSubtitle": "プラットフォーム全体の最近のテナント一覧です。",
+        "architectureTitle": "アーキテクチャメモ",
+        "architectureRoutes": "tenant と system-admin のルートを専用ファイルに分離しました。",
+        "architectureGuards": "tenant と system-admin の権限制御を別ガードに分離しました。",
+        "architectureModules": "system-admin の新規コードは src/modules/system-admin/ 配下に配置します。",
+        "architectureFuture": "今後の管理系バックエンド実装も同じモジュール境界の中に追加できます。"
+      },
+      "tenants": {
+        "title": "テナント管理",
+        "subtitle": "システムスコープからテナント、メンバー数、状態を確認します。",
+        "searchPlaceholder": "テナント名で検索"
+      },
+      "tenantDetail": {
+        "title": "テナント詳細",
+        "subtitle": "新しい system-admin モジュール境界での読み取り中心の詳細画面です。",
+        "membersTitle": "テナントユーザー",
+        "permissionsTitle": "機能権限",
+        "settingsTitle": "テナント設定",
+        "invitationsTitle": "招待"
+      },
+      "audit": {
+        "title": "監査ログ",
+        "subtitle": "System Admin 用の監査レビュー入口です。",
+        "placeholder": "監査レビュー UI は system-admin モジュール構造の一部として先に足場を作成しています。",
+        "placeholderHint": "次の実装段階でバックエンドの監査テーブルまたは関数へ接続してください。"
+      }
+    }
+  },
   "sidebar": {
     "group": {
       "main": "メニュー",
@@ -2018,7 +2088,8 @@
       "profile": "ユーザープロファイル",
       "changePassword": "パスワード変更",
       "userManagement": "ユーザー管理",
-      "users": "ユーザー一覧"
+      "users": "ユーザー一覧",
+      "systemAdmin": "System Admin"
     }
   },
   "header": {

@@ -1967,6 +1967,76 @@
       "closeHint": "Press Esc to close"
     }
   },
+  "systemAdmin": {
+    "nav": {
+      "group": "System Scope",
+      "dashboard": "Overview",
+      "tenants": "Tenants",
+      "audit": "Audit",
+      "noticeTitle": "Separated boundary",
+      "noticeBody": "System Admin uses a dedicated route tree, layout, and guard."
+    },
+    "metrics": {
+      "tenants": "Tenants",
+      "users": "Users",
+      "owners": "Owners"
+    },
+    "actions": {
+      "viewTenants": "View tenants",
+      "createTenant": "Create tenant"
+    },
+    "filters": {
+      "allStatuses": "All statuses"
+    },
+    "fields": {
+      "users": "Users",
+      "owners": "Owners",
+      "createdAt": "Created at",
+      "defaultLocale": "Default locale",
+      "timezone": "Timezone",
+      "masterDataProfile": "Master data profile"
+    },
+    "status": {
+      "active": "Active",
+      "suspended": "Suspended",
+      "voided": "Voided"
+    },
+    "empty": {
+      "tenants": "No tenants match the current filters.",
+      "invitations": "No invitations found for this tenant."
+    },
+    "pages": {
+      "home": {
+        "title": "System Admin",
+        "tenantsTitle": "Tenant snapshot",
+        "tenantsSubtitle": "Recent tenants across the platform.",
+        "architectureTitle": "Architecture notes",
+        "architectureRoutes": "Tenant and system-admin routes are split into dedicated route modules.",
+        "architectureGuards": "Tenant and system-admin checks are separated into explicit guard files.",
+        "architectureModules": "New system-admin code lives under src/modules/system-admin/.",
+        "architectureFuture": "Full backend-powered admin actions can be added behind the same module boundary."
+      },
+      "tenants": {
+        "title": "Tenant Management",
+        "subtitle": "Review tenants, membership counts, and status from the system scope.",
+        "searchPlaceholder": "Search by tenant name"
+      },
+      "tenantDetail": {
+        "title": "Tenant Detail",
+        "subtitle": "Read-first tenant detail in the new system-admin module boundary.",
+        "membersTitle": "Tenant users",
+        "permissionsTitle": "Function permissions",
+        "settingsTitle": "Tenant settings",
+        "invitationsTitle": "Invitations"
+      },
+      "audit": {
+        "title": "Audit Log",
+        "subtitle": "System-admin audit review entry point.",
+        "placeholder": "Audit review UI is scaffolded as part of the system-admin module structure.",
+        "placeholderHint": "Connect this page to backend audit tables or functions in the next implementation step."
+      }
+    }
+  },
   "sidebar": {
     "group": {
       "main": "Menu",
@@ -2026,7 +2096,8 @@
       "profile": "User Profile",
       "changePassword": "Change Password",
       "userManagement": "User Management",
-      "users": "Users"
+      "users": "Users",
+      "systemAdmin": "System Admin"
     }
   },
   "header": {

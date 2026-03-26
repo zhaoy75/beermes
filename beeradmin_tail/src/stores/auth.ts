@@ -9,6 +9,36 @@ type AuthState = {
   userId: string | null
   email: string | null
   username: string | null  // optional display name
+  tenantId: string | null
+  systemRole: string | null
+  isSystemAdmin: boolean
+}
+
+function applySession(target: AuthState, session: {
+  access_token: string
+  user: {
+    id: string
+    email?: string | null
+    user_metadata?: Record<string, unknown>
+    app_metadata?: Record<string, unknown>
+  }
+} | null) {
+  target.accessToken = session?.access_token ?? null
+  target.userId = session?.user?.id ?? null
+  target.email = session?.user?.email ?? null
+  target.username = typeof session?.user?.user_metadata?.username === 'string'
+    ? session.user.user_metadata.username
+    : null
+  target.tenantId = typeof session?.user?.app_metadata?.tenant_id === 'string'
+    ? session.user.app_metadata.tenant_id
+    : null
+  target.systemRole = typeof session?.user?.app_metadata?.system_role === 'string'
+    ? session.user.app_metadata.system_role
+    : null
+  target.isSystemAdmin = Boolean(
+    session?.user?.app_metadata?.is_system_admin ||
+    session?.user?.app_metadata?.system_role,
+  )
 }
 
 export const useAuthStore = defineStore('auth', {
@@ -17,6 +47,9 @@ export const useAuthStore = defineStore('auth', {
     userId: null,
     email: null,
     username: null,
+    tenantId: null,
+    systemRole: null,
+    isSystemAdmin: false,
   }),
   getters: {
     isAuthed: (s) => !!s.accessToken && !!s.userId,
@@ -27,18 +60,14 @@ export const useAuthStore = defineStore('auth', {
       if (error) throw error
 
       const { error: tenantError } = await supabase.functions.invoke('set-tenant', { body: {} })
-      if (tenantError) throw tenantError
+      if (tenantError) {
+        // Allow users with preassigned system scope to continue even if no tenant is resolved here.
+        console.warn('set-tenant failed during sign-in', tenantError)
+      }
 
-      // Refresh session so JWT includes tenant_id
-      await supabase.auth.refreshSession()
-
-      console.log((await supabase.auth.getSession()).data.session?.user?.app_metadata)
-
-      const session = data.session
-      this.accessToken = session?.access_token ?? null
-      this.userId = session?.user?.id ?? null
-      this.email = session?.user?.email ?? null
-      this.username = session?.user?.user_metadata?.username ?? null
+      const refreshed = await supabase.auth.refreshSession()
+      const session = refreshed.data.session ?? data.session
+      applySession(this, session)
       return data
     },
 
@@ -51,13 +80,7 @@ export const useAuthStore = defineStore('auth', {
     // Call at app start to sync with Supabase session
     async bootstrap() {
       const { data } = await supabase.auth.getSession()
-      const session = data.session
-      if (session) {
-        this.accessToken = session.access_token
-        this.userId = session.user.id
-        this.email = session.user.email ?? null
-        this.username = session.user.user_metadata?.username ?? null
-      }
+      applySession(this, data.session)
 
       // Keep Pinia in sync on auth events (token refresh, sign-in, sign-out)
       if (authListenerSet) return
@@ -72,10 +95,7 @@ export const useAuthStore = defineStore('auth', {
           }
           return
         }
-        this.accessToken = sess.access_token
-        this.userId = sess.user.id
-        this.email = sess.user.email ?? null
-        this.username = sess.user.user_metadata?.username ?? null
+        applySession(this, sess)
       })
     },
   },

@@ -658,12 +658,60 @@ docker run -d \
   -e POSTFIX_smtp_tls_mandatory_protocols="TLSv1.2 TLSv1.3" \
   boky/postfix
 
-🔳既存の開発
+🔳既存開発の残件
 　🔳移入、戻入のロット、数量のチェック
 　🔳パッケージの解体(パッケージからバルクにする)
+　🔳既存データの訂正
 　🔳権限
-🔳残りの開発
-　🔳製造かんり
-　🔳詰口簿（酒類の充填記録）
+　🔳管理者権限
+　🔳仕様の最終整理
+🔳Phase1の開発
+　🔳製造管理　詰口簿（酒類の充填記録）
+　🔳各帳票画面
+    課税移出管理簿
+    未納税移出管理簿
+    戻入管理簿
+    輸出免税管理簿
+  🔳月次申告資料XML作成
+
+I want to add System Admin Feature.  The system admin function should includes, do you have some recommendation. Please do not code, do not create detail specification, just give me some high level recommendation about the system admin function, system architecture for the function and system admin UI design.
+- System Admin Function
+  - tenant management
+    - create tenant
+    - stop/void tenant
+    - tenant user management
+    - tenant function permission management
+    - tenant master data management
+  - audit log for tenant management activities
+- System Arichitecture
+  - System admin function should be only accessible by system admin user with system scope
+  - tenant management data should be stored in supabase with proper table design
+  - audit log should include information of who did what action on which tenant and when  
+- System Admin UI
+  - there should be a system admin page accessible only by system admin user
+  - the page should have a section for tenant management with functionalities to create tenant, stop/void tenant, manage tenant users, manage tenant function permissions and manage tenant master data
+- System Implementation term
+  - the System Admin will have a same codebase of this repository
+  - for code 
+    -separate route tree
+    - separate layout
+    - separate menu definition
+    - separate permission checks
+    - separate service modules
+    - separate audit policies
 
 
+{"provider": "email", 
+ "providers": ["email"], 
+ "tenant_id": "2a231822-aa8d-452a-aa5f-9f5e4293cdaa"}
+
+
+update auth.users
+set raw_app_meta_data =
+  coalesce(raw_app_meta_data, '{}'::jsonb)
+  || '{"is_system_admin": true, "system_role": "system_admin"}'::jsonb
+where id = '314b44f4-b09a-407f-a2ce-68412ee3f734';
+
+{"provider": "email", "providers": ["email"], "tenant_id": "2a231822-aa8d-452a-aa5f-9f5e4293cdaa"}
+
+{"provider": "email", "providers": ["email"], "tenant_id": "2a231822-aa8d-452a-aa5f-9f5e4293cdaa", "system_role": "system_admin", "is_system_admin": true}

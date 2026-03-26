@@ -283,6 +283,7 @@ import { ref, computed, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import { useI18n } from 'vue-i18n'
 import { supabase } from '@/lib/supabase'
+import { useAuthStore } from '@/stores/auth'
 
 import {
   GridIcon,
@@ -305,7 +306,9 @@ import { useSidebar } from "@/composables/useSidebar";
 
 const route = useRoute();
 const { t } = useI18n()
+const auth = useAuthStore()
 const canSeeUsers = ref(false)
+const canSeeSystemAdmin = computed(() => auth.isSystemAdmin)
 
 const openSubmenuChild = ref(null);
 
@@ -446,6 +449,7 @@ const menuGroups = computed(() => [
         name: t('sidebar.items.userManagement'),
         subItems: [
           ...(canSeeUsers.value ? [{ name: t('sidebar.items.users'), path: "/users", pro: false }] : []),
+          ...(canSeeSystemAdmin.value ? [{ name: t('sidebar.items.systemAdmin'), path: "/system-admin", pro: false }] : []),
           // { name: t('sidebar.items.profile'), path: "/profile", pro: false },
           { name: t('sidebar.items.changePassword'), path: "/change-password", pro: false },
         ],

@@ -10,11 +10,26 @@
         <div class="flex flex-wrap items-center gap-2">
           <button
             class="rounded border border-gray-300 px-3 py-2 hover:bg-gray-50 disabled:opacity-50"
+            :disabled="reportLoading || exportLoading || sortedRows.length === 0"
+            @click="exportExcel"
+          >
+            {{ exportLoading ? t('fillingReport.export.exporting') : t('fillingReport.export.button') }}
+          </button>
+          <button
+            class="rounded border border-gray-300 px-3 py-2 hover:bg-gray-50 disabled:opacity-50"
             :disabled="reportLoading"
             @click="loadReport"
           >
             {{ t('common.refresh') }}
           </button>
+          <a
+            v-if="exportDownloadUrl && exportFileName"
+            :href="exportDownloadUrl"
+            :download="exportFileName"
+            class="text-sm text-blue-700 underline underline-offset-2"
+          >
+            {{ exportFileName }}
+          </a>
         </div>
       </header>
 
@@ -313,7 +328,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue3-toastify'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
@@ -327,6 +342,7 @@ import {
   type FillingHistoryLine,
   type FillingHistoryEvent,
 } from '@/lib/batchFilling'
+import { createWorkbookBlob, type WorkbookCell, type WorkbookSheet } from '@/lib/fillingReportExport'
 import { supabase } from '@/lib/supabase'
 import { formatVolumeNumber } from '@/lib/volumeFormat'
 
@@ -470,9 +486,23 @@ type AggregateBatchRow = {
   detailRows: FillingDetailRow[]
 }
 
+type FillingDetailTotals = {
+  packageNumbers: Record<string, number | null>
+  packageVolumes: Record<string, number | null>
+  sampleVolume: number | null
+  kegUnits: number | null
+  canBottleUnits: number | null
+  totalQuantity: number | null
+  tankLeftVolume: number | null
+  lossVolume: number | null
+}
+
 const { t, locale } = useI18n()
 const pageTitle = computed(() => t('fillingReport.title'))
 const reportLoading = ref(false)
+const exportLoading = ref(false)
+const exportFileName = ref('')
+const exportDownloadUrl = ref('')
 const reportRows = ref<FillingReportRow[]>([])
 const tenantId = ref('')
 const selectedBatchId = ref('')
@@ -515,11 +545,7 @@ const selectedReportRow = computed(
   () => sortedRows.value.find((row) => row.batchId === selectedBatchId.value) ?? null,
 )
 const detailPackageColumns = computed(() => {
-  const columns = new Set<string>()
-  selectedReportRow.value?.detailRows.forEach((row) => {
-    Object.keys(row.packageNumbers).forEach((key) => columns.add(key))
-  })
-  return Array.from(columns).sort((a, b) => a.localeCompare(b))
+  return selectedReportRow.value ? detailPackageColumnsFor(selectedReportRow.value) : []
 })
 const detailTableColumnCount = computed(() => 2 + detailPackageColumns.value.length * 2 + 6)
 const businessYearOptions = computed(() => {
@@ -541,85 +567,11 @@ const liquorCodeOptions = computed(() =>
 )
 const monthOptions = Array.from({ length: 12 }, (_, index) => index + 1)
 const selectedDetailRows = computed(() =>
-  [...(selectedReportRow.value?.detailRows ?? [])].sort((a, b) => {
-    const result = compareTimestamp(a.movementAt, b.movementAt)
-    return result !== 0 ? result : a.id.localeCompare(b.id)
-  }),
+  selectedReportRow.value ? orderedDetailRowsFor(selectedReportRow.value) : [],
 )
-const selectedDetailTotals = computed(() => {
-  const packageNumbers: Record<string, number | null> = {}
-  const packageVolumes: Record<string, number | null> = {}
-  let sampleVolumeTotal = 0
-  let kegUnitsTotal = 0
-  let canBottleUnitsTotal = 0
-  let totalQuantityTotal = 0
-  let lossVolumeTotal = 0
-  let hasSampleVolume = false
-  let hasKegUnits = false
-  let hasCanBottleUnits = false
-  let hasTotalQuantity = false
-  let hasLossVolume = false
-
-  detailPackageColumns.value.forEach((packageCode) => {
-    let packageNumberTotal = 0
-    let packageVolumeTotal = 0
-    let hasPackageNumber = false
-    let hasPackageVolume = false
-
-    selectedDetailRows.value.forEach((row) => {
-      const packageNumber = row.packageNumbers[packageCode]
-      const packageVolume = row.packageVolumes[packageCode]
-      if (packageNumber != null && Number.isFinite(packageNumber)) {
-        packageNumberTotal += packageNumber
-        hasPackageNumber = true
-      }
-      if (packageVolume != null && Number.isFinite(packageVolume)) {
-        packageVolumeTotal += packageVolume
-        hasPackageVolume = true
-      }
-    })
-
-    packageNumbers[packageCode] = hasPackageNumber ? packageNumberTotal : null
-    packageVolumes[packageCode] = hasPackageVolume ? packageVolumeTotal : null
-  })
-
-  selectedDetailRows.value.forEach((row) => {
-    if (row.sampleVolume != null && Number.isFinite(row.sampleVolume)) {
-      sampleVolumeTotal += row.sampleVolume
-      hasSampleVolume = true
-    }
-    if (row.kegUnits != null && Number.isFinite(row.kegUnits)) {
-      kegUnitsTotal += row.kegUnits
-      hasKegUnits = true
-    }
-    if (row.canBottleUnits != null && Number.isFinite(row.canBottleUnits)) {
-      canBottleUnitsTotal += row.canBottleUnits
-      hasCanBottleUnits = true
-    }
-    if (row.totalQuantity != null && Number.isFinite(row.totalQuantity)) {
-      totalQuantityTotal += row.totalQuantity
-      hasTotalQuantity = true
-    }
-    if (row.lossVolume != null && Number.isFinite(row.lossVolume)) {
-      lossVolumeTotal += row.lossVolume
-      hasLossVolume = true
-    }
-  })
-
-  return {
-    packageNumbers,
-    packageVolumes,
-    sampleVolume: hasSampleVolume ? sampleVolumeTotal : null,
-    kegUnits: hasKegUnits ? kegUnitsTotal : null,
-    canBottleUnits: hasCanBottleUnits ? canBottleUnitsTotal : null,
-    totalQuantity: hasTotalQuantity ? totalQuantityTotal : null,
-    tankLeftVolume:
-      selectedDetailRows.value.length > 0
-        ? selectedDetailRows.value[selectedDetailRows.value.length - 1]?.tankLeftVolume ?? null
-        : null,
-    lossVolume: hasLossVolume ? lossVolumeTotal : null,
-  }
-})
+const selectedDetailTotals = computed(() =>
+  buildDetailTotals(selectedDetailRows.value, detailPackageColumns.value),
+)
 
 const filteredRows = computed(() =>
   reportRows.value.filter((row) => {
@@ -796,6 +748,180 @@ function formatDateTime(value: string | null | undefined) {
 function formatTankSummary(tanks: string[]) {
   const values = tanks.map((value) => value.trim()).filter((value) => value.length > 0)
   return values.length ? values.join(', ') : '—'
+}
+
+function buildLocalDateStamp(date = new Date()) {
+  const year = String(date.getFullYear())
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}${month}${day}`
+}
+
+function clearExportDownload() {
+  if (exportDownloadUrl.value) URL.revokeObjectURL(exportDownloadUrl.value)
+  exportDownloadUrl.value = ''
+  exportFileName.value = ''
+}
+
+function buildExportFilterSummary() {
+  const businessYear = `${t('fillingReport.filters.businessYear')}: ${filters.businessYear}`
+  const month = `${t('fillingReport.filters.month')}: ${filters.month || t('fillingReport.defaults.allMonths')}`
+  const liquorCode = `${t('fillingReport.filters.liquorCode')}: ${filters.liquorCode || t('fillingReport.defaults.allLiquorCodes')}`
+  return [businessYear, month, liquorCode].join(' / ')
+}
+
+function buildSummarySheetRows(createdAtLabel: string): WorkbookCell[][] {
+  const header: WorkbookCell[] = [
+    t('fillingReport.table.batchCode'),
+    t('fillingReport.table.name'),
+    t('fillingReport.table.latestFillingAt'),
+    t('fillingReport.table.totalVolume'),
+    t('fillingReport.table.liquorCode'),
+    t('fillingReport.table.abv'),
+    ...packageColumns.value,
+    t('fillingReport.table.sampleVolume'),
+    t('fillingReport.table.tankLeftVolume'),
+    t('fillingReport.table.lossVolume'),
+  ]
+
+  const rows = sortedRows.value.map<WorkbookCell[]>((row) => [
+    row.batchCode ?? '',
+    row.displayName ?? '',
+    row.latestFillingAt ? formatDateTime(row.latestFillingAt) : '',
+    row.totalVolume ?? null,
+    row.liquorCode ?? '',
+    row.abv == null ? '' : formatAbv(row.abv),
+    ...packageColumns.value.map((packageCode) => row.packageNumbers[packageCode] ?? null),
+    row.sampleVolume ?? null,
+    row.tankLeftVolume ?? null,
+    row.lossVolume ?? null,
+  ])
+
+  return [
+    [t('fillingReport.title')],
+    [t('fillingReport.export.generatedAt'), createdAtLabel],
+    [t('fillingReport.export.filters'), buildExportFilterSummary()],
+    [],
+    header,
+    ...rows,
+  ]
+}
+
+function buildDetailSheetRows(row: FillingReportRow): WorkbookCell[][] {
+  const packageCodes = detailPackageColumnsFor(row)
+  const detailRows = orderedDetailRowsFor(row)
+  const totals = buildDetailTotals(detailRows, packageCodes)
+
+  const headerRow1: WorkbookCell[] = [
+    t('fillingReport.detail.table.date'),
+    t('fillingReport.detail.table.beforeFilling'),
+    ...packageCodes.flatMap((packageCode) => [packageCode, null]),
+    t('fillingReport.detail.table.sampleVolume'),
+    t('fillingReport.detail.table.totalQuantity'),
+    null,
+    null,
+    t('fillingReport.detail.table.tankLeftVolume'),
+    t('fillingReport.detail.table.lossVolume'),
+  ]
+  const headerRow2: WorkbookCell[] = [
+    null,
+    null,
+    ...packageCodes.flatMap(() => [
+      t('fillingReport.detail.table.packageNumber'),
+      t('fillingReport.detail.table.packageVolume'),
+    ]),
+    null,
+    t('fillingReport.detail.table.kegVolume'),
+    t('fillingReport.detail.table.canBottleVolume'),
+    t('fillingReport.detail.table.totalVolume'),
+    null,
+    null,
+  ]
+
+  const movementRows = detailRows.map<WorkbookCell[]>((detailRow) => [
+    detailRow.movementAt ? formatDateTime(detailRow.movementAt) : '',
+    [
+      `${t('fillingReport.detail.depth')}: ${formatNumberValue(detailRow.tankFillStartDepth)}`,
+      `${t('fillingReport.detail.quantity')}: ${formatVolumeValue(detailRow.tankFillStartVolume)}`,
+    ].join('\n'),
+    ...packageCodes.flatMap((packageCode) => [
+      detailRow.packageNumbers[packageCode] ?? null,
+      detailRow.packageVolumes[packageCode] ?? null,
+    ]),
+    detailRow.sampleVolume ?? null,
+    detailRow.kegUnits ?? null,
+    detailRow.canBottleUnits ?? null,
+    detailRow.totalQuantity ?? null,
+    detailRow.tankLeftVolume ?? null,
+    detailRow.lossVolume ?? null,
+  ])
+
+  const totalRow: WorkbookCell[] = [
+    null,
+    null,
+    ...packageCodes.flatMap((packageCode) => [
+      totals.packageNumbers[packageCode] ?? null,
+      totals.packageVolumes[packageCode] ?? null,
+    ]),
+    totals.sampleVolume ?? null,
+    totals.kegUnits ?? null,
+    totals.canBottleUnits ?? null,
+    totals.totalQuantity ?? null,
+    totals.tankLeftVolume ?? null,
+    totals.lossVolume ?? null,
+  ]
+
+  return [
+    [t('fillingReport.table.batchCode'), row.batchCode ?? '', t('fillingReport.table.name'), row.displayName ?? ''],
+    [t('fillingReport.table.liquorCode'), row.liquorCode ?? '', t('fillingReport.table.abv'), row.abv == null ? '' : formatAbv(row.abv)],
+    [t('fillingReport.detail.fillingTank'), formatTankSummary(row.fillingTanks)],
+    [],
+    headerRow1,
+    headerRow2,
+    ...movementRows,
+    totalRow,
+  ]
+}
+
+function buildExportSheets(createdAtLabel: string): WorkbookSheet[] {
+  return [
+    {
+      name: 'Summary',
+      rows: buildSummarySheetRows(createdAtLabel),
+    },
+    ...sortedRows.value.map((row, index) => ({
+      name: row.batchCode ?? row.displayName ?? `Batch_${index + 1}`,
+      rows: buildDetailSheetRows(row),
+    })),
+  ]
+}
+
+function exportExcel() {
+  if (!sortedRows.value.length) {
+    toast.error(t('fillingReport.export.noData'))
+    return
+  }
+
+  try {
+    exportLoading.value = true
+    const createdAt = new Date()
+    const fileName = `詰口一覧表_${buildLocalDateStamp(createdAt)}.xlsx`
+    const blob = createWorkbookBlob({
+      creator: 'beeradmin_tail',
+      createdAtIso: createdAt.toISOString(),
+      sheets: buildExportSheets(createdAt.toLocaleString(locale.value)),
+    })
+    const url = URL.createObjectURL(blob)
+    clearExportDownload()
+    exportFileName.value = fileName
+    exportDownloadUrl.value = url
+  } catch (err) {
+    clearExportDownload()
+    const detail = extractErrorMessage(err)
+    toast.error(detail || t('fillingReport.export.failed'))
+  } finally {
+    exportLoading.value = false
+  }
 }
 
 function resolveContainerKind(packageCode: string | null | undefined) {
@@ -1099,6 +1225,96 @@ function compareTimestamp(a: string | null | undefined, b: string | null | undef
   return aValue - bValue
 }
 
+function orderedDetailRowsFor(row: FillingReportRow) {
+  return [...row.detailRows].sort((a, b) => {
+    const result = compareTimestamp(a.movementAt, b.movementAt)
+    return result !== 0 ? result : a.id.localeCompare(b.id)
+  })
+}
+
+function detailPackageColumnsFor(row: FillingReportRow) {
+  const columns = new Set<string>()
+  row.detailRows.forEach((detailRow) => {
+    Object.keys(detailRow.packageNumbers).forEach((key) => columns.add(key))
+  })
+  return Array.from(columns).sort((a, b) => a.localeCompare(b))
+}
+
+function buildDetailTotals(
+  detailRows: FillingDetailRow[],
+  detailPackageCodes: string[],
+): FillingDetailTotals {
+  const packageNumbers: Record<string, number | null> = {}
+  const packageVolumes: Record<string, number | null> = {}
+  let sampleVolumeTotal = 0
+  let kegUnitsTotal = 0
+  let canBottleUnitsTotal = 0
+  let totalQuantityTotal = 0
+  let lossVolumeTotal = 0
+  let hasSampleVolume = false
+  let hasKegUnits = false
+  let hasCanBottleUnits = false
+  let hasTotalQuantity = false
+  let hasLossVolume = false
+
+  detailPackageCodes.forEach((packageCode) => {
+    let packageNumberTotal = 0
+    let packageVolumeTotal = 0
+    let hasPackageNumber = false
+    let hasPackageVolume = false
+
+    detailRows.forEach((row) => {
+      const packageNumber = row.packageNumbers[packageCode]
+      const packageVolume = row.packageVolumes[packageCode]
+      if (packageNumber != null && Number.isFinite(packageNumber)) {
+        packageNumberTotal += packageNumber
+        hasPackageNumber = true
+      }
+      if (packageVolume != null && Number.isFinite(packageVolume)) {
+        packageVolumeTotal += packageVolume
+        hasPackageVolume = true
+      }
+    })
+
+    packageNumbers[packageCode] = hasPackageNumber ? packageNumberTotal : null
+    packageVolumes[packageCode] = hasPackageVolume ? packageVolumeTotal : null
+  })
+
+  detailRows.forEach((row) => {
+    if (row.sampleVolume != null && Number.isFinite(row.sampleVolume)) {
+      sampleVolumeTotal += row.sampleVolume
+      hasSampleVolume = true
+    }
+    if (row.kegUnits != null && Number.isFinite(row.kegUnits)) {
+      kegUnitsTotal += row.kegUnits
+      hasKegUnits = true
+    }
+    if (row.canBottleUnits != null && Number.isFinite(row.canBottleUnits)) {
+      canBottleUnitsTotal += row.canBottleUnits
+      hasCanBottleUnits = true
+    }
+    if (row.totalQuantity != null && Number.isFinite(row.totalQuantity)) {
+      totalQuantityTotal += row.totalQuantity
+      hasTotalQuantity = true
+    }
+    if (row.lossVolume != null && Number.isFinite(row.lossVolume)) {
+      lossVolumeTotal += row.lossVolume
+      hasLossVolume = true
+    }
+  })
+
+  return {
+    packageNumbers,
+    packageVolumes,
+    sampleVolume: hasSampleVolume ? sampleVolumeTotal : null,
+    kegUnits: hasKegUnits ? kegUnitsTotal : null,
+    canBottleUnits: hasCanBottleUnits ? canBottleUnitsTotal : null,
+    totalQuantity: hasTotalQuantity ? totalQuantityTotal : null,
+    tankLeftVolume: detailRows.length > 0 ? detailRows[detailRows.length - 1]?.tankLeftVolume ?? null : null,
+    lossVolume: hasLossVolume ? lossVolumeTotal : null,
+  }
+}
+
 function buildReportRows(
   movements: MovementRow[],
   linesByMovementId: Map<string, MovementLineRow[]>,
@@ -1362,6 +1578,10 @@ async function loadReport() {
 
 onMounted(async () => {
   await loadReport()
+})
+
+onBeforeUnmount(() => {
+  clearExportDownload()
 })
 </script>
 

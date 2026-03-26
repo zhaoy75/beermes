@@ -5,7 +5,7 @@
 - Expose the page under `製造管理 > 帳票一覧`.
 - Show filling results across all batches in one read-only table.
 - Reuse the existing filling calculation rules already defined for Batch Packing / Batch Edit so report totals stay consistent with the operational screens.
-- Design the Excel export feature for `詰口一覧表` before implementation.
+- Add Excel export for `詰口一覧表`.
 
 ## Scope
 - Frontend only.
@@ -33,13 +33,12 @@
 - Use existing batch/filling persistence without adding a new backend API.
 - Keep the page read-only in v1.
 - Allow drill-down on a batch by clicking `ロット番号` in the main report table.
-- For the current subtask:
-  - design the export behavior only
-  - do not implement the Excel export in this turn
+- Add a page-level Excel export button.
+- Generate a downloadable `.xlsx` workbook from the current page data.
+- Show a download link after successful workbook generation.
 
 ## Non-Goals
 - Creating, editing, or deleting filling records from this report.
-- Implementing the Excel export in this turn.
 - Adding print or CSV behavior as part of this Excel-export design task.
 - Adding new database schema, SQL functions, or RLS policies.
 - Refactoring unrelated menu/layout code.
@@ -49,6 +48,7 @@
 - `specs/current-task.md`
 - `docs/UI/filling-report.md`
 - `docs/UI/filling-report-excel-export.md`
+- `beeradmin_tail/src/lib/fillingReportExport.ts`
 - `beeradmin_tail/src/router/tenant-routes.ts`
 - `beeradmin_tail/src/components/layout/AppSidebar.vue`
 - `beeradmin_tail/src/views/Pages/FillingReport.vue`
@@ -142,7 +142,8 @@
   - `PageBreadcrumb`
   - page title and subtitle
   - search section
-  - top-level refresh action
+- top-level refresh action
+- top-level Excel export action
 
 ## Page Behavior
 - Load report rows on mount.
@@ -219,6 +220,16 @@
 - Error handling:
   - clear rows on fatal fetch failure
   - show toast with the error message
+- Excel export behavior:
+  - add an export button in the page header
+  - generate a workbook from the current page state without a separate export-only fetch
+  - file name format:
+    - `詰口一覧表_YYYYMMDD.xlsx`
+  - workbook structure:
+    - first sheet: `Summary`
+    - one detail sheet per exported batch
+  - after successful generation:
+    - show a download link for the generated file
 
 ## Implementation Notes
 - Prefer reusing the batch info resolution already present in `ProducedBeer.vue` for:
@@ -277,6 +288,8 @@
   - add the dedicated UI specification for the `詰口一覧表` page
 - `docs/UI/filling-report-excel-export.md`
   - add the dedicated design document for Excel export behavior
+- `beeradmin_tail/src/lib/fillingReportExport.ts`
+  - add a lightweight workbook builder for the filling report export
 - `beeradmin_tail/src/router/tenant-routes.ts`
   - add the new report route
 - `beeradmin_tail/src/components/layout/AppSidebar.vue`
@@ -388,12 +401,30 @@
   - non-fixed filling-line volume values from movement meta are converted to liters using the package master `volume_uom`
   - this normalized liter value is then reused by detail package volume, `総量 (L)`, and derived loss calculations on the report page
   - when `mst_package.volume_uom` is stored as a UOM id instead of a literal code, resolve it through `mst_uom` before conversion
-- Added a dedicated design-document subtask for Excel export of `詰口一覧表`.
-- This turn is design-only for export:
-  - no export button or workbook generation code has been implemented yet
-- The Excel export design must reuse the existing data source and computed state in `beeradmin_tail/src/views/Pages/FillingReport.vue` instead of defining a separate export-only query path.
+- Implemented Excel export for `詰口一覧表` directly in `beeradmin_tail/src/views/Pages/FillingReport.vue`.
+- The export flow reuses the existing page data source and computed state instead of defining a separate export-only query path.
+- Added an export button in the page header:
+  - disabled while the report is loading
+  - disabled while export generation is running
+  - disabled when there is no visible report data to export
+- After workbook generation, the page shows a download link for the generated file.
+- The export file name format is:
+  - `詰口一覧表_YYYYMMDD.xlsx`
+- Added a lightweight in-repo workbook generator at `beeradmin_tail/src/lib/fillingReportExport.ts`:
+  - builds a valid `.xlsx` workbook in the browser
+  - sanitizes and deduplicates sheet names for Excel limits
+  - avoids adding a new third-party Excel dependency
+- Workbook layout implemented as:
+  - first sheet `Summary`
+  - one detail sheet per visible batch row in the report
+- The `Summary` sheet exports the same visible data as the main report table, including dynamic package columns.
+- Each batch detail sheet exports the same visible data as `バッチ詰口明細`, including:
+  - the batch summary line
+  - dynamic package columns with `本数` and `容量 (L)`
+  - grouped `総数量` sub columns
+  - the detail total row
 - Validation outcome:
   - `npm run type-check` in `beeradmin_tail`: passed
-  - `npm exec eslint src/views/Pages/FillingReport.vue src/router/tenant-routes.ts src/components/layout/AppSidebar.vue` in `beeradmin_tail`: passed
+  - `npm exec eslint src/views/Pages/FillingReport.vue src/lib/fillingReportExport.ts src/router/tenant-routes.ts src/components/layout/AppSidebar.vue` in `beeradmin_tail`: passed
   - locale JSON parse check for `src/locales/ja.json` and `src/locales/en.json`: passed
   - `npm run test` in `beeradmin_tail`: failed because `package.json` does not define a `test` script

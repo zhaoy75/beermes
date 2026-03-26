@@ -1950,6 +1950,14 @@
     "results": {
       "count": "{count}件"
     },
+    "export": {
+      "button": "Excel Export",
+      "exporting": "出力中…",
+      "generatedAt": "生成日時",
+      "filters": "抽出条件",
+      "noData": "出力対象のデータがありません。",
+      "failed": "Excel ファイルの生成に失敗しました。"
+    },
     "table": {
       "batchCode": "ロット番号",
       "name": "名前",

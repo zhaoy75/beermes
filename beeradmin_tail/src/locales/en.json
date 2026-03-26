@@ -1958,6 +1958,14 @@
     "results": {
       "count": "{count} results"
     },
+    "export": {
+      "button": "Excel Export",
+      "exporting": "Exporting…",
+      "generatedAt": "Generated At",
+      "filters": "Filters",
+      "noData": "There is no data to export.",
+      "failed": "Failed to generate the Excel file."
+    },
     "table": {
       "batchCode": "Lot No",
       "name": "Name",

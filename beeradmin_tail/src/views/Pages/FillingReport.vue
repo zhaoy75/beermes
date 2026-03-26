@@ -228,19 +228,29 @@
               <table class="min-w-full divide-y divide-gray-200 text-sm">
                 <thead class="bg-gray-50 text-xs uppercase text-gray-600">
                   <tr>
-                    <th class="px-3 py-2 text-left">{{ t('fillingReport.detail.table.date') }}</th>
-                    <th class="px-3 py-2 text-left">{{ t('fillingReport.detail.table.beforeFilling') }}</th>
+                    <th rowspan="2" class="px-3 py-2 text-left align-middle">{{ t('fillingReport.detail.table.date') }}</th>
+                    <th rowspan="2" class="px-3 py-2 text-left align-middle">{{ t('fillingReport.detail.table.beforeFilling') }}</th>
                     <th
                       v-for="packageCode in detailPackageColumns"
                       :key="`detail-package-header-${packageCode}`"
-                      class="px-3 py-2 text-right"
+                      colspan="2"
+                      class="px-3 py-2 text-center"
                     >
                       {{ packageCode }}
                     </th>
-                    <th class="px-3 py-2 text-right">{{ t('fillingReport.detail.table.sampleVolume') }}</th>
-                    <th class="px-3 py-2 text-right">{{ t('fillingReport.detail.table.totalQuantity') }}</th>
-                    <th class="px-3 py-2 text-right">{{ t('fillingReport.detail.table.tankLeftVolume') }}</th>
-                    <th class="px-3 py-2 text-right">{{ t('fillingReport.detail.table.lossVolume') }}</th>
+                    <th rowspan="2" class="px-3 py-2 text-right align-middle">{{ t('fillingReport.detail.table.sampleVolume') }}</th>
+                    <th colspan="3" class="px-3 py-2 text-center">{{ t('fillingReport.detail.table.totalQuantity') }}</th>
+                    <th rowspan="2" class="px-3 py-2 text-right align-middle">{{ t('fillingReport.detail.table.tankLeftVolume') }}</th>
+                    <th rowspan="2" class="px-3 py-2 text-right align-middle">{{ t('fillingReport.detail.table.lossVolume') }}</th>
+                  </tr>
+                  <tr>
+                    <template v-for="packageCode in detailPackageColumns" :key="`detail-package-subheader-${packageCode}`">
+                      <th class="px-3 py-2 text-right">{{ t('fillingReport.detail.table.packageNumber') }}</th>
+                      <th class="px-3 py-2 text-right">{{ t('fillingReport.detail.table.packageVolume') }}</th>
+                    </template>
+                    <th class="px-3 py-2 text-right">{{ t('fillingReport.detail.table.kegVolume') }}</th>
+                    <th class="px-3 py-2 text-right">{{ t('fillingReport.detail.table.canBottleVolume') }}</th>
+                    <th class="px-3 py-2 text-right">{{ t('fillingReport.detail.table.totalVolume') }}</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100 bg-white">
@@ -259,17 +269,38 @@
                         {{ t('fillingReport.detail.quantity') }}: {{ formatVolumeValue(detailRow.tankFillStartVolume) }}
                       </div>
                     </td>
-                    <td
-                      v-for="packageCode in detailPackageColumns"
-                      :key="`detail-package-row-${detailRow.id}-${packageCode}`"
-                      class="px-3 py-2 text-right"
-                    >
-                      {{ formatPackageNumber(detailRow.packageNumbers[packageCode]) }}
-                    </td>
+                    <template v-for="packageCode in detailPackageColumns" :key="`detail-package-row-${detailRow.id}-${packageCode}`">
+                      <td class="px-3 py-2 text-right">
+                        {{ formatPackageNumber(detailRow.packageNumbers[packageCode]) }}
+                      </td>
+                      <td class="px-3 py-2 text-right">
+                        {{ formatVolumeValue(detailRow.packageVolumes[packageCode]) }}
+                      </td>
+                    </template>
                     <td class="px-3 py-2 text-right">{{ formatVolumeValue(detailRow.sampleVolume) }}</td>
+                    <td class="px-3 py-2 text-right">{{ formatPackageNumber(detailRow.kegUnits) }}</td>
+                    <td class="px-3 py-2 text-right">{{ formatPackageNumber(detailRow.canBottleUnits) }}</td>
                     <td class="px-3 py-2 text-right">{{ formatVolumeValue(detailRow.totalQuantity) }}</td>
                     <td class="px-3 py-2 text-right">{{ formatVolumeValue(detailRow.tankLeftVolume) }}</td>
                     <td class="px-3 py-2 text-right">{{ formatVolumeValue(detailRow.lossVolume) }}</td>
+                  </tr>
+                  <tr v-if="selectedDetailRows.length > 0" class="bg-gray-50 font-semibold text-gray-900">
+                    <td class="px-3 py-2"></td>
+                    <td class="px-3 py-2"></td>
+                    <template v-for="packageCode in detailPackageColumns" :key="`detail-package-total-${packageCode}`">
+                      <td class="px-3 py-2 text-right">
+                        {{ formatPackageNumber(selectedDetailTotals.packageNumbers[packageCode]) }}
+                      </td>
+                      <td class="px-3 py-2 text-right">
+                        {{ formatVolumeValue(selectedDetailTotals.packageVolumes[packageCode]) }}
+                      </td>
+                    </template>
+                    <td class="px-3 py-2 text-right">{{ formatVolumeValue(selectedDetailTotals.sampleVolume) }}</td>
+                    <td class="px-3 py-2 text-right">{{ formatPackageNumber(selectedDetailTotals.kegUnits) }}</td>
+                    <td class="px-3 py-2 text-right">{{ formatPackageNumber(selectedDetailTotals.canBottleUnits) }}</td>
+                    <td class="px-3 py-2 text-right">{{ formatVolumeValue(selectedDetailTotals.totalQuantity) }}</td>
+                    <td class="px-3 py-2 text-right">{{ formatVolumeValue(selectedDetailTotals.tankLeftVolume) }}</td>
+                    <td class="px-3 py-2 text-right">{{ formatVolumeValue(selectedDetailTotals.lossVolume) }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -291,6 +322,7 @@ import {
   fillingSampleVolumeFromEvent,
   packingLossFromEvent,
   packingTotalLineVolumeFromEvent,
+  resolveFillingLineVolumeFromEvent,
   type FillingCalculationOptions,
   type FillingHistoryLine,
   type FillingHistoryEvent,
@@ -304,6 +336,7 @@ type PackageLookup = {
   packageCode: string
   volumeFix: boolean
   unitVolumeLiters: number | null
+  volumeUomCode: string | null
 }
 
 type PackageRow = {
@@ -317,6 +350,11 @@ type PackageRow = {
 type RegistryRow = {
   def_id: string
   def_key: string | null
+}
+
+type VolumeUomRow = {
+  id: string
+  code: string | null
 }
 
 type AttrDefRow = {
@@ -378,7 +416,10 @@ type FillingDetailRow = {
   tankFillStartDepth: number | null
   tankFillStartVolume: number | null
   packageNumbers: Record<string, number | null>
+  packageVolumes: Record<string, number | null>
   sampleVolume: number | null
+  kegUnits: number | null
+  canBottleUnits: number | null
   totalQuantity: number | null
   tankLeftVolume: number | null
   lossVolume: number | null
@@ -404,6 +445,12 @@ type FillingReportRow = {
 type AggregatePackageGroup = {
   label: string
   quantity: number | null
+}
+
+type DetailPackageGroup = {
+  label: string
+  quantity: number | null
+  volume: number | null
 }
 
 type AggregateBatchRow = {
@@ -474,7 +521,7 @@ const detailPackageColumns = computed(() => {
   })
   return Array.from(columns).sort((a, b) => a.localeCompare(b))
 })
-const detailTableColumnCount = computed(() => 2 + detailPackageColumns.value.length + 4)
+const detailTableColumnCount = computed(() => 2 + detailPackageColumns.value.length * 2 + 6)
 const businessYearOptions = computed(() => {
   const years = new Set<number>([currentBusinessYear()])
   reportRows.value.forEach((row) => {
@@ -495,10 +542,84 @@ const liquorCodeOptions = computed(() =>
 const monthOptions = Array.from({ length: 12 }, (_, index) => index + 1)
 const selectedDetailRows = computed(() =>
   [...(selectedReportRow.value?.detailRows ?? [])].sort((a, b) => {
-    const result = compareTimestamp(b.movementAt, a.movementAt)
+    const result = compareTimestamp(a.movementAt, b.movementAt)
     return result !== 0 ? result : a.id.localeCompare(b.id)
   }),
 )
+const selectedDetailTotals = computed(() => {
+  const packageNumbers: Record<string, number | null> = {}
+  const packageVolumes: Record<string, number | null> = {}
+  let sampleVolumeTotal = 0
+  let kegUnitsTotal = 0
+  let canBottleUnitsTotal = 0
+  let totalQuantityTotal = 0
+  let lossVolumeTotal = 0
+  let hasSampleVolume = false
+  let hasKegUnits = false
+  let hasCanBottleUnits = false
+  let hasTotalQuantity = false
+  let hasLossVolume = false
+
+  detailPackageColumns.value.forEach((packageCode) => {
+    let packageNumberTotal = 0
+    let packageVolumeTotal = 0
+    let hasPackageNumber = false
+    let hasPackageVolume = false
+
+    selectedDetailRows.value.forEach((row) => {
+      const packageNumber = row.packageNumbers[packageCode]
+      const packageVolume = row.packageVolumes[packageCode]
+      if (packageNumber != null && Number.isFinite(packageNumber)) {
+        packageNumberTotal += packageNumber
+        hasPackageNumber = true
+      }
+      if (packageVolume != null && Number.isFinite(packageVolume)) {
+        packageVolumeTotal += packageVolume
+        hasPackageVolume = true
+      }
+    })
+
+    packageNumbers[packageCode] = hasPackageNumber ? packageNumberTotal : null
+    packageVolumes[packageCode] = hasPackageVolume ? packageVolumeTotal : null
+  })
+
+  selectedDetailRows.value.forEach((row) => {
+    if (row.sampleVolume != null && Number.isFinite(row.sampleVolume)) {
+      sampleVolumeTotal += row.sampleVolume
+      hasSampleVolume = true
+    }
+    if (row.kegUnits != null && Number.isFinite(row.kegUnits)) {
+      kegUnitsTotal += row.kegUnits
+      hasKegUnits = true
+    }
+    if (row.canBottleUnits != null && Number.isFinite(row.canBottleUnits)) {
+      canBottleUnitsTotal += row.canBottleUnits
+      hasCanBottleUnits = true
+    }
+    if (row.totalQuantity != null && Number.isFinite(row.totalQuantity)) {
+      totalQuantityTotal += row.totalQuantity
+      hasTotalQuantity = true
+    }
+    if (row.lossVolume != null && Number.isFinite(row.lossVolume)) {
+      lossVolumeTotal += row.lossVolume
+      hasLossVolume = true
+    }
+  })
+
+  return {
+    packageNumbers,
+    packageVolumes,
+    sampleVolume: hasSampleVolume ? sampleVolumeTotal : null,
+    kegUnits: hasKegUnits ? kegUnitsTotal : null,
+    canBottleUnits: hasCanBottleUnits ? canBottleUnitsTotal : null,
+    totalQuantity: hasTotalQuantity ? totalQuantityTotal : null,
+    tankLeftVolume:
+      selectedDetailRows.value.length > 0
+        ? selectedDetailRows.value[selectedDetailRows.value.length - 1]?.tankLeftVolume ?? null
+        : null,
+    lossVolume: hasLossVolume ? lossVolumeTotal : null,
+  }
+})
 
 const filteredRows = computed(() =>
   reportRows.value.filter((row) => {
@@ -677,6 +798,13 @@ function formatTankSummary(tanks: string[]) {
   return values.length ? values.join(', ') : '—'
 }
 
+function resolveContainerKind(packageCode: string | null | undefined) {
+  const normalized = String(packageCode ?? '').trim().toLowerCase()
+  if (!normalized) return 'other'
+  if (normalized.includes('keg')) return 'keg'
+  return 'other'
+}
+
 function extractErrorMessage(err: unknown) {
   if (!err) return ''
   if (typeof err === 'string') return err
@@ -710,15 +838,40 @@ async function loadPackageLookup(tenant: string) {
   return new Map<string, PackageLookup>(
     ((data ?? []) as PackageRow[]).map((row) => {
       const unitVolume = toNumber(row.unit_volume)
-      const unitVolumeLiters = convertToLiters(unitVolume, row.volume_uom ?? null)
+      const volumeUomCode = resolveVolumeUomCode(row.volume_uom ?? null, volumeUomCodeById.value)
+      const unitVolumeLiters = convertToLiters(unitVolume, volumeUomCode)
       return [
         String(row.id),
         {
           packageCode: String(row.package_code ?? row.id),
           volumeFix: row.volume_fix_flg === true,
           unitVolumeLiters,
+          volumeUomCode,
         },
       ]
+    }),
+  )
+}
+
+const volumeUomCodeById = ref<Map<string, string>>(new Map())
+
+function resolveVolumeUomCode(value: string | null | undefined, uomCodeById: Map<string, string>) {
+  if (!value) return null
+  return uomCodeById.get(value) ?? value
+}
+
+async function loadVolumeUomCodes() {
+  const { data, error } = await supabase
+    .from('mst_uom')
+    .select('id, code')
+    .eq('dimension', 'volume')
+    .order('code', { ascending: true })
+  if (error) throw error
+
+  return new Map<string, string>(
+    ((data ?? []) as VolumeUomRow[]).flatMap((row) => {
+      if (!row?.id || !row?.code) return []
+      return [[String(row.id), String(row.code)]]
     }),
   )
 }
@@ -849,17 +1002,25 @@ async function loadBatchInfo(batchIds: string[], liquorCodeById: Map<string, str
   return infoMap
 }
 
-function normalizeFillingLines(rawLines: unknown): FillingHistoryLine[] {
+function normalizeFillingLines(rawLines: unknown, lookup: Map<string, PackageLookup>): FillingHistoryLine[] {
   if (!Array.isArray(rawLines)) return []
   return rawLines.map((line) => {
     const record = isRecord(line) ? line : {}
+    const packageTypeId =
+      typeof record.package_type_id === 'string' && record.package_type_id.trim()
+        ? record.package_type_id.trim()
+        : null
+    const packageDef = packageTypeId ? lookup.get(packageTypeId) : null
+    const rawQty = toNumber(record.qty)
+    const rawVolume = toNumber(record.volume)
+    const normalizedVolume =
+      packageDef?.volumeFix === false
+        ? convertToLiters(rawVolume ?? rawQty, packageDef?.volumeUomCode ?? null)
+        : rawVolume
     return {
-      package_type_id:
-        typeof record.package_type_id === 'string' && record.package_type_id.trim()
-          ? record.package_type_id.trim()
-          : null,
-      qty: toNumber(record.qty),
-      volume: toNumber(record.volume),
+      package_type_id: packageTypeId,
+      qty: rawQty,
+      volume: normalizedVolume,
       sample_flg: record.sample_flg === true || record.sample_flg === 'true',
     } satisfies FillingHistoryLine
   })
@@ -892,7 +1053,7 @@ function fillingEventFromMovement(
   lookup: Map<string, PackageLookup>,
 ) {
   const meta = isRecord(movement.meta) ? movement.meta : {}
-  const metaLines = normalizeFillingLines(meta.filling_lines)
+  const metaLines = normalizeFillingLines(meta.filling_lines, lookup)
   const fallbackLines = deriveFillingLinesFromMovementLines(linesByMovementId.get(String(movement.id)) ?? [], lookup)
   const fillingLines = metaLines.length ? metaLines : fallbackLines
   return {
@@ -911,6 +1072,16 @@ function sampleVolumeFromEvent(event: FillingHistoryEvent, options: FillingCalcu
   if (event.sample_volume != null && Number.isFinite(event.sample_volume)) return event.sample_volume
   const lines = Array.isArray(event.filling_lines) ? event.filling_lines : []
   return fillingSampleVolumeFromEvent(lines, options)
+}
+
+function lossVolumeFromMovement(
+  meta: JsonRecord | null | undefined,
+  event: FillingHistoryEvent,
+  options: FillingCalculationOptions,
+) {
+  const persistedLoss = toNumber(meta?.tank_loss_volume)
+  if (persistedLoss != null && Number.isFinite(persistedLoss)) return persistedLoss
+  return packingLossFromEvent(event, options)
 }
 
 function packageNumberFromLine(line: FillingHistoryLine, lookup: Map<string, PackageLookup>) {
@@ -946,8 +1117,8 @@ function buildReportRows(
     const event = fillingEventFromMovement(movement, linesByMovementId, lookup)
     const sampleVolume = sampleVolumeFromEvent(event, fillingOptions)
     const totalQuantity = packingTotalLineVolumeFromEvent(event, fillingOptions)
-    const lossVolume = packingLossFromEvent(event, fillingOptions)
-    const detailPackageGroups = new Map<string, AggregatePackageGroup>()
+    const lossVolume = lossVolumeFromMovement(meta, event, fillingOptions)
+    const detailPackageGroups = new Map<string, DetailPackageGroup>()
 
     if (!rowsByBatch.has(batchId)) {
       rowsByBatch.set(batchId, {
@@ -997,6 +1168,7 @@ function buildReportRows(
       const packageDef = lookup.get(packageTypeId)
       const label = packageDef?.packageCode ?? packageTypeId
       const quantity = packageNumberFromLine(line, lookup)
+      const volume = resolveFillingLineVolumeFromEvent(line, fillingOptions)
       const group = row.packageGroups.get(packageTypeId)
       const detailGroup = detailPackageGroups.get(packageTypeId)
       if (!group) {
@@ -1014,15 +1186,21 @@ function buildReportRows(
         detailPackageGroups.set(packageTypeId, {
           label,
           quantity,
+          volume,
         })
         return
       }
 
       if (detailGroup.quantity == null || quantity == null) {
         detailGroup.quantity = detailGroup.quantity ?? quantity
+      } else {
+        detailGroup.quantity += quantity
+      }
+      if (detailGroup.volume == null || volume == null) {
+        detailGroup.volume = detailGroup.volume ?? volume
         return
       }
-      detailGroup.quantity += quantity
+      detailGroup.volume += volume
     })
 
     const orderedDetailGroups = Array.from(detailPackageGroups.values()).sort((a, b) =>
@@ -1032,6 +1210,20 @@ function buildReportRows(
       acc[group.label] = group.quantity
       return acc
     }, {})
+    const detailPackageVolumes = orderedDetailGroups.reduce<Record<string, number | null>>((acc, group) => {
+      acc[group.label] = group.volume
+      return acc
+    }, {})
+    let kegUnits: number | null = null
+    let canBottleUnits: number | null = null
+    orderedDetailGroups.forEach((group) => {
+      if (group.quantity == null || !Number.isFinite(group.quantity)) return
+      if (resolveContainerKind(group.label) === 'keg') {
+        kegUnits = (kegUnits ?? 0) + group.quantity
+        return
+      }
+      canBottleUnits = (canBottleUnits ?? 0) + group.quantity
+    })
 
     row.detailRows.push({
       id: String(movement.id),
@@ -1041,7 +1233,10 @@ function buildReportRows(
       tankFillStartDepth: toNumber(meta.tank_fill_start_depth),
       tankFillStartVolume: toNumber(meta.tank_fill_start_volume),
       packageNumbers: detailPackageNumbers,
+      packageVolumes: detailPackageVolumes,
       sampleVolume,
+      kegUnits,
+      canBottleUnits,
       totalQuantity,
       tankLeftVolume: toNumber(meta.tank_left_volume),
       lossVolume,
@@ -1084,8 +1279,8 @@ async function loadReport() {
     reportRows.value = []
 
     const tenant = await ensureTenant()
-    const [packageLookup, liquorCodeById, movementRowsBySource, movementRowsByIntent] = await Promise.all([
-      loadPackageLookup(tenant),
+    const [uomCodeById, liquorCodeById, movementRowsBySource, movementRowsByIntent] = await Promise.all([
+      loadVolumeUomCodes(),
       loadLiquorCodeMap(),
       supabase
         .from('inv_movements')
@@ -1105,6 +1300,8 @@ async function loadReport() {
     if (movementRowsBySource.error) throw movementRowsBySource.error
     if (movementRowsByIntent.error) throw movementRowsByIntent.error
 
+    volumeUomCodeById.value = uomCodeById
+    const packageLookup = await loadPackageLookup(tenant)
     packageLookupMap.value = packageLookup
 
     const mergedMovementMap = new Map<string, MovementRow>()

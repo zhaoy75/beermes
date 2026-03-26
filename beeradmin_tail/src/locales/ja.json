@@ -1971,8 +1971,13 @@
       "table": {
         "date": "日付",
         "beforeFilling": "樽詰め前 深さ、数量",
+        "packageNumber": "本数",
+        "packageVolume": "容量(L)",
         "sampleVolume": "サンプル",
         "totalQuantity": "総数量",
+        "kegVolume": "樽",
+        "canBottleVolume": "缶・瓶",
+        "totalVolume": "総量 (L)",
         "tankLeftVolume": "タンク残",
         "lossVolume": "欠減"
       }

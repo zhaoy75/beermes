@@ -5,10 +5,12 @@
 - Expose the page under `製造管理 > 帳票一覧`.
 - Show filling results across all batches in one read-only table.
 - Reuse the existing filling calculation rules already defined for Batch Packing / Batch Edit so report totals stay consistent with the operational screens.
+- Design the Excel export feature for `詰口一覧表` before implementation.
 
 ## Scope
 - Frontend only.
 - Add a UI specification document for the new page under `docs/UI`.
+- Add a dedicated design document for Excel export behavior under `docs/UI`.
 - Add one new route, one new page component, and the related sidebar/i18n entries.
 - Add one report table that lists batches with filling history.
 - Add a search section above the report table.
@@ -31,10 +33,14 @@
 - Use existing batch/filling persistence without adding a new backend API.
 - Keep the page read-only in v1.
 - Allow drill-down on a batch by clicking `ロット番号` in the main report table.
+- For the current subtask:
+  - design the export behavior only
+  - do not implement the Excel export in this turn
 
 ## Non-Goals
 - Creating, editing, or deleting filling records from this report.
-- Adding export, print, or CSV behavior in this task unless implementation remains trivial after the base page is complete.
+- Implementing the Excel export in this turn.
+- Adding print or CSV behavior as part of this Excel-export design task.
 - Adding new database schema, SQL functions, or RLS policies.
 - Refactoring unrelated menu/layout code.
 - Building the other production report pages mentioned in `todo.txt`.
@@ -42,6 +48,7 @@
 ## Affected Files
 - `specs/current-task.md`
 - `docs/UI/filling-report.md`
+- `docs/UI/filling-report-excel-export.md`
 - `beeradmin_tail/src/router/tenant-routes.ts`
 - `beeradmin_tail/src/components/layout/AppSidebar.vue`
 - `beeradmin_tail/src/views/Pages/FillingReport.vue`
@@ -110,8 +117,8 @@
   - `tank_left_volume` from the latest filling movement only
   - this is intentionally not summed across movements
 - `欠減(Liter)`
-  - sum of derived filling loss across all filling movements for the batch
-  - use the same rule as Batch Packing / Batch Edit:
+  - use persisted `inv_movements.meta.tank_loss_volume` when available
+  - otherwise derive filling loss with the same rule as Batch Packing / Batch Edit:
     - `tank_fill_start_volume - tank_left_volume - non_sample_line_volume - sample_volume`
 
 ### Filling Calculation Rules
@@ -167,18 +174,44 @@
   - `Filling Tank` displays the distinct tank numbers used by the selected batch's filling movements, joined in display order
   - detail row granularity:
     - one row per related `inv_movements` filling movement
+  - detail row order:
+    - `日付` ascending
+  - detail total row:
+    - append one total row after the movement rows
+    - `日付`: blank
+    - `樽詰め前 深さ、数量`: blank
+    - package-type sub columns:
+      - `本数`: sum across the selected batch's detail rows
+      - `容量 (L)`: sum across the selected batch's detail rows
+    - `サンプル`: sum across the selected batch's detail rows
+    - `総数量` sub columns:
+      - `樽`: sum of keg unit counts across the selected batch's detail rows
+      - `缶・瓶`: sum of non-keg unit counts across the selected batch's detail rows
+      - `総量 (L)`: sum of packaged liters across the selected batch's detail rows
+    - `タンク残`: use the last detail row's `タンク残`
+    - `欠減`: sum across the selected batch's detail rows
   - detail table columns:
     - `日付`
     - `樽詰め前 深さ、数量`
     - dynamic package-type columns
       - header uses the package type code
-      - cell shows that movement row's package number for the package type
+      - each package type header expands to two sub columns:
+        - `本数`
+        - `容量 (L)`
+      - `本数` shows that movement row's package number for the package type
+      - `容量 (L)` shows that movement row's packaged volume in liters for the package type
     - `サンプル`
     - `総数量`
-    - `タンク残`
-    - `欠減`
+      - expands to three sub columns:
+        - `樽`
+        - `缶・瓶`
+        - `総量 (L)`
+  - `タンク残`
+  - `欠減`
   - detail `総数量` definition:
-    - packaged non-sample filling volume for that movement in liters
+    - `樽`: keg unit count for that movement
+    - `缶・瓶`: non-keg unit count for that movement
+    - `総量 (L)`: packaged non-sample filling volume for that movement in liters
   - detail `樽詰め前 深さ、数量` definition:
     - show the persisted `tank_fill_start_depth` and `tank_fill_start_volume` together in one display cell
 - Empty state:
@@ -225,6 +258,10 @@
   - confirm the detail table package columns are based only on package types present in the selected batch's movements
   - confirm detail `総数量` matches non-sample packaged liters for the movement
   - confirm detail `樽詰め前 深さ、数量` shows the stored start depth and start volume values together
+  - confirm the detail table appends one total row
+  - confirm the total row leaves `日付` and `樽詰め前 深さ、数量` blank
+  - confirm the total row sums package columns, `サンプル`, `総数量`, and `欠減`
+  - confirm the total row `タンク残` matches the last movement row in ascending `日付` order
 - Required checks before finishing implementation:
   - unit tests
   - lint
@@ -238,6 +275,8 @@
   - keep the `詰口一覧表` task spec aligned with UI-document and implementation scope
 - `docs/UI/filling-report.md`
   - add the dedicated UI specification for the `詰口一覧表` page
+- `docs/UI/filling-report-excel-export.md`
+  - add the dedicated design document for Excel export behavior
 - `beeradmin_tail/src/router/tenant-routes.ts`
   - add the new report route
 - `beeradmin_tail/src/components/layout/AppSidebar.vue`
@@ -325,6 +364,34 @@
   - for non-fixed packages, fallback line volume must prefer `inv_movement_lines.meta.input_volume_l`
   - for fixed packages, fallback package count must prefer `inv_movement_lines.meta.unit_count`
   - this keeps fallback `総数量` and `欠減(Liter)` aligned with the operational filling save behavior
+- Corrected report `欠減(Liter)` source priority:
+  - prefer persisted `inv_movements.meta.tank_loss_volume`
+  - only derive loss when that saved value is absent
+- Updated the batch detail table package layout:
+  - each package type now renders two sub columns
+  - `本数`
+  - `容量 (L)`
+- Added a batch detail total row:
+  - blank `日付`
+  - blank `樽詰め前 深さ、数量`
+  - summarized package totals, `サンプル`, `総数量`, and `欠減`
+  - `タンク残` copied from the last movement row
+- The total row is rendered after the ascending `日付` movement rows in the batch detail table.
+- Updated the batch detail `総数量` column to a grouped layout:
+  - `樽`
+  - `缶・瓶`
+  - `総量 (L)`
+- `樽` is derived from package types classified as keg by package code and displayed as unit count.
+- `缶・瓶` is derived from the remaining non-keg package types and displayed as unit count.
+- `総量 (L)` remains packaged liters.
+- Corrected report `容量(L)` normalization:
+  - non-fixed filling-line volume values from movement meta are converted to liters using the package master `volume_uom`
+  - this normalized liter value is then reused by detail package volume, `総量 (L)`, and derived loss calculations on the report page
+  - when `mst_package.volume_uom` is stored as a UOM id instead of a literal code, resolve it through `mst_uom` before conversion
+- Added a dedicated design-document subtask for Excel export of `詰口一覧表`.
+- This turn is design-only for export:
+  - no export button or workbook generation code has been implemented yet
+- The Excel export design must reuse the existing data source and computed state in `beeradmin_tail/src/views/Pages/FillingReport.vue` instead of defining a separate export-only query path.
 - Validation outcome:
   - `npm run type-check` in `beeradmin_tail`: passed
   - `npm exec eslint src/views/Pages/FillingReport.vue src/router/tenant-routes.ts src/components/layout/AppSidebar.vue` in `beeradmin_tail`: passed

@@ -63,6 +63,7 @@
 ### Batch Detail Row Granularity
 - One row represents one related filling movement in `inv_movements`.
 - The detail section is driven by the batch selected from the main table.
+- Rows are ordered by `日付` ascending.
 
 ### Table Columns
 - `ロット番号`
@@ -127,15 +128,48 @@
     - `tank_fill_start_volume`
 - dynamic package-type columns
   - column set is built from package types present in the selected batch's movement rows
-  - cell value is the package number for that movement row and package type
+  - each package type renders two sub columns:
+    - `本数`
+    - `容量 (L)`
+  - `本数` cell value is the package number for that movement row and package type
+  - `容量 (L)` cell value is the packaged volume in liters for that movement row and package type
+  - if a non-fixed filling line stores volume in the package master UOM, convert it to liters using `mst_package.volume_uom` before display
+  - if `mst_package.volume_uom` is persisted as a UOM id, resolve it through `mst_uom.code` before conversion
 - `サンプル`
   - sample volume for that movement
 - `総数量`
-  - non-sample packaged liters for that movement
+  - render as three sub columns:
+    - `樽`
+    - `缶・瓶`
+    - `総量 (L)`
+  - `樽`: keg unit count for that movement
+  - `缶・瓶`: non-keg unit count for that movement
+  - `総量 (L)`: non-sample packaged liters for that movement
 - `タンク残`
   - `tank_left_volume` for that movement
 - `欠減`
   - derived movement loss using the same filling-loss rule as the operational screens
+
+### Batch Detail Total Row
+- Append one total row after the movement rows.
+- `日付`
+  - blank
+- `樽詰め前 深さ、数量`
+  - blank
+- package-type sub columns
+  - `本数`: sum across the selected batch's movement rows
+  - `容量 (L)`: sum across the selected batch's movement rows
+- `サンプル`
+  - sum across the selected batch's movement rows
+- `総数量`
+  - render as three sub columns
+  - `樽`: sum of keg unit counts across the selected batch's movement rows
+  - `缶・瓶`: sum of non-keg unit counts across the selected batch's movement rows
+  - `総量 (L)`: sum of packaged liters across the selected batch's movement rows
+- `タンク残`
+  - show the last movement row's `タンク残` in ascending `日付` order
+- `欠減`
+  - sum across the selected batch's movement rows
 
 ### Formatting
 - Datetime:
@@ -170,7 +204,7 @@
   - second click: descending
 - Dynamic package-type columns must also be sortable by their package-number values.
 - This sort requirement applies to the main report table.
-- The batch detail table may use a fixed movement-date order in v1.
+- The batch detail table uses a fixed `日付` ascending order in v1.
 
 ## Business Rules
 - Tenant isolation:

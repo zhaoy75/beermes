@@ -1979,8 +1979,13 @@
       "table": {
         "date": "Date",
         "beforeFilling": "Before Filling Depth / Quantity",
+        "packageNumber": "Hon-su",
+        "packageVolume": "Volume (L)",
         "sampleVolume": "Sample",
         "totalQuantity": "Total Quantity",
+        "kegVolume": "Keg",
+        "canBottleVolume": "Can / Bottle",
+        "totalVolume": "Total Volume (L)",
         "tankLeftVolume": "Tank Left",
         "lossVolume": "Loss"
       }

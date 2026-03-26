@@ -245,6 +245,7 @@
                             <ul class="mt-1 space-y-1 ml-4">
                               <li v-for="child in subItem.subItems" :key="child.name">
                                 <router-link
+                                  v-if="child.path"
                                   :to="child.path"
                                   :class="[
                                     'menu-dropdown-item',
@@ -278,30 +279,21 @@
   </aside>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
+import type { Component } from 'vue'
 import { useRoute } from "vue-router";
 import { useI18n } from 'vue-i18n'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/auth'
 
 import {
-  GridIcon,
   CalenderIcon,
   UserCircleIcon,
-  ChatIcon,
-  MailIcon,
-  DocsIcon,
-  PieChartIcon,
   ChevronDownIcon,
   HorizontalDots,
-  PageIcon,
-  TableIcon,
-  ListIcon,
-  PlugInIcon,
 } from "../../icons";
 import SidebarWidget from "./SidebarWidget.vue";
-import BoxCubeIcon from "@/icons/BoxCubeIcon.vue";
 import { useSidebar } from "@/composables/useSidebar";
 
 const route = useRoute();
@@ -310,7 +302,21 @@ const auth = useAuthStore()
 const canSeeUsers = ref(false)
 const canSeeSystemAdmin = computed(() => auth.isSystemAdmin)
 
-const openSubmenuChild = ref(null);
+type MenuItem = {
+  name: string
+  path?: string
+  subItems?: MenuItem[]
+  icon?: Component
+  new?: boolean
+  pro?: boolean
+}
+
+type MenuGroup = {
+  title: string
+  items: MenuItem[]
+}
+
+const openSubmenuChild = ref<string | null>(null);
 
 const { isExpanded, isMobileOpen, isHovered, openSubmenu } = useSidebar();
 
@@ -343,7 +349,7 @@ const loadUserManagementVisibility = async () => {
   }
 }
 
-const menuGroups = computed(() => [
+const menuGroups = computed<MenuGroup[]>(() => [
   {
     title: t('sidebar.group.main'),
     items: [
@@ -380,6 +386,12 @@ const menuGroups = computed(() => [
         subItems: [
           { name: t('sidebar.items.recipeList'), path: "/recipeList", pro: false },
           { name: t('sidebar.items.batchList'), path: "/batches", pro: false },
+          {
+            name: t('sidebar.items.reportList'),
+            subItems: [
+              { name: t('sidebar.items.fillingReport'), path: "/fillingReport", pro: false },
+            ],
+          },
           // { name: t('sidebar.items.waste'), path: "/waste", pro: false },
         ],
       },
@@ -534,19 +546,19 @@ const menuGroups = computed(() => [
   // },
 ]);
 
-const isActive = (path) => route.path === path;
+const isActive = (path: string) => route.path === path;
 
-const toggleSubmenu = (groupIndex, itemIndex) => {
+const toggleSubmenu = (groupIndex: number, itemIndex: number) => {
   const key = `${groupIndex}-${itemIndex}`;
   openSubmenu.value = openSubmenu.value === key ? null : key;
 };
 
-const toggleSubmenuChild = (groupIndex, itemIndex, subIndex) => {
+const toggleSubmenuChild = (groupIndex: number, itemIndex: number, subIndex: number) => {
   const key = `${groupIndex}-${itemIndex}-${subIndex}`;
   openSubmenuChild.value = openSubmenuChild.value === key ? null : key;
 };
 
-const isSubItemActive = (subItem) => {
+const isSubItemActive = (subItem: MenuItem) => {
   if (subItem?.path) return isActive(subItem.path);
   if (subItem?.subItems) {
     return subItem.subItems.some((child) => child.path && isActive(child.path));
@@ -563,7 +575,7 @@ const isAnySubmenuRouteActive = computed(() => {
   );
 });
 
-const isSubmenuOpen = (groupIndex, itemIndex) => {
+const isSubmenuOpen = (groupIndex: number, itemIndex: number) => {
   const key = `${groupIndex}-${itemIndex}`;
   return (
     openSubmenu.value === key ||
@@ -574,7 +586,7 @@ const isSubmenuOpen = (groupIndex, itemIndex) => {
   );
 };
 
-const isSubmenuChildOpen = (groupIndex, itemIndex, subIndex) => {
+const isSubmenuChildOpen = (groupIndex: number, itemIndex: number, subIndex: number) => {
   const key = `${groupIndex}-${itemIndex}-${subIndex}`;
   const subItem = menuGroups.value[groupIndex].items[itemIndex].subItems?.[subIndex];
   if (!subItem?.subItems) return false;
@@ -584,16 +596,18 @@ const isSubmenuChildOpen = (groupIndex, itemIndex, subIndex) => {
   );
 };
 
-const startTransition = (el) => {
-  el.style.height = "auto";
-  const height = el.scrollHeight;
-  el.style.height = "0px";
-  el.offsetHeight; // force reflow
-  el.style.height = height + "px";
+const startTransition = (el: Element) => {
+  const element = el as HTMLElement;
+  element.style.height = "auto";
+  const height = element.scrollHeight;
+  element.style.height = "0px";
+  void element.offsetHeight; // force reflow
+  element.style.height = height + "px";
 };
 
-const endTransition = (el) => {
-  el.style.height = "";
+const endTransition = (el: Element) => {
+  const element = el as HTMLElement;
+  element.style.height = "";
 };
 
 onMounted(async () => {

@@ -1943,6 +1943,49 @@
     "voidSuccess": "Inventory quantity was set to 0.",
     "voidFailed": "Failed to set inventory quantity to 0."
   },
+  "fillingReport": {
+    "title": "Filling Report",
+    "subtitle": "Review filling results across all batches in one table.",
+    "filters": {
+      "businessYear": "Business Year",
+      "month": "Month",
+      "liquorCode": "Liquor Code"
+    },
+    "defaults": {
+      "allMonths": "All Months",
+      "allLiquorCodes": "All Liquor Codes"
+    },
+    "results": {
+      "count": "{count} results"
+    },
+    "table": {
+      "batchCode": "Lot No",
+      "name": "Name",
+      "latestFillingAt": "Latest Filling At",
+      "totalVolume": "Total Volume (L)",
+      "liquorCode": "Liquor Code",
+      "abv": "ABV",
+      "sampleVolume": "Sample (Liter)",
+      "tankLeftVolume": "Tank Left (Liter)",
+      "lossVolume": "Loss (Liter)"
+    },
+    "detail": {
+      "title": "Batch Filling Detail",
+      "subtitle": "Click a lot number to show movement-level filling details for that batch.",
+      "selectPrompt": "Select a lot number to view the filling details for that batch.",
+      "fillingTank": "Filling Tank",
+      "depth": "Depth",
+      "quantity": "Quantity",
+      "table": {
+        "date": "Date",
+        "beforeFilling": "Before Filling Depth / Quantity",
+        "sampleVolume": "Sample",
+        "totalQuantity": "Total Quantity",
+        "tankLeftVolume": "Tank Left",
+        "lossVolume": "Loss"
+      }
+    }
+  },
   "inventorySearchModal": {
     "title": "Inventory Search",
     "subtitle": "Search packaged beer inventory across lots, batches, products, sites, and packages.",
@@ -2060,6 +2103,8 @@
       "recipemng": "Recipe Management",
       "recipeRegister": "Recipe Register",
       "recipeList": "Recipe List",
+      "reportList": "Reports",
+      "fillingReport": "Filling Report",
       "batchYield": "Extract Yield",
       "inventory": "Inventory",
       "beerInventory": "Beer Inventory Management",

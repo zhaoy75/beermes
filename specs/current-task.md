@@ -1,95 +1,332 @@
 # Current Task Spec
 
 ## Goal
-- Update the System Admin ground design to adopt a module-based frontend structure.
-- Refactor the frontend architecture to introduce module-based route/layout/guard separation for tenant scope and system-admin scope.
+- Create a tenant-scoped Vue report page named `詰口一覧表`.
+- Expose the page under `製造管理 > 帳票一覧`.
+- Show filling results across all batches in one read-only table.
+- Reuse the existing filling calculation rules already defined for Batch Packing / Batch Edit so report totals stay consistent with the operational screens.
 
 ## Scope
-- Update `docs/system-admin-ground-design.md` so the target frontend architecture is module-based, using:
-  - `modules/tenant/*`
-  - `modules/system-admin/*`
-  - `router/tenant-routes.ts`
-  - `router/system-routes.ts`
-  - `layouts/TenantLayout.vue`
-  - `layouts/SystemAdminLayout.vue`
-  - `guards/tenantGuard.ts`
-  - `guards/systemAdminGuard.ts`
-- Implement that structure in the current frontend codebase with minimal disruption to existing tenant pages.
-- Add initial System Admin pages, services, stores, layout, sidebar, routes, and guard wiring.
-- Preserve the existing application behavior for current tenant routes while moving route definitions into dedicated route modules.
+- Frontend only.
+- Add a UI specification document for the new page under `docs/UI`.
+- Add one new route, one new page component, and the related sidebar/i18n entries.
+- Add one report table that lists batches with filling history.
+- Add a search section above the report table.
+- Add a batch filling detail section below the main report table.
+- Row granularity for v1:
+  - one row per batch that has at least one non-void filling event
+- Include these columns:
+  - `ロット番号`
+  - `名前`
+  - `最終充填日`
+  - `総量 (L)`
+  - `酒類コード`
+  - `ABV`
+  - dynamic package-type columns
+    - each package type is a column header
+    - each cell shows that package type's aggregated package number for the batch
+  - `サンプル(Liter)`
+  - `タンク残(Liter)`
+  - `欠減(Liter)`
+- Use existing batch/filling persistence without adding a new backend API.
+- Keep the page read-only in v1.
+- Allow drill-down on a batch by clicking `ロット番号` in the main report table.
 
 ## Non-Goals
-- Full migration of every existing tenant page into `modules/tenant/pages` in one step.
-- Backend schema or Edge Function implementation for the full system-admin domain.
-- Broad redesign of existing tenant page internals.
-- Fixing unrelated pre-existing lint issues across the repository.
+- Creating, editing, or deleting filling records from this report.
+- Adding export, print, or CSV behavior in this task unless implementation remains trivial after the base page is complete.
+- Adding new database schema, SQL functions, or RLS policies.
+- Refactoring unrelated menu/layout code.
+- Building the other production report pages mentioned in `todo.txt`.
 
 ## Affected Files
 - `specs/current-task.md`
-- `docs/system-admin-ground-design.md`
-- `beeradmin_tail/src/router/index.ts`
+- `docs/UI/filling-report.md`
 - `beeradmin_tail/src/router/tenant-routes.ts`
-- `beeradmin_tail/src/router/system-routes.ts`
-- `beeradmin_tail/src/guards/tenantGuard.ts`
-- `beeradmin_tail/src/guards/systemAdminGuard.ts`
-- `beeradmin_tail/src/layouts/TenantLayout.vue`
-- `beeradmin_tail/src/layouts/SystemAdminLayout.vue`
-- `beeradmin_tail/src/modules/system-admin/pages/*`
-- `beeradmin_tail/src/modules/system-admin/components/*`
-- `beeradmin_tail/src/modules/system-admin/services/*`
-- `beeradmin_tail/src/modules/system-admin/stores/*`
-- `beeradmin_tail/src/modules/tenant/services/*`
-- `beeradmin_tail/src/modules/tenant/stores/*`
-- `beeradmin_tail/src/stores/auth.ts`
-- `beeradmin_tail/src/locales/en.json`
+- `beeradmin_tail/src/components/layout/AppSidebar.vue`
+- `beeradmin_tail/src/views/Pages/FillingReport.vue`
 - `beeradmin_tail/src/locales/ja.json`
+- `beeradmin_tail/src/locales/en.json`
+- Optional if implementation benefits from extraction:
+  - `beeradmin_tail/src/lib/batchFilling.ts`
+  - `beeradmin_tail/src/lib/fillingReport.ts`
 
 ## Data Model / API Changes
-- No required backend schema changes in this task.
-- Frontend code should read system-admin capability from session metadata when present.
-- System-admin services may use placeholder or direct-read patterns compatible with the current backend until full backend implementation is added later.
+- No backend schema change in v1.
+- No new RPC in v1.
+
+### Source-of-Truth Decision
+- The current application writes filling event details through `public.product_filling(...)` and persists the operational filling payload into:
+  - `inv_movements`
+  - `inv_movement_lines`
+  - `inv_movements.meta`
+- `mes_batch_steps` exists in schema, but the current filling UI does not use it as the primary persisted source for filling report values.
+- Therefore, v1 of `詰口一覧表` must treat `inv_movements` + `inv_movement_lines` + `inv_movements.meta` as the source of truth for filling facts.
+- `mes_batch_steps` may be read only if implementation confirms real tenant data is populated there and that the values are required for a fallback or reconciliation path.
+
+### Batch Selection
+- Include only batches that have at least one non-void filling movement.
+- Filling movement definition for this page:
+  - `inv_movements.status != 'void'`
+  - `inv_movements.meta->>'source' = 'packing'`
+  - `inv_movements.meta->>'packing_type' = 'filling'`
+- If needed for compatibility, implementation may also accept:
+  - `inv_movements.meta->>'movement_intent' = 'PACKAGE_FILL'`
+
+### Column Mapping
+- `ロット番号`
+  - `mes_batches.batch_code`
+- `名前`
+  - `mes_batches.product_name`
+  - fallback: `mes_batches.batch_label`
+- `最終充填日`
+  - latest `inv_movements.movement_at` among the batch's filling movements
+- `総量 (L)`
+  - `mes_batches.actual_yield`
+- `酒類コード`
+  - use the same batch metadata resolution order already used by produced-beer pages:
+    - batch attribute `beer_category`
+    - fallback recipe/category
+    - fallback `mes_batches.meta.beer_category`
+    - fallback `mes_batches.meta.category`
+- `ABV`
+  - use the same resolution order already used by produced-beer pages:
+    - batch attribute `target_abv`
+    - fallback recipe target ABV
+    - fallback `mes_batches.meta.target_abv`
+- Dynamic package-type columns
+  - aggregate non-sample filling lines by package type across all filling movements in the batch
+  - package label source: `mst_package.package_code`
+  - package number source:
+    - fixed-volume package: sum of unit count / package count
+    - non-fixed-volume package: sum of line `qty` when no unit-count style value exists
+  - the page must build the package columns from the distinct package types that exist in the loaded result
+  - package columns must be ordered by `mst_package.package_code` ascending
+  - if a batch does not use a package type shown in the table, the corresponding cell is blank
+- `サンプル(Liter)`
+  - sum of sample volume across all filling movements for the batch
+  - if persisted `meta.sample_volume` is missing, derive from `meta.filling_lines` where `sample_flg = true`
+- `タンク残(Liter)`
+  - `tank_left_volume` from the latest filling movement only
+  - this is intentionally not summed across movements
+- `欠減(Liter)`
+  - sum of derived filling loss across all filling movements for the batch
+  - use the same rule as Batch Packing / Batch Edit:
+    - `tank_fill_start_volume - tank_left_volume - non_sample_line_volume - sample_volume`
+
+### Filling Calculation Rules
+- Reuse the existing shared rules in `beeradmin_tail/src/lib/batchFilling.ts`.
+- Non-sample lines contribute to packaged total.
+- Sample lines do not contribute to package count columns.
+- Sample lines do contribute to sample volume.
+- Loss must remain aligned with the current Batch Packing spec.
+
+## UI / Navigation
+- Add a new production submenu entry:
+  - parent: `製造管理`
+  - child group: `帳票一覧`
+  - page item: `詰口一覧表`
+- Use the existing nested sidebar pattern already supported by `AppSidebar.vue`.
+- New route:
+  - path: `/fillingReport`
+  - name: `FillingReport`
+  - component: `@/views/Pages/FillingReport.vue`
+- Page shell should match the existing admin pages:
+  - `PageBreadcrumb`
+  - page title and subtitle
+  - search section
+  - top-level refresh action
+
+## Page Behavior
+- Load report rows on mount.
+- Restrict all reads to the current tenant.
+- Search section fields:
+  - `年度`
+    - default value: current business year
+    - business year range: April 1 to March 31
+  - `month`
+    - values: `1` to `12`
+    - default value: blank
+    - interpreted as calendar month within the selected business year range
+  - `酒類コード`
+    - filter by liquor code value
+- Default sort:
+  - `最終充填日` descending
+- All visible table columns must support sort toggle.
+- Main table interaction:
+  - `ロット番号` is a clickable control
+  - clicking a batch row target loads or reveals the selected batch's filling movement details in the section below the main table
+- Batch filling detail section:
+  - appears under the main report table
+  - header line shows:
+    - `ロット番号`
+    - `名前`
+    - `酒類コード`
+    - `ABV`
+    - `Filling Tank`
+  - `Filling Tank` displays the distinct tank numbers used by the selected batch's filling movements, joined in display order
+  - detail row granularity:
+    - one row per related `inv_movements` filling movement
+  - detail table columns:
+    - `日付`
+    - `樽詰め前 深さ、数量`
+    - dynamic package-type columns
+      - header uses the package type code
+      - cell shows that movement row's package number for the package type
+    - `サンプル`
+    - `総数量`
+    - `タンク残`
+    - `欠減`
+  - detail `総数量` definition:
+    - packaged non-sample filling volume for that movement in liters
+  - detail `樽詰め前 深さ、数量` definition:
+    - show the persisted `tank_fill_start_depth` and `tank_fill_start_volume` together in one display cell
+- Empty state:
+  - show a normal empty table state when no filling batches exist
+- Error handling:
+  - clear rows on fatal fetch failure
+  - show toast with the error message
+
+## Implementation Notes
+- Prefer reusing the batch info resolution already present in `ProducedBeer.vue` for:
+  - beer name
+  - beer category / code
+  - ABV
+- Prefer reusing `batchFilling.ts` for all sample/loss/volume derivations instead of re-implementing formulas in the page.
+- The page query may fetch:
+  - batch master rows first
+  - filling movement headers next
+  - filling movement lines next
+  - package master data in parallel
+- Keep the first implementation scoped:
+  - no server-side filtering
+  - no pagination unless the dataset size makes it immediately necessary
 
 ## Validation Plan
-- Confirm the design document reflects the module-based frontend structure.
-- Run frontend type-check.
-- Run frontend lint and report unrelated existing failures if any remain.
-- Verify the new route split and guard files are wired into the main router.
+- Functional validation:
+  - confirm the page appears under `製造管理 > 帳票一覧`
+  - confirm the route opens successfully
+  - confirm the search section shows `年度`, `month`, and `酒類コード`
+  - confirm `年度` defaults to the current business year based on April 1 to March 31
+  - confirm `month` defaults to blank
+  - confirm only batches with filling history appear
+  - confirm latest filling date is the newest filling event per batch
+  - confirm year/month filters use `最終充填日`
+  - confirm liquor-code filter matches the displayed liquor-code value
+  - confirm `総量 (L)` displays `mes_batches.actual_yield`
+  - confirm `サンプル(Liter)`, `タンク残(Liter)`, and `欠減(Liter)` match Batch Packing / Batch Edit calculations
+  - confirm package columns are created from actual existing package types
+  - confirm package cells show package numbers per batch and stay blank when a batch does not use that package type
+  - confirm static columns and dynamic package columns can all be sorted
+  - confirm `ロット番号` is clickable in the main table
+  - confirm clicking a batch shows the selected batch's detail section below the main table
+  - confirm the detail header shows `ロット番号`, `名前`, `酒類コード`, `ABV`, and `Filling Tank`
+  - confirm the detail table renders one row per related filling movement
+  - confirm the detail table package columns are based only on package types present in the selected batch's movements
+  - confirm detail `総数量` matches non-sample packaged liters for the movement
+  - confirm detail `樽詰め前 深さ、数量` shows the stored start depth and start volume values together
+- Required checks before finishing implementation:
+  - unit tests
+  - lint
+  - type-check
+- Repository note:
+  - `beeradmin_tail/package.json` currently defines `type-check` and `lint`
+  - no dedicated unit test script is currently defined, so this must be reported explicitly unless one is added as part of implementation
 
 ## Planned File Changes
-- `specs/current-task.md`: replace the previous doc-only task with the module-based refactor task.
-- `docs/system-admin-ground-design.md`: update the design to make the sample structure the target frontend architecture.
-- `beeradmin_tail/src/router/*`: split tenant and system-admin routes.
-- `beeradmin_tail/src/guards/*`: add tenant and system-admin guards.
-- `beeradmin_tail/src/layouts/*`: add dedicated tenant and system-admin layouts.
-- `beeradmin_tail/src/modules/system-admin/*`: add initial module pages/components/services/stores.
-- `beeradmin_tail/src/modules/tenant/*`: add initial tenant module services/stores to support the new architecture.
-- `beeradmin_tail/src/stores/auth.ts`: expose system-admin metadata for guards and UI.
-- `beeradmin_tail/src/locales/*.json`: add system-admin labels.
+- `specs/current-task.md`
+  - keep the `詰口一覧表` task spec aligned with UI-document and implementation scope
+- `docs/UI/filling-report.md`
+  - add the dedicated UI specification for the `詰口一覧表` page
+- `beeradmin_tail/src/router/tenant-routes.ts`
+  - add the new report route
+- `beeradmin_tail/src/components/layout/AppSidebar.vue`
+  - add `帳票一覧 > 詰口一覧表` under `製造管理`
+- `beeradmin_tail/src/views/Pages/FillingReport.vue`
+  - add the new report page and report-table loading logic
+- `beeradmin_tail/src/locales/ja.json`
+  - add sidebar/page labels in Japanese
+- `beeradmin_tail/src/locales/en.json`
+  - add sidebar/page labels in English
+- Optional extraction only if it keeps the page simpler:
+  - `beeradmin_tail/src/lib/fillingReport.ts`
+  - `beeradmin_tail/src/lib/batchFilling.ts`
+
+## Open Decisions / Risks
+- The user request mentions `mes_batch_steps` as a source, but the live filling workflow currently persists reportable filling facts in movement tables and movement meta. Implementation must not ignore that mismatch.
+- `酒類コード` is specified as a code, while the current UI often resolves category labels. v1 should display the stored code/value, not a translated label, unless the user asks otherwise.
+- If some historic data lacks `meta.filling_lines`, `meta.sample_volume`, or tank fields, the page must degrade gracefully and show blanks rather than inventing values.
+- If the tenant has many distinct package types, the table may become horizontally wide and rely on horizontal scrolling.
+- Some batches may use multiple filling tanks across separate movements. The detail header must present that as a joined display string rather than pretending there is only one tank.
 
 ## Final Decisions
-- Updated `docs/system-admin-ground-design.md` so the module-based frontend structure is the target architecture for this repo.
-- Split route definitions into:
-  - `beeradmin_tail/src/router/tenant-routes.ts`
-  - `beeradmin_tail/src/router/system-routes.ts`
-- Replaced the monolithic guard logic in `beeradmin_tail/src/router/index.ts` with:
-  - `beeradmin_tail/src/guards/tenantGuard.ts`
-  - `beeradmin_tail/src/guards/systemAdminGuard.ts`
-- Added dedicated layout shells:
-  - `beeradmin_tail/src/layouts/TenantLayout.vue`
-  - `beeradmin_tail/src/layouts/SystemAdminLayout.vue`
-- Added initial module boundaries:
-  - `beeradmin_tail/src/modules/system-admin/*`
-  - `beeradmin_tail/src/modules/tenant/*`
-- Added an initial System Admin UI slice with:
-  - dashboard page
-  - tenant list page
-  - tenant detail page
-  - audit placeholder page
-  - dedicated system-admin sidebar
-- Updated `beeradmin_tail/src/stores/auth.ts` to keep tenant and system-admin metadata in store state and to make `set-tenant` failure non-fatal during sign-in.
-- Added System Admin navigation labels to `beeradmin_tail/src/locales/en.json` and `beeradmin_tail/src/locales/ja.json`, and exposed a System Admin entry link from the existing tenant sidebar for system-admin users.
+- Added a dedicated UI specification document at `docs/UI/filling-report.md`.
+- The UI document follows the existing `docs/UI` structure and treats the page as a read-only production report page.
+- The UI document keeps the same source-of-truth rule as this task spec:
+  - batch master fields from `mes_batches`
+  - filling event facts from `inv_movements`, `inv_movement_lines`, and `inv_movements.meta`
+- Implemented the new report page at `beeradmin_tail/src/views/Pages/FillingReport.vue`.
+- Added a batch filling detail section below the main report table.
+- `ロット番号` in the main report table is now clickable and selects the batch shown in the detail section.
+- The detail section summary line shows:
+  - `ロット番号`
+  - `名前`
+  - `酒類コード`
+  - `ABV`
+  - `Filling Tank`
+- The detail table uses one row per related filling movement.
+- The detail table package columns are dynamic and built only from package types present in the selected batch's movement rows.
+- Detail `総数量` is implemented as packaged non-sample liters per movement via the shared filling calculation helper.
+- Detail `樽詰め前 深さ、数量` is implemented as one cell showing persisted `tank_fill_start_depth` and `tank_fill_start_volume`.
+- The detail summary `Filling Tank` value is implemented as the distinct tank numbers from the selected batch's movement rows joined into one display string.
+- Added the new tenant route:
+  - `/fillingReport`
+  - route name: `FillingReport`
+- Added the new sidebar navigation path under:
+  - `製造管理 > 帳票一覧 > 詰口一覧表`
+- Added locale keys for:
+  - page title/subtitle
+  - result count
+  - filter labels/defaults
+  - report-table static column labels
+- Validation run after the detail-section change:
+  - `npm run type-check`
+  - `npm exec eslint src/views/Pages/FillingReport.vue src/router/tenant-routes.ts src/components/layout/AppSidebar.vue`
+  - locale JSON parse check for `ja.json` and `en.json`
+  - `npm run test` still fails because no `test` script exists in `beeradmin_tail/package.json`
+  - sidebar labels
+- The implemented page uses:
+  - `mes_batches` for batch master fields
+  - `mes_batches.actual_yield` for `総量 (L)`
+  - `inv_movements` for filling movement headers and latest filling datetime
+  - `inv_movement_lines` as fallback detail source when movement meta filling lines are missing
+  - `mst_package` for package code / fixed-volume metadata
+  - `attr_def` and `entity_attr` for liquor code and ABV resolution
+- Updated the page to use dynamic package-type columns instead of a fixed 15-column package layout.
+- In the updated layout:
+  - package type is the column header
+  - package number is the row value
+- Added a search section with:
+  - business year filter
+  - month filter
+  - liquor-code filter
+- Search/filter semantics implemented on the page:
+  - `年度` defaults to the current business year
+  - business year is calculated as April 1 to March 31
+  - `month` defaults to blank and is interpreted as calendar month `1..12` inside the selected business-year range
+  - `酒類コード` filters by the liquor-code value shown in the table
+- Added sortable table headers for:
+  - static columns
+  - dynamic package-type columns
+- Removed the earlier fixed package-pair locale pattern from the page implementation.
+- Filling totals on the page reuse `beeradmin_tail/src/lib/batchFilling.ts` to stay aligned with Batch Packing / Batch Edit calculations.
+- `総量 (L)` now comes from `mes_batches.actual_yield`, not from derived filling-line totals.
+- Corrected the fallback movement-line reconstruction used by the report:
+  - for non-fixed packages, fallback line volume must prefer `inv_movement_lines.meta.input_volume_l`
+  - for fixed packages, fallback package count must prefer `inv_movement_lines.meta.unit_count`
+  - this keeps fallback `総数量` and `欠減(Liter)` aligned with the operational filling save behavior
 - Validation outcome:
   - `npm run type-check` in `beeradmin_tail`: passed
-  - locale JSON parse check: passed
-  - `npm exec eslint .` in `beeradmin_tail`: failed due to large pre-existing unrelated lint errors already present across the repository
-  - unit tests: no unit test script is defined in `beeradmin_tail/package.json`
+  - `npm exec eslint src/views/Pages/FillingReport.vue src/router/tenant-routes.ts src/components/layout/AppSidebar.vue` in `beeradmin_tail`: passed
+  - locale JSON parse check for `src/locales/ja.json` and `src/locales/en.json`: passed
+  - `npm run test` in `beeradmin_tail`: failed because `package.json` does not define a `test` script

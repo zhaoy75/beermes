@@ -236,6 +236,15 @@ export const tenantRoutes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/fillingReport',
+    name: 'FillingReport',
+    component: () => import('@/views/Pages/FillingReport.vue'),
+    meta: {
+      title: 'Filling Report',
+      requiresAuth: true,
+    },
+  },
+  {
     path: '/producedBeerMovement',
     name: 'ProducedBeerMovement',
     component: () => import('@/views/Pages/ProducedBeerMovementEdit.vue'),

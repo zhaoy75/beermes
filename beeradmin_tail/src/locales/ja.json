@@ -1935,6 +1935,49 @@
     "voidSuccess": "在庫数量を0にしました。",
     "voidFailed": "在庫数量を0にできませんでした。"
   },
+  "fillingReport": {
+    "title": "詰口一覧表",
+    "subtitle": "全バッチの詰口実績を一覧で確認します。",
+    "filters": {
+      "businessYear": "年度",
+      "month": "月",
+      "liquorCode": "酒類コード"
+    },
+    "defaults": {
+      "allMonths": "すべての月",
+      "allLiquorCodes": "すべての酒類コード"
+    },
+    "results": {
+      "count": "{count}件"
+    },
+    "table": {
+      "batchCode": "ロット番号",
+      "name": "名前",
+      "latestFillingAt": "最終充填日",
+      "totalVolume": "総量 (L)",
+      "liquorCode": "酒類コード",
+      "abv": "ABV",
+      "sampleVolume": "サンプル(Liter)",
+      "tankLeftVolume": "タンク残(Liter)",
+      "lossVolume": "欠減(Liter)"
+    },
+    "detail": {
+      "title": "バッチ詰口明細",
+      "subtitle": "ロット番号をクリックすると該当バッチの詰口明細を表示します。",
+      "selectPrompt": "ロット番号を選択すると該当バッチの詰口明細を表示します。",
+      "fillingTank": "Filling Tank",
+      "depth": "深さ",
+      "quantity": "数量",
+      "table": {
+        "date": "日付",
+        "beforeFilling": "樽詰め前 深さ、数量",
+        "sampleVolume": "サンプル",
+        "totalQuantity": "総数量",
+        "tankLeftVolume": "タンク残",
+        "lossVolume": "欠減"
+      }
+    }
+  },
   "inventorySearchModal": {
     "title": "在庫検索",
     "subtitle": "ロット、バッチ、製品、サイト、パッケージから在庫を横断検索します。",
@@ -2053,6 +2096,8 @@
       "recipemng": "レシピ管理",
       "recipeRegister": "レシピ登録",
       "recipeList": "レシピ管理",
+      "reportList": "帳票一覧",
+      "fillingReport": "詰口一覧表",
       "inventory": "在庫管理",
       "beerInventory": "ビール在庫管理",
       "rawMaterialReceipts": "原材料受入",

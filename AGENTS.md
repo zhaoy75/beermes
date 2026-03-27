@@ -39,3 +39,10 @@
   - what code changed
   - what validations ran
   - any remaining risks
+
+## Other rules
+- when output excel file
+  - always use ms932 encode
+  - always add lines to table.
+  - table header cell background will be gray
+  - table header font should be bold

@@ -2501,6 +2501,16 @@
     "results": {
       "count": "{count}件"
     },
+    "export": {
+      "button": "Excel Export",
+      "exporting": "出力中…",
+      "generatedAt": "生成日時",
+      "businessYear": "年度",
+      "monthSheetLabel": "対象月",
+      "summarySheetName": "年度サマリー",
+      "noData": "出力対象のデータがありません。",
+      "failed": "課税移出一覧表の Excel ファイル生成に失敗しました。"
+    },
     "summary": {
       "title": "年度サマリー",
       "subtitle": "選択年度の課税移出を酒類コード・ABV別に集計します。",

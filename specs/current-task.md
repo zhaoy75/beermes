@@ -1,283 +1,98 @@
 # Current Task Spec
 
 ## Goal
-- Create a tenant-scoped Vue report page named `課税移出一覧表`.
-- Expose the page under `税務管理 > 帳票一覧`.
-- Show all taxable-removal records derived from `inv_movements` and `inv_movement_lines`.
-- Provide a business-year summary grouped by `酒類コード` and `ABV`.
-- Provide a searchable detail table of taxable-removal records.
+- Add Excel export to the tenant-scoped Vue page `課税移出一覧表`.
+- When the user clicks the export button, generate an `.xlsx` file in the browser, expose a download link, and name the file `課税移出一覧表_<business-year>.xlsx`.
+- Include one summary sheet plus one sheet for each month in the selected business year.
 
 ## Scope
 - Frontend only.
-- Replace the previous current-task scope with this new taxable-removal report task.
-- Add a UI specification document for the new page under `docs/UI`.
-- Add one new route, one new page component, and the related sidebar/i18n entries.
-- Add a search section with:
-  - `年度`
-  - `month`
-  - `酒類コード`
-- Add a business-year summary section above the detail table.
-- Add a detail table for taxable-removal records.
-- Keep the page read-only in v1.
+- Add an export action button to `課税移出一覧表`.
+- Generate a downloadable Excel workbook client-side using the existing workbook helper pattern already used in the repo.
+- Show a download link after the workbook is generated.
+- Workbook sheet contents:
+  - first sheet: same data as the page `年度サマリー`
+  - one sheet per month in the selected business year
+- Monthly sheets must ignore the current page `month` and `酒類コード` filter inputs and instead include all detail rows for that calendar month within the selected business year.
+- Keep the current page filtering, summary rendering, and data loading logic intact outside the export feature.
 
 ## Non-Goals
-- Creating, editing, reversing, or deleting product movements from this report.
-- Adding Excel export in this task.
-- Adding new backend RPCs, SQL functions, or schema changes.
-- Refactoring unrelated tax-management pages.
+- Adding backend export endpoints, storage uploads, or server-side file generation.
+- Changing persisted data, RPCs, or schema.
+- Changing the detail table shown on screen to ignore current filters.
+- Refactoring unrelated reports.
 
 ## Affected Files
 - `specs/current-task.md`
 - `docs/UI/tax-removal-report.md`
-- `beeradmin_tail/src/router/tenant-routes.ts`
-- `beeradmin_tail/src/components/layout/AppSidebar.vue`
 - `beeradmin_tail/src/views/Pages/TaxableRemovalReport.vue`
 - `beeradmin_tail/src/locales/ja.json`
 - `beeradmin_tail/src/locales/en.json`
-- Optional extraction only if implementation becomes materially simpler:
-  - `beeradmin_tail/src/lib/taxRemovalReport.ts`
 
 ## Data Model / API Changes
-- No backend schema change in v1.
-- No new RPC in v1.
+- No backend or API changes.
+- Reuse the already loaded report data in memory.
+- Use the selected `年度` as the business-year basis for export file naming and sheet data.
+- Summary sheet uses the same grouped rows as the on-screen summary for the selected `年度`.
+- Monthly detail sheets derive from all detail rows in memory that belong to the selected `年度` and the target calendar month, regardless of the current search section values for `month` and `酒類コード`.
 
-### Source-of-Truth Decision
-- This page must use `inv_movements` and `inv_movement_lines` as the transactional source of truth.
-- Taxable-removal filtering must be based on persisted tax movement metadata, not Japanese display text.
-- Include movement rows when either of the following is true:
-  - `inv_movements.meta->>'tax_event' = 'TAXABLE_REMOVAL'`
-  - fallback: `inv_movements.meta->>'tax_decision_code' = 'TAXABLE_REMOVAL'`
-- Exclude void rows:
-  - `inv_movements.status != 'void'`
-- Supporting master/detail lookups are allowed for display fields:
-  - `mes_batches`
-  - `mst_package`
-  - `mst_sites`
-  - `mst_uom`
-  - `registry_def` kind=`alcohol_type`
-  - `entity_attr` / `attr_def`
-  - `lot` when `src_lot_id` exists in line meta and lot number display is needed
+## Workbook Decisions
+- File name format: `課税移出一覧表_<business-year>.xlsx`
+- Sheet order:
+  - first: summary sheet
+  - then months `4` through `12`
+  - then months `1` through `3`
+- Summary sheet contents:
+  - title
+  - generated timestamp
+  - selected business year
+  - the same columns and row values as `年度サマリー`
+- Monthly sheet contents:
+  - month label and generated timestamp
+  - the same columns and row values as `課税移出明細`
+  - all matching rows for that month in the selected business year
+- Sheet names should remain short and Excel-safe.
+- If a monthly sheet has no rows, still create it with headers and no data rows.
 
-### Row Granularity
-- Business-year summary:
-  - one row per `酒類コード + ABV` group
-- Detail table:
-  - one row per taxable-removal `inv_movement_lines` row
-  - rows without package or batch context may still appear if the required detail fields can be resolved from movement/line data
-
-### Search / Filter Rules
-- `年度`
-  - required visible field
-  - default: current business year
-  - business year definition: April 1 to March 31
-- `month`
-  - values: `1` to `12`
-  - default: blank
-  - interpreted as calendar month inside the selected business year range
-- `酒類コード`
-  - default: blank
-  - filters by the code value shown in the page
-- Summary section filter scope:
-  - use the selected `年度` only
-  - do not narrow summary rows by `month`
-  - do not narrow summary rows by `酒類コード`
-- Detail table filter scope:
-  - use selected `年度`
-  - use selected `month` when not blank
-  - use selected `酒類コード` when not blank
-
-### Column Mapping
-#### Summary Section
-- `酒類コード`
-  - resolve from batch/category metadata using the same order already used in produced-beer pages:
-    - batch attribute `beer_category`
-    - recipe/category fallback
-    - `mes_batches.meta.beer_category`
-    - `mes_batches.meta.category`
-- `ABV`
-  - resolve from batch metadata using the same order already used in produced-beer pages:
-    - batch attribute `target_abv`
-    - recipe target ABV
-    - `mes_batches.meta.target_abv`
-- `数量(ml)`
-  - sum taxable-removal line quantity converted to milliliters
-  - primary source: `inv_movement_lines.qty` using `uom_id` / `mst_uom.code`
-  - fallback: package count × package unit volume when line quantity is missing but package quantity and package master are available
-- `存在数`
-  - sum package-count style value per line
-  - prefer `inv_movement_lines.meta.package_qty`
-  - fallback to `inv_movement_lines.unit`
-- `税率`
-  - use persisted `inv_movement_lines.tax_rate`
-  - fallback: `inv_movements.meta.tax_rate`
-  - display as raw numeric `/kl` rate
-- `酒税`
-  - calculate from taxable-removal volume and rate
-  - formula: `quantity_ml / 1000000 * tax_rate`
-  - aggregate by `酒類コード + ABV`
-
-#### Detail Table
-- `品目`
-  - alcohol type label resolved from `registry_def.kind = 'alcohol_type'` for the displayed `酒類コード`
-  - fallback to raw `酒類コード`
-- `銘柄`
-  - `mes_batches.product_name`
-  - fallback: `mes_batches.batch_label`
-  - fallback: batch/style name resolved on the produced-beer pages
-- `アルコール分（％）`
-  - displayed ABV value for the line
-- `年月日`
-  - `inv_movements.movement_at`
-- `容器`
-  - `mst_package.package_code`
-  - fallback: package localized name
-- `数量（mℓ）`
-  - line quantity converted to milliliters using the same conversion rule as summary
-- `単価（円）`
-  - blank in v1
-- `価格（円）`
-  - blank in v1
-- `移出区分`
-  - tax event display label for the movement
-  - for this page it should normally display `課税移出`
-- `移出先所在地`
-  - `mst_sites.address` formatted into a readable single-line string
-  - fallback: blank when address is missing
-- `移出先氏名又は名称`
-  - `mst_sites.name`
-- `ロット番号`
-  - prefer source lot number resolved from `lot.id = inv_movement_lines.meta.src_lot_id`
-  - fallback: `mes_batches.batch_code`
-- `摘要`
-  - prefer `inv_movement_lines.notes`
-  - fallback: `inv_movement_lines.meta.line_note`
-  - fallback: `inv_movements.notes`
-
-## UI / Navigation
-- Add a new tax-management submenu path:
-  - parent: `税務管理`
-  - child group: `帳票一覧`
-  - page item: `課税移出一覧表`
-- New route:
-  - path: `/taxableRemovalReport`
-  - name: `TaxableRemovalReport`
-  - component: `@/views/Pages/TaxableRemovalReport.vue`
-- Page shell should match existing admin pages:
-  - `PageBreadcrumb`
-  - page title and subtitle
-  - search section
-  - top-level refresh action
-
-## Page Behavior
-- Load report data on mount.
-- Restrict all reads to the current tenant.
-- Default detail-table sort:
-  - `年月日` descending
-  - tie-breaker by document/line order when needed
-- Search section fields:
-  - `年度`
-  - `month`
-  - `酒類コード`
-- Summary section:
-  - displayed above the detail table
-  - grouped by `酒類コード` and `ABV`
-  - calculated from the selected business year only
-- Detail table:
-  - shows all matching taxable-removal line rows
-  - updates based on selected `年度`, `month`, and `酒類コード`
-- Empty state:
-  - show standard no-data state when no records match
-- Error handling:
-  - clear rows on fatal fetch failure
-  - show toast with the error message
-
-## Implementation Notes
-- Prefer reusing existing produced-beer movement helpers/patterns for:
-  - tenant resolution
-  - batch beer-category and ABV resolution
-  - UOM to liters conversion
-  - tax-event label mapping
-- Milliliter conversion must support at least:
-  - `L`
-  - `mL`
-  - `kL`
-  - `gal_us`
-- If `mst_sites.address` is stored as structured JSON, format it by joining non-empty string values in field order.
-- Keep implementation scoped:
-  - no server-side filtering beyond the taxable-removal movement query itself
-  - no pagination unless the dataset size immediately requires it
+## Final Decisions
+- Reused the existing client-side workbook generator in `beeradmin_tail/src/lib/fillingReportExport.ts`; no new dependency was added.
+- Added an `Excel Export` button and a generated download link on `課税移出一覧表`.
+- Export file name is implemented as `課税移出一覧表_<selected-business-year>.xlsx`.
+- The summary sheet uses the same selected-business-year summary rows shown on screen.
+- Monthly sheets are generated for all twelve months in business-year order and ignore the current page `month` and `酒類コード` filter values.
+- The export link is cleared when the selected business year changes, when the report reloads, and on component unmount so stale downloads are not shown.
 
 ## Validation Plan
-- Functional validation:
-  - confirm the page appears under `税務管理 > 帳票一覧`
-  - confirm the route opens successfully
-  - confirm the search section shows `年度`, `month`, and `酒類コード`
-  - confirm `年度` defaults to the current business year based on April 1 to March 31
-  - confirm `month` defaults to blank
-  - confirm only taxable-removal movements appear
-  - confirm summary rows are grouped by `酒類コード` and `ABV`
-  - confirm summary uses selected `年度` only
-  - confirm detail table uses selected `年度`, `month`, and `酒類コード`
-  - confirm `数量(ml)` and detail `数量（mℓ）` convert from persisted movement quantity correctly
-  - confirm `税率` is read from persisted movement-line/header tax rate
-  - confirm `酒税` is calculated from `mL -> kL` conversion and tax rate
-  - confirm `単価（円）` and `価格（円）` remain blank
-  - confirm destination name/address and lot number degrade gracefully when missing
-- Required checks before finishing implementation:
+- Confirm the page shows an export button.
+- Confirm clicking export generates a download link on the page.
+- Confirm the generated file name matches `課税移出一覧表_<business-year>.xlsx`.
+- Confirm the workbook includes:
+  - one summary sheet
+  - twelve monthly sheets for the selected business year
+- Confirm the summary sheet matches the on-screen `年度サマリー`.
+- Confirm each monthly sheet includes all rows for that month in the selected business year even when the page `month` or `酒類コード` filter is set.
+- Run required checks before finishing:
   - unit tests
   - lint
   - type-check
 - Repository note:
-  - `beeradmin_tail/package.json` currently defines `type-check` and `lint`
-  - no dedicated unit test script is currently defined, so this must be reported explicitly unless one is added as part of implementation
+  - if no unit test script exists, report that explicitly.
+
+## Validation Outcome
+- `npm run type-check` in `beeradmin_tail`: passed.
+- `npm run lint` in `beeradmin_tail`: failed due to pre-existing repo-wide ESLint violations unrelated to this task.
+- `npm exec eslint src/views/Pages/TaxableRemovalReport.vue` in `beeradmin_tail`: passed.
+- locale JSON parse check for `src/locales/ja.json` and `src/locales/en.json`: passed.
+- Unit tests were not run because `beeradmin_tail/package.json` does not define a test script.
 
 ## Planned File Changes
 - `specs/current-task.md`
-  - replace the previous task scope with the taxable-removal report spec
+  - replace the previous task scope with the taxable-removal Excel export spec
 - `docs/UI/tax-removal-report.md`
-  - add the dedicated UI specification for `課税移出一覧表`
-- `beeradmin_tail/src/router/tenant-routes.ts`
-  - add the new report route
-- `beeradmin_tail/src/components/layout/AppSidebar.vue`
-  - add `帳票一覧 > 課税移出一覧表` under `税務管理`
+  - document the new export action and workbook structure
 - `beeradmin_tail/src/views/Pages/TaxableRemovalReport.vue`
-  - add the new report page and report loading logic
+  - add export button, download link, and client-side workbook generation
 - `beeradmin_tail/src/locales/ja.json`
-  - add sidebar/page labels in Japanese
+  - add export labels and messages
 - `beeradmin_tail/src/locales/en.json`
-  - add sidebar/page labels in English
-
-## Open Decisions / Risks
-- `movement type = 課税移出` is a UI/business label, while persisted data uses `tax_event` / `tax_decision_code`; implementation must not filter by translated text.
-- Some historical movement rows may lack `meta.src_lot_id`, `meta.package_qty`, destination address, or line notes; the page must degrade gracefully.
-- If some line quantities are stored in unusual UOMs, summary/detail quantity conversion depends on correct `mst_uom.code` mapping.
-- `存在数` is interpreted in v1 as package count, using `meta.package_qty` first and `unit` as fallback.
-
-## Final Decisions
-- Added a dedicated UI specification document at `docs/UI/tax-removal-report.md`.
-- Implemented the new report page at `beeradmin_tail/src/views/Pages/TaxableRemovalReport.vue`.
-- Added the new tenant route:
-  - `/taxableRemovalReport`
-  - route name: `TaxableRemovalReport`
-- Added the new sidebar navigation path under:
-  - `税務管理 > 帳票一覧 > 課税移出一覧表`
-- The implemented page uses:
-  - `inv_movements` and `inv_movement_lines` as the taxable-removal source of truth
-  - `mes_batches` plus batch attributes for `酒類コード`, `銘柄`, and `ABV`
-  - `mst_package` and `mst_uom` for package label and quantity conversion
-  - `mst_sites` for destination site name and address
-  - `lot` for lot number fallback when `src_lot_id` exists
-- Taxable-removal filtering is implemented by persisted tax metadata:
-  - `meta.tax_event = 'TAXABLE_REMOVAL'`
-  - fallback: `meta.tax_decision_code = 'TAXABLE_REMOVAL'`
-- The summary section is implemented as a business-year aggregation grouped by `酒類コード` and `ABV`.
-- The detail table is implemented as one row per taxable-removal movement line filtered by `年度`, `month`, and `酒類コード`.
-- `数量(ml)` and `数量（mℓ）` are derived from persisted line quantity with UOM conversion, with package-volume fallback when needed.
-- `税率` is read from persisted movement-line tax rate with movement-header fallback.
-- `酒税` is calculated as `quantity_ml / 1000000 * tax_rate`.
-- `単価（円）` and `価格（円）` are intentionally rendered blank in v1.
-- Validation outcome:
-  - `npm run type-check` in `beeradmin_tail`: passed
-  - `npm exec eslint src/views/Pages/TaxableRemovalReport.vue src/router/tenant-routes.ts src/components/layout/AppSidebar.vue` in `beeradmin_tail`: passed
-  - locale JSON parse check for `src/locales/ja.json` and `src/locales/en.json`: passed
-  - `npm run test` in `beeradmin_tail`: failed because `package.json` does not define a `test` script
+  - add export labels and messages

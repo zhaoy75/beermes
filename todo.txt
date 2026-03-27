@@ -717,7 +717,7 @@ where id = '314b44f4-b09a-407f-a2ce-68412ee3f734';
 {"provider": "email", "providers": ["email"], "tenant_id": "2a231822-aa8d-452a-aa5f-9f5e4293cdaa", "system_role": "system_admin", "is_system_admin": true}
 
 
-I want to create an vue page to show show the record of beer filling across all batches. 
+I want to create an vue page to show show the record of beer filling across all batches, please create spec first
 - the page should be named as 詰口一覧表
 - the page should be accessed under 製造管理.帳票一覧 menu
 - the page should show a table with following columns, date should retrieved from mes_batches, inv_movements and inv_movement_lines tables, the rest of columns should be retrieved from mes_batch_steps table with step type = 'filling'
@@ -734,3 +734,41 @@ I want to create an vue page to show show the record of beer filling across all 
   タンク残(Liter)
   欠減(Liter)
   
+
+日付	樽詰め前		10L 樽		15L 樽		20L 樽		ハンパ 樽		350ml 缶		500ml 缶		750ml 瓶		サンプル	総数量			タンク残	欠減
+	深さ (mm)	数量 (L)	本数	数量 (L)	本数	数量 (L)	本数	数量 (L)	本数	数量 (L)	本数	数量 (L)	本数	数量 (L)	本数	数量 (L)	数量 (L)	樽	缶・瓶	総量 (L)	数量 (L)	数量 (L)
+
+樽	缶・瓶	総量 (L)
+
+I want to add button to export the table data to excel file. when user click the button, 
+the system should generate an excel file with the table data and show a link to download
+ the generated excel file. the excel file name should be like "詰口一覧表_20260101.xlsx"
+- the excel should include serveral sheets,
+  the first sheet is summary sheet, contents should be same as the main report table in the page
+  the system should create sheet for every batch fill report, the information should just the same as バッチ詰口明細
+
+
+I want to create an vue page to show all 課稅移出, 
+- the page should be named as 課税移出一覧表
+- the page should be accessed under 税務管理.帳票一覧 menu
+- the page should have a search section 
+    - `年度`
+    - `month`
+    - `酒類コード`
+- the data should be retrieved from inv_movements and inv_movement_lines tables with movement type = 課税移出
+- the page should have a business year summary section with following columns. data will be group by 酒類コード	ABV. the summary will be calculated based on search section year.
+    酒類コード	ABV	数量(ml)	存在数	税率	酒税
+- the page should have a table to show all 課稅移出 record with following columns. the data should be filtered based on search section input. 
+    品目
+    銘柄
+    アルコール分（％）
+    年月日
+    容器
+    数量（mℓ）
+    単価（円）　blank
+    価格（円）  blank
+    移出区分
+    移出先所在地
+    移出先氏名又は名称
+    ロット番号
+    摘要

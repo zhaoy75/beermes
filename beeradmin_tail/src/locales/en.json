@@ -2509,6 +2509,16 @@
     "results": {
       "count": "{count} rows"
     },
+    "export": {
+      "button": "Excel Export",
+      "exporting": "Exporting…",
+      "generatedAt": "Generated At",
+      "businessYear": "Business year",
+      "monthSheetLabel": "Month",
+      "summarySheetName": "Summary",
+      "noData": "There is no data to export.",
+      "failed": "Failed to generate the taxable removal Excel file."
+    },
     "summary": {
       "title": "Business Year Summary",
       "subtitle": "Aggregate taxable removals for the selected business year by liquor code and ABV.",

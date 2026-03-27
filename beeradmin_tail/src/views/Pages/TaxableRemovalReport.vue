@@ -10,11 +10,26 @@
         <div class="flex flex-wrap items-center gap-2">
           <button
             class="rounded border border-gray-300 px-3 py-2 hover:bg-gray-50 disabled:opacity-50"
+            :disabled="loading || exportLoading || businessYearDetailRows.length === 0"
+            @click="exportExcel"
+          >
+            {{ exportLoading ? t('taxableRemovalReport.export.exporting') : t('taxableRemovalReport.export.button') }}
+          </button>
+          <button
+            class="rounded border border-gray-300 px-3 py-2 hover:bg-gray-50 disabled:opacity-50"
             :disabled="loading"
             @click="loadReport"
           >
             {{ t('common.refresh') }}
           </button>
+          <a
+            v-if="exportDownloadUrl && exportFileName"
+            :href="exportDownloadUrl"
+            :download="exportFileName"
+            class="text-sm text-blue-700 underline underline-offset-2"
+          >
+            {{ exportFileName }}
+          </a>
         </div>
       </header>
 
@@ -59,8 +74,8 @@
                 class="h-[40px] w-full rounded border border-gray-300 bg-white px-3"
               >
                 <option value="">{{ t('taxableRemovalReport.defaults.allLiquorCodes') }}</option>
-                <option v-for="code in liquorCodeOptions" :key="code" :value="code">
-                  {{ code }}
+                <option v-for="option in liquorCodeOptions" :key="option.value" :value="option.value">
+                  {{ option.label }}
                 </option>
               </select>
             </div>
@@ -101,7 +116,7 @@
                   </td>
                 </tr>
                 <tr v-for="row in summaryRows" v-else :key="row.key" class="hover:bg-gray-50">
-                  <td class="px-3 py-2 font-mono text-xs text-gray-700">{{ row.liquorCode || '—' }}</td>
+                  <td class="px-3 py-2 text-gray-700">{{ row.liquorCodeLabel || row.liquorCode || '—' }}</td>
                   <td class="px-3 py-2 text-right">{{ formatAbv(row.abv) }}</td>
                   <td class="px-3 py-2 text-right">{{ formatQuantityMl(row.quantityMl) }}</td>
                   <td class="px-3 py-2 text-right">{{ formatNumberValue(row.packageCount) }}</td>
@@ -180,11 +195,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue3-toastify'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import { createWorkbookBlob, type WorkbookCell, type WorkbookCellValue, type WorkbookSheet } from '@/lib/fillingReportExport'
 import { supabase } from '@/lib/supabase'
 
 type JsonMap = Record<string, unknown>
@@ -298,6 +314,7 @@ type DetailRow = {
 type SummaryRow = {
   key: string
   liquorCode: string | null
+  liquorCodeLabel: string | null
   abv: number | null
   quantityMl: number
   packageCount: number
@@ -305,10 +322,18 @@ type SummaryRow = {
   taxAmount: number
 }
 
+type LiquorCodeOption = {
+  value: string
+  label: string
+}
+
 const { t, locale } = useI18n()
 
 const pageTitle = computed(() => t('taxableRemovalReport.title'))
 const loading = ref(false)
+const exportLoading = ref(false)
+const exportFileName = ref('')
+const exportDownloadUrl = ref('')
 const tenantId = ref('')
 const detailRows = ref<DetailRow[]>([])
 const uomMap = ref(new Map<string, string>())
@@ -339,14 +364,23 @@ const businessYearOptions = computed(() => {
   return Array.from(years).sort((a, b) => b - a)
 })
 
-const liquorCodeOptions = computed(() =>
+const liquorCodeOptions = computed<LiquorCodeOption[]>(() =>
   Array.from(
     new Set(
       detailRows.value
         .map((row) => (row.liquorCode ?? '').trim())
         .filter((value) => value.length > 0),
     ),
-  ).sort((a, b) => a.localeCompare(b)),
+  )
+    .map((value) => ({
+      value,
+      label: resolveAlcoholTypeLabel(value) ?? value,
+    }))
+    .sort((a, b) => {
+      const labelCompare = a.label.localeCompare(b.label)
+      if (labelCompare !== 0) return labelCompare
+      return a.value.localeCompare(b.value)
+    }),
 )
 
 const filteredRows = computed(() =>
@@ -365,6 +399,12 @@ const filteredRows = computed(() =>
     .sort(compareDetailRows),
 )
 
+const businessYearDetailRows = computed(() =>
+  detailRows.value
+    .filter((row) => matchesBusinessYear(row.movementAt, filters.businessYear))
+    .sort(compareDetailRows),
+)
+
 const summaryRows = computed<SummaryRow[]>(() => {
   const map = new Map<string, SummaryRow>()
   detailRows.value
@@ -376,6 +416,7 @@ const summaryRows = computed<SummaryRow[]>(() => {
         map.set(key, {
           key,
           liquorCode: row.liquorCode,
+          liquorCodeLabel: resolveAlcoholTypeLabel(row.liquorCode) ?? row.liquorCode ?? null,
           abv: row.abv,
           quantityMl: 0,
           packageCount: 0,
@@ -397,6 +438,10 @@ const summaryRows = computed<SummaryRow[]>(() => {
       taxRates: row.taxRates.slice().sort((a, b) => a - b),
     }))
     .sort((a, b) => {
+      const labelCompare = (a.liquorCodeLabel ?? a.liquorCode ?? '').localeCompare(
+        b.liquorCodeLabel ?? b.liquorCode ?? '',
+      )
+      if (labelCompare !== 0) return labelCompare
       const codeCompare = (a.liquorCode ?? '').localeCompare(b.liquorCode ?? '')
       if (codeCompare !== 0) return codeCompare
       return (a.abv ?? 0) - (b.abv ?? 0)
@@ -536,6 +581,158 @@ function formatCurrency(value: number | null | undefined) {
 function formatTaxRateSummary(values: number[]) {
   if (!values.length) return '—'
   return values.map((value) => `${formatNumberValue(value)}/kl`).join(', ')
+}
+
+function pad2(value: number) {
+  return String(value).padStart(2, '0')
+}
+
+function buildMonthSheetOrder() {
+  return [...Array.from({ length: 9 }, (_, index) => index + 4), 1, 2, 3]
+}
+
+function calendarYearForBusinessYearMonth(businessYear: number, month: number) {
+  return month >= 4 ? businessYear : businessYear + 1
+}
+
+function clearExportDownload() {
+  if (exportDownloadUrl.value) URL.revokeObjectURL(exportDownloadUrl.value)
+  exportDownloadUrl.value = ''
+  exportFileName.value = ''
+}
+
+function borderedRow(values: WorkbookCellValue[]): WorkbookCell[] {
+  return values.map((value) => ({
+    style: 'border',
+    value,
+  }))
+}
+
+function buildSummarySheetRows(createdAtLabel: string): WorkbookCell[][] {
+  const header: WorkbookCellValue[] = [
+    t('taxableRemovalReport.summary.columns.liquorCode'),
+    t('taxableRemovalReport.summary.columns.abv'),
+    t('taxableRemovalReport.summary.columns.quantityMl'),
+    t('taxableRemovalReport.summary.columns.packageCount'),
+    t('taxableRemovalReport.summary.columns.taxRate'),
+    t('taxableRemovalReport.summary.columns.taxAmount'),
+  ]
+
+  const rows = summaryRows.value.map<WorkbookCell[]>((row) =>
+    borderedRow([
+      row.liquorCodeLabel || row.liquorCode || '—',
+      formatAbv(row.abv),
+      formatQuantityMl(row.quantityMl),
+      formatNumberValue(row.packageCount),
+      formatTaxRateSummary(row.taxRates),
+      formatCurrency(row.taxAmount),
+    ]),
+  )
+
+  return [
+    [t('taxableRemovalReport.summary.title')],
+    [t('taxableRemovalReport.export.generatedAt'), createdAtLabel],
+    [t('taxableRemovalReport.export.businessYear'), filters.businessYear],
+    [],
+    borderedRow(header),
+    ...rows,
+  ]
+}
+
+function buildMonthlySheetRows(month: number, createdAtLabel: string): WorkbookCell[][] {
+  const calendarYear = calendarYearForBusinessYearMonth(filters.businessYear, month)
+  const monthRows = businessYearDetailRows.value.filter((row) => {
+    const date = safeDate(row.movementAt)
+    if (!date) return false
+    return date.getMonth() + 1 === month
+  })
+
+  const header: WorkbookCellValue[] = [
+    t('taxableRemovalReport.table.columns.item'),
+    t('taxableRemovalReport.table.columns.brand'),
+    t('taxableRemovalReport.table.columns.abv'),
+    t('taxableRemovalReport.table.columns.movementAt'),
+    t('taxableRemovalReport.table.columns.container'),
+    t('taxableRemovalReport.table.columns.quantityMl'),
+    t('taxableRemovalReport.table.columns.unitPrice'),
+    t('taxableRemovalReport.table.columns.amount'),
+    t('taxableRemovalReport.table.columns.removalType'),
+    t('taxableRemovalReport.table.columns.destinationAddress'),
+    t('taxableRemovalReport.table.columns.destinationName'),
+    t('taxableRemovalReport.table.columns.lotNo'),
+    t('taxableRemovalReport.table.columns.notes'),
+  ]
+
+  const rows = monthRows.map<WorkbookCell[]>((row) =>
+    borderedRow([
+      row.itemLabel || row.liquorCode || '—',
+      row.brandName || '—',
+      formatAbv(row.abv),
+      formatDateTime(row.movementAt),
+      row.containerLabel || '—',
+      formatQuantityMl(row.quantityMl),
+      '—',
+      '—',
+      row.removalTypeLabel || '—',
+      row.destinationAddress || '—',
+      row.destinationName || '—',
+      row.lotNo || '—',
+      row.notes || '—',
+    ]),
+  )
+
+  return [
+    [t('taxableRemovalReport.table.title')],
+    [t('taxableRemovalReport.export.generatedAt'), createdAtLabel],
+    [t('taxableRemovalReport.export.businessYear'), filters.businessYear],
+    [t('taxableRemovalReport.export.monthSheetLabel'), `${calendarYear}-${pad2(month)}`],
+    [],
+    borderedRow(header),
+    ...rows,
+  ]
+}
+
+function buildExportSheets(createdAtLabel: string): WorkbookSheet[] {
+  return [
+    {
+      name: t('taxableRemovalReport.export.summarySheetName'),
+      rows: buildSummarySheetRows(createdAtLabel),
+    },
+    ...buildMonthSheetOrder().map((month) => {
+      const calendarYear = calendarYearForBusinessYearMonth(filters.businessYear, month)
+      return {
+        name: `${calendarYear}-${pad2(month)}`,
+        rows: buildMonthlySheetRows(month, createdAtLabel),
+      }
+    }),
+  ]
+}
+
+function exportExcel() {
+  if (!businessYearDetailRows.value.length) {
+    toast.error(t('taxableRemovalReport.export.noData'))
+    return
+  }
+
+  try {
+    exportLoading.value = true
+    const createdAt = new Date()
+    const fileName = `課税移出一覧表_${filters.businessYear}.xlsx`
+    const blob = createWorkbookBlob({
+      creator: 'beeradmin_tail',
+      createdAtIso: createdAt.toISOString(),
+      sheets: buildExportSheets(createdAt.toLocaleString(locale.value)),
+    })
+    const url = URL.createObjectURL(blob)
+    clearExportDownload()
+    exportFileName.value = fileName
+    exportDownloadUrl.value = url
+  } catch (err) {
+    clearExportDownload()
+    toast.error(extractErrorMessage(err) || t('taxableRemovalReport.export.failed'))
+  } finally {
+    exportLoading.value = false
+  }
 }
 
 function normalizedCode(value: string | null | undefined) {
@@ -818,6 +1015,7 @@ async function loadReferenceData() {
 async function loadReport() {
   try {
     loading.value = true
+    clearExportDownload()
     await loadReferenceData()
 
     const tenant = await ensureTenant()
@@ -907,5 +1105,16 @@ async function loadReport() {
 
 onMounted(() => {
   loadReport()
+})
+
+watch(
+  () => filters.businessYear,
+  () => {
+    clearExportDownload()
+  },
+)
+
+onUnmounted(() => {
+  clearExportDownload()
 })
 </script>

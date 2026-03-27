@@ -21,6 +21,7 @@
 - Subtitle:
   - summarize that the page shows all taxable-removal records
 - Actions:
+  - `Excel Export`
   - `Refresh`
 
 ### Body
@@ -41,7 +42,8 @@
 3. Page loads taxable-removal movement headers and lines.
 4. Page renders the business-year summary using the selected `年度`.
 5. User may narrow the detail table by `年度`, `month`, and `酒類コード`.
-6. User may refresh the page to reload the latest data.
+6. User may click `Excel Export` to generate a workbook and receive a download link.
+7. User may refresh the page to reload the latest data.
 
 ## Field Definitions
 ### Summary Row Granularity
@@ -63,11 +65,15 @@
   - default value: blank
   - interpreted as calendar month inside the selected business year range
 - `酒類コード`
-  - filters by the code value shown in the page
+  - option label displays the alcohol type name resolved from master data
+  - selected value still filters by the underlying liquor code
+  - fallback to the raw liquor code when no master label is available
 
 ### Summary Columns
 - `酒類コード`
   - resolved from batch category metadata
+  - display the alcohol type name for the resolved liquor code
+  - fallback to the raw liquor code when no master label is available
 - `ABV`
   - resolved from batch ABV metadata
 - `数量(ml)`
@@ -133,10 +139,26 @@
   - display `—`
 
 ## Actions
+### Excel Export
+- Generate the workbook in the browser.
+- Show a download link after generation succeeds.
+- File name format:
+  - `課税移出一覧表_<business-year>.xlsx`
+- Workbook structure:
+  - first sheet: same rows and columns as `年度サマリー`
+  - then one sheet per month in the selected business year
+- Monthly sheet rules:
+  - include all detail rows for that month inside the selected business year
+  - ignore the current page `month` and `酒類コード` filter inputs
+  - keep the same column set as `課税移出明細`
+- Month sheet order:
+  - `4` through `12`
+  - then `1` through `3`
+
 ### Refresh
 - Reload the report dataset.
 - Keep the user on the same page.
 
 ## Non-Scope
 - No inline movement editing.
-- No Excel or CSV export in v1.
+- No CSV export in this task.

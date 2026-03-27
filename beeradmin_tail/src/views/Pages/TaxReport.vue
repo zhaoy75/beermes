@@ -58,61 +58,62 @@
         </form>
       </section>
 
-      <section class="grid gap-4">
-        <article v-for="row in rows" :key="row.id" class="border border-gray-200 rounded-xl shadow-sm p-4 bg-white space-y-4">
-          <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
-            <div>
-              <p class="text-xs uppercase tracking-wide text-gray-400">{{ t('taxReport.card.taxType') }}</p>
-              <h3 class="text-lg font-semibold text-gray-900">{{ taxTypeLabel(row.tax_type) }}</h3>
-              <p class="text-xs uppercase tracking-wide text-gray-400 mt-2">{{ t('taxReport.card.period') }}</p>
-              <p class="text-xs text-gray-500">{{ formatPeriod(row) }}</p>
-            </div>
-            <div class="text-left md:text-right">
-              <p class="text-xs uppercase tracking-wide text-gray-400">{{ t('taxReport.card.status') }}</p>
-              <p class="text-sm text-gray-700">{{ statusLabel(row.status) }}</p>
-              <p class="mt-2 text-xs uppercase tracking-wide text-gray-400">{{ t('taxReport.card.totalTax') }}</p>
-              <p class="text-lg font-semibold text-gray-900">{{ formatCurrency(row.total_tax_amount) }}</p>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <p class="text-xs uppercase tracking-wide text-gray-400 mb-2">{{ t('taxReport.card.productionVolume') }}</p>
-              <div v-if="row.volume_breakdown.length" class="space-y-1 text-sm text-gray-700">
-                <div v-for="item in row.volume_breakdown" :key="item.key">
-                  {{ breakdownLabel(item) }}
+      <section class="border border-gray-200 rounded-xl shadow-sm bg-white overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="bg-gray-50 text-xs uppercase text-gray-500">
+            <tr>
+              <th class="px-3 py-2 text-left">{{ t('taxReport.card.taxType') }}</th>
+              <th class="px-3 py-2 text-left">{{ t('taxReport.card.period') }}</th>
+              <th class="px-3 py-2 text-left">{{ t('taxReport.card.status') }}</th>
+              <th class="px-3 py-2 text-right">{{ t('taxReport.card.totalTax') }}</th>
+              <th class="px-3 py-2 text-left">{{ t('taxReport.card.productionVolume') }}</th>
+              <th class="px-3 py-2 text-left">{{ t('taxReport.card.xmlFiles') }}</th>
+              <th class="px-3 py-2 text-left">{{ t('taxReport.card.attachments') }}</th>
+              <th class="px-3 py-2 text-left">{{ t('common.actions') }}</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100">
+            <tr v-for="row in rows" :key="row.id" class="align-top">
+              <td class="px-3 py-3 text-gray-700">{{ taxTypeLabel(row.tax_type) }}</td>
+              <td class="px-3 py-3 text-gray-700">{{ formatPeriod(row) }}</td>
+              <td class="px-3 py-3 text-gray-700">{{ statusLabel(row.status) }}</td>
+              <td class="px-3 py-3 text-right font-medium text-gray-900">{{ formatCurrency(row.total_tax_amount) }}</td>
+              <td class="px-3 py-3 text-gray-700 wrap-cell">
+                <div v-if="row.volume_breakdown.length" class="space-y-1">
+                  <div v-for="item in row.volume_breakdown" :key="item.key">
+                    {{ breakdownLabel(item) }}
+                  </div>
                 </div>
-              </div>
-              <p v-else class="text-xs text-gray-400">—</p>
-            </div>
-            <div class="grid grid-cols-1 gap-3 text-xs">
-              <div>
-                <p class="text-gray-500 mb-1">{{ t('taxReport.card.xmlFiles') }}</p>
-                <div v-if="row.report_files.length" class="space-y-1">
-                  <div v-for="file in row.report_files" :key="file" class="text-blue-600">{{ file }}</div>
+                <span v-else class="text-gray-400">—</span>
+              </td>
+              <td class="px-3 py-3 wrap-cell">
+                <div v-if="row.report_files.length" class="space-y-1 text-blue-600">
+                  <div v-for="file in row.report_files" :key="file">{{ file }}</div>
                 </div>
-                <div v-else class="text-gray-400">—</div>
-              </div>
-              <div>
-                <p class="text-gray-500 mb-1">{{ t('taxReport.card.attachments') }}</p>
-                <div v-if="row.attachment_files.length" class="space-y-1">
-                  <div v-for="file in row.attachment_files" :key="file" class="text-blue-600">{{ file }}</div>
+                <span v-else class="text-gray-400">—</span>
+              </td>
+              <td class="px-3 py-3 wrap-cell">
+                <div v-if="row.attachment_files.length" class="space-y-1 text-blue-600">
+                  <div v-for="file in row.attachment_files" :key="file">{{ file }}</div>
                 </div>
-                <div v-else class="text-gray-400">—</div>
-              </div>
-            </div>
-          </div>
-
-          <div class="flex flex-wrap items-center gap-2">
-            <button class="px-3 py-1.5 text-xs rounded border hover:bg-gray-100" @click="createXmlForRow(row)">
-              {{ t('taxReport.actions.createXml') }}
-            </button>
-            <button class="px-3 py-1.5 text-xs rounded border hover:bg-gray-100" @click="openEdit(row)">
-              {{ t('common.edit') }}
-            </button>
-          </div>
-        </article>
-        <p v-if="!loading && rows.length === 0" class="py-8 text-center text-gray-500">{{ t('common.noData') }}</p>
+                <span v-else class="text-gray-400">—</span>
+              </td>
+              <td class="px-3 py-3">
+                <div class="flex flex-wrap items-center gap-2">
+                  <button class="px-3 py-1.5 text-xs rounded border hover:bg-gray-100" @click="createXmlForRow(row)">
+                    {{ t('taxReport.actions.createXml') }}
+                  </button>
+                  <button class="px-3 py-1.5 text-xs rounded border hover:bg-gray-100" @click="openEdit(row)">
+                    {{ t('common.edit') }}
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr v-if="!loading && rows.length === 0">
+              <td colspan="8" class="px-3 py-8 text-center text-gray-500">{{ t('common.noData') }}</td>
+            </tr>
+          </tbody>
+        </table>
       </section>
 
       <div v-if="showCreatePrompt" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
@@ -387,6 +388,8 @@ import { formatVolume as formatVolumeDisplay } from '@/lib/volumeFormat'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
 
+type JsonMap = Record<string, unknown>
+
 interface CategoryRow {
   id: string
   code: string
@@ -435,7 +438,7 @@ interface MovementLine {
   batch_id: string | null
   qty: number | null
   uom_id: string | null
-  meta?: Record<string, any> | null
+  meta?: JsonMap | null
 }
 
 interface PackageCategoryInfo {
@@ -443,10 +446,36 @@ interface PackageCategoryInfo {
   unit_size_l: number | null
 }
 
+interface PackageLookupRow {
+  id: string
+  unit_volume: unknown
+  volume_uom: unknown
+}
+
+interface BatchLookupRow {
+  id: string
+}
+
+interface AttrDefRow {
+  attr_id: number | string
+  code: string | null
+}
+
+interface EntityAttrRow {
+  entity_id: string | number | null
+  attr_id: number | string | null
+  value_text?: string | null
+  value_num: unknown
+  value_ref_type_id?: string | number | null
+  value_json?: Record<string, unknown> | null
+}
+
 const TABLE = 'tax_reports'
 const STATUS_OPTIONS = ['draft', 'submitted', 'approved'] as const
-const TAX_TYPE_OPTIONS = ['monthly', 'yearly'] as const
-const MOVEMENT_DOC_TYPES = ['sale', 'tax_transfer', 'return', 'transfer', 'waste'] as const
+const TAX_TYPE_OPTIONS = ['monthly'] as const
+const SUMMARY_DOC_TYPES = ['sale', 'tax_transfer', 'return', 'transfer'] as const
+const DISPOSE_DOC_TYPES = ['waste'] as const
+const REPORT_DOC_TYPES = [...SUMMARY_DOC_TYPES, ...DISPOSE_DOC_TYPES] as const
 
 const { t, tm, locale } = useI18n()
 const pageTitle = computed(() => t('taxReport.title'))
@@ -525,11 +554,27 @@ function taxTypeLabel(taxType: string) {
   return typeof label === 'string' ? label : taxType
 }
 
+function isSummaryDocType(value: string): value is (typeof SUMMARY_DOC_TYPES)[number] {
+  return (SUMMARY_DOC_TYPES as readonly string[]).includes(value)
+}
+
+function isDisposeDocType(value: string): value is (typeof DISPOSE_DOC_TYPES)[number] {
+  return (DISPOSE_DOC_TYPES as readonly string[]).includes(value)
+}
+
 function movementTypeLabel(value: string) {
   const map = tm('taxReport.movementTypeMap')
   if (!map || typeof map !== 'object') return value
   const label = (map as Record<string, unknown>)[value]
   return typeof label === 'string' ? label : value
+}
+
+function summaryItemsFromBreakdown(items: TaxVolumeItem[]) {
+  return items.filter((item) => isSummaryDocType(item.move_type))
+}
+
+function disposeItemsFromBreakdown(items: TaxVolumeItem[]) {
+  return items.filter((item) => isDisposeDocType(item.move_type))
 }
 
 function formatPeriod(row: TaxReportRow) {
@@ -600,7 +645,7 @@ function kubunCodeForMoveType(moveType: string, fallback = '1') {
 }
 
 function recalcTotalTax() {
-  totalTaxAmount.value = reportBreakdown.value.reduce((sum, item) => {
+  totalTaxAmount.value = summaryItemsFromBreakdown(reportBreakdown.value).reduce((sum, item) => {
     const volume = Number.isFinite(item.volume_l) ? item.volume_l : 0
     const rate = item.tax_rate ?? 0
     return sum + volume * rate
@@ -612,13 +657,6 @@ function handleBreakdownChange(index: number) {
   if (!item) return
   if (!Number.isFinite(item.volume_l)) item.volume_l = 0
   if (!Number.isFinite(item.abv)) item.abv = null
-  if (item.move_type === 'waste') {
-    const disposeItem = disposeBreakdown.value.find((entry) => entry.key === item.key)
-    if (disposeItem) {
-      disposeItem.abv = item.abv
-      disposeItem.volume_l = item.volume_l
-    }
-  }
   recalcTotalTax()
 }
 
@@ -627,18 +665,7 @@ function handleDisposeChange(index: number) {
   if (!item) return
   if (!Number.isFinite(item.volume_l)) item.volume_l = 0
   if (!Number.isFinite(item.abv)) item.abv = null
-  const summaryItem = reportBreakdown.value.find((entry) => entry.key === item.key)
-  if (summaryItem) {
-    summaryItem.abv = item.abv
-    summaryItem.volume_l = item.volume_l
-  }
   recalcTotalTax()
-}
-
-function updateDisposeBreakdown() {
-  disposeBreakdown.value = reportBreakdown.value
-    .filter((item) => item.move_type === 'waste')
-    .map((item) => ({ ...item }))
 }
 
 function setXmlLink(kind: 'summary' | 'dispose', name: string, xml: string) {
@@ -760,28 +787,31 @@ function downloadTextFile(filename: string, content: string, mime = 'application
   URL.revokeObjectURL(url)
 }
 
-function normalizeReport(row: any): TaxReportRow {
+function normalizeReport(row: JsonMap): TaxReportRow {
   const files = Array.isArray(row.report_files) ? row.report_files : []
   const attachments = Array.isArray(row.attachment_files) ? row.attachment_files : []
   const breakdown = Array.isArray(row.volume_breakdown) ? row.volume_breakdown : []
   const normalizedBreakdown: TaxVolumeItem[] = breakdown
-    .map((item: any, index: number) => ({
-      key: item.key || `${row.id}-${index}`,
-      move_type: item.move_type || item.moveType || item.doc_type || 'unknown',
-      categoryId: item.categoryId || item.category_id || '',
-      categoryCode: item.categoryCode || item.category_code || '',
-      categoryName: item.categoryName || item.category_name || '—',
-      abv: typeof item.abv === 'number' ? item.abv : item.abv ? Number(item.abv) : null,
-      volume_l: typeof item.volume_l === 'number' ? item.volume_l : Number(item.volume_l || 0),
+    .map((item: unknown, index: number) => {
+      const record = item && typeof item === 'object' ? (item as JsonMap) : {}
+      return {
+        key: String(record.key ?? `${String(row.id ?? '')}-${index}`),
+        move_type: String(record.move_type ?? record.moveType ?? record.doc_type ?? 'unknown'),
+        categoryId: String(record.categoryId ?? record.category_id ?? ''),
+        categoryCode: String(record.categoryCode ?? record.category_code ?? ''),
+        categoryName: String(record.categoryName ?? record.category_name ?? '—'),
+        abv: typeof record.abv === 'number' ? record.abv : record.abv ? Number(record.abv) : null,
+        volume_l: typeof record.volume_l === 'number' ? record.volume_l : Number(record.volume_l || 0),
       tax_rate:
-        typeof item.tax_rate === 'number'
-          ? item.tax_rate
-          : item.tax_rate
-            ? Number(item.tax_rate)
-            : item.taxRate
-              ? Number(item.taxRate)
-              : null,
-    }))
+          typeof record.tax_rate === 'number'
+            ? record.tax_rate
+            : record.tax_rate
+              ? Number(record.tax_rate)
+              : record.taxRate
+                ? Number(record.taxRate)
+                : null,
+      }
+    })
     .filter((item: TaxVolumeItem) => item.categoryId || item.categoryName)
   if (normalizedBreakdown.length > 0 && normalizedBreakdown.every((item) => item.tax_rate == null)) {
     const totalVolume = normalizedBreakdown.reduce((sum, item) => sum + (item.volume_l || 0), 0)
@@ -791,16 +821,16 @@ function normalizeReport(row: any): TaxReportRow {
     })
   }
   return {
-    id: row.id,
-    tax_type: row.tax_type || 'monthly',
+    id: String(row.id ?? ''),
+    tax_type: toNullableString(row.tax_type) ?? 'monthly',
     tax_year: Number(row.tax_year),
     tax_month: row.tax_month ? Number(row.tax_month) : 0,
-    status: row.status,
+    status: toNullableString(row.status) ?? 'draft',
     total_tax_amount: Number(row.total_tax_amount ?? 0),
     volume_breakdown: normalizedBreakdown,
-    report_files: files.map((file: any) => String(file)),
-    attachment_files: attachments.map((file: any) => String(file)),
-    created_at: row.created_at ?? null,
+    report_files: files.map((file: unknown) => String(file)),
+    attachment_files: attachments.map((file: unknown) => String(file)),
+    created_at: toNullableString(row.created_at),
   }
 }
 
@@ -840,15 +870,82 @@ async function loadPackageCategories(packageIds: string[]) {
   if (packageIds.length === 0) return map
   const tenant = await ensureTenant()
   const { data, error } = await supabase
-    .from('mst_beer_package_category')
-    .select('id, size, uom_id')
+    .from('mst_package')
+    .select('id, unit_volume, volume_uom, is_active')
     .eq('tenant_id', tenant)
+    .eq('is_active', true)
     .in('id', packageIds)
   if (error) throw error
-  ;(data ?? []).forEach((row: any) => {
-    const uomCode = row.uom_id ? uomLookup.value.get(row.uom_id) : null
-    map.set(row.id, { id: row.id, unit_size_l: convertToLiters(row.size ?? null, uomCode) })
+  ;((data ?? []) as PackageLookupRow[]).forEach((row) => {
+    map.set(row.id, {
+      id: row.id,
+      unit_size_l: convertToLiters(
+        toNullableNumber(row.unit_volume),
+        typeof row.volume_uom === 'string' ? row.volume_uom : null,
+      ),
+    })
   })
+  return map
+}
+
+async function loadBatchEntityAttrsByBatchIds(batchIds: string[]) {
+  const map = new Map<string, { categoryId: string | null; abv: number | null }>()
+  if (batchIds.length === 0) return map
+
+  const uniqueIds = Array.from(new Set(batchIds))
+  const { data: attrDefs, error: attrDefError } = await supabase
+    .from('attr_def')
+    .select('attr_id, code')
+    .eq('domain', 'batch')
+    .in('code', ['beer_category', 'target_abv'])
+    .eq('is_active', true)
+  if (attrDefError) throw attrDefError
+
+  const attrIdToCode = new Map<string, string>()
+  const attrIds = ((attrDefs ?? []) as AttrDefRow[])
+    .map((row) => {
+      const id = Number(row.attr_id)
+      if (!Number.isFinite(id)) return null
+      const code = typeof row.code === 'string' ? row.code : null
+      if (code) attrIdToCode.set(String(row.attr_id), code)
+      return id
+    })
+    .filter((id): id is number => id != null)
+  if (!attrIds.length) return map
+
+  const { data: attrValues, error: attrValueError } = await supabase
+    .from('entity_attr')
+    .select('entity_id, attr_id, value_text, value_num, value_ref_type_id, value_json')
+    .eq('entity_type', 'batch')
+    .in('entity_id', uniqueIds)
+    .in('attr_id', attrIds)
+  if (attrValueError) throw attrValueError
+
+  ;((attrValues ?? []) as EntityAttrRow[]).forEach((row) => {
+    const batchId = String(row.entity_id ?? '')
+    if (!batchId) return
+    if (!map.has(batchId)) {
+      map.set(batchId, { categoryId: null, abv: null })
+    }
+    const entry = map.get(batchId)
+    if (!entry) return
+
+    const code = attrIdToCode.get(String(row.attr_id))
+    if (!code) return
+
+    if (code === 'beer_category') {
+      const jsonDefId = row.value_json?.def_id
+      if (typeof jsonDefId === 'string' && jsonDefId.trim()) entry.categoryId = jsonDefId.trim()
+      else if (typeof row.value_text === 'string' && row.value_text.trim()) entry.categoryId = row.value_text.trim()
+      else if (row.value_ref_type_id != null) entry.categoryId = String(row.value_ref_type_id)
+    }
+
+    if (code === 'target_abv') {
+      const abv = toNullableNumber(row.value_num)
+      if (abv != null) entry.abv = abv
+    }
+  })
+
   return map
 }
 
@@ -871,6 +968,18 @@ function normalizeTaxCategoryCode(value: unknown) {
   if (!text) return ''
   const num = Number(text)
   return Number.isFinite(num) ? String(Math.trunc(num)) : text
+}
+
+function toNullableNumber(value: unknown) {
+  if (value == null || value === '') return null
+  const numeric = Number(value)
+  return Number.isFinite(numeric) ? numeric : null
+}
+
+function toNullableString(value: unknown) {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  return trimmed ? trimmed : null
 }
 
 function buildTaxRateIndex(rows: Array<{ spec?: Record<string, unknown> | null }>) {
@@ -940,6 +1049,8 @@ function convertToLiters(size: number | null, uomCode: string | null | undefined
       return size
     case 'ml':
       return size / 1000
+    case 'kl':
+      return size * 1000
     case 'gal_us':
       return size * 3.78541
     default:
@@ -953,7 +1064,10 @@ function resolvePackageSizeLiters(row: PackageCategoryInfo | undefined) {
 
 const categoryLookup = computed(() => {
   const map = new Map<string, CategoryRow>()
-  categories.value.forEach((row) => map.set(row.id, row))
+  categories.value.forEach((row) => {
+    if (row.id) map.set(row.id, row)
+    if (row.code) map.set(row.code, row)
+  })
   return map
 })
 
@@ -967,6 +1081,7 @@ async function generateReportForPeriod(taxType: string, year: number, month: num
   try {
     generating.value = true
     reportBreakdown.value = []
+    disposeBreakdown.value = []
     totalTaxAmount.value = 0
 
     const tenant = await ensureTenant()
@@ -979,7 +1094,7 @@ async function generateReportForPeriod(taxType: string, year: number, month: num
       .from('inv_movements')
       .select('id, movement_at, doc_type')
       .eq('tenant_id', tenant)
-      .in('doc_type', MOVEMENT_DOC_TYPES as unknown as string[])
+      .in('doc_type', REPORT_DOC_TYPES as unknown as string[])
       .gte('movement_at', startDate)
       .lt('movement_at', endDate)
 
@@ -1001,7 +1116,7 @@ async function generateReportForPeriod(taxType: string, year: number, month: num
 
     if (lineError) throw lineError
 
-    const lines = (movementLines ?? []).filter((row: any) => row.package_id || row.batch_id) as MovementLine[]
+    const lines = ((movementLines ?? []) as MovementLine[]).filter((row) => row.package_id || row.batch_id)
     if (lines.length === 0) {
       reportBreakdown.value = []
       totalTaxAmount.value = 0
@@ -1012,22 +1127,24 @@ async function generateReportForPeriod(taxType: string, year: number, month: num
     const batchIds = Array.from(new Set(lines.map((line) => line.batch_id).filter(Boolean))) as string[]
 
     const packageMap = await loadPackageCategories(packageIds)
+    const batchAttrMap = await loadBatchEntityAttrsByBatchIds(batchIds)
 
     const batchMap = new Map<string, { categoryId: string | null; categoryName: string; abv: number | null }>()
     if (batchIds.length > 0) {
       const { data: batches, error: batchError } = await supabase
         .from('mes_batches')
-        .select('id, actual_abv, recipe:recipe_id ( id, category, target_abv )')
+        .select('id')
         .eq('tenant_id', tenant)
         .in('id', batchIds)
       if (batchError) throw batchError
-      ;(batches ?? []).forEach((row: any) => {
-        const categoryId = row.recipe?.category ?? null
+      ;((batches ?? []) as BatchLookupRow[]).forEach((row) => {
+        const attr = batchAttrMap.get(String(row.id))
+        const categoryId = attr?.categoryId ?? null
         const category = categoryId ? categoryLookup.value.get(categoryId) : null
-        batchMap.set(row.id, {
+        batchMap.set(String(row.id), {
           categoryId,
           categoryName: category?.name || category?.code || categoryId || '—',
-          abv: row.actual_abv ?? row.recipe?.target_abv ?? null,
+          abv: attr?.abv ?? null,
         })
       })
     }
@@ -1050,6 +1167,10 @@ async function generateReportForPeriod(taxType: string, year: number, month: num
       const categoryName = category?.name || category?.code || categoryId
       const categoryCode = category?.code ?? ''
       const abv = batchInfo?.abv ?? null
+
+      if (!(REPORT_DOC_TYPES as readonly string[]).includes(moveType)) {
+        return
+      }
 
       const uomCode = line.uom_id ? uomLookup.value.get(line.uom_id) : null
       let volume = line.qty != null ? convertToLiters(Number(line.qty), uomCode) : null
@@ -1082,7 +1203,9 @@ async function generateReportForPeriod(taxType: string, year: number, month: num
       }
 
       const taxRate = applicableTaxRate(categoryCode, movementAt)
-      totalTax += volume * taxRate
+      if (isSummaryDocType(moveType)) {
+        totalTax += volume * taxRate
+      }
       taxTotalMap.set(key, (taxTotalMap.get(key) ?? 0) + volume * taxRate)
     })
 
@@ -1091,12 +1214,13 @@ async function generateReportForPeriod(taxType: string, year: number, month: num
       item.tax_rate = item.volume_l > 0 ? taxTotal / item.volume_l : 0
     })
 
-    reportBreakdown.value = Array.from(breakdownMap.values()).sort((a, b) => {
+    const generatedItems = Array.from(breakdownMap.values()).sort((a, b) => {
       if (a.categoryName !== b.categoryName) return a.categoryName.localeCompare(b.categoryName)
       return (a.abv ?? 0) - (b.abv ?? 0)
     })
+    reportBreakdown.value = summaryItemsFromBreakdown(generatedItems)
+    disposeBreakdown.value = disposeItemsFromBreakdown(generatedItems)
     totalTaxAmount.value = totalTax
-    updateDisposeBreakdown()
   } catch (err) {
     console.error(err)
     toast.error(err instanceof Error ? err.message : String(err))
@@ -1200,9 +1324,9 @@ async function openEdit(row: TaxReportRow) {
   form.status = row.status
   form.report_files = row.report_files.join('\n')
   form.attachment_files = row.attachment_files.join('\n')
-  reportBreakdown.value = row.volume_breakdown
+  reportBreakdown.value = summaryItemsFromBreakdown(row.volume_breakdown).map((item) => ({ ...item }))
+  disposeBreakdown.value = disposeItemsFromBreakdown(row.volume_breakdown).map((item) => ({ ...item }))
   totalTaxAmount.value = row.total_tax_amount
-  updateDisposeBreakdown()
   showModal.value = true
 }
 
@@ -1265,7 +1389,7 @@ async function saveReport() {
       tax_month: form.tax_month,
       status,
       total_tax_amount: totalTaxAmount.value,
-      volume_breakdown: reportBreakdown.value,
+      volume_breakdown: [...reportBreakdown.value, ...disposeBreakdown.value],
       report_files: parseFileList(form.report_files),
       attachment_files: parseFileList(form.attachment_files),
     }
@@ -1294,7 +1418,8 @@ function buildDisposeXmlFilename(taxType: string, taxYear: number, taxMonth: num
 }
 
 function createXmlForSummary() {
-  if (reportBreakdown.value.length === 0) {
+  const summaryBreakdown = summaryItemsFromBreakdown(reportBreakdown.value)
+  if (summaryBreakdown.length === 0) {
     toast.info(t('taxReport.emptyBreakdown'))
     return
   }
@@ -1307,7 +1432,7 @@ function createXmlForSummary() {
       taxMonth: form.tax_month,
       status: editing.value ? form.status : 'draft',
       totalTax: totalTaxAmount.value,
-      breakdown: reportBreakdown.value,
+      breakdown: summaryBreakdown,
     })
     downloadTextFile(filename, xml)
     setXmlLink('summary', filename, xml)
@@ -1352,7 +1477,8 @@ function createXmlForDispose() {
 }
 
 async function createXmlForRow(row: TaxReportRow) {
-  if (!row.volume_breakdown.length) {
+  const summaryBreakdown = summaryItemsFromBreakdown(row.volume_breakdown)
+  if (!summaryBreakdown.length) {
     toast.info(t('taxReport.emptyBreakdown'))
     return
   }
@@ -1365,7 +1491,7 @@ async function createXmlForRow(row: TaxReportRow) {
       taxMonth: row.tax_month,
       status: row.status,
       totalTax: row.total_tax_amount,
-      breakdown: row.volume_breakdown,
+      breakdown: summaryBreakdown,
     })
     downloadTextFile(filename, xml)
   } catch (err) {
@@ -1437,5 +1563,10 @@ function removeAttachment(file: string) {
 th,
 td {
   white-space: nowrap;
+}
+
+.wrap-cell {
+  white-space: normal;
+  min-width: 14rem;
 }
 </style>

@@ -2421,7 +2421,7 @@
       "period": "Period",
       "status": "Status",
       "totalTax": "Total tax amount",
-      "productionVolume": "Production volume (by type & ABV)",
+      "productionVolume": "Report breakdown (by type & ABV)",
       "xmlFiles": "XML files",
       "attachments": "Attachments"
     },
@@ -2435,13 +2435,13 @@
       "taxMonth": "Month",
       "status": "Status",
       "totalTax": "Total tax amount",
-      "breakdown": "Volume breakdown",
+      "breakdown": "Report breakdown",
       "xmlFiles": "XML files",
       "xmlPlaceholder": "Enter file names, one per line",
       "attachments": "Attachment files",
       "attachmentsHint": "Upload attachment files to list them here."
     },
-    "emptyBreakdown": "No production data found for this period.",
+    "emptyBreakdown": "No reportable movement data found for this period.",
     "createPrompt": {
       "title": "Create tax report",
       "subtitle": "Select the tax type and reporting period before generating.",
@@ -2455,6 +2455,7 @@
       "yearly": "Yearly"
     },
     "movementTypeMap": {
+      "production_receipt": "Production",
       "sale": "Taxed shipment",
       "tax_transfer": "Export (tax exempt)",
       "return": "Return",
@@ -2473,7 +2474,7 @@
     "sections": {
       "summary": {
         "title": "Summary section",
-        "subtitle": "Review and edit the full movement breakdown."
+        "subtitle": "Review and edit reportable movement rows."
       },
       "dispose": {
         "title": "Dispose section",
@@ -2490,7 +2491,7 @@
       "taxYearRequired": "Tax year is required.",
       "taxMonthRequired": "Month is required.",
       "statusRequired": "Status is required.",
-      "breakdownRequired": "Production data is required."
+      "breakdownRequired": "Reportable movement data is required."
     }
   },
   "taxableRemovalReport": {

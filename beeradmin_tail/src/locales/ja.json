@@ -2413,7 +2413,7 @@
       "period": "対象期間",
       "status": "ステータス",
       "totalTax": "酒税額合計",
-      "productionVolume": "生産量（種別・ABV別）",
+      "productionVolume": "申告内訳（種別・ABV別）",
       "xmlFiles": "申告XML",
       "attachments": "添付ファイル"
     },
@@ -2427,13 +2427,13 @@
       "taxMonth": "月",
       "status": "ステータス",
       "totalTax": "酒税額合計",
-      "breakdown": "生産量内訳",
+      "breakdown": "申告内訳",
       "xmlFiles": "XMLファイル",
       "xmlPlaceholder": "ファイル名を1行ずつ入力",
       "attachments": "添付ファイル",
       "attachmentsHint": "添付ファイルをアップロードしてください。"
     },
-    "emptyBreakdown": "対象期間の生産データがありません。",
+    "emptyBreakdown": "対象期間の申告対象データがありません。",
     "createPrompt": {
       "title": "申告書作成",
       "subtitle": "課税種別と対象期間を選択してください。",
@@ -2447,6 +2447,7 @@
       "yearly": "年次"
     },
     "movementTypeMap": {
+      "production_receipt": "生産",
       "sale": "課税移出",
       "tax_transfer": "輸出免税",
       "return": "戻入",
@@ -2465,7 +2466,7 @@
     "sections": {
       "summary": {
         "title": "サマリー",
-        "subtitle": "移出内訳を確認・編集します。"
+        "subtitle": "申告対象の移動内訳を確認・編集します。"
       },
       "dispose": {
         "title": "廃棄",
@@ -2482,7 +2483,7 @@
       "taxYearRequired": "課税年度は必須です。",
       "taxMonthRequired": "月は必須です。",
       "statusRequired": "ステータスは必須です。",
-      "breakdownRequired": "生産量の集計が必要です。"
+      "breakdownRequired": "申告対象データの集計が必要です。"
     }
   },
   "taxableRemovalReport": {

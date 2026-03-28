@@ -75,7 +75,11 @@
           <tbody class="divide-y divide-gray-100">
             <tr v-for="row in rows" :key="row.id" class="align-top">
               <td class="px-3 py-3 text-gray-700">{{ taxTypeLabel(row.tax_type) }}</td>
-              <td class="px-3 py-3 text-gray-700">{{ formatPeriod(row) }}</td>
+              <td class="px-3 py-3 text-gray-700">
+                <button class="text-left text-blue-600 hover:underline" type="button" @click="openEdit(row)">
+                  {{ formatPeriod(row) }}
+                </button>
+              </td>
               <td class="px-3 py-3 text-gray-700">{{ statusLabel(row.status) }}</td>
               <td class="px-3 py-3 text-right font-medium text-gray-900">{{ formatCurrency(row.total_tax_amount) }}</td>
               <td class="px-3 py-3 text-gray-700 wrap-cell">
@@ -88,7 +92,15 @@
               </td>
               <td class="px-3 py-3 wrap-cell">
                 <div v-if="row.report_files.length" class="space-y-1 text-blue-600">
-                  <div v-for="file in row.report_files" :key="file">{{ file }}</div>
+                  <button
+                    v-for="file in row.report_files"
+                    :key="file"
+                    class="block text-left hover:underline"
+                    type="button"
+                    @click="downloadXmlForRowFile(row, file)"
+                  >
+                    {{ file }}
+                  </button>
                 </div>
                 <span v-else class="text-gray-400">—</span>
               </td>
@@ -100,11 +112,13 @@
               </td>
               <td class="px-3 py-3">
                 <div class="flex flex-wrap items-center gap-2">
-                  <button class="px-3 py-1.5 text-xs rounded border hover:bg-gray-100" @click="createXmlForRow(row)">
-                    {{ t('taxReport.actions.createXml') }}
-                  </button>
-                  <button class="px-3 py-1.5 text-xs rounded border hover:bg-gray-100" @click="openEdit(row)">
-                    {{ t('common.edit') }}
+                  <button
+                    class="px-3 py-1.5 text-xs rounded border hover:bg-gray-100 disabled:opacity-50"
+                    type="button"
+                    :disabled="deletingReportId === row.id || !canDeleteReport(row)"
+                    @click="deleteReport(row)"
+                  >
+                    {{ t('common.delete') }}
                   </button>
                 </div>
               </td>
@@ -486,6 +500,7 @@ const saving = ref(false)
 const showModal = ref(false)
 const editing = ref(false)
 const generating = ref(false)
+const deletingReportId = ref('')
 const showCreatePrompt = ref(false)
 const templateXml = ref('')
 
@@ -580,6 +595,10 @@ function disposeItemsFromBreakdown(items: TaxVolumeItem[]) {
 function formatPeriod(row: TaxReportRow) {
   if (row.tax_type === 'yearly') return `${row.tax_year} / —`
   return `${row.tax_year} / ${row.tax_month || '—'}`
+}
+
+function canDeleteReport(row: TaxReportRow) {
+  return row.status === 'draft'
 }
 
 const attachmentList = computed(() => parseFileList(form.attachment_files))
@@ -1330,6 +1349,29 @@ async function openEdit(row: TaxReportRow) {
   showModal.value = true
 }
 
+async function deleteReport(row: TaxReportRow) {
+  if (!canDeleteReport(row)) {
+    toast.info(t('taxReport.deleteDraftOnly'))
+    return
+  }
+  const confirmed = window.confirm(t('taxReport.deleteConfirm', { period: formatPeriod(row) }))
+  if (!confirmed) return
+
+  try {
+    deletingReportId.value = row.id
+    const tenant = await ensureTenant()
+    const { error } = await supabase.from(TABLE).delete().eq('id', row.id).eq('tenant_id', tenant)
+    if (error) throw error
+    toast.success(t('taxReport.deleted'))
+    await fetchReports()
+  } catch (err) {
+    console.error(err)
+    toast.error(t('taxReport.deleteFailed', { message: err instanceof Error ? err.message : String(err) }))
+  } finally {
+    deletingReportId.value = ''
+  }
+}
+
 async function handlePeriodChange() {
   if (editing.value) return
   if (!form.tax_year) return
@@ -1476,44 +1518,32 @@ function createXmlForDispose() {
   form.report_files = Array.from(files).join('\n')
 }
 
-async function createXmlForRow(row: TaxReportRow) {
-  const summaryBreakdown = summaryItemsFromBreakdown(row.volume_breakdown)
-  if (!summaryBreakdown.length) {
+function isDisposeFilename(filename: string, row: TaxReportRow) {
+  const expectedDisposeName = buildDisposeXmlFilename(row.tax_type, row.tax_year, row.tax_month)
+  return filename === expectedDisposeName || filename.includes('廃棄')
+}
+
+function downloadXmlForRowFile(row: TaxReportRow, filename: string) {
+  const isDispose = isDisposeFilename(filename, row)
+  const breakdown = isDispose ? disposeItemsFromBreakdown(row.volume_breakdown) : summaryItemsFromBreakdown(row.volume_breakdown)
+  if (!breakdown.length) {
     toast.info(t('taxReport.emptyBreakdown'))
     return
   }
-  const filename = buildXmlFilename(row.tax_type, row.tax_year, row.tax_month)
-  let xml = ''
+
   try {
-    xml = buildXmlPayload({
+    const xml = buildXmlPayload({
       taxType: row.tax_type,
       taxYear: row.tax_year,
       taxMonth: row.tax_month,
       status: row.status,
       totalTax: row.total_tax_amount,
-      breakdown: summaryBreakdown,
+      breakdown,
     })
     downloadTextFile(filename, xml)
   } catch (err) {
     toast.error(t('taxReport.templateMissing'))
     console.error(err)
-    return
-  }
-
-  if (row.report_files.includes(filename)) return
-  try {
-    const tenant = await ensureTenant()
-    const updatedFiles = [...row.report_files, filename]
-    const { error } = await supabase
-      .from(TABLE)
-      .update({ report_files: updatedFiles })
-      .eq('id', row.id)
-      .eq('tenant_id', tenant)
-    if (error) throw error
-    await fetchReports()
-  } catch (err) {
-    console.error(err)
-    toast.error(err instanceof Error ? err.message : String(err))
   }
 }
 

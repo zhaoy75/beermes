@@ -772,3 +772,11 @@ I want to create an vue page to show all 課稅移出,
     移出先氏名又は名称
     ロット番号
     摘要
+
+
+for 課税移出一覧表 vue page, I want to add button to export the table data to excel file. when user click the button, 
+the system should generate an excel file with the table data and show a link to download
+ the generated excel file. the excel file name should be like "課税移出一覧表_2026.xlsx"
+- the excel should include serveral sheets,
+  the first sheet is summary sheet, contents should be same as the 年度サマリー table in the page
+  the system should create sheet for every month in the business year, the information should just the same as 課税移出明細 table in the page but with all record of the month regardless of the search section input.

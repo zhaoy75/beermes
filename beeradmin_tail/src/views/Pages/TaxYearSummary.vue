@@ -153,7 +153,6 @@ interface CategoryRecord {
 }
 
 interface TaxRateRecord {
-  category: string
   taxrate: number
   effectDate: Date | null
   expireDate: Date | null
@@ -171,7 +170,7 @@ interface MovementLine {
   batch_id: string | null
   qty: number | null
   uom_id: string | null
-  meta: Record<string, any> | null
+  meta: Record<string, unknown> | null
 }
 
 interface PackageCategoryInfo {
@@ -179,15 +178,28 @@ interface PackageCategoryInfo {
   unit_size_l: number | null
 }
 
+interface PackageLookupRow {
+  id: string
+  unit_volume: unknown
+  volume_uom: unknown
+}
+
 interface BatchRow {
   id: string
   batch_code: string | null
-  recipe_id: string | null
 }
 
-interface RecipeRow {
-  id: string
-  category: string | null
+interface AttrDefRow {
+  attr_id: number | string
+  code: string | null
+}
+
+interface EntityAttrRow {
+  entity_id: string | number | null
+  attr_id: number | string | null
+  value_text?: string | null
+  value_ref_type_id?: string | number | null
+  value_json?: Record<string, unknown> | null
 }
 
 interface CategorySummary {
@@ -228,7 +240,11 @@ let chartInstance: Chart | null = null
 
 const categoryLookup = computed(() => {
   const map = new Map<string, CategoryRecord>()
-  categories.value.forEach((row) => map.set(row.id, row))
+  categories.value.forEach((row) => {
+    map.set(row.id, row)
+    const normalizedCode = normalizeTaxCategoryCode(row.code)
+    if (normalizedCode) map.set(normalizedCode, row)
+  })
   return map
 })
 
@@ -283,14 +299,18 @@ async function ensureTenant() {
 
 async function loadCategories() {
   try {
-    const tenant = await ensureTenant()
     const { data, error } = await supabase
-      .from('mst_category')
-      .select('id, code, name')
-      .eq('tenant_id', tenant)
-      .order('name', { ascending: true, nullsFirst: false })
+      .from('registry_def')
+      .select('def_id, def_key, spec')
+      .eq('kind', 'alcohol_type')
+      .eq('is_active', true)
+      .order('def_key', { ascending: true })
     if (error) throw error
-    categories.value = data ?? []
+    categories.value = (data ?? []).map((row: { def_id?: unknown; def_key?: unknown; spec?: Record<string, unknown> | null }) => ({
+      id: String(row.def_id ?? ''),
+      code: String(row.spec?.tax_category_code ?? row.spec?.code ?? row.def_key ?? ''),
+      name: typeof row.spec?.name === 'string' ? row.spec.name : (typeof row.def_key === 'string' ? row.def_key : null),
+    }))
   } catch (err) {
     console.warn('Failed to load categories', err)
   }
@@ -298,27 +318,36 @@ async function loadCategories() {
 
 const taxRateIndex = ref<Record<string, TaxRateRecord[]>>({})
 
-function buildTaxRateIndex(rows: any[]) {
+function normalizeTaxCategoryCode(value: unknown) {
+  if (value == null) return ''
+  if (typeof value === 'number' && Number.isFinite(value)) return String(Math.trunc(value))
+  const text = String(value).trim()
+  if (!text) return ''
+  const numeric = Number(text)
+  return Number.isFinite(numeric) ? String(Math.trunc(numeric)) : text
+}
+
+function buildTaxRateIndex(rows: Array<{ spec?: Record<string, unknown> | null }>) {
   const index: Record<string, TaxRateRecord[]> = {}
   rows.forEach((row) => {
-    if (!row.category) return
-    const effectDate = row.effect_date ? new Date(row.effect_date) : null
-    const expireDate = row.expire_date ? new Date(row.expire_date) : null
+    const spec = (row.spec && typeof row.spec === 'object') ? row.spec : {}
+    const categoryCode = normalizeTaxCategoryCode(spec.tax_category_code)
+    if (!categoryCode) return
+    const taxRateRaw = Number(spec.tax_rate ?? 0)
+    if (!Number.isFinite(taxRateRaw)) return
     const entry: TaxRateRecord = {
-      category: row.category,
-      taxrate: Number(row.taxrate ?? 0) || 0,
-      effectDate,
-      expireDate,
+      taxrate: taxRateRaw,
+      effectDate: spec.start_date ? new Date(String(spec.start_date)) : null,
+      expireDate: spec.expiration_date ? new Date(String(spec.expiration_date)) : null,
     }
-    if (!index[entry.category]) index[entry.category] = []
-    index[entry.category].push(entry)
+    if (!index[categoryCode]) index[categoryCode] = []
+    index[categoryCode].push(entry)
   })
 
-  Object.keys(index).forEach((key) => {
-    index[key].sort((a, b) => {
-      const aTime = a.effectDate ? a.effectDate.getTime() : -Infinity
-      const bTime = b.effectDate ? b.effectDate.getTime() : -Infinity
-      return aTime - bTime
+  Object.values(index).forEach((records) => {
+    records.sort((a, b) => {
+      if (!a.effectDate || !b.effectDate) return 0
+      return a.effectDate.getTime() - b.effectDate.getTime()
     })
   })
   taxRateIndex.value = index
@@ -326,13 +355,13 @@ function buildTaxRateIndex(rows: any[]) {
 
 async function loadTaxRates() {
   try {
-    const tenant = await ensureTenant()
     const { data, error } = await supabase
-      .from('tax_beer')
-      .select('category, taxrate, effect_date, expire_date')
-      .eq('tenant_id', tenant)
+      .from('registry_def')
+      .select('spec')
+      .eq('kind', 'alcohol_tax')
+      .eq('is_active', true)
     if (error) throw error
-    buildTaxRateIndex(data ?? [])
+    buildTaxRateIndex((data ?? []) as Array<{ spec?: Record<string, unknown> | null }>)
   } catch (err) {
     console.warn('Failed to load tax rates', err)
     taxRateIndex.value = {}
@@ -356,13 +385,15 @@ async function loadUoms() {
 function convertToLiters(size: number | null | undefined, uomCode: string | null | undefined) {
   if (size == null || Number.isNaN(Number(size))) return null
   const numeric = Number(size)
-  switch (uomCode) {
-    case 'L':
+  switch (uomCode?.toLowerCase()) {
+    case 'l':
     case null:
     case undefined:
       return numeric
-    case 'mL':
+    case 'ml':
       return numeric / 1000
+    case 'kl':
+      return numeric * 1000
     case 'gal_us':
       return numeric * 3.78541
     default:
@@ -370,7 +401,7 @@ function convertToLiters(size: number | null | undefined, uomCode: string | null
   }
 }
 
-function toNumber(value: any): number | null {
+function toNumber(value: unknown): number | null {
   if (value == null || value === '') return null
   const num = Number(value)
   return Number.isFinite(num) ? num : null
@@ -397,8 +428,9 @@ function resolveLineVolume(line: MovementLine, packageRow: PackageCategoryInfo |
 }
 
 function applicableTaxRate(categoryId: string | null | undefined, dateStr: string | null | undefined) {
-  if (!categoryId) return 0
-  const records = taxRateIndex.value[categoryId]
+  const code = normalizeTaxCategoryCode(categoryId)
+  if (!code) return 0
+  const records = taxRateIndex.value[code]
   if (!records || records.length === 0) return 0
   if (!dateStr) return records[records.length - 1]?.taxrate ?? 0
   const date = new Date(dateStr)
@@ -424,7 +456,7 @@ async function loadMovementLines(movementIds: string[]) {
     .select('movement_id, package_id, batch_id, qty, uom_id, meta')
     .in('movement_id', movementIds)
   if (error) throw error
-  return (data ?? []).filter((row: any) => row.package_id || row.batch_id) as MovementLine[]
+  return ((data ?? []) as MovementLine[]).filter((row) => row.package_id || row.batch_id)
 }
 
 async function loadPackageCategories(packageIds: string[]) {
@@ -432,15 +464,24 @@ async function loadPackageCategories(packageIds: string[]) {
   if (packageIds.length === 0) return map
   const tenant = await ensureTenant()
   const { data, error } = await supabase
-    .from('mst_beer_package_category')
-    .select('id, size, uom_id')
+    .from('mst_package')
+    .select('id, unit_volume, volume_uom, is_active')
     .eq('tenant_id', tenant)
+    .eq('is_active', true)
     .in('id', packageIds)
   if (error) throw error
-  ;(data ?? []).forEach((row: any) => {
-    const uomCode = row.uom_id ? uomLookup.value.get(row.uom_id) : null
-    const unitSize = convertToLiters(row.size, uomCode)
-    map.set(row.id, { id: row.id, unit_size_l: unitSize })
+  ;((data ?? []) as PackageLookupRow[]).forEach((row) => {
+    const volumeUom =
+      typeof row.volume_uom === 'string'
+        ? (uomLookup.value.get(row.volume_uom) ?? row.volume_uom)
+        : null
+    map.set(row.id, {
+      id: row.id,
+      unit_size_l: convertToLiters(
+        toNumber(row.unit_volume),
+        volumeUom,
+      ),
+    })
   })
   return map
 }
@@ -451,25 +492,59 @@ async function loadBatches(batchIds: string[]) {
   const tenant = await ensureTenant()
   const { data, error } = await supabase
     .from('mes_batches')
-    .select('id, batch_code, recipe_id')
+    .select('id, batch_code')
     .eq('tenant_id', tenant)
     .in('id', batchIds)
   if (error) throw error
-  ;(data ?? []).forEach((row: any) => map.set(row.id, row as BatchRow))
+  ;((data ?? []) as BatchRow[]).forEach((row) => map.set(row.id, row))
   return map
 }
 
-async function loadRecipes(recipeIds: string[]) {
-  const map = new Map<string, RecipeRow>()
-  if (recipeIds.length === 0) return map
-  const tenant = await ensureTenant()
-  const { data, error } = await supabase
-    .from('mes_recipes')
-    .select('id, category')
-    .eq('tenant_id', tenant)
-    .in('id', recipeIds)
-  if (error) throw error
-  ;(data ?? []).forEach((row: any) => map.set(row.id, row as RecipeRow))
+async function loadBatchCategories(batchIds: string[]) {
+  const map = new Map<string, string>()
+  if (batchIds.length === 0) return map
+  const uniqueIds = Array.from(new Set(batchIds))
+  const { data: attrDefs, error: attrDefError } = await supabase
+    .from('attr_def')
+    .select('attr_id, code')
+    .eq('domain', 'batch')
+    .eq('code', 'beer_category')
+    .eq('is_active', true)
+  if (attrDefError) throw attrDefError
+
+  const attrIds = ((attrDefs ?? []) as AttrDefRow[])
+    .map((row) => Number(row.attr_id))
+    .filter((value) => Number.isFinite(value))
+  if (!attrIds.length) return map
+
+  const { data: attrValues, error: attrValueError } = await supabase
+    .from('entity_attr')
+    .select('entity_id, attr_id, value_text, value_ref_type_id, value_json')
+    .eq('entity_type', 'batch')
+    .in('entity_id', uniqueIds)
+    .in('attr_id', attrIds)
+  if (attrValueError) throw attrValueError
+
+  ;((attrValues ?? []) as EntityAttrRow[]).forEach((row) => {
+    const batchId = String(row.entity_id ?? '')
+    if (!batchId) return
+    const jsonDefId = row.value_json?.def_id
+    if (typeof jsonDefId === 'string' && jsonDefId.trim()) {
+      map.set(batchId, jsonDefId.trim())
+      return
+    }
+    if (typeof jsonDefId === 'number' && Number.isFinite(jsonDefId)) {
+      map.set(batchId, String(jsonDefId))
+      return
+    }
+    if (typeof row.value_text === 'string' && row.value_text.trim()) {
+      map.set(batchId, row.value_text.trim())
+      return
+    }
+    if (row.value_ref_type_id != null) {
+      map.set(batchId, String(row.value_ref_type_id))
+    }
+  })
   return map
 }
 
@@ -512,10 +587,9 @@ async function loadSummary() {
       new Set(lines.map((line) => line.batch_id).filter((id): id is string => Boolean(id))),
     )
     const batchMap = await loadBatches(batchIds)
-    const recipeIds = Array.from(new Set(Array.from(batchMap.values()).map((row) => row.recipe_id).filter(Boolean))) as string[]
-    const recipeMap = await loadRecipes(recipeIds)
+    const batchCategoryMap = await loadBatchCategories(batchIds)
 
-    processMovementLines(lines, headerMap, packageMap, batchMap, recipeMap)
+    processMovementLines(lines, headerMap, packageMap, batchMap, batchCategoryMap)
   } catch (err) {
     console.error(err)
     errorMessage.value = err instanceof Error ? err.message : String(err)
@@ -537,7 +611,7 @@ function processMovementLines(
   headerMap: Map<string, MovementHeader>,
   packageMap: Map<string, PackageCategoryInfo>,
   batchMap: Map<string, BatchRow>,
-  recipeMap: Map<string, RecipeRow>
+  batchCategoryMap: Map<string, string>
 ) {
   const categoryTotals = new Map<string, { volume: number; tax: number }>()
   const monthlyTotals = Array.from({ length: 12 }, (_, month) => ({ month, volume: 0, tax: 0 }))
@@ -555,14 +629,16 @@ function processMovementLines(
     const batchId = row.batch_id ?? null
     if (!batchId) return
     const batchInfo = batchMap.get(batchId)
-    const recipe = batchInfo?.recipe_id ? recipeMap.get(batchInfo.recipe_id) : undefined
-    const categoryId = recipe?.category ?? null
-    if (!categoryId) return
+    const rawCategoryId = batchCategoryMap.get(batchId) ?? null
+    if (!rawCategoryId) return
+    const categoryRecord = categoryLookup.value.get(rawCategoryId)
+    const categoryId = categoryRecord?.id || normalizeTaxCategoryCode(rawCategoryId) || rawCategoryId
+    const categoryName = categoryRecord?.name || categoryRecord?.code || categoryId
 
     const volume = resolveLineVolume(row, packageRow)
     if (volume == null || volume <= 0) return
 
-    const taxRate = applicableTaxRate(categoryId, movementAt)
+    const taxRate = applicableTaxRate(categoryRecord?.code ?? rawCategoryId, movementAt)
     const taxAmount = volume * taxRate
 
     const categoryEntry = categoryTotals.get(categoryId) || { volume: 0, tax: 0 }
@@ -582,7 +658,7 @@ function processMovementLines(
         batchId,
         batchCode: batchInfo?.batch_code ?? batchId,
         categoryId,
-        categoryName: categoryLookup.value.get(categoryId)?.name || categoryLookup.value.get(categoryId)?.code || categoryId,
+        categoryName,
         fillDate: movementAt,
         totalVolume: 0,
         totalTax: 0,
@@ -687,13 +763,18 @@ function updateChart() {
       })
   } else {
       chartInstance.data.labels = labels
-      const volumeDataset = chartInstance.data.datasets[0] as any
-      const taxDataset = chartInstance.data.datasets[1] as any
+      const volumeDataset = chartInstance.data.datasets[0] as { label?: string; data?: number[] }
+      const taxDataset = chartInstance.data.datasets[1] as { label?: string; data?: number[] }
       volumeDataset.label = t('taxYearSummary.volumeSeries')
       volumeDataset.data = volumes
       taxDataset.label = t('taxYearSummary.taxSeries')
       taxDataset.data = taxes
-      const opts = chartInstance.options as any
+      const opts = chartInstance.options as {
+        scales?: {
+          y?: { title?: { text?: string } }
+          y1?: { title?: { text?: string } }
+        }
+      }
       if (opts.scales?.y?.title) opts.scales.y.title.text = t('taxYearSummary.volumeSeries')
       if (opts.scales?.y1?.title) opts.scales.y1.title.text = t('taxYearSummary.taxSeries')
       chartInstance.update()

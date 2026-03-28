@@ -123,8 +123,9 @@
 - `添付ファイル`
   - saved `attachment_files`
 - Row actions:
-  - `XML生成`
-  - `Edit`
+  - `参照`
+  - `削除`
+
 
 ### Create / Edit Form Fields
 - `課税種別`
@@ -141,7 +142,7 @@
   - new rows are saved as `draft`
 - `酒税額合計`
   - read-only derived display
-- `XMLファイル`
+- `申告XMLファイル`
   - free text list
   - one file name per line
 - `添付ファイル`

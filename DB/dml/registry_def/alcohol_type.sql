@@ -53,10 +53,46 @@ VALUES
   }'
 );
 
-CREATE OR REPLACE VIEW v_batch_with_alcohol_type AS
+CREATE OR REPLACE VIEW v_alcohol_type_options AS
+WITH ranked_alcohol_type AS (
+  SELECT
+    rd.def_id,
+    rd.def_key,
+    rd.scope,
+    rd.owner_id,
+    rd.spec,
+    NULLIF(BTRIM(rd.spec ->> 'tax_category_code'), '') AS tax_category_code,
+    COALESCE(NULLIF(BTRIM(rd.spec ->> 'name'), ''), rd.def_key) AS label,
+    ROW_NUMBER() OVER (
+      PARTITION BY NULLIF(BTRIM(rd.spec ->> 'tax_category_code'), '')
+      ORDER BY
+        CASE
+          WHEN rd.scope = 'tenant' AND rd.owner_id = app_current_tenant_id() THEN 0
+          WHEN rd.scope = 'system' THEN 1
+          ELSE 2
+        END,
+        rd.updated_at DESC,
+        rd.created_at DESC,
+        rd.def_id DESC
+    ) AS row_priority
+  FROM registry_def rd
+  WHERE rd.kind = 'alcohol_type'
+    AND rd.is_active = true
+    AND (
+      rd.scope = 'system'
+      OR (rd.scope = 'tenant' AND rd.owner_id = app_current_tenant_id())
+    )
+    AND NULLIF(BTRIM(rd.spec ->> 'tax_category_code'), '') IS NOT NULL
+)
 SELECT
-  b.*,
-  at.label AS alcohol_type_label
-FROM batch b
-LEFT JOIN v_alcohol_type_options at
-  ON at.value = b.alcohol_type_key;
+  tax_category_code AS key,
+  tax_category_code AS value,
+  label,
+  def_id,
+  def_key,
+  scope,
+  owner_id,
+  spec
+FROM ranked_alcohol_type
+WHERE row_priority = 1;
+

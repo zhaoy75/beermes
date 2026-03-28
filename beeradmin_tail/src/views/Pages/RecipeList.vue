@@ -366,6 +366,7 @@ import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import { buildAlcoholTypeLabelMap, resolveAlcoholTypeLabel } from '@/lib/alcoholTypeRegistry'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
@@ -443,19 +444,12 @@ const styleOptions = computed(() => {
   return Array.from(set).sort((a, b) => a.localeCompare(b))
 })
 
-const categoryMap = computed(() => {
-  const map = new Map<string, string>()
-  categories.value.forEach((row) => {
-    const label = typeof row.spec?.name === 'string' ? row.spec.name : row.def_key
-    map.set(row.def_id, label || row.def_key)
-  })
-  return map
-})
+const categoryLabelMap = computed(() => buildAlcoholTypeLabelMap(categories.value))
 
 const categoryOptions = computed(() =>
   categories.value.map((row) => ({
     value: row.def_id,
-    label: typeof row.spec?.name === 'string' ? row.spec.name : row.def_key,
+    label: resolveAlcoholTypeLabel(categoryLabelMap.value, row.def_id) ?? row.def_key,
   })),
 )
 
@@ -697,7 +691,7 @@ function goEdit(row: RecipeRow) {
 
 function categoryLabel(id: string | null | undefined) {
   if (!id) return '—'
-  return categoryMap.value.get(id) ?? '—'
+  return resolveAlcoholTypeLabel(categoryLabelMap.value, id) ?? id
 }
 
 const normalizeObject = (value: unknown) => {

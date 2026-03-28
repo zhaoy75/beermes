@@ -405,6 +405,7 @@ import {
   packingTotalLineVolumeFromEvent as derivePackingTotalLineVolumeFromEvent,
   processedFillingVolumeFromEvent,
 } from '@/lib/batchFilling'
+import { buildAlcoholTypeLabelMap, resolveAlcoholTypeLabel } from '@/lib/alcoholTypeRegistry'
 import { supabase } from '@/lib/supabase'
 import { formatVolume } from '@/lib/volumeFormat'
 
@@ -553,6 +554,17 @@ type PackingEvent = {
 const packageCategories = ref<PackageCategoryOption[]>([])
 const siteOptions = ref<SiteOption[]>([])
 const beerCategories = ref<BeerCategoryOption[]>([])
+const beerCategoryLabelMap = computed(() => {
+  const map = new Map<string, string>()
+  beerCategories.value.forEach((row) => {
+    if (!row.label) return
+    ;[row.value, row.key, row.label].forEach((key) => {
+      const normalized = String(key ?? '').trim()
+      if (normalized) map.set(normalized, row.label)
+    })
+  })
+  return map
+})
 const recipeCategoryId = ref<string | null>(null)
 const volumeUoms = ref<VolumeUomOption[]>([])
 const uomOptionsRaw = ref<UomOption[]>([])
@@ -1081,12 +1093,11 @@ async function loadBeerCategories() {
       .eq('is_active', true)
       .order('def_key', { ascending: true })
     if (error) throw error
+    const labelMap = buildAlcoholTypeLabelMap((data ?? []) as Array<Record<string, unknown>>)
     beerCategories.value = (data ?? []).map((row: any) => ({
       value: String(row.def_id),
       key: String(row.def_key ?? ''),
-      label: typeof row.spec?.name === 'string' && row.spec.name.trim()
-        ? row.spec.name.trim()
-        : String(row.def_key ?? row.def_id),
+      label: resolveAlcoholTypeLabel(labelMap, row.def_id) ?? String(row.def_key ?? row.def_id),
     }))
   } catch (err) {
     console.error(err)
@@ -1690,8 +1701,7 @@ function beerCategoryLabel(categoryValue: string | null | undefined) {
   if (!categoryValue) return '—'
   const normalized = categoryValue.trim()
   if (!normalized) return '—'
-  const match = beerCategories.value.find((row) => row.value === normalized || row.key === normalized)
-  return match?.label || normalized
+  return resolveAlcoholTypeLabel(beerCategoryLabelMap.value, normalized) ?? normalized
 }
 
 function formatPackingBeerCategory() {

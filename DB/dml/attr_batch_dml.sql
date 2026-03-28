@@ -32,7 +32,7 @@ values
     '00000000-0000-0000-0000-000000000000',
     'beer_category',
     'Beer Category',
-    '{"ja":"ビール分類","en":"Beer Category"}',
+    '{"ja":"酒類分類","en":"Beer Category"}',
     'ref',
     null,
     'registry_def',

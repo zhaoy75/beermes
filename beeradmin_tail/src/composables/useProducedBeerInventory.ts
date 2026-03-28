@@ -2,6 +2,7 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue3-toastify'
 import { supabase } from '@/lib/supabase'
+import { buildAlcoholTypeLabelMap, resolveAlcoholTypeLabel } from '@/lib/alcoholTypeRegistry'
 import { formatVolumeNumber } from '@/lib/volumeFormat'
 
 type ContainerKind = 'tank' | 'keg' | 'case' | 'other'
@@ -118,11 +119,7 @@ export function useProducedBeerInventory() {
       .map((item) => ({ value: item.value, label: item.label })),
   )
 
-  const categoryMap = computed(() => {
-    const map = new Map<string, CategoryRow>()
-    categories.value.forEach((row) => map.set(row.def_id, row))
-    return map
-  })
+  const categoryLabelMap = computed(() => buildAlcoholTypeLabelMap(categories.value))
 
   const packageCategoryMap = computed(() => {
     const map = new Map<
@@ -194,10 +191,7 @@ export function useProducedBeerInventory() {
 
   function categoryLabel(categoryId: string | null | undefined) {
     if (!categoryId) return '—'
-    const category = categoryMap.value.get(categoryId)
-    if (!category) return categoryId
-    const label = typeof category.spec?.name === 'string' ? category.spec.name : category.def_key
-    return label || categoryId
+    return resolveAlcoholTypeLabel(categoryLabelMap.value, categoryId) ?? categoryId
   }
 
   function siteLabel(siteId: string | null | undefined) {

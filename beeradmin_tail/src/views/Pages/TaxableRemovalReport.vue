@@ -200,6 +200,7 @@ import { useI18n } from 'vue-i18n'
 import { toast } from 'vue3-toastify'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import { buildAlcoholTypeLabelMap, resolveAlcoholTypeLabel as resolveAlcoholTypeRegistryLabel } from '@/lib/alcoholTypeRegistry'
 import { createWorkbookBlob, type WorkbookCell, type WorkbookCellValue, type WorkbookSheet } from '@/lib/fillingReportExport'
 import { supabase } from '@/lib/supabase'
 
@@ -742,7 +743,7 @@ function normalizedCode(value: string | null | undefined) {
 function resolveAlcoholTypeLabel(code: string | null | undefined) {
   const normalized = normalizedCode(code)
   if (!normalized) return null
-  return alcoholTypeLabelMap.value.get(normalized) ?? null
+  return resolveAlcoholTypeRegistryLabel(alcoholTypeLabelMap.value, normalized) ?? null
 }
 
 function formatAddress(value: JsonMap | string | null | undefined) {
@@ -868,24 +869,7 @@ async function loadAlcoholTypes() {
     .eq('kind', 'alcohol_type')
     .eq('is_active', true)
   if (error) throw error
-  const next = new Map<string, string>()
-  ;((data ?? []) as AlcoholTypeRegistryRow[]).forEach((row) => {
-    const spec = row.spec && typeof row.spec === 'object' ? row.spec : {}
-    const label =
-      (typeof spec.name === 'string' && spec.name.trim() ? spec.name.trim() : null) ??
-      (typeof row.def_key === 'string' && row.def_key.trim() ? row.def_key.trim() : null)
-    if (!label) return
-    const keys = [
-      typeof row.def_id === 'string' ? row.def_id.trim() : '',
-      typeof row.def_key === 'string' ? row.def_key.trim() : '',
-      typeof spec.name === 'string' ? spec.name.trim() : '',
-      typeof spec.tax_category_code === 'number' || typeof spec.tax_category_code === 'string'
-        ? String(spec.tax_category_code).trim()
-        : '',
-    ].filter((value) => value.length > 0)
-    keys.forEach((key) => next.set(key, label))
-  })
-  alcoholTypeLabelMap.value = next
+  alcoholTypeLabelMap.value = buildAlcoholTypeLabelMap((data ?? []) as AlcoholTypeRegistryRow[])
 }
 
 async function loadBatchInfo(batchIds: string[]) {

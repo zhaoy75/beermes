@@ -254,6 +254,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
+import { buildAlcoholTypeLabelMap, resolveAlcoholTypeLabel } from '@/lib/alcoholTypeRegistry'
 import { supabase } from '@/lib/supabase'
 import { formatVolumeNumber } from '@/lib/volumeFormat'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
@@ -398,11 +399,7 @@ const siteMap = computed(() => {
   return map
 })
 
-const categoryMap = computed(() => {
-  const map = new Map<string, CategoryRow>()
-  categories.value.forEach((row) => map.set(row.def_id, row))
-  return map
-})
+const categoryLabelMap = computed(() => buildAlcoholTypeLabelMap(categories.value))
 
 const packageCategoryMap = computed(() => {
   const map = new Map<string, { label: string; size: number | null; uomId: string | null }>()
@@ -496,10 +493,7 @@ function formatDateTime(value: string | null | undefined) {
 
 function categoryLabel(categoryId: string | null | undefined) {
   if (!categoryId) return '—'
-  const category = categoryMap.value.get(categoryId)
-  if (!category) return categoryId
-  const label = typeof category.spec?.name === 'string' ? category.spec.name : category.def_key
-  return label || categoryId
+  return resolveAlcoholTypeLabel(categoryLabelMap.value, categoryId) ?? categoryId
 }
 
 function resolveLang() {

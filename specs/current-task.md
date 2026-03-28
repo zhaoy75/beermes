@@ -1,58 +1,62 @@
 # Current Task Spec
 
 ## Goal
-- Fix `年間課税概要` loader failures caused by outdated table names.
-- Align category, tax-rate, package, and batch-category lookups with the current database design already used elsewhere in the app.
+- Make all `酒類分類` displays use the `name` value in `registry_def.spec` for `kind = 'alcohol_type'` instead of showing registry keys.
 
 ## Scope
 - Frontend only.
-- Update `beeradmin_tail/src/views/Pages/TaxYearSummary.vue`.
-- No UI redesign beyond what is needed to restore data loading.
+- Update alcohol-type label resolution on pages that display batch/recipe/product liquor classification.
+- Include filter dropdowns, table cells, detail panels, and generated export content where the same value is shown.
 
 ## Non-Goals
-- No backend, database schema, or RPC changes.
-- No change to the page layout or chart design.
-- No change to the annual summary aggregation target beyond replacing broken master lookups.
-- No cleanup of unrelated repo-wide lint issues.
+- No database schema or seed changes.
+- No locale copy changes beyond what is necessary to show the resolved alcohol-type name.
+- No changes to unrelated category systems such as material categories.
+- No refactor of unrelated data-loading code.
 
 ## Affected Files
 - `specs/current-task.md`
+- `beeradmin_tail/src/lib/alcoholTypeRegistry.ts`
+- `beeradmin_tail/src/composables/useProducedBeerInventory.ts`
+- `beeradmin_tail/src/views/Pages/ProducedBeer.vue`
+- `beeradmin_tail/src/views/Pages/ProducedBeerMovementEdit.vue`
+- `beeradmin_tail/src/views/Pages/FillingReport.vue`
+- `beeradmin_tail/src/views/Pages/TaxableRemovalReport.vue`
+- `beeradmin_tail/src/views/Pages/TaxReport.vue`
 - `beeradmin_tail/src/views/Pages/TaxYearSummary.vue`
+- `beeradmin_tail/src/views/Pages/RecipeList.vue`
+- `beeradmin_tail/src/views/Pages/BatchEdit.vue`
+- `beeradmin_tail/src/views/Pages/BatchPacking.vue`
 
 ## Data Model / API Changes
 - None.
-- Category master should come from `registry_def` with `kind = 'alcohol_type'`.
-- Tax rate master should come from `registry_def` with `kind = 'alcohol_tax'`.
-- Package volume fallback should come from `mst_package`.
-- Batch category should come from `attr_def` / `entity_attr` for the `beer_category` batch attribute.
+- The app will still read from `registry_def(kind = 'alcohol_type')`, but display labels will resolve from `spec.name`.
+- Lookup should continue to accept existing stored values such as `def_id`, `def_key`, and tax category code where present.
 
 ## Planned File Changes
 - `specs/current-task.md`
-  - replace the previous `酒税申告` interaction spec with this DB-alignment task
-- `beeradmin_tail/src/views/Pages/TaxYearSummary.vue`
-  - replace `mst_category`, `tax_beer`, and `mst_beer_package_category` lookups
-  - remove the `mes_recipes` dependency for category resolution
-  - resolve batch category from `entity_attr`
-  - align tax-rate indexing and package volume conversion with the current master design
-  - clean up local typing needed for targeted lint/type-check
+  - replace the previous SQL task spec with this UI resolution task
+- `beeradmin_tail/src/lib/alcoholTypeRegistry.ts`
+  - add shared helpers to extract alcohol-type labels from `registry_def.spec.name`
+  - add shared lookup-map construction for `def_id`, `def_key`, `spec.name`, and code-like fields
+- frontend pages/composables
+  - switch alcohol-type display logic to the shared helper
+  - update `FillingReport` row/filter/export handling so labels display `spec.name` consistently
 
 ## Fix Decisions
-- Keep the current page behavior and output structure, but source category/tax/package data from the current tables.
-- Use the same category normalization rules as `TaxReport.vue` so category ids or codes can both resolve.
-- Use `beer_category` from batch `entity_attr` as the source of category classification.
+- Centralize alcohol-type label resolution to avoid per-page drift.
+- Use `spec.name` as the preferred display label, with existing identifiers retained only as lookup keys or final fallback.
+- Keep filter values stable by storing raw values internally while rendering labels from the shared lookup.
 
 ## Final Decisions
-- `TaxYearSummary.vue` no longer queries `mst_category`, `tax_beer`, or `mst_beer_package_category`.
-- Category master now loads from `registry_def(kind = 'alcohol_type')`.
-- Tax rates now load from `registry_def(kind = 'alcohol_tax')` and are indexed by normalized tax category code.
-- Package volume fallback now loads from `mst_package`, resolving `volume_uom` through the loaded UOM map when needed.
-- Batch category resolution now uses `attr_def` / `entity_attr` for the `beer_category` batch attribute, removing the `mes_recipes` dependency.
-- Summary and batch rows keep the same UI output shape, but category resolution now accepts either registry ids or tax category codes.
+- Added a shared alcohol-type registry helper to standardize label extraction and lookup-key handling.
+- Alcohol-type display labels now prefer `registry_def.spec.name` across inventory, movement, filling, taxable removal, tax report, tax year summary, recipe, and batch packing related screens.
+- Lookup remains backward-compatible with stored `def_id`, `def_key`, label text, and tax-category-like values where those still exist in batch/meta/recipe data.
+- `FillingReport` now keeps the raw liquor classification value for filtering while rendering a separate display label for UI and export output.
 
 ## Validation Plan
-- Confirm `年間課税概要` no longer queries removed tables.
-- Confirm category, tax rate, and package loaders use the current master tables.
-- Confirm the page still builds monthly/category summaries from movement data.
+- Verify targeted pages display alcohol-type names from `registry_def.spec.name`.
+- Verify filters and exports still work when stored values are `def_id`, `def_key`, or tax category code.
 - Run required checks before finishing:
   - unit tests
   - lint
@@ -61,7 +65,6 @@
   - if no unit test script exists, report that explicitly.
 
 ## Validation Outcome
-- `npm exec eslint src/views/Pages/TaxYearSummary.vue` in `beeradmin_tail`: passed.
 - `npm run type-check` in `beeradmin_tail`: passed.
-- `npm run lint` in `beeradmin_tail`: failed due to pre-existing repo-wide ESLint issues unrelated to this task.
+- `npm exec eslint src/lib/alcoholTypeRegistry.ts src/composables/useProducedBeerInventory.ts src/views/Pages/ProducedBeer.vue src/views/Pages/ProducedBeerMovementEdit.vue src/views/Pages/FillingReport.vue src/views/Pages/TaxableRemovalReport.vue src/views/Pages/TaxReport.vue src/views/Pages/TaxYearSummary.vue src/views/Pages/RecipeList.vue src/views/Pages/BatchEdit.vue src/views/Pages/BatchPacking.vue` in `beeradmin_tail`: failed due to pre-existing ESLint errors in those files, primarily long-standing `@typescript-eslint/no-explicit-any` violations and a few unused-symbol errors unrelated to this change.
 - Unit tests were not run because `beeradmin_tail/package.json` does not define a test script.

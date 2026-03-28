@@ -395,6 +395,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { alcoholTypeLookupKeys } from '@/lib/alcoholTypeRegistry'
 import { supabase } from '@/lib/supabase'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
@@ -408,6 +409,7 @@ interface CategoryRow {
   id: string
   code: string
   name: string | null
+  lookupKeys: string[]
 }
 
 interface TaxRateRecord {
@@ -875,6 +877,7 @@ async function loadCategories() {
     id: String(row.def_id ?? ''),
     code: String(row.spec?.tax_category_code ?? row.spec?.code ?? row.def_key ?? ''),
     name: typeof row.spec?.name === 'string' ? row.spec.name : (typeof row.def_key === 'string' ? row.def_key : null),
+    lookupKeys: alcoholTypeLookupKeys(row),
   }))
 }
 
@@ -1084,6 +1087,10 @@ function resolvePackageSizeLiters(row: PackageCategoryInfo | undefined) {
 const categoryLookup = computed(() => {
   const map = new Map<string, CategoryRow>()
   categories.value.forEach((row) => {
+    row.lookupKeys.forEach((key) => {
+      const normalized = String(key ?? '').trim()
+      if (normalized) map.set(normalized, row)
+    })
     if (row.id) map.set(row.id, row)
     if (row.code) map.set(row.code, row)
   })

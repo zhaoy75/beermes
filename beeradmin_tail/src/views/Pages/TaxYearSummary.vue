@@ -124,6 +124,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import { alcoholTypeLookupKeys } from '@/lib/alcoholTypeRegistry'
 import { supabase } from '@/lib/supabase'
 import { formatVolume as formatVolumeDisplay } from '@/lib/volumeFormat'
 
@@ -150,6 +151,7 @@ interface CategoryRecord {
   id: string
   code: string
   name: string | null
+  lookupKeys: string[]
 }
 
 interface TaxRateRecord {
@@ -241,7 +243,12 @@ let chartInstance: Chart | null = null
 const categoryLookup = computed(() => {
   const map = new Map<string, CategoryRecord>()
   categories.value.forEach((row) => {
-    map.set(row.id, row)
+    row.lookupKeys.forEach((key) => {
+      const normalized = String(key ?? '').trim()
+      if (normalized) map.set(normalized, row)
+      const normalizedCode = normalizeTaxCategoryCode(normalized)
+      if (normalizedCode) map.set(normalizedCode, row)
+    })
     const normalizedCode = normalizeTaxCategoryCode(row.code)
     if (normalizedCode) map.set(normalizedCode, row)
   })
@@ -310,6 +317,7 @@ async function loadCategories() {
       id: String(row.def_id ?? ''),
       code: String(row.spec?.tax_category_code ?? row.spec?.code ?? row.def_key ?? ''),
       name: typeof row.spec?.name === 'string' ? row.spec.name : (typeof row.def_key === 'string' ? row.def_key : null),
+      lookupKeys: alcoholTypeLookupKeys(row),
     }))
   } catch (err) {
     console.warn('Failed to load categories', err)

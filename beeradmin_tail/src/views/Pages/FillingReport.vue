@@ -74,8 +74,8 @@
                 class="h-[40px] w-full rounded border border-gray-300 bg-white px-3"
               >
                 <option value="">{{ t('fillingReport.defaults.allLiquorCodes') }}</option>
-                <option v-for="code in liquorCodeOptions" :key="code" :value="code">
-                  {{ code }}
+                <option v-for="option in liquorCodeOptions" :key="option.value" :value="option.value">
+                  {{ option.label }}
                 </option>
               </select>
             </div>
@@ -177,7 +177,7 @@
                 <td class="px-3 py-2">{{ row.displayName || '—' }}</td>
                 <td class="px-3 py-2 text-xs text-gray-500">{{ formatDateTime(row.latestFillingAt) }}</td>
                 <td class="px-3 py-2 text-right">{{ formatVolumeValue(row.totalVolume) }}</td>
-                <td class="px-3 py-2 font-mono text-xs text-gray-600">{{ row.liquorCode || '—' }}</td>
+                <td class="px-3 py-2 text-gray-700">{{ row.liquorCodeLabel || row.liquorCode || '—' }}</td>
                 <td class="px-3 py-2 text-right">{{ formatAbv(row.abv) }}</td>
                 <td
                   v-for="packageCode in packageColumns"
@@ -227,7 +227,7 @@
               </div>
               <div class="rounded-lg border border-gray-200 bg-white p-3">
                 <dt class="text-xs uppercase text-gray-500">{{ t('fillingReport.table.liquorCode') }}</dt>
-                <dd class="mt-1 font-mono text-sm text-gray-700">{{ selectedReportRow.liquorCode || '—' }}</dd>
+                <dd class="mt-1 text-sm text-gray-700">{{ selectedReportRow.liquorCodeLabel || selectedReportRow.liquorCode || '—' }}</dd>
               </div>
               <div class="rounded-lg border border-gray-200 bg-white p-3">
                 <dt class="text-xs uppercase text-gray-500">{{ t('fillingReport.table.abv') }}</dt>
@@ -333,6 +333,7 @@ import { useI18n } from 'vue-i18n'
 import { toast } from 'vue3-toastify'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
+import { buildAlcoholTypeLabelMap, resolveAlcoholTypeLabel } from '@/lib/alcoholTypeRegistry'
 import {
   fillingSampleVolumeFromEvent,
   packingLossFromEvent,
@@ -371,6 +372,7 @@ type PackageRow = {
 type RegistryRow = {
   def_id: string
   def_key: string | null
+  spec?: Record<string, unknown> | null
 }
 
 type VolumeUomRow = {
@@ -426,6 +428,7 @@ type BatchInfo = {
   displayName: string | null
   actualYield: number | null
   liquorCode: string | null
+  liquorCodeLabel: string | null
   abv: number | null
 }
 
@@ -454,6 +457,7 @@ type FillingReportRow = {
   latestFillingAt: string | null
   totalVolume: number | null
   liquorCode: string | null
+  liquorCodeLabel: string | null
   abv: number | null
   packageNumbers: Record<string, number | null>
   sampleVolume: number | null
@@ -482,6 +486,7 @@ type AggregateBatchRow = {
   latestFillingAt: string | null
   totalVolume: number | null
   liquorCode: string | null
+  liquorCodeLabel: string | null
   abv: number | null
   packageGroups: Map<string, AggregatePackageGroup>
   sampleVolume: number
@@ -502,6 +507,11 @@ type FillingDetailTotals = {
   lossVolume: number | null
 }
 
+type LiquorCodeOption = {
+  value: string
+  label: string
+}
+
 const { t, locale } = useI18n()
 const pageTitle = computed(() => t('fillingReport.title'))
 const reportLoading = ref(false)
@@ -509,6 +519,7 @@ const exportLoading = ref(false)
 const exportFileName = ref('')
 const exportDownloadUrl = ref('')
 const reportRows = ref<FillingReportRow[]>([])
+const liquorCodeLabelMap = ref<Map<string, string>>(new Map())
 const tenantId = ref('')
 const selectedBatchId = ref('')
 const filters = reactive({
@@ -561,14 +572,19 @@ const businessYearOptions = computed(() => {
   })
   return Array.from(years).sort((a, b) => b - a)
 })
-const liquorCodeOptions = computed(() =>
+const liquorCodeOptions = computed<LiquorCodeOption[]>(() =>
   Array.from(
-    new Set(
+    new Map(
       reportRows.value
-        .map((row) => (row.liquorCode ?? '').trim())
-        .filter((value) => value.length > 0),
+        .map((row) => {
+          const value = (row.liquorCode ?? '').trim()
+          if (!value) return null
+          return [value, row.liquorCodeLabel || value] as const
+        })
+        .filter((entry): entry is readonly [string, string] => entry != null),
     ),
-  ).sort((a, b) => a.localeCompare(b)),
+    ([value, label]) => ({ value, label }),
+  ).sort((a, b) => a.label.localeCompare(b.label)),
 )
 const monthOptions = Array.from({ length: 12 }, (_, index) => index + 1)
 const selectedDetailRows = computed(() =>
@@ -723,7 +739,7 @@ function sortValue(row: FillingReportRow, key: string): string | number {
     case 'totalVolume':
       return row.totalVolume ?? Number.NEGATIVE_INFINITY
     case 'liquorCode':
-      return normalizeString(row.liquorCode)
+      return normalizeString(row.liquorCodeLabel ?? row.liquorCode)
     case 'abv':
       return row.abv ?? Number.NEGATIVE_INFINITY
     case 'sampleVolume':
@@ -771,7 +787,11 @@ function clearExportDownload() {
 function buildExportFilterSummary() {
   const businessYear = `${t('fillingReport.filters.businessYear')}: ${filters.businessYear}`
   const month = `${t('fillingReport.filters.month')}: ${filters.month || t('fillingReport.defaults.allMonths')}`
-  const liquorCode = `${t('fillingReport.filters.liquorCode')}: ${filters.liquorCode || t('fillingReport.defaults.allLiquorCodes')}`
+  const liquorCodeLabel =
+    (filters.liquorCode ? resolveAlcoholTypeLabel(liquorCodeLabelMap.value, filters.liquorCode) : null) ||
+    filters.liquorCode ||
+    t('fillingReport.defaults.allLiquorCodes')
+  const liquorCode = `${t('fillingReport.filters.liquorCode')}: ${liquorCodeLabel}`
   return [businessYear, month, liquorCode].join(' / ')
 }
 
@@ -802,7 +822,7 @@ function buildSummarySheetRows(createdAtLabel: string): WorkbookCell[][] {
       row.displayName ?? '',
       row.latestFillingAt ? formatDateTime(row.latestFillingAt) : '',
       row.totalVolume ?? null,
-      row.liquorCode ?? '',
+      row.liquorCodeLabel || row.liquorCode || '',
       row.abv == null ? '' : formatAbv(row.abv),
       ...packageColumns.value.map((packageCode) => row.packageNumbers[packageCode] ?? null),
       row.sampleVolume ?? null,
@@ -889,7 +909,7 @@ function buildDetailSheetRows(row: FillingReportRow): WorkbookCell[][] {
 
   return [
     [t('fillingReport.table.batchCode'), row.batchCode ?? '', t('fillingReport.table.name'), row.displayName ?? ''],
-    [t('fillingReport.table.liquorCode'), row.liquorCode ?? '', t('fillingReport.table.abv'), row.abv == null ? '' : formatAbv(row.abv)],
+    [t('fillingReport.table.liquorCode'), row.liquorCodeLabel || row.liquorCode || '', t('fillingReport.table.abv'), row.abv == null ? '' : formatAbv(row.abv)],
     [t('fillingReport.detail.fillingTank'), formatTankSummary(row.fillingTanks)],
     [],
     borderedRow(headerRow1),
@@ -1018,34 +1038,25 @@ async function loadVolumeUomCodes() {
   )
 }
 
-async function loadLiquorCodeMap() {
+async function loadLiquorCodeLabelMap() {
   const { data, error } = await supabase
     .from('registry_def')
-    .select('def_id, def_key')
+    .select('def_id, def_key, spec')
     .eq('kind', 'alcohol_type')
     .eq('is_active', true)
   if (error) throw error
 
-  return new Map<string, string>(
-    ((data ?? []) as RegistryRow[]).flatMap((row) => {
-      if (!row?.def_id) return []
-      const key = typeof row.def_key === 'string' && row.def_key.trim() ? row.def_key.trim() : String(row.def_id)
-      return [[String(row.def_id), key]]
-    }),
-  )
+  return buildAlcoholTypeLabelMap((data ?? []) as RegistryRow[])
 }
 
-function resolveLiquorCode(
-  value: string | number | null | undefined,
-  liquorCodeById: Map<string, string>,
-) {
+function resolveLiquorCodeValue(value: string | number | null | undefined) {
   if (value == null) return null
   const normalized = String(value).trim()
   if (!normalized) return null
-  return liquorCodeById.get(normalized) ?? normalized
+  return normalized
 }
 
-async function loadBatchInfo(batchIds: string[], liquorCodeById: Map<string, string>) {
+async function loadBatchInfo(batchIds: string[], alcoholTypeLabels: Map<string, string>) {
   const infoMap = new Map<string, BatchInfo>()
   if (!batchIds.length) return infoMap
 
@@ -1102,7 +1113,7 @@ async function loadBatchInfo(batchIds: string[], liquorCodeById: Map<string, str
               : row.value_ref_type_id != null
                 ? String(row.value_ref_type_id)
                 : null
-        entry.liquorCode = resolveLiquorCode(rawValue, liquorCodeById)
+        entry.liquorCode = resolveLiquorCodeValue(rawValue)
       }
 
       if (code === 'target_abv') {
@@ -1127,11 +1138,24 @@ async function loadBatchInfo(batchIds: string[], liquorCodeById: Map<string, str
       batchCode: row.batch_code ?? null,
       displayName: row.product_name ?? row.batch_label ?? resolveBatchLabel(meta) ?? null,
       actualYield: toNumber(row.actual_yield),
-      liquorCode:
+      liquorCode: attr?.liquorCode ??
+        resolveLiquorCodeValue(recipe?.category ?? null) ??
+        resolveLiquorCodeValue(resolveMetaString(meta, 'beer_category')) ??
+        resolveLiquorCodeValue(resolveMetaString(meta, 'category')) ??
+        null,
+      liquorCodeLabel:
+        resolveAlcoholTypeLabel(
+          alcoholTypeLabels,
+          attr?.liquorCode ??
+            resolveLiquorCodeValue(recipe?.category ?? null) ??
+            resolveLiquorCodeValue(resolveMetaString(meta, 'beer_category')) ??
+            resolveLiquorCodeValue(resolveMetaString(meta, 'category')) ??
+            null,
+        ) ??
         attr?.liquorCode ??
-        resolveLiquorCode(recipe?.category ?? null, liquorCodeById) ??
-        resolveLiquorCode(resolveMetaString(meta, 'beer_category'), liquorCodeById) ??
-        resolveLiquorCode(resolveMetaString(meta, 'category'), liquorCodeById) ??
+        resolveLiquorCodeValue(recipe?.category ?? null) ??
+        resolveLiquorCodeValue(resolveMetaString(meta, 'beer_category')) ??
+        resolveLiquorCodeValue(resolveMetaString(meta, 'category')) ??
         null,
       abv:
         attr?.abv ??
@@ -1363,6 +1387,7 @@ function buildReportRows(
         latestFillingAt: movement.movement_at ?? null,
         totalVolume: batchInfo?.actualYield ?? null,
         liquorCode: batchInfo?.liquorCode ?? null,
+        liquorCodeLabel: batchInfo?.liquorCodeLabel ?? batchInfo?.liquorCode ?? null,
         abv: batchInfo?.abv ?? null,
         packageGroups: new Map(),
         sampleVolume: 0,
@@ -1494,6 +1519,7 @@ function buildReportRows(
       latestFillingAt: row.latestFillingAt,
       totalVolume: row.totalVolume,
       liquorCode: row.liquorCode,
+      liquorCodeLabel: row.liquorCodeLabel,
       abv: row.abv,
       packageNumbers,
       sampleVolume: row.sampleVolume,
@@ -1511,9 +1537,9 @@ async function loadReport() {
     reportRows.value = []
 
     const tenant = await ensureTenant()
-    const [uomCodeById, liquorCodeById, movementRowsBySource, movementRowsByIntent] = await Promise.all([
+    const [uomCodeById, alcoholTypeLabels, movementRowsBySource, movementRowsByIntent] = await Promise.all([
       loadVolumeUomCodes(),
-      loadLiquorCodeMap(),
+      loadLiquorCodeLabelMap(),
       supabase
         .from('inv_movements')
         .select('id, movement_at, meta')
@@ -1533,6 +1559,7 @@ async function loadReport() {
     if (movementRowsByIntent.error) throw movementRowsByIntent.error
 
     volumeUomCodeById.value = uomCodeById
+    liquorCodeLabelMap.value = alcoholTypeLabels
     const packageLookup = await loadPackageLookup(tenant)
     packageLookupMap.value = packageLookup
 
@@ -1568,7 +1595,7 @@ async function loadReport() {
         .from('inv_movement_lines')
         .select('movement_id, package_id, qty, unit, meta')
         .in('movement_id', movementIds),
-      loadBatchInfo(batchIds, liquorCodeById),
+      loadBatchInfo(batchIds, alcoholTypeLabels),
     ])
 
     if (lineError) throw lineError

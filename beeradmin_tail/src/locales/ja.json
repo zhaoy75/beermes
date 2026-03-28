@@ -404,7 +404,7 @@
         "filling": "充填",
         "memo": "メモ",
         "date": "日付",
-        "beerCategory": "ビールカテゴリ",
+        "beerCategory": "酒類分類",
         "tankNo": "タンクNo",
         "packingType": "種別",
         "tankFillStartVolume": "タンク詰め前 容量 (L)",
@@ -1064,11 +1064,11 @@
       "table": {
         "lotNo": "ロットコード",
         "lotTaxType": "ロット税区分",
-        "beerCategory": "ビール分類",
+        "beerCategory": "酒類分類",
         "targetAbv": "目標ABV",
         "styleName": "スタイル名",
         "beerName": "ビール名",
-        "category": "カテゴリ",
+        "category": "酒類分類",
         "packageType": "パッケージ種別",
         "batchNo": "製造バッチ",
         "productionDate": "製造日",
@@ -1083,7 +1083,7 @@
       "viewCard": "カード表示",
       "filters": {
         "beerName": "ビール名",
-        "category": "カテゴリ",
+        "category": "酒類分類",
         "packageType": "パッケージ種別",
         "batchNo": "製造バッチ",
         "dateFrom": "開始日",
@@ -1128,7 +1128,7 @@
         "totalPackages": "数量(本/箱)",
         "lines": "明細",
         "lineBeer": "ビール名",
-        "lineCategory": "カテゴリ",
+        "lineCategory": "酒類分類",
         "linePackageType": "パッケージ種別",
         "lineBatch": "バッチ",
         "lineQtyPackages": "数量(本/箱)",
@@ -1166,7 +1166,7 @@
         "hint": "移出元のカードまたは移出ボタンで明細を追加します。",
         "columns": {
           "beer": "ビール名",
-          "category": "カテゴリ",
+          "category": "酒類分類",
           "packageType": "パッケージ種別",
           "batch": "バッチ",
           "qtyPackages": "数量(本/箱)",
@@ -1387,7 +1387,7 @@
       "table": {
         "select": "選択",
         "lotCode": "ロットコード",
-        "beerCategory": "ビール分類",
+        "beerCategory": "酒類分類",
         "targetAbv": "目標ABV",
         "styleName": "スタイル名",
         "batchCode": "バッチコード",
@@ -1941,11 +1941,11 @@
     "filters": {
       "businessYear": "年度",
       "month": "月",
-      "liquorCode": "酒類コード"
+      "liquorCode": "酒類分類"
     },
     "defaults": {
       "allMonths": "すべての月",
-      "allLiquorCodes": "すべての酒類コード"
+      "allLiquorCodes": "すべての酒類分類"
     },
     "results": {
       "count": "{count}件"
@@ -1963,7 +1963,7 @@
       "name": "名前",
       "latestFillingAt": "最終充填日",
       "totalVolume": "総量 (L)",
-      "liquorCode": "酒類コード",
+      "liquorCode": "酒類分類",
       "abv": "ABV",
       "sampleVolume": "サンプル(Liter)",
       "tankLeftVolume": "タンク残(Liter)",
@@ -2375,11 +2375,11 @@
   },
   "taxYearSummary": {
     "title": "年間課税概要",
-    "subtitle": "カテゴリ別の年間生産量と酒税額を確認します。",
+    "subtitle": "酒類分類別の年間生産量と酒税額を確認します。",
     "yearLabel": "課税年度",
     "selectYear": "年度を選択",
-    "summaryHeading": "カテゴリ別サマリー",
-    "category": "カテゴリ",
+    "summaryHeading": "酒類分類別サマリー",
+    "category": "酒類分類",
     "volume": "生産量 (L)",
     "taxAmount": "酒税額",
     "noData": "指定した年度のデータはありません。",
@@ -2463,7 +2463,7 @@
     "breakdown": {
       "columns": {
         "movementType": "移出種別",
-        "category": "ビール種別",
+        "category": "酒類分類",
         "abv": "ABV(%)",
         "volume": "数量(L)"
       }
@@ -2497,7 +2497,7 @@
     "filters": {
       "businessYear": "年度",
       "month": "month",
-      "liquorCode": "酒類コード"
+      "liquorCode": "酒類分類"
     },
     "defaults": {
       "allMonths": "すべて",
@@ -2519,9 +2519,9 @@
     },
     "summary": {
       "title": "年度サマリー",
-      "subtitle": "選択年度の課税移出を酒類コード・ABV別に集計します。",
+      "subtitle": "選択年度の課税移出を酒類分類・ABV別に集計します。",
       "columns": {
-        "liquorCode": "酒類コード",
+        "liquorCode": "酒類分類",
         "abv": "ABV",
         "quantityMl": "数量(ml)",
         "packageCount": "存在数",

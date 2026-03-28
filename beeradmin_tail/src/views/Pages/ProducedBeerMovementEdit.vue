@@ -325,6 +325,7 @@ import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import { buildAlcoholTypeLabelMap, resolveAlcoholTypeLabel } from '@/lib/alcoholTypeRegistry'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
@@ -406,7 +407,7 @@ const lotSelectionSource = ref<'none' | 'inventory' | 'lot'>('none')
 const lotLookupQuery = ref('')
 const showLotSuggestions = ref(false)
 const activeLotSuggestionIndex = ref(0)
-const alcoholTypeLabels = ref<Record<string, string>>({})
+const alcoholTypeLabelMap = ref<Map<string, string>>(new Map())
 const saving = ref(false)
 
 const movementForm = reactive({
@@ -580,7 +581,7 @@ function resolveMetaNumber(meta: Record<string, any> | null | undefined, key: st
 
 function alcoholTypeLabel(code: string | null | undefined) {
   if (!code) return '—'
-  return alcoholTypeLabels.value[code] ?? code
+  return resolveAlcoholTypeLabel(alcoholTypeLabelMap.value, code) ?? code
 }
 
 async function saveMovement() {
@@ -1230,12 +1231,7 @@ async function loadAlcoholTypes() {
     .eq('kind', 'alcohol_type')
     .eq('is_active', true)
   if (error) throw error
-  const map: Record<string, string> = {}
-  ;(data ?? []).forEach((row: any) => {
-    const label = typeof row?.spec?.name === 'string' ? row.spec.name : row.def_key
-    if (row?.def_id) map[String(row.def_id)] = String(label || row.def_id)
-  })
-  alcoholTypeLabels.value = map
+  alcoholTypeLabelMap.value = buildAlcoholTypeLabelMap((data ?? []) as Array<Record<string, unknown>>)
 }
 
 async function loadLotReferenceMaps(

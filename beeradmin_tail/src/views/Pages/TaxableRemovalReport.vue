@@ -200,7 +200,11 @@ import { useI18n } from 'vue-i18n'
 import { toast } from 'vue3-toastify'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
-import { buildAlcoholTypeLabelMap, resolveAlcoholTypeLabel as resolveAlcoholTypeRegistryLabel } from '@/lib/alcoholTypeRegistry'
+import {
+  buildAlcoholTypeLabelMap,
+  loadAlcoholTypeReferenceData,
+  resolveAlcoholTypeLabel as resolveAlcoholTypeRegistryLabel,
+} from '@/lib/alcoholTypeRegistry'
 import { createWorkbookBlob, type WorkbookCell, type WorkbookCellValue, type WorkbookSheet } from '@/lib/fillingReportExport'
 import { supabase } from '@/lib/supabase'
 
@@ -863,13 +867,11 @@ async function loadPackages() {
 }
 
 async function loadAlcoholTypes() {
-  const { data, error } = await supabase
-    .from('registry_def')
-    .select('def_id, def_key, spec')
-    .eq('kind', 'alcohol_type')
-    .eq('is_active', true)
-  if (error) throw error
-  alcoholTypeLabelMap.value = buildAlcoholTypeLabelMap((data ?? []) as AlcoholTypeRegistryRow[])
+  const { optionRows, fallbackRows } = await loadAlcoholTypeReferenceData(supabase)
+  alcoholTypeLabelMap.value = buildAlcoholTypeLabelMap(
+    optionRows as AlcoholTypeRegistryRow[],
+    fallbackRows as AlcoholTypeRegistryRow[],
+  )
 }
 
 async function loadBatchInfo(batchIds: string[]) {

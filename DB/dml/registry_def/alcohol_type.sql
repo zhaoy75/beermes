@@ -95,4 +95,3 @@ SELECT
   spec
 FROM ranked_alcohol_type
 WHERE row_priority = 1;
-

@@ -254,7 +254,11 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { buildAlcoholTypeLabelMap, resolveAlcoholTypeLabel } from '@/lib/alcoholTypeRegistry'
+import {
+  buildAlcoholTypeLabelMap,
+  loadAlcoholTypeReferenceData,
+  resolveAlcoholTypeLabel,
+} from '@/lib/alcoholTypeRegistry'
 import { supabase } from '@/lib/supabase'
 import { formatVolumeNumber } from '@/lib/volumeFormat'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
@@ -368,6 +372,7 @@ const tenantId = ref<string | null>(null)
 const movementLoading = ref(false)
 
 const categories = ref<CategoryRow[]>([])
+const categoryFallbackRows = ref<CategoryRow[]>([])
 const packageCategories = ref<PackageCategoryRow[]>([])
 const uoms = ref<Array<{ id: string; code: string | null }>>([])
 const siteOptions = ref<SiteOption[]>([])
@@ -399,7 +404,7 @@ const siteMap = computed(() => {
   return map
 })
 
-const categoryLabelMap = computed(() => buildAlcoholTypeLabelMap(categories.value))
+const categoryLabelMap = computed(() => buildAlcoholTypeLabelMap(categories.value, categoryFallbackRows.value))
 
 const packageCategoryMap = computed(() => {
   const map = new Map<string, { label: string; size: number | null; uomId: string | null }>()
@@ -738,14 +743,9 @@ async function ensureTenant() {
 }
 
 async function loadCategories() {
-  const { data, error } = await supabase
-    .from('registry_def')
-    .select('def_id, def_key, spec')
-    .eq('kind', 'alcohol_type')
-    .eq('is_active', true)
-    .order('def_key', { ascending: true })
-  if (error) throw error
-  categories.value = data ?? []
+  const { optionRows, fallbackRows } = await loadAlcoholTypeReferenceData(supabase)
+  categories.value = optionRows as CategoryRow[]
+  categoryFallbackRows.value = fallbackRows as CategoryRow[]
 }
 
 async function loadPackageCategories() {

@@ -366,7 +366,11 @@ import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
-import { buildAlcoholTypeLabelMap, resolveAlcoholTypeLabel } from '@/lib/alcoholTypeRegistry'
+import {
+  buildAlcoholTypeLabelMap,
+  loadAlcoholTypeReferenceData,
+  resolveAlcoholTypeLabel,
+} from '@/lib/alcoholTypeRegistry'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
@@ -405,6 +409,7 @@ const saving = ref(false)
 const sortKey = ref<SortKey>('created_at')
 const sortDirection = ref<SortDirection>('desc')
 const categories = ref<CategoryRow[]>([])
+const categoryFallbackRows = ref<CategoryRow[]>([])
 
 const filters = reactive({
   name: '',
@@ -444,7 +449,7 @@ const styleOptions = computed(() => {
   return Array.from(set).sort((a, b) => a.localeCompare(b))
 })
 
-const categoryLabelMap = computed(() => buildAlcoholTypeLabelMap(categories.value))
+const categoryLabelMap = computed(() => buildAlcoholTypeLabelMap(categories.value, categoryFallbackRows.value))
 
 const categoryOptions = computed(() =>
   categories.value.map((row) => ({
@@ -593,14 +598,9 @@ function validate() {
 
 async function fetchCategories() {
   try {
-    const { data, error } = await supabase
-      .from('registry_def')
-      .select('def_id, def_key, spec')
-      .eq('kind', 'alcohol_type')
-      .eq('is_active', true)
-      .order('def_key', { ascending: true })
-    if (error) throw error
-    categories.value = data ?? []
+    const { optionRows, fallbackRows } = await loadAlcoholTypeReferenceData(supabase)
+    categories.value = optionRows as CategoryRow[]
+    categoryFallbackRows.value = fallbackRows as CategoryRow[]
   } catch (err) {
     console.warn('Failed to load categories', err)
   }

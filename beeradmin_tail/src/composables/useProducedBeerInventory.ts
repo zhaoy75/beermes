@@ -2,7 +2,11 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue3-toastify'
 import { supabase } from '@/lib/supabase'
-import { buildAlcoholTypeLabelMap, resolveAlcoholTypeLabel } from '@/lib/alcoholTypeRegistry'
+import {
+  buildAlcoholTypeLabelMap,
+  loadAlcoholTypeReferenceData,
+  resolveAlcoholTypeLabel,
+} from '@/lib/alcoholTypeRegistry'
 import { formatVolumeNumber } from '@/lib/volumeFormat'
 
 type ContainerKind = 'tank' | 'keg' | 'case' | 'other'
@@ -101,6 +105,7 @@ export function useProducedBeerInventory() {
   const inventoryLoading = ref(false)
 
   const categories = ref<CategoryRow[]>([])
+  const categoryFallbackRows = ref<CategoryRow[]>([])
   const packageCategories = ref<PackageCategoryRow[]>([])
   const uoms = ref<Array<{ id: string; code: string | null }>>([])
   const siteOptions = ref<SiteOption[]>([])
@@ -119,7 +124,7 @@ export function useProducedBeerInventory() {
       .map((item) => ({ value: item.value, label: item.label })),
   )
 
-  const categoryLabelMap = computed(() => buildAlcoholTypeLabelMap(categories.value))
+  const categoryLabelMap = computed(() => buildAlcoholTypeLabelMap(categories.value, categoryFallbackRows.value))
 
   const packageCategoryMap = computed(() => {
     const map = new Map<
@@ -279,14 +284,9 @@ export function useProducedBeerInventory() {
   }
 
   async function loadCategories() {
-    const { data, error } = await supabase
-      .from('registry_def')
-      .select('def_id, def_key, spec')
-      .eq('kind', 'alcohol_type')
-      .eq('is_active', true)
-      .order('def_key', { ascending: true })
-    if (error) throw error
-    categories.value = data ?? []
+    const { optionRows, fallbackRows } = await loadAlcoholTypeReferenceData(supabase)
+    categories.value = optionRows as CategoryRow[]
+    categoryFallbackRows.value = fallbackRows as CategoryRow[]
   }
 
   async function loadPackageCategories() {

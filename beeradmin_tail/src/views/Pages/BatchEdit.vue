@@ -405,7 +405,11 @@ import {
   packingTotalLineVolumeFromEvent as derivePackingTotalLineVolumeFromEvent,
   processedFillingVolumeFromEvent,
 } from '@/lib/batchFilling'
-import { buildAlcoholTypeLabelMap, resolveAlcoholTypeLabel } from '@/lib/alcoholTypeRegistry'
+import {
+  buildAlcoholTypeLabelMap,
+  loadAlcoholTypeReferenceData,
+  resolveAlcoholTypeLabel,
+} from '@/lib/alcoholTypeRegistry'
 import { supabase } from '@/lib/supabase'
 import { formatVolume } from '@/lib/volumeFormat'
 
@@ -877,12 +881,10 @@ async function loadBatchAttributes(batchUuid: string) {
       const [kind, domain] = key.split(':')
       let options: Array<{ value: string | number, label: string }> = []
       if (kind === 'registry_def') {
-        const { data, error } = await supabase
-          .from('registry_def')
-          .select('def_id, def_key, spec')
-          .eq('kind', domain)
-          .eq('is_active', true)
-          .order('def_key', { ascending: true })
+        const query = domain === 'alcohol_type'
+          ? supabase.from('v_alcohol_type_options').select('def_id, def_key, spec').order('value', { ascending: true })
+          : supabase.from('registry_def').select('def_id, def_key, spec').eq('kind', domain).eq('is_active', true).order('def_key', { ascending: true })
+        const { data, error } = await query
         if (error) throw error
         options = (data ?? []).map((row: any) => ({
           value: row.def_id,
@@ -1086,15 +1088,12 @@ async function loadSites() {
 
 async function loadBeerCategories() {
   try {
-    const { data, error } = await supabase
-      .from('registry_def')
-      .select('def_id, def_key, spec')
-      .eq('kind', 'alcohol_type')
-      .eq('is_active', true)
-      .order('def_key', { ascending: true })
-    if (error) throw error
-    const labelMap = buildAlcoholTypeLabelMap((data ?? []) as Array<Record<string, unknown>>)
-    beerCategories.value = (data ?? []).map((row: any) => ({
+    const { optionRows, fallbackRows } = await loadAlcoholTypeReferenceData(supabase)
+    const labelMap = buildAlcoholTypeLabelMap(
+      optionRows as Array<Record<string, unknown>>,
+      fallbackRows as Array<Record<string, unknown>>,
+    )
+    beerCategories.value = optionRows.map((row: any) => ({
       value: String(row.def_id),
       key: String(row.def_key ?? ''),
       label: resolveAlcoholTypeLabel(labelMap, row.def_id) ?? String(row.def_key ?? row.def_id),

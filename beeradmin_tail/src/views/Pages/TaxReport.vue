@@ -395,7 +395,10 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { alcoholTypeLookupKeys } from '@/lib/alcoholTypeRegistry'
+import {
+  buildAlcoholTypeLookupKeys,
+  loadAlcoholTypeReferenceData,
+} from '@/lib/alcoholTypeRegistry'
 import { supabase } from '@/lib/supabase'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
@@ -866,18 +869,12 @@ async function ensureTenant() {
 }
 
 async function loadCategories() {
-  const { data, error } = await supabase
-    .from('registry_def')
-    .select('def_id, def_key, spec')
-    .eq('kind', 'alcohol_type')
-    .eq('is_active', true)
-    .order('def_key', { ascending: true })
-  if (error) throw error
-  categories.value = (data ?? []).map((row: { def_id?: unknown; def_key?: unknown; spec?: Record<string, unknown> | null }) => ({
+  const { optionRows, fallbackRows } = await loadAlcoholTypeReferenceData(supabase)
+  categories.value = optionRows.map((row: { def_id?: unknown; def_key?: unknown; spec?: Record<string, unknown> | null }) => ({
     id: String(row.def_id ?? ''),
     code: String(row.spec?.tax_category_code ?? row.spec?.code ?? row.def_key ?? ''),
     name: typeof row.spec?.name === 'string' ? row.spec.name : (typeof row.def_key === 'string' ? row.def_key : null),
-    lookupKeys: alcoholTypeLookupKeys(row),
+    lookupKeys: buildAlcoholTypeLookupKeys(row, fallbackRows),
   }))
 }
 

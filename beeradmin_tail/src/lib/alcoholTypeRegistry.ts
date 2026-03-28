@@ -1,3 +1,5 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
+
 export type AlcoholTypeRegistryRow = {
   def_id?: unknown
   def_key?: unknown
@@ -23,6 +25,22 @@ function uniqueStrings(values: string[]) {
   return Array.from(new Set(values.filter((value) => value.length > 0)))
 }
 
+function taxCategoryCode(row: AlcoholTypeRegistryRow) {
+  const spec = row.spec && typeof row.spec === 'object' ? row.spec : {}
+  return toTrimmedString(spec.tax_category_code)
+}
+
+function addAlcoholTypeRowsToLabelMap(
+  map: Map<string, string>,
+  rows: AlcoholTypeRegistryRow[],
+) {
+  rows.forEach((row) => {
+    const label = alcoholTypeDisplayLabel(row)
+    if (!label) return
+    alcoholTypeLookupKeys(row).forEach((key) => map.set(key, label))
+  })
+}
+
 export function alcoholTypeDisplayLabel(row: AlcoholTypeRegistryRow) {
   const spec = row.spec && typeof row.spec === 'object' ? row.spec : {}
   return (
@@ -46,14 +64,52 @@ export function alcoholTypeLookupKeys(row: AlcoholTypeRegistryRow) {
   ])
 }
 
-export function buildAlcoholTypeLabelMap(rows: AlcoholTypeRegistryRow[]) {
+export function buildAlcoholTypeLabelMap(
+  rows: AlcoholTypeRegistryRow[],
+  fallbackRows: AlcoholTypeRegistryRow[] = [],
+) {
   const map = new Map<string, string>()
-  rows.forEach((row) => {
-    const label = alcoholTypeDisplayLabel(row)
-    if (!label) return
-    alcoholTypeLookupKeys(row).forEach((key) => map.set(key, label))
-  })
+  addAlcoholTypeRowsToLabelMap(map, fallbackRows)
+  addAlcoholTypeRowsToLabelMap(map, rows)
   return map
+}
+
+export function buildAlcoholTypeLookupKeys(
+  row: AlcoholTypeRegistryRow,
+  fallbackRows: AlcoholTypeRegistryRow[] = [],
+) {
+  const code = taxCategoryCode(row)
+  const relatedRows = code
+    ? fallbackRows.filter((entry) => taxCategoryCode(entry) === code)
+    : []
+  return uniqueStrings([
+    ...alcoholTypeLookupKeys(row),
+    ...relatedRows.flatMap((entry) => alcoholTypeLookupKeys(entry)),
+  ])
+}
+
+export async function loadAlcoholTypeReferenceData(
+  client: SupabaseClient,
+) {
+  const [optionResult, fallbackResult] = await Promise.all([
+    client
+      .from('v_alcohol_type_options')
+      .select('def_id, def_key, spec')
+      .order('value', { ascending: true }),
+    client
+      .from('registry_def')
+      .select('def_id, def_key, spec')
+      .eq('kind', 'alcohol_type')
+      .eq('is_active', true),
+  ])
+
+  if (optionResult.error) throw optionResult.error
+  if (fallbackResult.error) throw fallbackResult.error
+
+  return {
+    optionRows: (optionResult.data ?? []) as AlcoholTypeRegistryRow[],
+    fallbackRows: (fallbackResult.data ?? []) as AlcoholTypeRegistryRow[],
+  }
 }
 
 export function resolveAlcoholTypeLabel(

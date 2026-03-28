@@ -160,6 +160,11 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import {
+  buildAlcoholTypeLabelMap,
+  loadAlcoholTypeReferenceData,
+  resolveAlcoholTypeLabel,
+} from '@/lib/alcoholTypeRegistry'
 import { supabase } from '@/lib/supabase'
 import BatchSummaryDialog from '@/views/Pages/components/BatchSummaryDialog.vue'
 import BatchCreateDialog from '@/views/Pages/components/BatchCreateDialog.vue'
@@ -250,6 +255,7 @@ const attrFields = ref<AttrField[]>([])
 const attrLoading = ref(false)
 const attrValuesByBatch = ref<Record<string, Record<string, unknown>>>({})
 const attrRefOptions = ref<Record<string, Array<{ value: string | number, label: string }>>>({})
+const attrRefLabelMaps = ref<Record<string, Map<string, string>>>({})
 
 const attrSearchFields = computed(() => attrFields.value)
 
@@ -484,27 +490,44 @@ async function loadAttrRefOptions(fields: AttrField[]) {
   }
   if (!keys.size) {
     attrRefOptions.value = {}
+    attrRefLabelMaps.value = {}
     return
   }
   const cache = { ...attrRefOptions.value }
+  const labelCache = { ...attrRefLabelMaps.value }
   for (const key of Array.from(keys)) {
-    if (cache[key]) continue
     const [kind, domain] = key.split(':')
+    const needsAlcoholTypeLabelMap =
+      kind === 'registry_def' && domain === 'alcohol_type' && !labelCache[key]
+    if (cache[key] && !needsAlcoholTypeLabelMap) continue
     let options: Array<{ value: string | number, label: string }> = []
     if (kind === 'registry_def') {
-      const { data, error } = await supabase
-        .from('registry_def')
-        .select('def_id, def_key, spec')
-        .eq('kind', domain)
-        .eq('is_active', true)
-        .order('def_key', { ascending: true })
-      if (error) {
-        console.warn('Failed to load registry options', error)
+      if (domain === 'alcohol_type') {
+        try {
+          const { optionRows, fallbackRows } = await loadAlcoholTypeReferenceData(supabase)
+          labelCache[key] = buildAlcoholTypeLabelMap(optionRows, fallbackRows)
+          options = optionRows.map((row) => ({
+            value: String(row.def_id ?? ''),
+            label: resolveAlcoholTypeLabel(labelCache[key], row.def_id as string) ?? String(row.def_key ?? row.def_id ?? ''),
+          }))
+        } catch (error) {
+          console.warn('Failed to load alcohol type options', error)
+        }
       } else {
-        options = (data ?? []).map((row: any) => ({
-          value: row.def_id,
-          label: row.spec?.name || row.def_key,
-        }))
+        const { data, error } = await supabase
+          .from('registry_def')
+          .select('def_id, def_key, spec')
+          .eq('kind', domain)
+          .eq('is_active', true)
+          .order('def_key', { ascending: true })
+        if (error) {
+          console.warn('Failed to load registry options', error)
+        } else {
+          options = (data ?? []).map((row: any) => ({
+            value: row.def_id,
+            label: row.spec?.name || row.def_key,
+          }))
+        }
       }
     } else if (kind === 'type_def') {
       const { data, error } = await supabase
@@ -525,6 +548,7 @@ async function loadAttrRefOptions(fields: AttrField[]) {
     cache[key] = options
   }
   attrRefOptions.value = cache
+  attrRefLabelMaps.value = labelCache
 }
 
 function resetFilters() {
@@ -552,7 +576,7 @@ const filteredBatches = computed(() => {
       const query = normalizeSearchText(search.attr[String(field.attr_id)])
       if (!query) return true
       const raw = attrValueFor(batch.id, field.attr_id)
-      return matchAttrValue(raw, query)
+      return matchAttrValue(raw, query, field)
     })
     return nameMatch && statusMatch && startOk && endOk && attrMatch
   })
@@ -656,6 +680,25 @@ function attrOptions(field: AttrField) {
   return attrRefOptions.value[key] ?? []
 }
 
+function attrRefKey(field: AttrField) {
+  if (!field.ref_kind || !field.ref_domain) return null
+  return `${field.ref_kind}:${field.ref_domain}`
+}
+
+function resolveAttrRefDisplayLabel(value: unknown, field: AttrField) {
+  const normalized = normalizeAttrValue(value)
+  if (normalized == null) return null
+  const options = attrOptions(field)
+  const hit = options.find((opt) => String(opt.value) === String(normalized))
+  if (hit?.label) return hit.label
+  const key = attrRefKey(field)
+  if (key && field.ref_kind === 'registry_def' && field.ref_domain === 'alcohol_type') {
+    const labelMap = attrRefLabelMaps.value[key]
+    if (labelMap) return resolveAlcoholTypeLabel(labelMap, String(normalized))
+  }
+  return null
+}
+
 function pickAttrValue(row: Record<string, any>) {
   if (row.value_text != null) return row.value_text
   if (row.value_num != null) return row.value_num
@@ -692,9 +735,7 @@ function formatAttrValueForField(value: unknown, field: AttrField) {
   if (value == null) return '—'
   if (field.data_type === 'ref') {
     const normalized = normalizeAttrValue(value)
-    const options = attrOptions(field)
-    const hit = options.find((opt) => String(opt.value) === String(normalized))
-    return hit?.label ?? String(normalized ?? '—')
+    return resolveAttrRefDisplayLabel(normalized, field) ?? String(normalized ?? '—')
   }
   if (field.data_type === 'boolean' || typeof value === 'boolean') {
     return Boolean(value) ? t('common.yes') : t('common.no')
@@ -719,11 +760,23 @@ function formatAttrValueForField(value: unknown, field: AttrField) {
   return String(value)
 }
 
-function matchAttrValue(raw: unknown, query: string) {
+function matchAttrValue(raw: unknown, query: string, field?: AttrField) {
   if (raw == null) return false
   const queryTrimmed = query.trim()
   if (!queryTrimmed) return true
   const normalized = normalizeAttrValue(raw)
+  if (field?.data_type === 'ref') {
+    const rawValue = String(normalized ?? '').trim()
+    if (rawValue === queryTrimmed) return true
+    const rawLabel = resolveAttrRefDisplayLabel(normalized, field)
+    const queryLabel = resolveAttrRefDisplayLabel(queryTrimmed, field)
+    if (rawLabel && queryLabel) {
+      return rawLabel.toLowerCase() === queryLabel.toLowerCase()
+    }
+    if (rawLabel) {
+      return rawLabel.toLowerCase().includes(queryTrimmed.toLowerCase())
+    }
+  }
   if (typeof normalized === 'boolean') {
     const lowered = queryTrimmed.toLowerCase()
     const wanted = ['true', '1', 'yes', 'y'].includes(lowered)

@@ -333,7 +333,11 @@ import { useI18n } from 'vue-i18n'
 import { toast } from 'vue3-toastify'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
-import { buildAlcoholTypeLabelMap, resolveAlcoholTypeLabel } from '@/lib/alcoholTypeRegistry'
+import {
+  buildAlcoholTypeLabelMap,
+  loadAlcoholTypeReferenceData,
+  resolveAlcoholTypeLabel,
+} from '@/lib/alcoholTypeRegistry'
 import {
   fillingSampleVolumeFromEvent,
   packingLossFromEvent,
@@ -1039,14 +1043,8 @@ async function loadVolumeUomCodes() {
 }
 
 async function loadLiquorCodeLabelMap() {
-  const { data, error } = await supabase
-    .from('registry_def')
-    .select('def_id, def_key, spec')
-    .eq('kind', 'alcohol_type')
-    .eq('is_active', true)
-  if (error) throw error
-
-  return buildAlcoholTypeLabelMap((data ?? []) as RegistryRow[])
+  const { optionRows, fallbackRows } = await loadAlcoholTypeReferenceData(supabase)
+  return buildAlcoholTypeLabelMap(optionRows as RegistryRow[], fallbackRows as RegistryRow[])
 }
 
 function resolveLiquorCodeValue(value: string | number | null | undefined) {

@@ -325,7 +325,11 @@ import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
-import { buildAlcoholTypeLabelMap, resolveAlcoholTypeLabel } from '@/lib/alcoholTypeRegistry'
+import {
+  buildAlcoholTypeLabelMap,
+  loadAlcoholTypeReferenceData,
+  resolveAlcoholTypeLabel,
+} from '@/lib/alcoholTypeRegistry'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
@@ -1225,13 +1229,11 @@ async function loadSites() {
 }
 
 async function loadAlcoholTypes() {
-  const { data, error } = await supabase
-    .from('registry_def')
-    .select('def_id, def_key, spec')
-    .eq('kind', 'alcohol_type')
-    .eq('is_active', true)
-  if (error) throw error
-  alcoholTypeLabelMap.value = buildAlcoholTypeLabelMap((data ?? []) as Array<Record<string, unknown>>)
+  const { optionRows, fallbackRows } = await loadAlcoholTypeReferenceData(supabase)
+  alcoholTypeLabelMap.value = buildAlcoholTypeLabelMap(
+    optionRows as Array<Record<string, unknown>>,
+    fallbackRows as Array<Record<string, unknown>>,
+  )
 }
 
 async function loadLotReferenceMaps(

@@ -1,4 +1,4 @@
--- Attribute definitions and set for Batch: Beer Category + Target ABV
+-- Attribute definitions and set for Batch: Beer Category + Target/Actual ABV
 -- Scope: system, Industry: 00000000-0000-0000-0000-000000000000
 -- References registry_def kind = 'alcohol_type'
 
@@ -57,6 +57,23 @@ values
     true,
     'Target alcohol by volume (%)',
     20
+  ),
+  (
+    '00000000-0000-0000-0000-000000000000',
+    'batch',
+    'system',
+    null,
+    '00000000-0000-0000-0000-000000000000',
+    'actual_abv',
+    'Actual ABV',
+    '{"ja":"実績ABV","en":"Actual ABV"}',
+    'number',
+    (select id from mst_uom where tenant_id = '00000000-0000-0000-0000-000000000000' and code = '%' limit 1),
+    null,
+    null,
+    false,
+    'Actual alcohol by volume (%)',
+    25
   ),
   (
     '00000000-0000-0000-0000-000000000000',
@@ -133,7 +150,7 @@ values (
   'batch_alcohol',
   'Batch Alcohol',
   '{"ja":"バッチの酒類情報","en":"Batch Alcohol"}',
-  'Beer category and target ABV for batch',
+  'Beer category, target ABV, and actual ABV for batch',
   10
 )
 on conflict do nothing;
@@ -155,12 +172,14 @@ select
   case d.code
     when 'beer_category' then true
     when 'target_abv' then true
+    when 'actual_abv' then false
     else false
   end,
   'Tax',
   case d.code
     when 'beer_category' then 'select'
     when 'target_abv' then 'number'
+    when 'actual_abv' then 'number'
     when 'liquid_name' then 'text'
     when 'style_name' then 'text'
     when 'customer_name' then 'text'
@@ -169,6 +188,7 @@ select
   case d.code
     when 'beer_category' then 10
     when 'target_abv' then 20
+    when 'actual_abv' then 25
     when 'liquid_name' then 30
     when 'style_name' then 40
     when 'customer_name' then 50
@@ -182,7 +202,7 @@ join attr_def d
 where s.tenant_id = '00000000-0000-0000-0000-000000000000'
   and s.domain = 'batch'
   and s.code = 'batch_alcohol'
-  and d.code in ('beer_category', 'target_abv', 'liquid_name', 'style_name', 'customer_name')
+  and d.code in ('beer_category', 'target_abv', 'actual_abv', 'liquid_name', 'style_name', 'customer_name')
 on conflict do nothing;
 
 -- 4) entity_attr_set / entity_attr
@@ -231,3 +251,18 @@ on conflict do nothing;
 -- where d.tenant_id = :tenant_id
 --   and d.domain = 'batch'
 --   and d.code = 'target_abv';
+
+-- insert into entity_attr (
+--   tenant_id, entity_type, entity_id_uuid, attr_id, value_num, uom_id
+-- )
+-- select
+--   :tenant_id,
+--   'batch',
+--   :batch_id,
+--   d.attr_id,
+--   :actual_abv,
+--   (select id from mst_uom where tenant_id = :tenant_id and code = '%' limit 1)
+-- from attr_def d
+-- where d.tenant_id = :tenant_id
+--   and d.domain = 'batch'
+--   and d.code = 'actual_abv';

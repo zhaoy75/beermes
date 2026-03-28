@@ -403,34 +403,15 @@ begin
     v_tax_category_match_count := 0;
 
     if v_beer_category is not null then
-      with candidates as (
-        select
-          case
-            when r.scope = 'tenant' and r.owner_id = v_tenant then 0
-            else 1
-          end as scope_rank,
-          nullif(btrim(coalesce(r.spec ->> 'tax_category_code', '')), '') as tax_category_code
-        from public.registry_def r
-        where r.kind = 'alcohol_type'
-          and r.is_active = true
-          and (
-            (r.scope = 'tenant' and r.owner_id = v_tenant)
-            or r.scope = 'system'
-          )
-          and (
-            r.def_id::text = v_beer_category
-            or r.def_key = v_beer_category
-            or lower(coalesce(r.spec ->> 'name', '')) = lower(v_beer_category)
-          )
-      ),
-      prioritized as (
-        select c.tax_category_code
-        from candidates c
-        where c.scope_rank = (select min(c2.scope_rank) from candidates c2)
-      )
-      select count(*), max(p.tax_category_code)
+      select count(*), max(v.key)
         into v_tax_category_match_count, v_tax_category_code
-      from prioritized p;
+      from public.v_alcohol_type_options v
+      where
+        v.def_id::text = v_beer_category
+        or v.def_key = v_beer_category
+        or lower(coalesce(v.spec ->> 'name', '')) = lower(v_beer_category)
+        or v.key = v_beer_category
+        or v.value = v_beer_category;
     end if;
 
     if v_tax_category_match_count > 1 then

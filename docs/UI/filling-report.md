@@ -84,10 +84,12 @@
     - `mes_batches.meta.beer_category`
     - `mes_batches.meta.category`
 - `ABV`
-  - target ABV for the batch
+  - resolved ABV for the batch
   - resolution order:
+    - batch attribute `actual_abv`
     - batch attribute `target_abv`
     - recipe target ABV
+    - `mes_batches.meta.actual_abv`
     - `mes_batches.meta.target_abv`
 - dynamic package-type columns
   - each existing package type becomes one table column
@@ -257,7 +259,7 @@
 - `mst_package`
   - package code and fixed-volume metadata
 - `attr_def` / `entity_attr`
-  - batch attribute lookup for `beer_category` and `target_abv`
+  - batch attribute lookup for `beer_category`, `actual_abv`, and `target_abv`
 
 ### Source-of-Truth Rule
 - Current operational filling records are persisted in:

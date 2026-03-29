@@ -116,6 +116,7 @@
   - `mst_uom` (uom code mapping)
   - `attr_def` / `entity_attr` for batch attributes:
     - `beer_category`
+    - `actual_abv`
     - `target_abv`
     - `style_name`
 - Transactional data:

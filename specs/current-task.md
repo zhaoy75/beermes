@@ -1,58 +1,76 @@
 # Current Task Spec
 
 ## Goal
-- Create a reusable SQL patch to add batch attribute `actual_abv` into existing environments.
+- Change existing batch ABV-related processing to use `actual_abv` first.
+- Keep backward compatibility by falling back to `target_abv` only when `actual_abv` is not set.
 
 ## Scope
-- Add one patch SQL file under `DB/dml`.
-- Patch should safely insert `actual_abv` into `attr_def` and add the matching `attr_set_rule` for `batch_alcohol`.
-- Patch may update the `batch_alcohol` description text so it matches the new attribute set contents.
+- Update batch ABV resolution logic in report and inventory-related frontend code.
+- Update related UI specs/docs so they describe `actual_abv -> target_abv fallback`.
+- Limit this task to places where batch/result ABV is derived for display, filtering, export, or tax/report calculations.
 
 ## Non-Goals
-- No frontend or application logic changes.
-- No seed-file restructuring beyond the already completed `attr_batch_dml.sql` update.
-- No backfill of existing batch `entity_attr` rows.
+- No changes to recipe master semantics; recipe `target_abv` remains the recipe target value.
+- No schema changes.
+- No batch data backfill.
+- No change to alcohol-type/category handling.
 
 ## Affected Files
 - `specs/current-task.md`
-- `DB/dml/attr_def_actual_abv_patch.sql`
+- `beeradmin_tail/src/views/Pages/FillingReport.vue`
+- `beeradmin_tail/src/views/Pages/TaxableRemovalReport.vue`
+- `beeradmin_tail/src/views/Pages/TaxReport.vue`
+- `beeradmin_tail/src/views/Pages/ProducedBeer.vue`
+- `beeradmin_tail/src/composables/useProducedBeerInventory.ts`
+- `beeradmin_tail/src/views/Pages/ProducedBeerMovementEdit.vue`
+- `docs/UI/filling-report.md`
+- `docs/UI/tax-report.md`
+- `docs/UI/product_beer.md`
 
 ## Data Model / API Changes
-- No schema changes.
-- Adds data rows in existing tables:
-  - `attr_def` for `code = 'actual_abv'`
-  - `attr_set_rule` linking `actual_abv` into `batch_alcohol`
+- No schema/API changes.
+- Batch ABV lookup order changes from:
+  - `target_abv` batch attr, then recipe/meta fallback
+- To:
+  - `actual_abv` batch attr
+  - `target_abv` batch attr
+  - recipe `target_abv`
+  - batch meta `actual_abv`
+  - batch meta `target_abv`
 
 ## Planned File Changes
 - `specs/current-task.md`
-  - replace the previous seed-update spec with this patch-SQL task
-- `DB/dml/attr_def_actual_abv_patch.sql`
-  - insert `actual_abv` into `attr_def` if missing
-  - update `batch_alcohol` description if needed
-  - insert `attr_set_rule` for `actual_abv` if missing
-  - add verification queries
+  - replace the previous SQL patch spec with this ABV resolution migration task
+- frontend batch ABV consumers
+  - include `actual_abv` attr_def lookup
+  - resolve ABV from `actual_abv` first and keep `target_abv` as fallback
+  - preserve existing UI fields/exports while changing the source priority
+- docs
+  - update ABV resolution order descriptions
 
 ## Fix Decisions
-- Keep the patch safe to re-run.
-- Use the same tenant/domain/scope/industry constants as the existing batch seed data.
-- Match the `actual_abv` definition already added to `attr_batch_dml.sql`.
+- Use candidate 2: `actual_abv` first, `target_abv` only as fallback.
+- Treat batch attribute values as the authoritative source before recipe/meta fallbacks.
+- Keep variable names/UI labels stable unless a file clearly needs renaming for correctness.
 
 ## Final Decisions
-- Created a re-runnable patch SQL file at `DB/dml/attr_def_actual_abv_patch.sql`.
-- The patch inserts `actual_abv` into `attr_def` if missing, updates the `batch_alcohol` description text, and inserts the corresponding `attr_set_rule` if missing.
-- The patch includes verification queries for both `attr_def` and `attr_set_rule`.
+- Updated the targeted batch ABV consumers to include `actual_abv` in batch attr lookup.
+- Implemented ABV resolution as `actual_abv` batch attr, then `target_abv` batch attr, then existing recipe/meta fallbacks where those files already used them.
+- Kept existing variable names such as `targetAbv` and `abv` in UI code to avoid unrelated churn, while changing only the source priority.
+- Updated the related UI docs to describe the new `actual_abv`-first resolution order.
 
 ## Validation Plan
-- Review the patch SQL for idempotency and consistency with `attr_batch_dml.sql`.
+- Verify every targeted batch ABV consumer includes `actual_abv` in attr lookup.
+- Verify the fallback order is `actual_abv -> target_abv -> recipe target_abv -> meta actual_abv -> meta target_abv`.
 - Run required checks before finishing:
   - unit tests
   - lint
   - type-check
 - Repository note:
-  - this task is SQL-only, so app checks are expected to be unchanged and may only validate no incidental breakage.
+  - if no unit test script exists, report that explicitly.
 
 ## Validation Outcome
-- Reviewed `DB/dml/attr_def_actual_abv_patch.sql` and confirmed it matches the `actual_abv` definition already added to `DB/dml/attr_batch_dml.sql`.
+- Verified the targeted files now include `actual_abv` in batch attr lookup and prefer it over `target_abv`.
 - `npm run type-check` passed in `beeradmin_tail`.
 - Unit tests could not be run because `beeradmin_tail/package.json` does not define a `test` script.
-- `npm exec eslint src` still fails due to pre-existing repository-wide lint issues unrelated to this SQL patch task.
+- Targeted ESLint execution still fails due to pre-existing repository issues, primarily `@typescript-eslint/no-explicit-any` and some `no-unused-vars` findings in the touched files.

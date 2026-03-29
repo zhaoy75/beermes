@@ -1069,7 +1069,7 @@ async function loadBatchInfo(batchIds: string[], alcoholTypeLabels: Map<string, 
     .from('attr_def')
     .select('attr_id, code')
     .eq('domain', 'batch')
-    .in('code', ['beer_category', 'target_abv'])
+    .in('code', ['beer_category', 'actual_abv', 'target_abv'])
     .eq('is_active', true)
   if (attrDefError) throw attrDefError
 
@@ -1114,7 +1114,12 @@ async function loadBatchInfo(batchIds: string[], alcoholTypeLabels: Map<string, 
         entry.liquorCode = resolveLiquorCodeValue(rawValue)
       }
 
-      if (code === 'target_abv') {
+      if (code === 'actual_abv') {
+        const num = toNumber(row.value_num)
+        if (num != null) entry.abv = num
+      }
+
+      if (code === 'target_abv' && entry.abv == null) {
         const num = toNumber(row.value_num)
         if (num != null) entry.abv = num
       }
@@ -1158,6 +1163,7 @@ async function loadBatchInfo(batchIds: string[], alcoholTypeLabels: Map<string, 
       abv:
         attr?.abv ??
         toNumber(recipe?.target_abv) ??
+        resolveMetaNumber(meta, 'actual_abv') ??
         resolveMetaNumber(meta, 'target_abv') ??
         null,
     })

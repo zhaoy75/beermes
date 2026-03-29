@@ -951,7 +951,7 @@ async function loadBatchInfo(batchIds: string[]) {
       .from('attr_def')
       .select('attr_id, code')
       .eq('domain', 'batch')
-      .in('code', ['beer_category', 'target_abv', 'style_name'])
+      .in('code', ['beer_category', 'actual_abv', 'target_abv', 'style_name'])
       .eq('is_active', true)
     if (attrDefError) throw attrDefError
     ;(attrDefs ?? []).forEach((row: any) => {
@@ -994,7 +994,11 @@ async function loadBatchInfo(batchIds: string[]) {
           else if (row.value_ref_type_id != null)
             entry.beerCategoryId = String(row.value_ref_type_id)
         }
-        if (code === 'target_abv') {
+        if (code === 'actual_abv') {
+          const num = toNumber(row.value_num)
+          if (num != null) entry.targetAbv = num
+        }
+        if (code === 'target_abv' && entry.targetAbv == null) {
           const num = toNumber(row.value_num)
           if (num != null) entry.targetAbv = num
         }
@@ -1036,6 +1040,7 @@ async function loadBatchInfo(batchIds: string[]) {
       targetAbv:
         attr?.targetAbv ??
         toNumber(recipe?.target_abv) ??
+        resolveMetaNumber(meta, 'actual_abv') ??
         resolveMetaNumber(meta, 'target_abv') ??
         null,
       styleName:

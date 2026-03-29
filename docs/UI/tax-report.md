@@ -197,6 +197,7 @@
 - Category resolution order for batch rows:
   - batch `entity_attr` with attr code `beer_category`
 - ABV resolution order:
+  - batch `entity_attr` with attr code `actual_abv`
   - batch `entity_attr` with attr code `target_abv`
 - Category label resolution:
   - resolve against active `registry_def(kind = 'alcohol_type')`

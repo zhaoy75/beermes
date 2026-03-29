@@ -916,7 +916,7 @@ async function loadBatchEntityAttrsByBatchIds(batchIds: string[]) {
     .from('attr_def')
     .select('attr_id, code')
     .eq('domain', 'batch')
-    .in('code', ['beer_category', 'target_abv'])
+    .in('code', ['beer_category', 'actual_abv', 'target_abv'])
     .eq('is_active', true)
   if (attrDefError) throw attrDefError
 
@@ -959,7 +959,12 @@ async function loadBatchEntityAttrsByBatchIds(batchIds: string[]) {
       else if (row.value_ref_type_id != null) entry.categoryId = String(row.value_ref_type_id)
     }
 
-    if (code === 'target_abv') {
+    if (code === 'actual_abv') {
+      const abv = toNullableNumber(row.value_num)
+      if (abv != null) entry.abv = abv
+    }
+
+    if (code === 'target_abv' && entry.abv == null) {
       const abv = toNullableNumber(row.value_num)
       if (abv != null) entry.abv = abv
     }

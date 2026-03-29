@@ -236,6 +236,16 @@
       "actualYieldSaveFailed": "実績生産量の保存に失敗しました。",
       "actualYieldProduceFailed": "実績生産量は保存されましたが、製品生成登録に失敗しました。",
       "actualYieldSaved": "実績生産量を保存し、製品生成を登録しました。",
+      "errors": {
+        "attrInvalid": "バッチ属性に入力エラーがあります。内容を確認してください。",
+        "attrMin": "{field} は {min} 以上で入力してください。",
+        "attrMax": "{field} は {max} 以下で入力してください。",
+        "attrPattern": "{field} の形式が正しくありません。",
+        "attrAllowedValues": "{field} は定義済みの候補から入力してください。",
+        "attrJson": "{field} は正しいJSON形式で入力してください。",
+        "attrReference": "{field} の参照値が不正です。",
+        "saveFailed": "バッチ情報の保存に失敗しました。"
+      },
       "relatedBatch": "関連バッチ",
       "fillingTitle": "詰口",
       "fillingSubtitle": "移出・詰口情報のサマリーです。",

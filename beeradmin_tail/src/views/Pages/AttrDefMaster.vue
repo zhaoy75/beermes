@@ -1,5 +1,5 @@
 <template>
-  <AdminLayout>
+  <SystemAdminLayout>
     <PageBreadcrumb :pageTitle="pageTitle" />
     <div class="min-h-screen bg-white text-gray-900 p-4 max-w-7xl mx-auto">
       <header class="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -371,18 +371,19 @@
         </div>
       </div>
     </div>
-  </AdminLayout>
+  </SystemAdminLayout>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { supabase } from '@/lib/supabase'
-import AdminLayout from '@/components/layout/AdminLayout.vue'
+import SystemAdminLayout from '@/layouts/SystemAdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
 import { useTableSort } from '@/composables/useTableSort'
+import { useAuthStore } from '@/stores/auth'
 
 type AttrDefRow = {
   attr_id: number
@@ -431,8 +432,10 @@ type UsageCount = {
 type SortKey = 'code' | 'name' | 'domainIndustry' | 'dataType' | 'uom' | 'validation' | 'active' | 'usage'
 
 const TABLE = 'attr_def'
+const SYSTEM_TENANT_ID = '00000000-0000-0000-0000-000000000000'
 
 const { t } = useI18n()
+const auth = useAuthStore()
 const pageTitle = computed(() => t('attrDef.title'))
 
 const rows = ref<AttrDefRow[]>([])
@@ -602,20 +605,34 @@ function usageTotal(row: AttrDefRow) {
 }
 
 async function ensureTenant() {
+  if (auth.accessToken === null && auth.userId === null) {
+    await auth.bootstrap()
+  }
   if (tenantId.value) return tenantId.value
   const { data, error } = await supabase.auth.getUser()
   if (error) throw error
   const id = data.user?.app_metadata?.tenant_id as string | undefined
-  if (!id) throw new Error('Tenant not resolved in session')
-  tenantId.value = id
   const role = String(data.user?.app_metadata?.role ?? data.user?.user_metadata?.role ?? '').toLowerCase()
-  const isAdminFlag = Boolean(data.user?.app_metadata?.is_admin || data.user?.user_metadata?.is_admin)
-  isAdmin.value = isAdminFlag || role === 'admin'
+  const isAdminFlag = Boolean(
+    data.user?.app_metadata?.is_admin ||
+    data.user?.user_metadata?.is_admin ||
+    data.user?.app_metadata?.is_system_admin ||
+    data.user?.app_metadata?.system_role,
+  )
+  isAdmin.value = isAdminFlag || role === 'admin' || auth.isSystemAdmin
+  if (!id) {
+    if (auth.isSystemAdmin || Boolean(data.user?.app_metadata?.is_system_admin || data.user?.app_metadata?.system_role)) {
+      tenantId.value = SYSTEM_TENANT_ID
+      return tenantId.value
+    }
+    throw new Error('Tenant not resolved in session')
+  }
+  tenantId.value = id
   return id
 }
 
 function canEdit(row: AttrDefRow) {
-  if (row.scope === 'system') return isAdmin.value
+  if (row.scope === 'system') return auth.isSystemAdmin || isAdmin.value
   return true
 }
 
@@ -884,6 +901,10 @@ async function saveAttr() {
     }
 
     if (editing.value && selectedRow.value) {
+      if (!canEdit(selectedRow.value)) {
+        toast.error(t('attrDef.errors.adminOnlySystem'))
+        return
+      }
       const { error } = await supabase
         .from(TABLE)
         .update(payload)
@@ -893,9 +914,9 @@ async function saveAttr() {
     } else {
       const insertPayload = {
         ...payload,
-        tenant_id: tenant,
-        scope: 'tenant',
-        owner_id: tenant,
+        tenant_id: auth.isSystemAdmin ? SYSTEM_TENANT_ID : tenant,
+        scope: auth.isSystemAdmin ? 'system' : 'tenant',
+        owner_id: auth.isSystemAdmin ? null : tenant,
       }
       const { error } = await supabase.from(TABLE).insert(insertPayload)
       if (error) throw error
@@ -914,6 +935,10 @@ async function saveAttr() {
 
 function confirmDelete() {
   if (!selectedRow.value) return
+  if (!canEdit(selectedRow.value)) {
+    toast.error(t('attrDef.errors.adminOnlySystem'))
+    return
+  }
   if (usageTotal(selectedRow.value) > 0) {
     toast.error(t('attrDef.errors.deleteUsed'))
     return
@@ -925,6 +950,10 @@ async function deleteAttr() {
   if (!selectedRow.value) return
   try {
     saving.value = true
+    if (!canEdit(selectedRow.value)) {
+      toast.error(t('attrDef.errors.adminOnlySystem'))
+      return
+    }
     const { error } = await supabase.from(TABLE).delete().eq('attr_id', selectedRow.value.attr_id)
     if (error) throw error
     toast.success(t('common.deleted'))

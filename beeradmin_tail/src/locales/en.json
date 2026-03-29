@@ -236,6 +236,16 @@
       "actualYieldSaveFailed": "Failed to save actual yield.",
       "actualYieldProduceFailed": "Actual yield was saved, but product production registration failed.",
       "actualYieldSaved": "Actual yield saved and product production registered.",
+      "errors": {
+        "attrInvalid": "Some batch attributes are invalid. Review the highlighted fields.",
+        "attrMin": "{field} must be greater than or equal to {min}.",
+        "attrMax": "{field} must be less than or equal to {max}.",
+        "attrPattern": "{field} format is invalid.",
+        "attrAllowedValues": "{field} must match one of the configured values.",
+        "attrJson": "{field} must be valid JSON.",
+        "attrReference": "{field} reference value is invalid.",
+        "saveFailed": "Failed to save batch information."
+      },
       "relatedBatch": "Related batch",
       "fillingTitle": "Filling",
       "fillingSubtitle": "Summary of move and filling information.",

@@ -51,6 +51,12 @@
       fields in entity_attr_set in domain "batch". 
         field name should be choose according to system language setting
         field text and input method should follow the attr_def rule
+        save-time validation must follow attr_def conditions:
+          - required
+          - num_min / num_max
+          - text_regex
+          - allowed_values
+        if any batch attribute is invalid, batch save must be blocked and the field error must be shown inline
 
     a horizontal line 
       batch relation list 
@@ -125,6 +131,7 @@
   - Batch actual yield entry is for manufacturing result entry.
   - Manufacturing site for actual yield must be `BREWERY_MANUFACTUR`.
   - Stored function `product_produce` is the server-side source of truth and must reject non-manufacturing destination sites.
+  - Batch attribute values stored in `entity_attr` must be validated against the linked `attr_def` conditions before save.
 
 
 ## Data Handling

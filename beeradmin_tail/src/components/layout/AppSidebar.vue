@@ -446,14 +446,7 @@ const menuGroups = computed<MenuGroup[]>(() => [
           { name: t('sidebar.items.materialClassMaster'), path: "/materialClassMaster", pro: false },
           { name: t('sidebar.items.materialTypeMaster'), path: "/materialTypeMaster", pro: false },
           { name: t('sidebar.items.siteTypeMaster'), path: "/siteTypeMaster", pro: false },
-          {
-            name: t('sidebar.items.systemRelated'),
-            subItems: [
-              { name: t('sidebar.items.attrDefMaster'), path: "/attrDefMaster", pro: false },
-              { name: t('sidebar.items.attrSetMaster'), path: "/attrSetMaster", pro: false },
-              { name: t('sidebar.items.uomMaster'), path: "/uomMaster", pro: false },
-            ],
-          },
+          { name: t('sidebar.items.uomMaster'), path: "/uomMaster", pro: false },
 
         ],
       },

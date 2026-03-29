@@ -1,73 +1,67 @@
 # Current Task Spec
 
 ## Goal
-- Add clickable column sorting to master-page list tables that currently do not support sorting.
-- Keep the existing filter and CRUD behavior unchanged while making table order user-controllable.
+- For `バッチ実績入力` and `移送詰口管理`, validate batch `entity_attr` values against the check conditions defined in `attr_def` before saving.
 
 ## Scope
-- Implement sort state, sortable headers, and sorted row rendering for master-page list tables in the frontend.
-- Reuse a shared sorting helper/composable where it reduces repeated comparator logic.
-- Apply sorting only to list-style tables that display master data records or assigned attributes.
+- Load `attr_def` validation fields for batch attribute inputs in `BatchEdit` and `BatchPacking`.
+- Validate batch attribute values before `entity_attr` upsert using:
+  - required
+  - num_min / num_max
+  - text_regex
+  - allowed_values
+- Surface validation errors in the page so invalid attributes are not silently ignored.
+- Update the relevant UI specs to state that save-time validation follows `attr_def`.
 
 ## Non-Goals
-- No changes to report pages, inventory pages, or non-master screens.
-- No changes to database schema, SQL, or API contracts.
-- No changes to card-only lists.
-- No changes to editor-only grids such as the calibration input table in `EquipmentMaster.vue`.
+- No DB trigger or RLS change for `entity_attr`.
+- No validation changes for non-batch entity attributes.
+- No redesign of the batch attribute input UI beyond error display needed for validation.
 
 ## Affected Files
 - `specs/current-task.md`
-- `beeradmin_tail/src/composables/useTableSort.ts`
-- `beeradmin_tail/src/views/Pages/AlcoholTaxMaster.vue`
-- `beeradmin_tail/src/views/Pages/AlcoholTypeMaster.vue`
-- `beeradmin_tail/src/views/Pages/AttrDefMaster.vue`
-- `beeradmin_tail/src/views/Pages/AttrSetMaster.vue`
-- `beeradmin_tail/src/views/Pages/MaterialClassMaster.vue`
-- `beeradmin_tail/src/views/Pages/MaterialTypeMaster.vue`
-- `beeradmin_tail/src/views/Pages/PackageMaster.vue`
-- `beeradmin_tail/src/views/Pages/SiteTypeMaster.vue`
-- `beeradmin_tail/src/views/Pages/UomMaster.vue`
+- `beeradmin_tail/src/lib/batchAttrValidation.ts`
+- `beeradmin_tail/src/views/Pages/BatchEdit.vue`
+- `beeradmin_tail/src/views/Pages/BatchPacking.vue`
+- `beeradmin_tail/src/locales/ja.json`
+- `beeradmin_tail/src/locales/en.json`
+- `docs/UI/batchedit.md`
+- `docs/UI/batchpacking.md`
 
 ## Data Model / API Changes
 - None.
+- Frontend will request additional existing `attr_def` columns when loading batch attribute definitions:
+  - `required`
+  - `num_min`
+  - `num_max`
+  - `text_regex`
+  - `allowed_values`
 
 ## Planned File Changes
-- Add a shared table-sorting composable that handles sort key, direction, icon state, and null-safe value comparison.
-- Update each targeted master page to:
-  - define sortable columns,
-  - render clickable table headers,
-  - switch `filteredRows` / `pagedRows` rendering to sorted rows.
-- Keep existing mobile card views and filters intact.
+- Add a shared batch-attribute validation helper for normalized data type handling and rule checks.
+- Extend batch attribute field types in `BatchEdit` and `BatchPacking` to carry validation metadata and per-field error text.
+- Validate before `entity_attr` delete/upsert and stop save when any field is invalid.
+- Show inline validation errors for batch attribute inputs and a page-level save error message.
+- Update docs to state that batch attribute save follows `attr_def` conditions.
 
 ## Final Decisions
-- Added `beeradmin_tail/src/composables/useTableSort.ts` as the shared sort-state and comparator helper for master tables.
-- Applied sortable headers to these master-page tables:
-  - `AlcoholTaxMaster`
-  - `AlcoholTypeMaster`
-  - `AttrDefMaster`
-  - `AttrSetMaster` rule tables
-  - `MaterialClassMaster`
-  - `MaterialTypeMaster` attribute table
-  - `PackageMaster`
-  - `SiteTypeMaster`
-  - `UomMaster`
-- Kept existing default ordering where practical:
-  - `createdAt desc` for registry-based masters that were previously fetched newest-first
-  - `code` or `dimension` ascending for code-based masters
-  - existing attribute/rule natural ordering as the initial sort where that was already the implicit UI order
-- Left `EquipmentMaster` calibration editing grid out of scope because it is an input table with an existing dedicated `sort by depth` action, not a master list view.
+- Added a shared validation helper in `beeradmin_tail/src/lib/batchAttrValidation.ts` so batch attribute save rules are defined once for both `BatchEdit` and `BatchPacking`.
+- Extended batch attribute loading in both pages to fetch `attr_def.required`, `num_min`, `num_max`, `text_regex`, and `allowed_values`.
+- Combined `attr_set_rule.required` and `attr_def.required` so either source can make a field required at save time.
+- Normalized attribute data types during load (`string` -> `text`, `boolean` -> `bool`) before rendering and validation.
+- Blocked save when any batch attribute is invalid, showed field-level inline errors, and exposed a page-level error banner for overall save failure.
+- Replaced permissive JSON fallback with strict JSON parsing for batch attribute saves after validation.
+- Updated the batch edit and batch packing docs to state that `entity_attr` save must validate against linked `attr_def` conditions.
 
 ## Validation Plan
-- Verify each targeted table header toggles ascending/descending order.
-- Verify filters are applied before sorting, and pagination remains based on the sorted list where pagination exists.
 - Run required checks before finishing:
   - unit tests
   - lint
   - type-check
 - If no unit test script exists, report that explicitly.
+- If repo-wide lint has pre-existing failures, run targeted lint on touched files and report remaining failures.
 
 ## Validation Outcome
-- Verified the targeted master tables now render sortable headers and use sorted row collections.
 - `npm run type-check` passed in `beeradmin_tail`.
-- Unit tests could not be run because `beeradmin_tail/package.json` does not define a `test` script.
-- Targeted ESLint execution on the touched files still fails due pre-existing repository issues, including `@typescript-eslint/no-explicit-any` and some `no-unused-vars` findings in files that were already carrying those patterns.
+- `npm run test` could not run because `beeradmin_tail/package.json` does not define a `test` script.
+- Targeted ESLint execution on `src/lib/batchAttrValidation.ts`, `src/views/Pages/BatchEdit.vue`, and `src/views/Pages/BatchPacking.vue` failed due to pre-existing `@typescript-eslint/no-explicit-any` and `no-unused-vars` issues in the two page files.

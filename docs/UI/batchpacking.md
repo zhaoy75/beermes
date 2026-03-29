@@ -40,6 +40,7 @@
 - Operator: create packing events
 - QA / Manager: create, edit, delete (policy dependent)
 - No permission: page read-only or blocked
+- Batch attribute edits on this page must follow the same `attr_def` save-time validation as Batch Edit.
 
 ## Page Layout
 ### Header
@@ -218,6 +219,15 @@ Common filling calculation rules:
 
 Batch Edit consistency requirement:
 - Batch Edit page is a consumer of packing history; it is not allowed to redefine filling-derived columns independently
+
+Batch attribute validation requirement:
+- when this page saves batch attributes into `entity_attr`, it must validate against the linked `attr_def`
+- validation scope:
+  - required
+  - num_min / num_max
+  - text_regex
+  - allowed_values
+- if any attribute is invalid, save must be blocked and the field error must be shown inline
 - For Filling rows, Batch Edit page must display:
   - `明細総容量` using the same `sample_flg = false` line-total rule as Batch Packing
   - `詰口残数量` using the same `詰口払出数量 - 明細総容量` rule as Batch Packing

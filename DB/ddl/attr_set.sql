@@ -144,6 +144,16 @@ EXECUTE FUNCTION set_updated_at();
 ALTER TABLE attr_set ENABLE ROW LEVEL SECURITY;
 ALTER TABLE attr_set_rule ENABLE ROW LEVEL SECURITY;
 
+CREATE OR REPLACE FUNCTION app_is_system_admin()
+RETURNS boolean
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT
+    COALESCE(lower(auth.jwt() -> 'app_metadata' ->> 'is_system_admin') = 'true', false)
+    OR COALESCE(NULLIF(auth.jwt() -> 'app_metadata' ->> 'system_role', ''), '') <> ''
+$$;
+
 -- attr_set SELECT: system rows + tenant's own rows
 CREATE POLICY attr_set_select_system_or_tenant
 ON attr_set
@@ -160,8 +170,16 @@ ON attr_set
 FOR INSERT
 TO authenticated
 WITH CHECK (
-  scope = 'tenant'
-  AND owner_id = app_current_tenant_id()
+  (
+    scope = 'tenant'
+    AND owner_id = app_current_tenant_id()
+  )
+  OR
+  (
+    scope = 'system'
+    AND owner_id IS NULL
+    AND app_is_system_admin()
+  )
 );
 
 -- attr_set UPDATE: tenant can only update its own tenant-scoped rows
@@ -170,12 +188,28 @@ ON attr_set
 FOR UPDATE
 TO authenticated
 USING (
-  scope = 'tenant'
-  AND owner_id = app_current_tenant_id()
+  (
+    scope = 'tenant'
+    AND owner_id = app_current_tenant_id()
+  )
+  OR
+  (
+    scope = 'system'
+    AND owner_id IS NULL
+    AND app_is_system_admin()
+  )
 )
 WITH CHECK (
-  scope = 'tenant'
-  AND owner_id = app_current_tenant_id()
+  (
+    scope = 'tenant'
+    AND owner_id = app_current_tenant_id()
+  )
+  OR
+  (
+    scope = 'system'
+    AND owner_id IS NULL
+    AND app_is_system_admin()
+  )
 );
 
 -- attr_set DELETE: tenant can only delete its own tenant-scoped rows
@@ -184,8 +218,16 @@ ON attr_set
 FOR DELETE
 TO authenticated
 USING (
-  scope = 'tenant'
-  AND owner_id = app_current_tenant_id()
+  (
+    scope = 'tenant'
+    AND owner_id = app_current_tenant_id()
+  )
+  OR
+  (
+    scope = 'system'
+    AND owner_id IS NULL
+    AND app_is_system_admin()
+  )
 );
 
 -- ----------------------------------------------------------------------------
@@ -221,8 +263,11 @@ WITH CHECK (
     FROM attr_set s
     WHERE s.tenant_id = attr_set_rule.tenant_id
       AND s.attr_set_id = attr_set_rule.attr_set_id
-      AND s.scope = 'tenant'
-      AND s.owner_id = app_current_tenant_id()
+      AND (
+        (s.scope = 'tenant' AND s.owner_id = app_current_tenant_id())
+        OR
+        (s.scope = 'system' AND s.owner_id IS NULL AND app_is_system_admin())
+      )
   )
 );
 
@@ -237,8 +282,11 @@ USING (
     FROM attr_set s
     WHERE s.tenant_id = attr_set_rule.tenant_id
       AND s.attr_set_id = attr_set_rule.attr_set_id
-      AND s.scope = 'tenant'
-      AND s.owner_id = app_current_tenant_id()
+      AND (
+        (s.scope = 'tenant' AND s.owner_id = app_current_tenant_id())
+        OR
+        (s.scope = 'system' AND s.owner_id IS NULL AND app_is_system_admin())
+      )
   )
 )
 WITH CHECK (
@@ -247,8 +295,11 @@ WITH CHECK (
     FROM attr_set s
     WHERE s.tenant_id = attr_set_rule.tenant_id
       AND s.attr_set_id = attr_set_rule.attr_set_id
-      AND s.scope = 'tenant'
-      AND s.owner_id = app_current_tenant_id()
+      AND (
+        (s.scope = 'tenant' AND s.owner_id = app_current_tenant_id())
+        OR
+        (s.scope = 'system' AND s.owner_id IS NULL AND app_is_system_admin())
+      )
   )
 );
 
@@ -263,7 +314,10 @@ USING (
     FROM attr_set s
     WHERE s.tenant_id = attr_set_rule.tenant_id
       AND s.attr_set_id = attr_set_rule.attr_set_id
-      AND s.scope = 'tenant'
-      AND s.owner_id = app_current_tenant_id()
+      AND (
+        (s.scope = 'tenant' AND s.owner_id = app_current_tenant_id())
+        OR
+        (s.scope = 'system' AND s.owner_id IS NULL AND app_is_system_admin())
+      )
   )
 );

@@ -146,24 +146,6 @@ export const tenantRoutes: RouteRecordRaw[] = [
     },
   },
   {
-    path: '/attrDefMaster',
-    name: 'attrDefMaster',
-    component: () => import('@/views/Pages/AttrDefMaster.vue'),
-    meta: {
-      title: 'Attribute Definition Master',
-      requiresAuth: true,
-    },
-  },
-  {
-    path: '/attrSetMaster',
-    name: 'attrSetMaster',
-    component: () => import('@/views/Pages/AttrSetMaster.vue'),
-    meta: {
-      title: 'Attribute Set Master',
-      requiresAuth: true,
-    },
-  },
-  {
     path: '/taxYearSummary',
     name: 'TaxYearSummary',
     component: () => import('@/views/Pages/TaxYearSummary.vue'),

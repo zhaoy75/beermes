@@ -41,4 +41,44 @@ export const systemRoutes: RouteRecordRaw[] = [
       requiresSystemAdmin: true,
     },
   },
+  {
+    path: '/system-admin/attr-definitions',
+    name: 'SystemAdminAttrDefMaster',
+    component: () => import('@/views/Pages/AttrDefMaster.vue'),
+    meta: {
+      title: 'Attribute Definition Master',
+      requiresAuth: true,
+      requiresSystemAdmin: true,
+    },
+  },
+  {
+    path: '/attrDefMaster',
+    name: 'LegacyAttrDefMaster',
+    redirect: '/system-admin/attr-definitions',
+    meta: {
+      title: 'Attribute Definition Master',
+      requiresAuth: true,
+      requiresSystemAdmin: true,
+    },
+  },
+  {
+    path: '/system-admin/attr-sets',
+    name: 'SystemAdminAttrSetMaster',
+    component: () => import('@/views/Pages/AttrSetMaster.vue'),
+    meta: {
+      title: 'Attribute Set Master',
+      requiresAuth: true,
+      requiresSystemAdmin: true,
+    },
+  },
+  {
+    path: '/attrSetMaster',
+    name: 'LegacyAttrSetMaster',
+    redirect: '/system-admin/attr-sets',
+    meta: {
+      title: 'Attribute Set Master',
+      requiresAuth: true,
+      requiresSystemAdmin: true,
+    },
+  },
 ]

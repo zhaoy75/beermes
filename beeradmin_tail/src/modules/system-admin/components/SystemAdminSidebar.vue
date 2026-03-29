@@ -105,6 +105,16 @@ const navItems = computed(() => [
     label: t('systemAdmin.nav.audit'),
     icon: ListIcon,
   },
+  {
+    path: '/system-admin/attr-definitions',
+    label: t('sidebar.items.attrDefMaster'),
+    icon: SettingsIcon,
+  },
+  {
+    path: '/system-admin/attr-sets',
+    label: t('sidebar.items.attrSetMaster'),
+    icon: SettingsIcon,
+  },
 ])
 
 function isActive(path: string) {

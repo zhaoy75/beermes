@@ -29,6 +29,10 @@
           </div>
         </header>
 
+        <div v-if="batchSaveError" class="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {{ batchSaveError }}
+        </div>
+
         <form class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" @submit.prevent>
           <div>
             <label class="block text-sm text-gray-600 mb-1" for="batchCode">{{ t('batch.edit.batchCode') }}</label>
@@ -97,7 +101,7 @@
                   <span v-if="field.uom_code" class="text-xs text-gray-500">{{ field.uom_code }}</span>
                 </div>
               </template>
-              <template v-else-if="field.data_type === 'boolean'">
+              <template v-else-if="field.data_type === 'bool'">
                 <label class="inline-flex items-center gap-2 text-sm text-gray-700">
                   <input v-model="field.value" type="checkbox" class="h-4 w-4" />
                   {{ t('common.yes') }}
@@ -115,6 +119,7 @@
               <template v-else>
                 <input v-model.trim="field.value" type="text" class="w-full h-[40px] border rounded px-3" />
               </template>
+              <p v-if="field.error" class="mt-1 text-xs text-red-600">{{ field.error }}</p>
             </div>
           </div>
         </div>
@@ -410,6 +415,10 @@ import {
   loadAlcoholTypeReferenceData,
   resolveAlcoholTypeLabel,
 } from '@/lib/alcoholTypeRegistry'
+import {
+  normalizeBatchAttrDataType,
+  validateBatchAttrField,
+} from '@/lib/batchAttrValidation'
 import { supabase } from '@/lib/supabase'
 import { formatVolume } from '@/lib/volumeFormat'
 
@@ -450,7 +459,12 @@ type AttrRuleRow = {
     name: string
     name_i18n: Record<string, string> | null
     data_type: string
+    required: boolean
     uom_id: string | null
+    num_min: number | null
+    num_max: number | null
+    text_regex: string | null
+    allowed_values: unknown | null
     ref_kind: string | null
     ref_domain: string | null
   } | null
@@ -465,10 +479,15 @@ type AttrField = {
   required: boolean
   uom_id: string | null
   uom_code: string | null
+  num_min: number | null
+  num_max: number | null
+  text_regex: string | null
+  allowed_values: unknown | null
   ref_kind: string | null
   ref_domain: string | null
   value: any
   options: Array<{ value: string | number, label: string }>
+  error: string
 }
 
 const attrFields = ref<AttrField[]>([])
@@ -574,6 +593,7 @@ const volumeUoms = ref<VolumeUomOption[]>([])
 const uomOptionsRaw = ref<UomOption[]>([])
 const packingEvents = ref<PackingEvent[]>([])
 const packingNotice = ref('')
+const batchSaveError = ref('')
 
 const actualYieldDialog = reactive({
   open: false,
@@ -834,7 +854,7 @@ async function loadBatchAttributes(batchUuid: string) {
 
     const { data: ruleRows, error: ruleError } = await supabase
       .from('attr_set_rule')
-      .select('attr_id, required, sort_order, is_active, attr_def:attr_def!fk_attr_set_rule_attr(attr_id, code, name, name_i18n, data_type, uom_id, ref_kind, ref_domain)')
+      .select('attr_id, required, sort_order, is_active, attr_def:attr_def!fk_attr_set_rule_attr(attr_id, code, name, name_i18n, data_type, required, uom_id, num_min, num_max, text_regex, allowed_values, ref_kind, ref_domain)')
       .in('attr_set_id', setIds)
       .eq('is_active', true)
       .order('sort_order', { ascending: true })
@@ -915,12 +935,13 @@ async function loadBatchAttributes(batchUuid: string) {
       if (!attr) continue
       const valueRow = valueMap.get(attr.attr_id)
       let value: any = ''
-      if (attr.data_type === 'number') value = valueRow?.value_num ?? ''
-      else if (attr.data_type === 'boolean') value = valueRow?.value_bool ?? false
-      else if (attr.data_type === 'date') value = valueRow?.value_date ?? ''
-      else if (attr.data_type === 'timestamp') value = toInputDateTime(valueRow?.value_ts)
-      else if (attr.data_type === 'json') value = valueRow?.value_json ? JSON.stringify(valueRow.value_json, null, 2) : ''
-      else if (attr.data_type === 'ref') {
+      const dataType = normalizeBatchAttrDataType(attr.data_type)
+      if (dataType === 'number') value = valueRow?.value_num ?? ''
+      else if (dataType === 'bool') value = valueRow?.value_bool ?? false
+      else if (dataType === 'date') value = valueRow?.value_date ?? ''
+      else if (dataType === 'timestamp') value = toInputDateTime(valueRow?.value_ts)
+      else if (dataType === 'json') value = valueRow?.value_json ? JSON.stringify(valueRow.value_json, null, 2) : ''
+      else if (dataType === 'ref') {
         if (attr.ref_kind === 'registry_def') value = valueRow?.value_json?.def_id ?? ''
         else value = valueRow?.value_ref_type_id ?? ''
       } else value = valueRow?.value_text ?? ''
@@ -931,14 +952,19 @@ async function loadBatchAttributes(batchUuid: string) {
         code: attr.code,
         name: attr.name,
         name_i18n: attr.name_i18n ?? null,
-        data_type: attr.data_type,
-        required: Boolean(typedRow.required),
+        data_type: dataType,
+        required: Boolean(typedRow.required || attr.required),
         uom_id: attr.uom_id ?? null,
         uom_code: attr.uom_id ? uomMap.get(String(attr.uom_id)) ?? null : null,
+        num_min: attr.num_min ?? null,
+        num_max: attr.num_max ?? null,
+        text_regex: attr.text_regex ?? null,
+        allowed_values: attr.allowed_values ?? null,
         ref_kind: attr.ref_kind ?? null,
         ref_domain: attr.ref_domain ?? null,
         value,
         options: optionsKey ? refOptions.get(optionsKey) ?? [] : [],
+        error: '',
       })
     }
     attrFields.value = fields
@@ -950,7 +976,50 @@ async function loadBatchAttributes(batchUuid: string) {
   }
 }
 
+function validateBatchAttributes() {
+  let hasError = false
+  batchSaveError.value = ''
+
+  for (const field of attrFields.value) {
+    field.error = validateBatchAttrField(
+      {
+        code: field.code,
+        name: attrLabel(field),
+        data_type: field.data_type,
+        required: field.required,
+        num_min: field.num_min,
+        num_max: field.num_max,
+        text_regex: field.text_regex,
+        allowed_values: field.allowed_values,
+        ref_kind: field.ref_kind,
+        value: field.value,
+      },
+      {
+        required: (label) => t('errors.required', { field: label }),
+        mustBeNumber: (label) => t('errors.mustBeNumber', { field: label }),
+        minValue: (label, min) => t('batch.edit.errors.attrMin', { field: label, min }),
+        maxValue: (label, max) => t('batch.edit.errors.attrMax', { field: label, max }),
+        pattern: (label) => t('batch.edit.errors.attrPattern', { field: label }),
+        allowedValues: (label) => t('batch.edit.errors.attrAllowedValues', { field: label }),
+        invalidJson: (label) => t('batch.edit.errors.attrJson', { field: label }),
+        invalidReference: (label) => t('batch.edit.errors.attrReference', { field: label }),
+      },
+    )
+    if (field.error) hasError = true
+  }
+
+  if (hasError) {
+    batchSaveError.value = t('batch.edit.errors.attrInvalid')
+  }
+
+  return !hasError
+}
+
 async function saveBatchAttributes(batchUuid: string) {
+  if (!validateBatchAttributes()) {
+    throw new Error(batchSaveError.value || t('batch.edit.errors.attrInvalid'))
+  }
+
   const tenant = await ensureTenant()
   const toUpsert: Array<Record<string, any>> = []
   const toDelete: number[] = []
@@ -977,10 +1046,10 @@ async function saveBatchAttributes(batchUuid: string) {
 
     const row: Record<string, any> = { ...base }
     if (field.data_type === 'number') row.value_num = Number(field.value)
-    else if (field.data_type === 'boolean') row.value_bool = Boolean(field.value)
+    else if (field.data_type === 'bool') row.value_bool = Boolean(field.value)
     else if (field.data_type === 'date') row.value_date = field.value
     else if (field.data_type === 'timestamp') row.value_ts = fromInputDateTime(String(field.value))
-    else if (field.data_type === 'json') row.value_json = parseJsonSafe(String(field.value))
+    else if (field.data_type === 'json') row.value_json = parseJsonValue(String(field.value))
     else if (field.data_type === 'ref') {
       if (field.ref_kind === 'registry_def') {
         row.value_json = { def_id: field.value, kind: field.ref_domain }
@@ -1282,6 +1351,8 @@ async function saveBatch() {
   if (!batchId.value) return
   try {
     savingBatch.value = true
+    batchSaveError.value = ''
+    if (!validateBatchAttributes()) return
     const meta = buildBatchMeta(batch.value?.meta)
     const trimmedBatchLabel = batchForm.batch_label.trim()
     const update: Record<string, any> = {
@@ -1305,6 +1376,7 @@ async function saveBatch() {
     await fetchBatch()
   } catch (err) {
     console.error(err)
+    batchSaveError.value = extractErrorMessage(err) || t('batch.edit.errors.saveFailed')
   } finally {
     savingBatch.value = false
   }
@@ -1969,13 +2041,10 @@ function buildBatchMeta(meta: unknown) {
   return base
 }
 
-function parseJsonSafe(value: string) {
-  if (!value) return null
-  try {
-    return JSON.parse(value)
-  } catch {
-    return value
-  }
+function parseJsonValue(value: string) {
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  return JSON.parse(trimmed)
 }
 
 function toNumber(value: any): number | null {

@@ -98,6 +98,22 @@ CREATE TABLE IF NOT EXISTS attr_def (
 
 ALTER TABLE attr_def ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY attr_def_delete_own_tenant ON public.attr_def;
+DROP POLICY attr_def_insert_tenant_only ON public.attr_def;
+DROP POLICY attr_def_select_system_or_tenant ON public.attr_def;
+DROP POLICY attr_def_update_own_tenant ON public.attr_def;
+
+
+CREATE OR REPLACE FUNCTION app_is_system_admin()
+RETURNS boolean
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT
+    COALESCE(lower(auth.jwt() -> 'app_metadata' ->> 'is_system_admin') = 'true', false)
+    OR COALESCE(NULLIF(auth.jwt() -> 'app_metadata' ->> 'system_role', ''), '') <> ''
+$$;
+
 -- SELECT: system rows + tenant's own rows
 CREATE POLICY attr_def_select_system_or_tenant
 ON attr_def
@@ -114,8 +130,16 @@ ON attr_def
 FOR INSERT
 TO authenticated
 WITH CHECK (
-  scope = 'tenant'
-  AND owner_id = app_current_tenant_id()
+  (
+    scope = 'tenant'
+    AND owner_id = app_current_tenant_id()
+  )
+  OR
+  (
+    scope = 'system'
+    AND owner_id IS NULL
+    AND app_is_system_admin()
+  )
 );
 
 -- UPDATE: tenant can only update its own tenant-scoped rows
@@ -124,12 +148,28 @@ ON attr_def
 FOR UPDATE
 TO authenticated
 USING (
-  scope = 'tenant'
-  AND owner_id = app_current_tenant_id()
+  (
+    scope = 'tenant'
+    AND owner_id = app_current_tenant_id()
+  )
+  OR
+  (
+    scope = 'system'
+    AND owner_id IS NULL
+    AND app_is_system_admin()
+  )
 )
 WITH CHECK (
-  scope = 'tenant'
-  AND owner_id = app_current_tenant_id()
+  (
+    scope = 'tenant'
+    AND owner_id = app_current_tenant_id()
+  )
+  OR
+  (
+    scope = 'system'
+    AND owner_id IS NULL
+    AND app_is_system_admin()
+  )
 );
 
 -- DELETE: tenant can only delete its own tenant-scoped rows
@@ -138,8 +178,16 @@ ON attr_def
 FOR DELETE
 TO authenticated
 USING (
-  scope = 'tenant'
-  AND owner_id = app_current_tenant_id()
+  (
+    scope = 'tenant'
+    AND owner_id = app_current_tenant_id()
+  )
+  OR
+  (
+    scope = 'system'
+    AND owner_id IS NULL
+    AND app_is_system_admin()
+  )
 );
 
 ALTER TABLE attr_def

@@ -1,5 +1,5 @@
 <template>
-  <AdminLayout>
+  <SystemAdminLayout>
     <PageBreadcrumb :pageTitle="pageTitle" />
     <div class="min-h-screen bg-white text-gray-900 p-4 max-w-7xl mx-auto">
       <header class="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -434,20 +434,22 @@
         </div>
       </div>
     </div>
-  </AdminLayout>
+  </SystemAdminLayout>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { supabase } from '@/lib/supabase'
-import AdminLayout from '@/components/layout/AdminLayout.vue'
+import SystemAdminLayout from '@/layouts/SystemAdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
 import { useTableSort } from '@/composables/useTableSort'
+import { useAuthStore } from '@/stores/auth'
 
 type AttrDefRow = {
+  tenant_id: string
   attr_id: number
   code: string
   name: string
@@ -455,9 +457,11 @@ type AttrDefRow = {
   domain: string
   data_type: string
   allowed_values: unknown | null
+  scope: string
 }
 
 type AttrSetRow = {
+  tenant_id: string
   attr_set_id: number
   code: string
   name: string
@@ -493,7 +497,9 @@ type IndustryRow = {
 }
 
 const { t } = useI18n()
+const auth = useAuthStore()
 const pageTitle = computed(() => t('attrSet.title'))
+const SYSTEM_TENANT_ID = '00000000-0000-0000-0000-000000000000'
 
 const loading = ref(false)
 const saving = ref(false)
@@ -533,9 +539,15 @@ const contextMenu = reactive({
   target: null as AttrSetRow | null,
 })
 
+const availableAttrDefs = computed(() => {
+  const currentSet = selectedSet.value
+  if (!currentSet) return attrDefs.value
+  return attrDefs.value.filter((item) => item.tenant_id === currentSet.tenant_id)
+})
+
 const paletteGroups = computed(() => {
   const term = paletteFilter.value.trim().toLowerCase()
-  const filtered = attrDefs.value.filter((item) => {
+  const filtered = availableAttrDefs.value.filter((item) => {
     const label = `${item.code} ${item.name} ${displayNameI18n(item)}`.toLowerCase()
     return !term || label.includes(term)
   })
@@ -620,27 +632,41 @@ function industryLabel(industryId: string | null) {
 }
 
 async function ensureTenant() {
+  if (auth.accessToken === null && auth.userId === null) {
+    await auth.bootstrap()
+  }
   if (tenantId.value) return tenantId.value
   const { data, error } = await supabase.auth.getUser()
   if (error) throw error
   const id = data.user?.app_metadata?.tenant_id as string | undefined
-  if (!id) throw new Error('Tenant not resolved in session')
-  tenantId.value = id
   const role = String(data.user?.app_metadata?.role ?? data.user?.user_metadata?.role ?? '').toLowerCase()
-  const isAdminFlag = Boolean(data.user?.app_metadata?.is_admin || data.user?.user_metadata?.is_admin)
-  isAdmin.value = isAdminFlag || role === 'admin'
+  const isAdminFlag = Boolean(
+    data.user?.app_metadata?.is_admin ||
+    data.user?.user_metadata?.is_admin ||
+    data.user?.app_metadata?.is_system_admin ||
+    data.user?.app_metadata?.system_role,
+  )
+  isAdmin.value = isAdminFlag || role === 'admin' || auth.isSystemAdmin
+  if (!id) {
+    if (auth.isSystemAdmin || Boolean(data.user?.app_metadata?.is_system_admin || data.user?.app_metadata?.system_role)) {
+      tenantId.value = SYSTEM_TENANT_ID
+      return tenantId.value
+    }
+    throw new Error('Tenant not resolved in session')
+  }
+  tenantId.value = id
   return id
 }
 
 function canEdit(row: AttrSetRow) {
-  if (row.scope === 'system') return isAdmin.value
+  if (row.scope === 'system') return auth.isSystemAdmin || isAdmin.value
   return true
 }
 
 async function fetchAttrDefs() {
   const { data, error } = await supabase
     .from('attr_def')
-    .select('attr_id, code, name, name_i18n, domain, data_type, allowed_values')
+    .select('tenant_id, attr_id, code, name, name_i18n, domain, data_type, allowed_values, scope')
     .eq('is_active', true)
     .order('code', { ascending: true })
   if (error) throw error
@@ -650,7 +676,7 @@ async function fetchAttrDefs() {
 async function fetchAttrSets() {
   const { data, error } = await supabase
     .from('attr_set')
-    .select('attr_set_id, code, name, name_i18n, domain, industry_id, is_active, scope, owner_id')
+    .select('tenant_id, attr_set_id, code, name, name_i18n, domain, industry_id, is_active, scope, owner_id')
     .order('code', { ascending: true })
   if (error) throw error
   attrSets.value = (data ?? []) as AttrSetRow[]
@@ -854,9 +880,9 @@ async function saveSet() {
     } else {
       const insertPayload = {
         ...payload,
-        tenant_id: tenant,
-        scope: 'tenant',
-        owner_id: tenant,
+        tenant_id: auth.isSystemAdmin ? SYSTEM_TENANT_ID : tenant,
+        scope: auth.isSystemAdmin ? 'system' : 'tenant',
+        owner_id: auth.isSystemAdmin ? null : tenant,
       }
       const { error } = await supabase.from('attr_set').insert(insertPayload)
       if (error) throw error
@@ -881,10 +907,9 @@ async function saveSelectedSet() {
       return
     }
     saving.value = true
-    const tenant = await ensureTenant()
     const setId = selectedSet.value.attr_set_id
     const rows = rulesForSelected.value.map((rule, index) => ({
-      tenant_id: tenant,
+      tenant_id: selectedSet.value?.tenant_id ?? SYSTEM_TENANT_ID,
       attr_set_id: setId,
       attr_id: rule.attr_id,
       required: rule.required,
@@ -900,6 +925,7 @@ async function saveSelectedSet() {
     const { error: deleteError } = await supabase
       .from('attr_set_rule')
       .delete()
+      .eq('tenant_id', selectedSet.value.tenant_id)
       .eq('attr_set_id', setId)
     if (deleteError) throw deleteError
 
@@ -926,8 +952,8 @@ async function confirmDeleteSet(set: AttrSetRow) {
   if (!confirmed) return
   try {
     saving.value = true
-    await supabase.from('attr_set_rule').delete().eq('attr_set_id', set.attr_set_id)
-    const { error } = await supabase.from('attr_set').delete().eq('attr_set_id', set.attr_set_id)
+    await supabase.from('attr_set_rule').delete().eq('tenant_id', set.tenant_id).eq('attr_set_id', set.attr_set_id)
+    const { error } = await supabase.from('attr_set').delete().eq('tenant_id', set.tenant_id).eq('attr_set_id', set.attr_set_id)
     if (error) throw error
     toast.success(t('common.deleted'))
     if (selectedSetId.value === set.attr_set_id) {
@@ -957,7 +983,7 @@ function onAttrDragStart(event: DragEvent, attr: AttrDefRow) {
 function onAttrDrop(event: DragEvent) {
   const attrId = Number(event.dataTransfer?.getData('text/plain'))
   if (!attrId || !selectedSetId.value) return
-  const attr = attrDefs.value.find((item) => item.attr_id === attrId)
+  const attr = availableAttrDefs.value.find((item) => item.attr_id === attrId)
   if (!attr) return
 
   const existing = rulesForSelected.value.find((rule) => rule.attr_id === attrId)

@@ -52,20 +52,60 @@
             <table class="min-w-full divide-y divide-gray-200 text-sm">
               <thead class="bg-gray-50">
                 <tr>
-                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('attrDef.table.code') }}</th>
-                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('attrDef.table.displayName') }}</th>
-                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('attrDef.table.domainIndustry') }}</th>
-                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('attrDef.table.dataType') }}</th>
-                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('attrDef.table.uom') }}</th>
-                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('attrDef.table.validation') }}</th>
-                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('attrDef.table.active') }}</th>
-                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('attrDef.table.usage') }}</th>
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                    <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('code')">
+                      <span>{{ t('attrDef.table.code') }}</span>
+                      <span v-if="sortIcon('code')" class="text-xs">{{ sortIcon('code') }}</span>
+                    </button>
+                  </th>
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                    <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('name')">
+                      <span>{{ t('attrDef.table.displayName') }}</span>
+                      <span v-if="sortIcon('name')" class="text-xs">{{ sortIcon('name') }}</span>
+                    </button>
+                  </th>
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                    <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('domainIndustry')">
+                      <span>{{ t('attrDef.table.domainIndustry') }}</span>
+                      <span v-if="sortIcon('domainIndustry')" class="text-xs">{{ sortIcon('domainIndustry') }}</span>
+                    </button>
+                  </th>
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                    <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('dataType')">
+                      <span>{{ t('attrDef.table.dataType') }}</span>
+                      <span v-if="sortIcon('dataType')" class="text-xs">{{ sortIcon('dataType') }}</span>
+                    </button>
+                  </th>
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                    <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('uom')">
+                      <span>{{ t('attrDef.table.uom') }}</span>
+                      <span v-if="sortIcon('uom')" class="text-xs">{{ sortIcon('uom') }}</span>
+                    </button>
+                  </th>
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                    <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('validation')">
+                      <span>{{ t('attrDef.table.validation') }}</span>
+                      <span v-if="sortIcon('validation')" class="text-xs">{{ sortIcon('validation') }}</span>
+                    </button>
+                  </th>
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                    <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('active')">
+                      <span>{{ t('attrDef.table.active') }}</span>
+                      <span v-if="sortIcon('active')" class="text-xs">{{ sortIcon('active') }}</span>
+                    </button>
+                  </th>
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                    <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('usage')">
+                      <span>{{ t('attrDef.table.usage') }}</span>
+                      <span v-if="sortIcon('usage')" class="text-xs">{{ sortIcon('usage') }}</span>
+                    </button>
+                  </th>
                   <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('common.actions') }}</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-100">
                 <tr
-                  v-for="row in filteredRows"
+                  v-for="row in sortedRows"
                   :key="row.attr_id"
                   class="hover:bg-gray-50"
                 >
@@ -98,7 +138,7 @@
                     </button>
                   </td>
                 </tr>
-                <tr v-if="!loading && filteredRows.length === 0">
+                <tr v-if="!loading && sortedRows.length === 0">
                   <td colspan="9" class="px-3 py-8 text-center text-gray-500">{{ t('common.noData') }}</td>
                 </tr>
                 <tr v-if="loading">
@@ -342,6 +382,7 @@ import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
+import { useTableSort } from '@/composables/useTableSort'
 
 type AttrDefRow = {
   attr_id: number
@@ -386,6 +427,8 @@ type UsageCount = {
   setCount: number
   entityCount: number
 }
+
+type SortKey = 'code' | 'name' | 'domainIndustry' | 'dataType' | 'uom' | 'validation' | 'active' | 'usage'
 
 const TABLE = 'attr_def'
 
@@ -476,6 +519,21 @@ const filteredRows = computed(() => {
     return matchCode && matchDomain
   })
 })
+
+const { sortedRows, setSort, sortIcon } = useTableSort<AttrDefRow, SortKey>(
+  filteredRows,
+  {
+    code: (row) => row.code,
+    name: (row) => row.name,
+    domainIndustry: (row) => `${row.domain} ${industryLabel(row.industry_id)}`,
+    dataType: (row) => dataTypeLabel(row.data_type),
+    uom: (row) => uomLabel(row.uom_id),
+    validation: (row) => validationLabel(row),
+    active: (row) => row.is_active,
+    usage: (row) => usageTotal(row),
+  },
+  'code',
+)
 
 function normalizeDataType(value: string) {
   if (value === 'string') return 'text'

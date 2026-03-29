@@ -144,17 +144,47 @@
               <table class="min-w-full divide-y divide-gray-200 text-sm">
                 <thead class="bg-gray-50">
                   <tr>
-                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('attrSet.rules.code') }}</th>
-                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('attrSet.rules.name') }}</th>
-                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('attrSet.rules.required') }}</th>
-                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('attrSet.rules.editable') }}</th>
-                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('attrSet.rules.visible') }}</th>
-                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('attrSet.rules.defaultValue') }}</th>
+                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                      <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setRuleSort('code')">
+                        <span>{{ t('attrSet.rules.code') }}</span>
+                        <span v-if="ruleSortIcon('code')" class="text-xs">{{ ruleSortIcon('code') }}</span>
+                      </button>
+                    </th>
+                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                      <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setRuleSort('name')">
+                        <span>{{ t('attrSet.rules.name') }}</span>
+                        <span v-if="ruleSortIcon('name')" class="text-xs">{{ ruleSortIcon('name') }}</span>
+                      </button>
+                    </th>
+                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                      <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setRuleSort('required')">
+                        <span>{{ t('attrSet.rules.required') }}</span>
+                        <span v-if="ruleSortIcon('required')" class="text-xs">{{ ruleSortIcon('required') }}</span>
+                      </button>
+                    </th>
+                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                      <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setRuleSort('editable')">
+                        <span>{{ t('attrSet.rules.editable') }}</span>
+                        <span v-if="ruleSortIcon('editable')" class="text-xs">{{ ruleSortIcon('editable') }}</span>
+                      </button>
+                    </th>
+                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                      <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setRuleSort('visible')">
+                        <span>{{ t('attrSet.rules.visible') }}</span>
+                        <span v-if="ruleSortIcon('visible')" class="text-xs">{{ ruleSortIcon('visible') }}</span>
+                      </button>
+                    </th>
+                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                      <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setRuleSort('defaultValue')">
+                        <span>{{ t('attrSet.rules.defaultValue') }}</span>
+                        <span v-if="ruleSortIcon('defaultValue')" class="text-xs">{{ ruleSortIcon('defaultValue') }}</span>
+                      </button>
+                    </th>
                     <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('common.actions') }}</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
-                  <tr v-for="rule in rulesForSelected" :key="rule.attr_id">
+                  <tr v-for="rule in sortedRulesForSelected" :key="rule.attr_id">
                     <td class="px-3 py-2 font-mono text-xs text-gray-700">{{ rule.code }}</td>
                     <td class="px-3 py-2">
                       <div>{{ rule.name }}</div>
@@ -281,16 +311,46 @@
               <table class="min-w-full divide-y divide-gray-200 text-sm">
                 <thead class="bg-gray-50">
                   <tr>
-                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('attrSet.rules.code') }}</th>
-                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('attrSet.rules.name') }}</th>
-                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('attrSet.rules.required') }}</th>
-                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('attrSet.rules.editable') }}</th>
-                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('attrSet.rules.visible') }}</th>
-                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('attrSet.rules.defaultValue') }}</th>
+                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                      <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setRuleSort('code')">
+                        <span>{{ t('attrSet.rules.code') }}</span>
+                        <span v-if="ruleSortIcon('code')" class="text-xs">{{ ruleSortIcon('code') }}</span>
+                      </button>
+                    </th>
+                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                      <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setRuleSort('name')">
+                        <span>{{ t('attrSet.rules.name') }}</span>
+                        <span v-if="ruleSortIcon('name')" class="text-xs">{{ ruleSortIcon('name') }}</span>
+                      </button>
+                    </th>
+                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                      <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setRuleSort('required')">
+                        <span>{{ t('attrSet.rules.required') }}</span>
+                        <span v-if="ruleSortIcon('required')" class="text-xs">{{ ruleSortIcon('required') }}</span>
+                      </button>
+                    </th>
+                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                      <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setRuleSort('editable')">
+                        <span>{{ t('attrSet.rules.editable') }}</span>
+                        <span v-if="ruleSortIcon('editable')" class="text-xs">{{ ruleSortIcon('editable') }}</span>
+                      </button>
+                    </th>
+                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                      <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setRuleSort('visible')">
+                        <span>{{ t('attrSet.rules.visible') }}</span>
+                        <span v-if="ruleSortIcon('visible')" class="text-xs">{{ ruleSortIcon('visible') }}</span>
+                      </button>
+                    </th>
+                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                      <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setRuleSort('defaultValue')">
+                        <span>{{ t('attrSet.rules.defaultValue') }}</span>
+                        <span v-if="ruleSortIcon('defaultValue')" class="text-xs">{{ ruleSortIcon('defaultValue') }}</span>
+                      </button>
+                    </th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
-                  <tr v-for="rule in rulesForSelected" :key="rule.attr_id">
+                  <tr v-for="rule in sortedRulesForSelected" :key="rule.attr_id">
                     <td class="px-3 py-2 font-mono text-xs text-gray-700">{{ rule.code }}</td>
                     <td class="px-3 py-2">
                       <div>{{ rule.name }}</div>
@@ -385,6 +445,7 @@ import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
+import { useTableSort } from '@/composables/useTableSort'
 
 type AttrDefRow = {
   attr_id: number
@@ -422,6 +483,8 @@ type AttrRuleRow = {
   sort_order: number
   is_active: boolean
 }
+
+type RuleSortKey = 'code' | 'name' | 'required' | 'editable' | 'visible' | 'defaultValue' | 'sortOrder'
 
 type IndustryRow = {
   industry_id: string
@@ -494,6 +557,24 @@ const rulesForSelected = computed(() => {
   if (!selectedSetId.value) return []
   return rules.value[selectedSetId.value] || []
 })
+
+const {
+  sortedRows: sortedRulesForSelected,
+  setSort: setRuleSort,
+  sortIcon: ruleSortIcon,
+} = useTableSort<AttrRuleRow, RuleSortKey>(
+  rulesForSelected,
+  {
+    code: (rule) => rule.code,
+    name: (rule) => rule.name,
+    required: (rule) => rule.required,
+    editable: (rule) => rule.editable,
+    visible: (rule) => rule.visible,
+    defaultValue: (rule) => rule.default_value,
+    sortOrder: (rule) => rule.sort_order,
+  },
+  'sortOrder',
+)
 
 const industryOptions = computed(() => {
   return [...industries.value].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.name.localeCompare(b.name))

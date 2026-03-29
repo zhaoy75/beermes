@@ -143,18 +143,58 @@
             <table v-else class="min-w-full divide-y divide-gray-200 text-sm">
               <thead class="bg-gray-50">
                 <tr>
-                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('materialType.table.attrSet') }}</th>
-                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('materialType.table.code') }}</th>
-                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('materialType.table.name') }}</th>
-                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('materialType.table.dataType') }}</th>
-                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('materialType.table.required') }}</th>
-                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('materialType.table.uiSection') }}</th>
-                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('materialType.table.uiWidget') }}</th>
-                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('materialType.table.active') }}</th>
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                    <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setAttributeSort('attrSetLabel')">
+                      <span>{{ t('materialType.table.attrSet') }}</span>
+                      <span v-if="attributeSortIcon('attrSetLabel')" class="text-xs">{{ attributeSortIcon('attrSetLabel') }}</span>
+                    </button>
+                  </th>
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                    <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setAttributeSort('code')">
+                      <span>{{ t('materialType.table.code') }}</span>
+                      <span v-if="attributeSortIcon('code')" class="text-xs">{{ attributeSortIcon('code') }}</span>
+                    </button>
+                  </th>
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                    <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setAttributeSort('name')">
+                      <span>{{ t('materialType.table.name') }}</span>
+                      <span v-if="attributeSortIcon('name')" class="text-xs">{{ attributeSortIcon('name') }}</span>
+                    </button>
+                  </th>
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                    <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setAttributeSort('dataType')">
+                      <span>{{ t('materialType.table.dataType') }}</span>
+                      <span v-if="attributeSortIcon('dataType')" class="text-xs">{{ attributeSortIcon('dataType') }}</span>
+                    </button>
+                  </th>
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                    <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setAttributeSort('required')">
+                      <span>{{ t('materialType.table.required') }}</span>
+                      <span v-if="attributeSortIcon('required')" class="text-xs">{{ attributeSortIcon('required') }}</span>
+                    </button>
+                  </th>
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                    <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setAttributeSort('uiSection')">
+                      <span>{{ t('materialType.table.uiSection') }}</span>
+                      <span v-if="attributeSortIcon('uiSection')" class="text-xs">{{ attributeSortIcon('uiSection') }}</span>
+                    </button>
+                  </th>
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                    <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setAttributeSort('uiWidget')">
+                      <span>{{ t('materialType.table.uiWidget') }}</span>
+                      <span v-if="attributeSortIcon('uiWidget')" class="text-xs">{{ attributeSortIcon('uiWidget') }}</span>
+                    </button>
+                  </th>
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                    <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setAttributeSort('active')">
+                      <span>{{ t('materialType.table.active') }}</span>
+                      <span v-if="attributeSortIcon('active')" class="text-xs">{{ attributeSortIcon('active') }}</span>
+                    </button>
+                  </th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-100">
-                <tr v-for="row in attributeRows" :key="row.key" class="hover:bg-gray-50">
+                <tr v-for="row in sortedAttributeRows" :key="row.key" class="hover:bg-gray-50">
                   <td class="px-3 py-2 text-xs text-gray-600">{{ row.attrSetLabel }}</td>
                   <td class="px-3 py-2 font-mono text-xs text-gray-700">{{ row.code }}</td>
                   <td class="px-3 py-2 text-gray-800">{{ row.name }}</td>
@@ -286,6 +326,7 @@ import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
+import { useTableSort } from '@/composables/useTableSort'
 
 type TypeRow = {
   type_id: number
@@ -323,6 +364,20 @@ type AttrDefRow = {
   description: string | null
   is_active: boolean
 }
+
+type AttributeDisplayRow = {
+  key: string
+  attrSetLabel: string
+  code: string
+  name: string
+  dataType: string
+  required: boolean
+  uiSection: string | null
+  uiWidget: string | null
+  active: boolean
+}
+
+type AttributeSortKey = 'attrSetLabel' | 'code' | 'name' | 'dataType' | 'required' | 'uiSection' | 'uiWidget' | 'active'
 
 type AttrRuleRow = {
   attr_set_id: number
@@ -423,7 +478,7 @@ const assignedAttrSets = computed(() => {
     .filter((set): set is AttrSetRow => Boolean(set))
 })
 
-const attributeRows = computed(() => {
+const attributeRows = computed<AttributeDisplayRow[]>(() => {
   const rows = attrRules.value.map((rule) => {
     const attr = Array.isArray(rule.attr_def) ? (rule.attr_def[0] ?? null) : rule.attr_def
     const set = attrSetLookup.value.get(rule.attr_set_id)
@@ -441,6 +496,25 @@ const attributeRows = computed(() => {
   })
   return rows.sort((a, b) => a.attrSetLabel.localeCompare(b.attrSetLabel) || a.code.localeCompare(b.code))
 })
+
+const {
+  sortedRows: sortedAttributeRows,
+  setSort: setAttributeSort,
+  sortIcon: attributeSortIcon,
+} = useTableSort<AttributeDisplayRow, AttributeSortKey>(
+  attributeRows,
+  {
+    attrSetLabel: (row) => row.attrSetLabel,
+    code: (row) => row.code,
+    name: (row) => row.name,
+    dataType: (row) => row.dataType,
+    required: (row) => row.required,
+    uiSection: (row) => row.uiSection,
+    uiWidget: (row) => row.uiWidget,
+    active: (row) => row.active,
+  },
+  'attrSetLabel',
+)
 
 function buildTree(rows: TypeRow[]) {
   const map = new Map<number, TreeNode>()

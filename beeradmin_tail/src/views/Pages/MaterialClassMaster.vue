@@ -35,20 +35,65 @@
         <table class="min-w-full divide-y divide-gray-200">
           <thead class="bg-gray-50">
             <tr>
-              <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('materialClass.table.name') }}</th>
-              <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('materialClass.table.label') }}</th>
-              <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('materialClass.table.category') }}</th>
-              <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('materialClass.table.alcoholTaxRequired') }}</th>
-              <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('materialClass.table.manufacturingRequired') }}</th>
-              <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('materialClass.table.movingControlRequired') }}</th>
-              <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('materialClass.table.shipmentControlRequired') }}</th>
-              <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('materialClass.table.description') }}</th>
-              <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('materialClass.table.createdAt') }}</th>
+              <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('name')">
+                  <span>{{ t('materialClass.table.name') }}</span>
+                  <span v-if="sortIcon('name')" class="text-xs">{{ sortIcon('name') }}</span>
+                </button>
+              </th>
+              <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('label')">
+                  <span>{{ t('materialClass.table.label') }}</span>
+                  <span v-if="sortIcon('label')" class="text-xs">{{ sortIcon('label') }}</span>
+                </button>
+              </th>
+              <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('category')">
+                  <span>{{ t('materialClass.table.category') }}</span>
+                  <span v-if="sortIcon('category')" class="text-xs">{{ sortIcon('category') }}</span>
+                </button>
+              </th>
+              <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('alcoholTaxRequired')">
+                  <span>{{ t('materialClass.table.alcoholTaxRequired') }}</span>
+                  <span v-if="sortIcon('alcoholTaxRequired')" class="text-xs">{{ sortIcon('alcoholTaxRequired') }}</span>
+                </button>
+              </th>
+              <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('manufacturingRequired')">
+                  <span>{{ t('materialClass.table.manufacturingRequired') }}</span>
+                  <span v-if="sortIcon('manufacturingRequired')" class="text-xs">{{ sortIcon('manufacturingRequired') }}</span>
+                </button>
+              </th>
+              <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('movingControlRequired')">
+                  <span>{{ t('materialClass.table.movingControlRequired') }}</span>
+                  <span v-if="sortIcon('movingControlRequired')" class="text-xs">{{ sortIcon('movingControlRequired') }}</span>
+                </button>
+              </th>
+              <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('shipmentControlRequired')">
+                  <span>{{ t('materialClass.table.shipmentControlRequired') }}</span>
+                  <span v-if="sortIcon('shipmentControlRequired')" class="text-xs">{{ sortIcon('shipmentControlRequired') }}</span>
+                </button>
+              </th>
+              <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('description')">
+                  <span>{{ t('materialClass.table.description') }}</span>
+                  <span v-if="sortIcon('description')" class="text-xs">{{ sortIcon('description') }}</span>
+                </button>
+              </th>
+              <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('createdAt')">
+                  <span>{{ t('materialClass.table.createdAt') }}</span>
+                  <span v-if="sortIcon('createdAt')" class="text-xs">{{ sortIcon('createdAt') }}</span>
+                </button>
+              </th>
               <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('common.actions') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100">
-            <tr v-for="row in filteredRows" :key="row.def_id" class="hover:bg-gray-50">
+            <tr v-for="row in sortedRows" :key="row.def_id" class="hover:bg-gray-50">
               <td class="px-3 py-2 font-mono text-xs text-gray-700">{{ row.spec?.name || row.def_key }}</td>
               <td class="px-3 py-2 text-gray-800">{{ row.spec?.label || '—' }}</td>
               <td class="px-3 py-2 text-gray-800">{{ row.spec?.category || '—' }}</td>
@@ -75,7 +120,7 @@
                 </button>
               </td>
             </tr>
-            <tr v-if="!loading && filteredRows.length === 0">
+            <tr v-if="!loading && sortedRows.length === 0">
               <td colspan="10" class="px-3 py-8 text-center text-gray-500">{{ t('common.noData') }}</td>
             </tr>
           </tbody>
@@ -83,7 +128,7 @@
       </section>
 
       <section class="md:hidden grid gap-3">
-        <div v-for="row in filteredRows" :key="row.def_id" class="border border-gray-200 rounded-xl shadow-sm p-4">
+        <div v-for="row in sortedRows" :key="row.def_id" class="border border-gray-200 rounded-xl shadow-sm p-4">
           <div class="flex items-start justify-between gap-3">
             <div>
               <p class="text-xs uppercase tracking-wide text-gray-400">{{ row.spec?.category || '—' }}</p>
@@ -258,6 +303,7 @@ import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
+import { useTableSort } from '@/composables/useTableSort'
 
 type RegistrySpec = {
   name?: string | null
@@ -278,6 +324,17 @@ type MaterialClassRow = {
   spec: RegistrySpec | null
   created_at: string | null
 }
+
+type SortKey =
+  | 'name'
+  | 'label'
+  | 'category'
+  | 'alcoholTaxRequired'
+  | 'manufacturingRequired'
+  | 'movingControlRequired'
+  | 'shipmentControlRequired'
+  | 'description'
+  | 'createdAt'
 
 const TABLE = 'registry_def'
 const KIND = 'material_class'
@@ -335,6 +392,23 @@ const filteredRows = computed(() => {
     return !categoryFilter || category.includes(categoryFilter)
   })
 })
+
+const { sortedRows, setSort, sortIcon } = useTableSort<MaterialClassRow, SortKey>(
+  filteredRows,
+  {
+    name: (row) => row.spec?.name ?? row.def_key,
+    label: (row) => row.spec?.label,
+    category: (row) => row.spec?.category,
+    alcoholTaxRequired: (row) => row.spec?.alcohol_tax_required_flg,
+    manufacturingRequired: (row) => row.spec?.manufacturing_application_required_flg,
+    movingControlRequired: (row) => row.spec?.moving_control_required_flg,
+    shipmentControlRequired: (row) => row.spec?.shipment_control_required_flg,
+    description: (row) => row.spec?.description,
+    createdAt: (row) => (row.created_at ? Date.parse(row.created_at) : null),
+  },
+  'createdAt',
+  'desc',
+)
 
 function formatTimestamp(value: string | null | undefined) {
   if (!value) return '—'

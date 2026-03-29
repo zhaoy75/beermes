@@ -27,19 +27,59 @@
         <table class="min-w-full divide-y divide-gray-200">
           <thead class="bg-gray-50">
             <tr>
-              <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('package.columns.code') }}</th>
-              <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('package.columns.name') }}</th>
-              <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('package.columns.text') }}</th>
-              <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('package.columns.unitVolume') }}</th>
-              <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('package.columns.maxVolume') }}</th>
-              <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('package.columns.volumeFixFlg') }}</th>
-              <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('package.columns.volumeUom') }}</th>
-              <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('package.columns.createdAt') }}</th>
+              <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('packageCode')">
+                  <span>{{ t('package.columns.code') }}</span>
+                  <span v-if="sortIcon('packageCode')" class="text-xs">{{ sortIcon('packageCode') }}</span>
+                </button>
+              </th>
+              <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('name')">
+                  <span>{{ t('package.columns.name') }}</span>
+                  <span v-if="sortIcon('name')" class="text-xs">{{ sortIcon('name') }}</span>
+                </button>
+              </th>
+              <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('description')">
+                  <span>{{ t('package.columns.text') }}</span>
+                  <span v-if="sortIcon('description')" class="text-xs">{{ sortIcon('description') }}</span>
+                </button>
+              </th>
+              <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('unitVolume')">
+                  <span>{{ t('package.columns.unitVolume') }}</span>
+                  <span v-if="sortIcon('unitVolume')" class="text-xs">{{ sortIcon('unitVolume') }}</span>
+                </button>
+              </th>
+              <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('maxVolume')">
+                  <span>{{ t('package.columns.maxVolume') }}</span>
+                  <span v-if="sortIcon('maxVolume')" class="text-xs">{{ sortIcon('maxVolume') }}</span>
+                </button>
+              </th>
+              <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('volumeFixFlg')">
+                  <span>{{ t('package.columns.volumeFixFlg') }}</span>
+                  <span v-if="sortIcon('volumeFixFlg')" class="text-xs">{{ sortIcon('volumeFixFlg') }}</span>
+                </button>
+              </th>
+              <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('volumeUom')">
+                  <span>{{ t('package.columns.volumeUom') }}</span>
+                  <span v-if="sortIcon('volumeUom')" class="text-xs">{{ sortIcon('volumeUom') }}</span>
+                </button>
+              </th>
+              <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('createdAt')">
+                  <span>{{ t('package.columns.createdAt') }}</span>
+                  <span v-if="sortIcon('createdAt')" class="text-xs">{{ sortIcon('createdAt') }}</span>
+                </button>
+              </th>
               <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('common.actions') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100">
-            <tr v-for="row in rows" :key="row.id" class="hover:bg-gray-50">
+            <tr v-for="row in sortedRows" :key="row.id" class="hover:bg-gray-50">
               <td class="px-3 py-2 font-mono text-xs text-gray-700">{{ row.package_code }}</td>
               <td class="px-3 py-2">{{ resolveName(row) || '—' }}</td>
               <td class="px-3 py-2 text-sm text-gray-600">{{ row.description || '—' }}</td>
@@ -186,6 +226,7 @@ import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { supabase } from '@/lib/supabase'
 import { formatVolumeNumber } from '@/lib/volumeFormat'
+import { useTableSort } from '@/composables/useTableSort'
 
 type PackageRow = {
   id: string
@@ -200,6 +241,16 @@ type PackageRow = {
   volume_uom: string
   created_at: string | null
 }
+
+type SortKey =
+  | 'packageCode'
+  | 'name'
+  | 'description'
+  | 'unitVolume'
+  | 'maxVolume'
+  | 'volumeFixFlg'
+  | 'volumeUom'
+  | 'createdAt'
 
 const TABLE = 'mst_package'
 
@@ -233,6 +284,21 @@ const volumeUomOptions = computed(() =>
     value: row.id,
     label: row.name ? `${row.code} - ${row.name}` : row.code,
   }))
+)
+
+const { sortedRows, setSort, sortIcon } = useTableSort<PackageRow, SortKey>(
+  rows,
+  {
+    packageCode: (row) => row.package_code,
+    name: (row) => resolveName(row),
+    description: (row) => row.description,
+    unitVolume: (row) => row.unit_volume,
+    maxVolume: (row) => row.max_volume,
+    volumeFixFlg: (row) => resolveVolumeFixFlag(row),
+    volumeUom: (row) => resolveUomLabel(row.volume_uom),
+    createdAt: (row) => (row.created_at ? Date.parse(row.created_at) : null),
+  },
+  'packageCode',
 )
 
 function resolveLang() {

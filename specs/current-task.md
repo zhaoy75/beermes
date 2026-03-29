@@ -1,76 +1,73 @@
 # Current Task Spec
 
 ## Goal
-- Change existing batch ABV-related processing to use `actual_abv` first.
-- Keep backward compatibility by falling back to `target_abv` only when `actual_abv` is not set.
+- Add clickable column sorting to master-page list tables that currently do not support sorting.
+- Keep the existing filter and CRUD behavior unchanged while making table order user-controllable.
 
 ## Scope
-- Update batch ABV resolution logic in report and inventory-related frontend code.
-- Update related UI specs/docs so they describe `actual_abv -> target_abv fallback`.
-- Limit this task to places where batch/result ABV is derived for display, filtering, export, or tax/report calculations.
+- Implement sort state, sortable headers, and sorted row rendering for master-page list tables in the frontend.
+- Reuse a shared sorting helper/composable where it reduces repeated comparator logic.
+- Apply sorting only to list-style tables that display master data records or assigned attributes.
 
 ## Non-Goals
-- No changes to recipe master semantics; recipe `target_abv` remains the recipe target value.
-- No schema changes.
-- No batch data backfill.
-- No change to alcohol-type/category handling.
+- No changes to report pages, inventory pages, or non-master screens.
+- No changes to database schema, SQL, or API contracts.
+- No changes to card-only lists.
+- No changes to editor-only grids such as the calibration input table in `EquipmentMaster.vue`.
 
 ## Affected Files
 - `specs/current-task.md`
-- `beeradmin_tail/src/views/Pages/FillingReport.vue`
-- `beeradmin_tail/src/views/Pages/TaxableRemovalReport.vue`
-- `beeradmin_tail/src/views/Pages/TaxReport.vue`
-- `beeradmin_tail/src/views/Pages/ProducedBeer.vue`
-- `beeradmin_tail/src/composables/useProducedBeerInventory.ts`
-- `beeradmin_tail/src/views/Pages/ProducedBeerMovementEdit.vue`
-- `docs/UI/filling-report.md`
-- `docs/UI/tax-report.md`
-- `docs/UI/product_beer.md`
+- `beeradmin_tail/src/composables/useTableSort.ts`
+- `beeradmin_tail/src/views/Pages/AlcoholTaxMaster.vue`
+- `beeradmin_tail/src/views/Pages/AlcoholTypeMaster.vue`
+- `beeradmin_tail/src/views/Pages/AttrDefMaster.vue`
+- `beeradmin_tail/src/views/Pages/AttrSetMaster.vue`
+- `beeradmin_tail/src/views/Pages/MaterialClassMaster.vue`
+- `beeradmin_tail/src/views/Pages/MaterialTypeMaster.vue`
+- `beeradmin_tail/src/views/Pages/PackageMaster.vue`
+- `beeradmin_tail/src/views/Pages/SiteTypeMaster.vue`
+- `beeradmin_tail/src/views/Pages/UomMaster.vue`
 
 ## Data Model / API Changes
-- No schema/API changes.
-- Batch ABV lookup order changes from:
-  - `target_abv` batch attr, then recipe/meta fallback
-- To:
-  - `actual_abv` batch attr
-  - `target_abv` batch attr
-  - recipe `target_abv`
-  - batch meta `actual_abv`
-  - batch meta `target_abv`
+- None.
 
 ## Planned File Changes
-- `specs/current-task.md`
-  - replace the previous SQL patch spec with this ABV resolution migration task
-- frontend batch ABV consumers
-  - include `actual_abv` attr_def lookup
-  - resolve ABV from `actual_abv` first and keep `target_abv` as fallback
-  - preserve existing UI fields/exports while changing the source priority
-- docs
-  - update ABV resolution order descriptions
-
-## Fix Decisions
-- Use candidate 2: `actual_abv` first, `target_abv` only as fallback.
-- Treat batch attribute values as the authoritative source before recipe/meta fallbacks.
-- Keep variable names/UI labels stable unless a file clearly needs renaming for correctness.
+- Add a shared table-sorting composable that handles sort key, direction, icon state, and null-safe value comparison.
+- Update each targeted master page to:
+  - define sortable columns,
+  - render clickable table headers,
+  - switch `filteredRows` / `pagedRows` rendering to sorted rows.
+- Keep existing mobile card views and filters intact.
 
 ## Final Decisions
-- Updated the targeted batch ABV consumers to include `actual_abv` in batch attr lookup.
-- Implemented ABV resolution as `actual_abv` batch attr, then `target_abv` batch attr, then existing recipe/meta fallbacks where those files already used them.
-- Kept existing variable names such as `targetAbv` and `abv` in UI code to avoid unrelated churn, while changing only the source priority.
-- Updated the related UI docs to describe the new `actual_abv`-first resolution order.
+- Added `beeradmin_tail/src/composables/useTableSort.ts` as the shared sort-state and comparator helper for master tables.
+- Applied sortable headers to these master-page tables:
+  - `AlcoholTaxMaster`
+  - `AlcoholTypeMaster`
+  - `AttrDefMaster`
+  - `AttrSetMaster` rule tables
+  - `MaterialClassMaster`
+  - `MaterialTypeMaster` attribute table
+  - `PackageMaster`
+  - `SiteTypeMaster`
+  - `UomMaster`
+- Kept existing default ordering where practical:
+  - `createdAt desc` for registry-based masters that were previously fetched newest-first
+  - `code` or `dimension` ascending for code-based masters
+  - existing attribute/rule natural ordering as the initial sort where that was already the implicit UI order
+- Left `EquipmentMaster` calibration editing grid out of scope because it is an input table with an existing dedicated `sort by depth` action, not a master list view.
 
 ## Validation Plan
-- Verify every targeted batch ABV consumer includes `actual_abv` in attr lookup.
-- Verify the fallback order is `actual_abv -> target_abv -> recipe target_abv -> meta actual_abv -> meta target_abv`.
+- Verify each targeted table header toggles ascending/descending order.
+- Verify filters are applied before sorting, and pagination remains based on the sorted list where pagination exists.
 - Run required checks before finishing:
   - unit tests
   - lint
   - type-check
-- Repository note:
-  - if no unit test script exists, report that explicitly.
+- If no unit test script exists, report that explicitly.
 
 ## Validation Outcome
-- Verified the targeted files now include `actual_abv` in batch attr lookup and prefer it over `target_abv`.
+- Verified the targeted master tables now render sortable headers and use sorted row collections.
 - `npm run type-check` passed in `beeradmin_tail`.
 - Unit tests could not be run because `beeradmin_tail/package.json` does not define a `test` script.
-- Targeted ESLint execution still fails due to pre-existing repository issues, primarily `@typescript-eslint/no-explicit-any` and some `no-unused-vars` findings in the touched files.
+- Targeted ESLint execution on the touched files still fails due pre-existing repository issues, including `@typescript-eslint/no-explicit-any` and some `no-unused-vars` findings in files that were already carrying those patterns.

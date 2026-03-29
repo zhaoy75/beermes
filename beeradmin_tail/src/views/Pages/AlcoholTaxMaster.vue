@@ -47,25 +47,40 @@
           <thead class="bg-gray-50">
             <tr>
               <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
-                {{ t('alcoholTax.table.name') }}
+                <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('name')">
+                  <span>{{ t('alcoholTax.table.name') }}</span>
+                  <span v-if="sortIcon('name')" class="text-xs">{{ sortIcon('name') }}</span>
+                </button>
               </th>
               <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
-                {{ t('alcoholTax.table.taxCategoryCode') }}
+                <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('taxCategoryCode')">
+                  <span>{{ t('alcoholTax.table.taxCategoryCode') }}</span>
+                  <span v-if="sortIcon('taxCategoryCode')" class="text-xs">{{ sortIcon('taxCategoryCode') }}</span>
+                </button>
               </th>
               <th class="px-3 py-2 text-right text-xs font-medium text-gray-600">
-                {{ t('alcoholTax.table.taxRate') }}
+                <button class="ml-auto flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('taxRate')">
+                  <span>{{ t('alcoholTax.table.taxRate') }}</span>
+                  <span v-if="sortIcon('taxRate')" class="text-xs">{{ sortIcon('taxRate') }}</span>
+                </button>
               </th>
               <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
-                {{ t('alcoholTax.table.startDate') }}
+                <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('startDate')">
+                  <span>{{ t('alcoholTax.table.startDate') }}</span>
+                  <span v-if="sortIcon('startDate')" class="text-xs">{{ sortIcon('startDate') }}</span>
+                </button>
               </th>
               <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
-                {{ t('alcoholTax.table.expirationDate') }}
+                <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('expirationDate')">
+                  <span>{{ t('alcoholTax.table.expirationDate') }}</span>
+                  <span v-if="sortIcon('expirationDate')" class="text-xs">{{ sortIcon('expirationDate') }}</span>
+                </button>
               </th>
               <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('common.actions') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100">
-            <tr v-for="row in filteredRows" :key="row.def_id" class="hover:bg-gray-50">
+            <tr v-for="row in sortedRows" :key="row.def_id" class="hover:bg-gray-50">
               <td class="px-3 py-2">{{ row.spec?.name || row.def_key }}</td>
               <td class="px-3 py-2 font-mono text-xs text-gray-700">{{ row.spec?.tax_category_code ?? '—' }}</td>
               <td class="px-3 py-2 text-right font-mono text-xs text-gray-700">{{ formatRate(row.spec?.tax_rate) }}</td>
@@ -88,7 +103,7 @@
                 </button>
               </td>
             </tr>
-            <tr v-if="!loading && filteredRows.length === 0">
+            <tr v-if="!loading && sortedRows.length === 0">
               <td colspan="6" class="px-3 py-8 text-center text-gray-500">{{ t('common.noData') }}</td>
             </tr>
           </tbody>
@@ -96,7 +111,7 @@
       </section>
 
       <section class="md:hidden grid gap-3">
-        <div v-for="row in filteredRows" :key="row.def_id" class="border border-gray-200 rounded-xl shadow-sm p-4">
+        <div v-for="row in sortedRows" :key="row.def_id" class="border border-gray-200 rounded-xl shadow-sm p-4">
           <div class="flex items-start justify-between gap-3">
             <div>
               <p class="text-xs uppercase tracking-wide text-gray-400">{{ row.spec?.tax_category_code ?? '—' }}</p>
@@ -237,6 +252,7 @@ import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
+import { useTableSort } from '@/composables/useTableSort'
 
 type RegistrySpec = {
   name?: string | null
@@ -254,6 +270,8 @@ type AlcoholTaxRow = {
   spec: RegistrySpec | null
   created_at: string | null
 }
+
+type SortKey = 'name' | 'taxCategoryCode' | 'taxRate' | 'startDate' | 'expirationDate'
 
 const TABLE = 'registry_def'
 const KIND = 'alcohol_tax'
@@ -305,6 +323,22 @@ const filteredRows = computed(() => {
     return matchName && matchTax
   })
 })
+
+const { sortedRows, setSort, sortIcon } = useTableSort<AlcoholTaxRow, SortKey>(
+  filteredRows,
+  {
+    name: (row) => row.spec?.name ?? row.def_key,
+    taxCategoryCode: (row) => row.spec?.tax_category_code,
+    taxRate: (row) => {
+      const value = row.spec?.tax_rate
+      return value == null || value === '' ? null : Number(value)
+    },
+    startDate: (row) => (row.spec?.start_date ? Date.parse(row.spec.start_date) : null),
+    expirationDate: (row) => (row.spec?.expiration_date ? Date.parse(row.spec.expiration_date) : null),
+  },
+  'startDate',
+  'desc',
+)
 
 function formatDate(value: string | null | undefined) {
   if (!value) return '—'

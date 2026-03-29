@@ -46,22 +46,34 @@
           <thead class="bg-gray-50">
             <tr>
               <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
-                {{ t('siteType.table.name') }}
+                <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('name')">
+                  <span>{{ t('siteType.table.name') }}</span>
+                  <span v-if="sortIcon('name')" class="text-xs">{{ sortIcon('name') }}</span>
+                </button>
               </th>
               <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
-                {{ t('siteType.table.inventoryCount') }}
+                <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('inventoryCount')">
+                  <span>{{ t('siteType.table.inventoryCount') }}</span>
+                  <span v-if="sortIcon('inventoryCount')" class="text-xs">{{ sortIcon('inventoryCount') }}</span>
+                </button>
               </th>
               <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
-                {{ t('siteType.table.description') }}
+                <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('description')">
+                  <span>{{ t('siteType.table.description') }}</span>
+                  <span v-if="sortIcon('description')" class="text-xs">{{ sortIcon('description') }}</span>
+                </button>
               </th>
               <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
-                {{ t('siteType.table.createdAt') }}
+                <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('createdAt')">
+                  <span>{{ t('siteType.table.createdAt') }}</span>
+                  <span v-if="sortIcon('createdAt')" class="text-xs">{{ sortIcon('createdAt') }}</span>
+                </button>
               </th>
               <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('common.actions') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100">
-            <tr v-for="row in filteredRows" :key="row.def_id" class="hover:bg-gray-50">
+            <tr v-for="row in sortedRows" :key="row.def_id" class="hover:bg-gray-50">
               <td class="px-3 py-2">{{ row.spec?.name || row.def_key }}</td>
               <td class="px-3 py-2 text-sm text-gray-700">
                 {{ row.spec?.inventory_count_flg === true ? t('common.yes') : row.spec?.inventory_count_flg === false ? t('common.no') : '—' }}
@@ -85,7 +97,7 @@
                 </button>
               </td>
             </tr>
-            <tr v-if="!loading && filteredRows.length === 0">
+            <tr v-if="!loading && sortedRows.length === 0">
               <td colspan="5" class="px-3 py-8 text-center text-gray-500">{{ t('common.noData') }}</td>
             </tr>
           </tbody>
@@ -93,7 +105,7 @@
       </section>
 
       <section class="md:hidden grid gap-3">
-        <div v-for="row in filteredRows" :key="row.def_id" class="border border-gray-200 rounded-xl shadow-sm p-4">
+        <div v-for="row in sortedRows" :key="row.def_id" class="border border-gray-200 rounded-xl shadow-sm p-4">
           <div class="flex items-start justify-between gap-3">
             <div>
               <p class="text-xs uppercase tracking-wide text-gray-400">
@@ -212,6 +224,7 @@ import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
+import { useTableSort } from '@/composables/useTableSort'
 
 type RegistrySpec = {
   name?: string | null
@@ -227,6 +240,8 @@ type SiteTypeRow = {
   spec: RegistrySpec | null
   created_at: string | null
 }
+
+type SortKey = 'name' | 'inventoryCount' | 'description' | 'createdAt'
 
 const TABLE = 'registry_def'
 const KIND = 'site_type'
@@ -274,6 +289,18 @@ const filteredRows = computed(() => {
     return matchName && matchInventory
   })
 })
+
+const { sortedRows, setSort, sortIcon } = useTableSort<SiteTypeRow, SortKey>(
+  filteredRows,
+  {
+    name: (row) => row.spec?.name ?? row.def_key,
+    inventoryCount: (row) => row.spec?.inventory_count_flg,
+    description: (row) => row.spec?.description,
+    createdAt: (row) => (row.created_at ? Date.parse(row.created_at) : null),
+  },
+  'createdAt',
+  'desc',
+)
 
 function formatTimestamp(value: string | null | undefined) {
   if (!value) return '—'

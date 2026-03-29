@@ -25,11 +25,36 @@
         <table class="min-w-full divide-y divide-gray-200">
           <thead class="bg-gray-50">
             <tr>
-              <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('uom.table.dimension') }}</th>
-              <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('uom.table.code') }}</th>
-              <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('uom.table.name') }}</th>
-              <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('uom.table.conversionFactor') }}</th>
-              <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('uom.table.baseUnit') }}</th>
+              <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('dimension')">
+                  <span>{{ t('uom.table.dimension') }}</span>
+                  <span v-if="sortIcon('dimension')" class="text-xs">{{ sortIcon('dimension') }}</span>
+                </button>
+              </th>
+              <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('code')">
+                  <span>{{ t('uom.table.code') }}</span>
+                  <span v-if="sortIcon('code')" class="text-xs">{{ sortIcon('code') }}</span>
+                </button>
+              </th>
+              <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('name')">
+                  <span>{{ t('uom.table.name') }}</span>
+                  <span v-if="sortIcon('name')" class="text-xs">{{ sortIcon('name') }}</span>
+                </button>
+              </th>
+              <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('baseFactor')">
+                  <span>{{ t('uom.table.conversionFactor') }}</span>
+                  <span v-if="sortIcon('baseFactor')" class="text-xs">{{ sortIcon('baseFactor') }}</span>
+                </button>
+              </th>
+              <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('baseUnit')">
+                  <span>{{ t('uom.table.baseUnit') }}</span>
+                  <span v-if="sortIcon('baseUnit')" class="text-xs">{{ sortIcon('baseUnit') }}</span>
+                </button>
+              </th>
               <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('common.actions') }}</th>
             </tr>
           </thead>
@@ -166,6 +191,7 @@ import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
+import { useTableSort } from '@/composables/useTableSort'
 
 type UomMeta = {
   label?: {
@@ -188,6 +214,8 @@ type UomRow = {
   meta: UomMeta | null
   created_at?: string | null
 }
+
+type SortKey = 'dimension' | 'code' | 'name' | 'baseFactor' | 'baseUnit'
 
 const TABLE = 'mst_uom'
 const INDUSTRY_ID = '00000000-0000-0000-0000-000000000000'
@@ -220,10 +248,22 @@ const form = reactive({
 
 const errors = reactive<Record<string, string>>({})
 
-const totalPages = computed(() => Math.max(1, Math.ceil(rows.value.length / pageSize)))
+const { sortedRows, setSort, sortIcon } = useTableSort<UomRow, SortKey>(
+  rows,
+  {
+    dimension: (row) => row.dimension,
+    code: (row) => row.code,
+    name: (row) => labelEn(row),
+    baseFactor: (row) => row.base_factor,
+    baseUnit: (row) => row.is_base_unit,
+  },
+  'dimension',
+)
+
+const totalPages = computed(() => Math.max(1, Math.ceil(sortedRows.value.length / pageSize)))
 const pageStart = computed(() => (page.value - 1) * pageSize)
-const pageEnd = computed(() => Math.min(rows.value.length, pageStart.value + pageSize))
-const pagedRows = computed(() => rows.value.slice(pageStart.value, pageEnd.value))
+const pageEnd = computed(() => Math.min(sortedRows.value.length, pageStart.value + pageSize))
+const pagedRows = computed(() => sortedRows.value.slice(pageStart.value, pageEnd.value))
 
 function labelEn(row: UomRow) {
   return row.meta?.label?.en || row.name || '—'

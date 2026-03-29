@@ -7,15 +7,6 @@
           <h1 class="text-xl font-semibold">{{ t('producedBeer.title') }}</h1>
           <p class="text-sm text-gray-500">{{ t('producedBeer.subtitle') }}</p>
         </div>
-        <div class="flex flex-wrap items-center gap-2">
-          <button
-            class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
-            :disabled="movementLoading"
-            @click="fetchMovements"
-          >
-            {{ t('common.refresh') }}
-          </button>
-        </div>
       </header>
 
       <section class="border border-gray-200 rounded-xl shadow-sm p-4 bg-white space-y-4">
@@ -27,10 +18,14 @@
           <div class="flex flex-wrap items-center gap-2">
             <button
               class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
-              :disabled="movementLoading || filteredMovementCards.length === 0"
-              @click="exportMovementsCsv"
+              :disabled="movementLoading || exportLoading || filteredMovementCards.length === 0"
+              @click="exportMovementsExcel"
             >
-              {{ t('producedBeer.movement.actions.exportCsv') }}
+              {{
+                exportLoading
+                  ? t('producedBeer.movement.export.exporting')
+                  : t('producedBeer.movement.actions.exportExcel')
+              }}
             </button>
             <button
               class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-50"
@@ -50,13 +45,6 @@
               @click="resetMovementFilters"
             >
               {{ t('common.reset') }}
-            </button>
-            <button
-              class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
-              :disabled="movementLoading"
-              @click="fetchMovements"
-            >
-              {{ t('common.refresh') }}
             </button>
           </div>
         </header>
@@ -259,6 +247,7 @@ import {
   loadAlcoholTypeReferenceData,
   resolveAlcoholTypeLabel,
 } from '@/lib/alcoholTypeRegistry'
+import { createWorkbookBlob, type WorkbookCell, type WorkbookSheet } from '@/lib/fillingReportExport'
 import { supabase } from '@/lib/supabase'
 import { formatVolumeNumber } from '@/lib/volumeFormat'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
@@ -370,6 +359,7 @@ const pageTitle = computed(() => t('producedBeer.title'))
 
 const tenantId = ref<string | null>(null)
 const movementLoading = ref(false)
+const exportLoading = ref(false)
 
 const categories = ref<CategoryRow[]>([])
 const categoryFallbackRows = ref<CategoryRow[]>([])
@@ -632,71 +622,88 @@ function movementTaxRateLabel(card: MovementCardView) {
   return '—'
 }
 
-function csvEscape(value: unknown) {
-  const raw = value == null ? '' : String(value)
-  if (raw.includes('"')) {
-    const escaped = raw.replace(/"/g, '""')
-    return `"${escaped}"`
-  }
-  if (raw.includes(',') || raw.includes('\n')) {
-    return `"${raw}"`
-  }
-  return raw
+function borderedRow(values: Array<string | number | null | undefined>, style: 'border' | 'header' = 'border'): WorkbookCell[] {
+  return values.map((value) => ({
+    style,
+    value,
+  }))
 }
 
-function exportMovementsCsv() {
-  const header = [
-    t('producedBeer.movement.card.docNo'),
-    t('producedBeer.movement.filters.movementType'),
-    t('producedBeer.movement.card.taxType'),
+function buildMovementExportSheet(): WorkbookSheet {
+  const header = borderedRow([
     t('producedBeer.movement.card.movementDate'),
+    t('producedBeer.inventory.table.styleName'),
+    t('producedBeer.inventory.table.targetAbv'),
+    t('producedBeer.movement.card.linePackageType'),
+    t('producedBeer.movement.card.volumePerPackage'),
+    t('producedBeer.movement.card.unitOfPackage'),
+    t('producedBeer.movement.card.totalVolume'),
+    t('producedBeer.movement.card.taxRate'),
     t('producedBeer.movement.card.source'),
     t('producedBeer.movement.card.destination'),
-    t('producedBeer.movement.card.lineBeer'),
-    t('producedBeer.movement.card.linePackageType'),
-    t('producedBeer.movement.card.lineBatch'),
-    t('producedBeer.movement.card.lineQtyPackages'),
-    t('producedBeer.movement.card.lineQtyLiters'),
-  ]
+    t('producedBeer.movement.card.docNo'),
+    t('producedBeer.movement.filters.movementType'),
+  ], 'header')
 
-  const rows: string[][] = []
-  filteredMovementCards.value.forEach((card) => {
-    const base = [
-      card.docNo,
-      movementTypeLabel(card.taxEvent),
-      card.taxType ?? '',
-      card.movementAt ?? '',
+  const rows = filteredMovementCards.value.map((card) =>
+    borderedRow([
+      formatDateTime(card.movementAt),
+      movementStyleLabel(card),
+      movementTargetAbvLabel(card),
+      movementPackageLabel(card),
+      movementVolumeLabel(card),
+      movementUnitOfPackageLabel(card),
+      formatVolumeNumberValue(card.totalLiters),
+      movementTaxRateLabel(card),
       siteLabel(card.sourceSiteId),
       siteLabel(card.destSiteId),
-    ]
-    if (card.lines.length === 0) {
-      rows.push([...base, '', '', '', '', ''])
-      return
-    }
-    card.lines.forEach((line) => {
-      rows.push(
-        [
-          ...base,
-          line.beerName ?? '',
-          line.packageTypeLabel ?? '',
-          line.batchCode ?? '',
-          line.packageQty ?? '',
-          line.qtyLiters ?? '',
-        ].map((value) => String(value)),
-      )
+      card.docNo,
+      movementTypeLabel(card.taxEvent),
+    ]),
+  )
+
+  return {
+    name: t('producedBeer.sections.movements'),
+    rows: [header, ...rows],
+  }
+}
+
+function exportMovementsExcel() {
+  if (!filteredMovementCards.value.length) {
+    toast.error(t('producedBeer.movement.export.noData'))
+    return
+  }
+
+  try {
+    exportLoading.value = true
+    const createdAt = new Date()
+    const blob = createWorkbookBlob({
+      creator: 'beeradmin_tail',
+      createdAtIso: createdAt.toISOString(),
+      sheets: [buildMovementExportSheet()],
     })
-  })
+    const dateStamp = createdAt.toISOString().slice(0, 10).replace(/-/g, '')
+    const fileName = `movements-${dateStamp}.xlsx`
+    downloadBlob(blob, fileName)
+  } catch (err) {
+    toast.error(extractErrorMessage(err) || t('producedBeer.movement.export.failed'))
+  } finally {
+    exportLoading.value = false
+  }
+}
 
-  const csv = [header, ...rows].map((row) => row.map(csvEscape).join(',')).join('\n')
-
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+function downloadBlob(blob: Blob, fileName: string) {
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
-  const dateStamp = new Date().toISOString().slice(0, 10).replace(/-/g, '')
   link.href = url
-  link.download = `movements-${dateStamp}.csv`
+  link.download = fileName
   link.click()
   URL.revokeObjectURL(url)
+}
+
+function extractErrorMessage(err: unknown) {
+  if (err instanceof Error && err.message) return err.message
+  return typeof err === 'string' ? err : ''
 }
 
 function matchesMovementType(header: MovementHeader) {

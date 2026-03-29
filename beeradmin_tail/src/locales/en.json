@@ -1122,7 +1122,12 @@
         "reversed": "Reversed",
         "reverseConfirm": "Reverse document {docNo}?",
         "reverseSuccess": "Movement reversed.",
-        "exportCsv": "Export CSV"
+        "exportExcel": "Export Excel"
+      },
+      "export": {
+        "exporting": "Exporting…",
+        "noData": "There is no data to export.",
+        "failed": "Failed to generate the Excel file."
       },
       "card": {
         "docNo": "Document no",
@@ -1928,7 +1933,13 @@
     },
     "actions": {
       "showDag": "Show DAG",
-      "void": "Set Qty 0"
+      "cancelRemoval": "Cancel Removal"
+    },
+    "merge": {
+      "expand": "Show merged details",
+      "collapse": "Hide merged details",
+      "summary": "{count} lots merged",
+      "detailsTitle": "Merged lot details"
     },
     "dag": {
       "title": "Related History",
@@ -1949,9 +1960,9 @@
         "status": "Status"
       }
     },
-    "voidConfirm": "Set quantity of {lot} to 0?",
-    "voidSuccess": "Inventory quantity was set to 0.",
-    "voidFailed": "Failed to set inventory quantity to 0."
+    "cancelRemovalConfirm": "Cancel removal for {lot}?",
+    "cancelRemovalSuccess": "Removal was canceled.",
+    "cancelRemovalFailed": "Failed to cancel removal."
   },
   "fillingReport": {
     "title": "Filling Report",

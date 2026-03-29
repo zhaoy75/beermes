@@ -1,57 +1,46 @@
 # Current Task Spec
 
 ## Goal
-- For `バッチ実績入力` and `移送詰口管理`, validate batch `entity_attr` values against the check conditions defined in `attr_def` before saving.
+- Update produced beer inventory row merging so rows are merged only when `製造バッチ`, `ロットコード`, `ロット税区分`, `パッケージ種別`, and `保管場所` all match, while keeping the existing row expansion UI on the inventory page and inventory dialog.
 
 ## Scope
-- Load `attr_def` validation fields for batch attribute inputs in `BatchEdit` and `BatchPacking`.
-- Validate batch attribute values before `entity_attr` upsert using:
-  - required
-  - num_min / num_max
-  - text_regex
-  - allowed_values
-- Surface validation errors in the page so invalid attributes are not silently ignored.
-- Update the relevant UI specs to state that save-time validation follows `attr_def`.
+- Change the shared inventory grouping logic in `useProducedBeerInventory.ts` so `lotTaxType` is part of the merge key in addition to `siteId`.
+- Preserve summed quantities when multiple underlying lots still merge inside the same site-scoped group.
+- Expose merged-row detail data from the shared inventory composable.
+- On `ProducedBeerInventory.vue`, show an unfold toggle at the right side of the `ロットコード` cell only when a row represents multiple underlying lots, and render a detail section when expanded.
+- On `InventorySearchModal.vue`, show the same unfold toggle and merged-row detail display.
+- Update related UI specs for the inventory page and inventory search modal.
 
 ## Non-Goals
-- No DB trigger or RLS change for `entity_attr`.
-- No validation changes for non-batch entity attributes.
-- No redesign of the batch attribute input UI beyond error display needed for validation.
+- No change to inventory fetch source tables or backend RPCs.
+- No change to cancellation business rules or DAG tracing behavior.
+- No change to row filters, sort keys, or selection payload beyond the row structure needed to support expansion.
 
 ## Affected Files
 - `specs/current-task.md`
-- `beeradmin_tail/src/lib/batchAttrValidation.ts`
-- `beeradmin_tail/src/views/Pages/BatchEdit.vue`
-- `beeradmin_tail/src/views/Pages/BatchPacking.vue`
+- `beeradmin_tail/src/composables/useProducedBeerInventory.ts`
+- `beeradmin_tail/src/views/Pages/ProducedBeerInventory.vue`
+- `beeradmin_tail/src/components/inventory/InventorySearchModal.vue`
 - `beeradmin_tail/src/locales/ja.json`
 - `beeradmin_tail/src/locales/en.json`
-- `docs/UI/batchedit.md`
-- `docs/UI/batchpacking.md`
+- `docs/UI/produced-beer-inventory-management-spec.md`
+- `docs/UI/inventory-search-shortcut-modal-spec.md`
 
 ## Data Model / API Changes
 - None.
-- Frontend will request additional existing `attr_def` columns when loading batch attribute definitions:
-  - `required`
-  - `num_min`
-  - `num_max`
-  - `text_regex`
-  - `allowed_values`
+- Shared frontend inventory row shape will include merged-row detail metadata for UI expansion.
 
 ## Planned File Changes
-- Add a shared batch-attribute validation helper for normalized data type handling and rule checks.
-- Extend batch attribute field types in `BatchEdit` and `BatchPacking` to carry validation metadata and per-field error text.
-- Validate before `entity_attr` delete/upsert and stop save when any field is invalid.
-- Show inline validation errors for batch attribute inputs and a page-level save error message.
-- Update docs to state that batch attribute save follows `attr_def` conditions.
+- Include `lotTaxType` in the inventory row merge key in `useProducedBeerInventory.ts`.
+- Add merged-row detail arrays and `isMerged`-style metadata to the shared inventory row model.
+- Render an expand/collapse control beside `ロットコード` for merged rows in both inventory tables.
+- Render expanded detail rows beneath merged parent rows on both the inventory page and the inventory search modal.
+- Update docs to describe the new merge rule and unfold behavior.
 
 ## Final Decisions
-- Added a shared validation helper in `beeradmin_tail/src/lib/batchAttrValidation.ts` so batch attribute save rules are defined once for both `BatchEdit` and `BatchPacking`.
-- Extended batch attribute loading in both pages to fetch `attr_def.required`, `num_min`, `num_max`, `text_regex`, and `allowed_values`.
-- Combined `attr_set_rule.required` and `attr_def.required` so either source can make a field required at save time.
-- Normalized attribute data types during load (`string` -> `text`, `boolean` -> `bool`) before rendering and validation.
-- Blocked save when any batch attribute is invalid, showed field-level inline errors, and exposed a page-level error banner for overall save failure.
-- Replaced permissive JSON fallback with strict JSON parsing for batch attribute saves after validation.
-- Updated the batch edit and batch packing docs to state that `entity_attr` save must validate against linked `attr_def` conditions.
+- Inventory rows now merge only when batch, lot number, lot tax type, package type, and site all match.
+- The existing merged-row detail and expand/collapse UI remains unchanged; only the grouping condition was tightened.
+- Inventory page and inventory search modal specs were updated to document the added lot tax type condition.
 
 ## Validation Plan
 - Run required checks before finishing:
@@ -59,9 +48,9 @@
   - lint
   - type-check
 - If no unit test script exists, report that explicitly.
-- If repo-wide lint has pre-existing failures, run targeted lint on touched files and report remaining failures.
 
 ## Validation Outcome
-- `npm run type-check` passed in `beeradmin_tail`.
-- `npm run test` could not run because `beeradmin_tail/package.json` does not define a `test` script.
-- Targeted ESLint execution on `src/lib/batchAttrValidation.ts`, `src/views/Pages/BatchEdit.vue`, and `src/views/Pages/BatchPacking.vue` failed due to pre-existing `@typescript-eslint/no-explicit-any` and `no-unused-vars` issues in the two page files.
+- `npm run type-check` in `beeradmin_tail`: pass.
+- `npm exec eslint src/composables/useProducedBeerInventory.ts` in `beeradmin_tail`: failed on pre-existing `no-explicit-any` errors in `useProducedBeerInventory.ts`.
+- `npm run test` in `beeradmin_tail`: failed because `package.json` has no `test` script.
+- Verified by source inspection that the merge key now includes `lotTaxTypeGroupKey`, and both inventory specs mention the new merge condition.

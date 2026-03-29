@@ -1122,7 +1122,12 @@
         "reversed": "取消済",
         "reverseConfirm": "伝票 {docNo} を取り消しますか？",
         "reverseSuccess": "移出を取り消しました。",
-        "exportCsv": "CSV出力"
+        "exportExcel": "EXCEL出力"
+      },
+      "export": {
+        "exporting": "出力中…",
+        "noData": "出力対象のデータがありません。",
+        "failed": "Excel ファイルの生成に失敗しました。"
       },
       "card": {
         "docNo": "伝票番号",
@@ -1920,7 +1925,13 @@
     },
     "actions": {
       "showDag": "関連履歴",
-      "void": "数量0"
+      "cancelRemoval": "移出取消"
+    },
+    "merge": {
+      "expand": "内訳を表示",
+      "collapse": "内訳を閉じる",
+      "summary": "{count}件を集約",
+      "detailsTitle": "集約明細"
     },
     "dag": {
       "title": "関連履歴",
@@ -1941,9 +1952,9 @@
         "status": "ステータス"
       }
     },
-    "voidConfirm": "{lot} の数量を0にします。よろしいですか？",
-    "voidSuccess": "在庫数量を0にしました。",
-    "voidFailed": "在庫数量を0にできませんでした。"
+    "cancelRemovalConfirm": "{lot} の移出を取り消します。よろしいですか？",
+    "cancelRemovalSuccess": "移出を取り消しました。",
+    "cancelRemovalFailed": "移出取消に失敗しました。"
   },
   "fillingReport": {
     "title": "詰口一覧表",
@@ -1961,7 +1972,7 @@
       "count": "{count}件"
     },
     "export": {
-      "button": "Excel Export",
+      "button": "Excel出力",
       "exporting": "出力中…",
       "generatedAt": "生成日時",
       "filters": "抽出条件",

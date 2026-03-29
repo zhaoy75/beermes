@@ -60,6 +60,11 @@
   - select dropdown
   - default option: all package
   - package list from mst_package
+- `Show Non-Package`
+  - checkbox
+  - default: off
+  - when off, rows without `package_id` are hidden
+  - when on, rows without `package_id` are included in the result grid
 
 ### Layout
 - Show the form above the result grid.
@@ -84,6 +89,9 @@
 - The grid should update from the active filter state.
 - The grid can be sort by each column
 - The grid should support keyboard row navigation.
+- Rows are merged only when manufacturing batch, lot code, lot tax type, package type, and site all match.
+- When a merged row represents multiple underlying lots, show an unfold toggle on the right side of the `Lot Code` cell.
+- Expanding a merged row shows the underlying lot detail directly below the parent row.
 
 ### Result Grid Keyboard Behavior
 - `ArrowDown`
@@ -157,6 +165,7 @@
    - Product
    - Site
    - Container
+   - Show Non-Package
 3. The modal shows a result grid with the same core columns as `ProducedBeerInventory`.
 4. Pressing `Escape` closes the modal.
 5. Clicking outside the modal closes it.
@@ -168,3 +177,4 @@
 11. ProductMoveFast focuses `unit` for package lots and `volume` for non-package lots after modal close.
 12. Pressing `ArrowDown` / `ArrowUp` in the modal moves the active result row selection.
 13. Pressing `Enter` while a result row is active behaves the same as double-clicking that row.
+14. Non-package inventory rows are hidden by default and only shown when `Show Non-Package` is enabled.

@@ -178,46 +178,100 @@
                   {{ t('common.noData') }}
                 </td>
               </tr>
-              <tr v-for="row in sortedRows" v-else :key="row.id" class="hover:bg-gray-50">
-                <td class="px-3 py-2 font-mono text-xs text-gray-600">{{ row.lotNo || '—' }}</td>
-                <td class="px-3 py-2 font-mono text-xs text-gray-600">
-                  {{ row.lotTaxType || '—' }}
-                </td>
-                <td class="px-3 py-2 font-mono text-xs text-gray-600">
-                  {{ row.batchCode || '—' }}
-                </td>
-                <td class="px-3 py-2">{{ categoryLabel(row.beerCategoryId) }}</td>
-                <td class="px-3 py-2 text-right">{{ formatAbv(row.targetAbv) }}</td>
-                <td class="px-3 py-2">{{ row.styleName || row.productName || '—' }}</td>
-                <td class="px-3 py-2">{{ row.packageTypeLabel || '—' }}</td>
-                <td class="px-3 py-2 text-xs text-gray-500">
-                  {{ formatDate(row.productionDate) }}
-                </td>
-                <td class="px-3 py-2 text-right">{{ formatVolumeNumberValue(row.qtyLiters) }}</td>
-                <td class="px-3 py-2 text-right">{{ formatNumber(row.qtyPackages) }}</td>
-                <td class="px-3 py-2">{{ siteLabel(row.siteId) }}</td>
-                <td class="px-3 py-2 space-x-2">
-                  <button
-                    class="px-2 py-1 text-xs rounded border hover:bg-gray-100"
-                    type="button"
-                    @click="openDagDialog(row)"
-                  >
-                    {{ t('producedBeerInventory.actions.showDag') }}
-                  </button>
-                  <button
-                    class="px-2 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
-                    type="button"
-                    :disabled="zeroingLotId === row.lotId"
-                    @click="setLotQtyZero(row)"
-                  >
-                    {{
-                      zeroingLotId === row.lotId
-                        ? t('common.saving')
-                        : t('producedBeerInventory.actions.void')
-                    }}
-                  </button>
-                </td>
-              </tr>
+              <template v-for="row in sortedRows" :key="row.id">
+                <tr class="hover:bg-gray-50">
+                  <td class="px-3 py-2 font-mono text-xs text-gray-600">
+                    <div class="flex items-center justify-between gap-2">
+                      <span>{{ row.lotNo || '—' }}</span>
+                      <button
+                        v-if="row.mergedCount > 1"
+                        class="rounded border border-gray-300 px-1.5 py-0.5 text-[11px] hover:bg-gray-100"
+                        type="button"
+                        :title="
+                          isExpanded(row.id)
+                            ? t('producedBeerInventory.merge.collapse')
+                            : t('producedBeerInventory.merge.expand')
+                        "
+                        @click.stop="toggleExpanded(row.id)"
+                      >
+                        {{ isExpanded(row.id) ? 'v' : '>' }}
+                      </button>
+                    </div>
+                    <div v-if="row.mergedCount > 1" class="mt-1 text-[11px] text-gray-400">
+                      {{ t('producedBeerInventory.merge.summary', { count: row.mergedCount }) }}
+                    </div>
+                  </td>
+                  <td class="px-3 py-2 font-mono text-xs text-gray-600">
+                    {{ row.lotTaxType || '—' }}
+                  </td>
+                  <td class="px-3 py-2 font-mono text-xs text-gray-600">
+                    {{ row.batchCode || '—' }}
+                  </td>
+                  <td class="px-3 py-2">{{ categoryLabel(row.beerCategoryId) }}</td>
+                  <td class="px-3 py-2 text-right">{{ formatAbv(row.targetAbv) }}</td>
+                  <td class="px-3 py-2">{{ row.styleName || row.productName || '—' }}</td>
+                  <td class="px-3 py-2">{{ row.packageTypeLabel || '—' }}</td>
+                  <td class="px-3 py-2 text-xs text-gray-500">
+                    {{ formatDate(row.productionDate) }}
+                  </td>
+                  <td class="px-3 py-2 text-right">{{ formatVolumeNumberValue(row.qtyLiters) }}</td>
+                  <td class="px-3 py-2 text-right">{{ formatNumber(row.qtyPackages) }}</td>
+                  <td class="px-3 py-2">{{ row.siteLabelText }}</td>
+                  <td class="px-3 py-2 space-x-2">
+                    <button
+                      class="px-2 py-1 text-xs rounded border hover:bg-gray-100 disabled:opacity-50"
+                      type="button"
+                      :disabled="!row.canShowDag"
+                      @click="openDagDialog(row)"
+                    >
+                      {{ t('producedBeerInventory.actions.showDag') }}
+                    </button>
+                    <button
+                      class="px-2 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+                      type="button"
+                      :disabled="cancelingRowId === row.id || !row.canVoid"
+                      @click="cancelRemoval(row)"
+                    >
+                      {{
+                        cancelingRowId === row.id
+                          ? t('common.saving')
+                          : t('producedBeerInventory.actions.cancelRemoval')
+                      }}
+                    </button>
+                  </td>
+                </tr>
+                <tr v-if="isExpanded(row.id)" class="bg-gray-50/80">
+                  <td colspan="12" class="px-4 py-3">
+                    <div class="rounded-lg border border-gray-200 bg-white">
+                      <div class="border-b border-gray-200 px-3 py-2 text-xs font-medium text-gray-600">
+                        {{ t('producedBeerInventory.merge.detailsTitle') }}
+                      </div>
+                      <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200 text-xs">
+                          <thead class="bg-gray-50 text-gray-600">
+                            <tr>
+                              <th class="px-3 py-2 text-left">{{ t('producedBeer.inventory.table.lotNo') }}</th>
+                              <th class="px-3 py-2 text-left">{{ t('producedBeer.inventory.table.lotTaxType') }}</th>
+                              <th class="px-3 py-2 text-left">{{ t('producedBeer.inventory.table.productionDate') }}</th>
+                              <th class="px-3 py-2 text-right">{{ t('producedBeer.inventory.table.qtyLiters') }}</th>
+                              <th class="px-3 py-2 text-right">{{ t('producedBeer.inventory.table.qtyPackages') }}</th>
+                            </tr>
+                          </thead>
+                          <tbody class="divide-y divide-gray-100 bg-white">
+                            <tr v-for="detail in row.mergedDetails" :key="detail.id">
+                              <td class="px-3 py-2 font-mono text-gray-600">{{ detail.lotNo || '—' }}</td>
+                              <td class="px-3 py-2 font-mono text-gray-600">{{ detail.lotTaxType || '—' }}</td>
+                              <td class="px-3 py-2 text-gray-500">{{ formatDate(detail.productionDate) }}</td>
+                              <td class="px-3 py-2 text-right text-gray-700">{{ formatVolumeNumberValue(detail.qtyLiters) }}</td>
+                              <td class="px-3 py-2 text-right text-gray-700">{{ formatNumber(detail.qtyPackages) }}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </template>
             </tbody>
           </table>
         </section>
@@ -442,7 +496,8 @@ const sortState = reactive<{
   direction: 'desc',
 })
 
-const zeroingLotId = ref('')
+const cancelingRowId = ref('')
+const expandedRowIds = ref<string[]>([])
 
 const dagDialog = reactive({
   open: false,
@@ -453,6 +508,18 @@ const dagDialog = reactive({
   relatedLots: [] as TraceLotNode[],
   movements: [] as TraceMovementRow[],
 })
+
+function isExpanded(rowId: string) {
+  return expandedRowIds.value.includes(rowId)
+}
+
+function toggleExpanded(rowId: string) {
+  if (isExpanded(rowId)) {
+    expandedRowIds.value = expandedRowIds.value.filter((id) => id !== rowId)
+    return
+  }
+  expandedRowIds.value = [...expandedRowIds.value, rowId]
+}
 
 function productFilterValue(row: InventoryPageRow) {
   return row.productName || row.styleName || row.batchCode || row.lotNo || ''
@@ -479,7 +546,7 @@ const filteredRows = computed(() => {
   return inventoryRows.value.filter((row) => {
     if (keyword && !row.keywordIndex.includes(keyword)) return false
     if (filters.product && productFilterValue(row) !== filters.product) return false
-    if (filters.site && row.siteId !== filters.site) return false
+    if (filters.site && !row.siteIds.includes(filters.site)) return false
     if (filters.packageId && row.packageId !== filters.packageId) return false
     if (!filters.showNonPackage && !row.packageId) return false
     return true
@@ -518,7 +585,7 @@ function sortValue(row: InventoryPageRow, key: SortKey): string | number {
     case 'qtyPackages':
       return row.qtyPackages ?? Number.NEGATIVE_INFINITY
     case 'site':
-      return normalizeString(siteLabel(row.siteId))
+      return normalizeString(row.siteLabelText)
   }
 }
 
@@ -586,6 +653,7 @@ function closeDagDialog() {
 }
 
 async function openDagDialog(row: InventoryPageRow) {
+  if (!row.canShowDag) return
   dagDialog.open = true
   dagDialog.loading = true
   dagDialog.error = ''
@@ -698,29 +766,32 @@ async function openDagDialog(row: InventoryPageRow) {
   }
 }
 
-async function setLotQtyZero(row: InventoryPageRow) {
+async function cancelRemoval(row: InventoryPageRow) {
+  if (!row.canVoid) return
   const target = row.lotNo || row.batchCode || row.id
-  if (!window.confirm(t('producedBeerInventory.voidConfirm', { lot: target }))) return
+  if (!window.confirm(t('producedBeerInventory.cancelRemovalConfirm', { lot: target }))) return
   try {
-    zeroingLotId.value = row.lotId
-    const { error } = await supabase.rpc('inventory_lot_void', {
-      p_lot_id: row.lotId,
-      p_site_id: row.siteId,
-      p_reason: 'manual_set_qty_zero_from_inventory_page',
-    })
-    if (error) throw error
-    if (dagDialog.rootRow?.lotId === row.lotId) closeDagDialog()
+    cancelingRowId.value = row.id
+    for (const targetRow of row.voidTargets) {
+      const { error } = await supabase.rpc('inventory_lot_void', {
+        p_lot_id: targetRow.lotId,
+        p_site_id: targetRow.siteId,
+        p_reason: 'inventory_removal_cancel_from_inventory_page',
+      })
+      if (error) throw error
+    }
+    if (dagDialog.rootRow && row.lotIds.includes(dagDialog.rootRow.lotId)) closeDagDialog()
     await loadInventory()
-    toast.success(t('producedBeerInventory.voidSuccess'))
+    toast.success(t('producedBeerInventory.cancelRemovalSuccess'))
   } catch (err) {
     const detail = extractErrorMessage(err)
     toast.error(
       detail
-        ? `${t('producedBeerInventory.voidFailed')} (${detail})`
-        : t('producedBeerInventory.voidFailed'),
+        ? `${t('producedBeerInventory.cancelRemovalFailed')} (${detail})`
+        : t('producedBeerInventory.cancelRemovalFailed'),
     )
   } finally {
-    zeroingLotId.value = ''
+    cancelingRowId.value = ''
   }
 }
 

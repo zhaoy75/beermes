@@ -21,6 +21,7 @@ interface SiteOption {
   value: string
   label: string
   ownerType: string | null
+  siteTypeKey: string | null
 }
 
 interface PackageCategoryRow {
@@ -35,8 +36,11 @@ interface PackageCategoryRow {
 interface InventoryRow {
   id: string
   lotId: string
+  lotIds: string[]
+  mergedCount: number
   lotNo: string | null
   lotTaxType: string | null
+  batchId: string | null
   batchCode: string | null
   beerCategoryId: string | null
   targetAbv: number | null
@@ -48,6 +52,23 @@ interface InventoryRow {
   packageBarcode: string | null
   containerKind: ContainerKind
   keywordIndex: string
+  productionDate: string | null
+  qtyPackages: number | null
+  qtyLiters: number | null
+  siteId: string | null
+  siteIds: string[]
+  siteLabelText: string
+  canShowDag: boolean
+  canVoid: boolean
+  voidTargets: Array<{ lotId: string; siteId: string }>
+  mergedDetails: InventoryMergedDetail[]
+}
+
+interface InventoryMergedDetail {
+  id: string
+  lotId: string
+  lotNo: string | null
+  lotTaxType: string | null
   productionDate: string | null
   qtyPackages: number | null
   qtyLiters: number | null
@@ -204,6 +225,11 @@ export function useProducedBeerInventory() {
     return siteMap.value.get(siteId)?.label ?? '—'
   }
 
+  function siteTypeKey(siteId: string | null | undefined) {
+    if (!siteId) return null
+    return siteMap.value.get(siteId)?.siteTypeKey ?? null
+  }
+
   function resolveLang() {
     return String(locale.value ?? '')
       .toLowerCase()
@@ -309,9 +335,21 @@ export function useProducedBeerInventory() {
 
   async function loadSites() {
     const tenant = await ensureTenant()
+    const { data: siteTypes, error: siteTypeError } = await supabase
+      .from('registry_def')
+      .select('def_id, def_key')
+      .eq('kind', 'site_type')
+      .eq('is_active', true)
+    if (siteTypeError) throw siteTypeError
+    const siteTypeMap = new Map<string, string>()
+    ;(siteTypes ?? []).forEach((row: any) => {
+      if (!row?.def_id) return
+      siteTypeMap.set(String(row.def_id), String(row.def_key ?? ''))
+    })
+
     const { data, error } = await supabase
       .from('mst_sites')
-      .select('id, name, owner_type')
+      .select('id, name, owner_type, site_type_id')
       .eq('tenant_id', tenant)
       .order('name', { ascending: true })
     if (error) throw error
@@ -319,6 +357,7 @@ export function useProducedBeerInventory() {
       value: row.id,
       label: row.name ?? row.id,
       ownerType: row.owner_type ?? null,
+      siteTypeKey: row.site_type_id ? siteTypeMap.get(String(row.site_type_id)) ?? null : null,
     }))
   }
 
@@ -572,9 +611,13 @@ export function useProducedBeerInventory() {
       type InventoryAccumulator = {
         key: string
         lotId: string
+        lotIds: Set<string>
         siteId: string
+        siteIds: Set<string>
+        siteLabels: Set<string>
         lotNo: string | null
         lotTaxType: string | null
+        batchId: string | null
         batchCode: string | null
         beerCategoryId: string | null
         targetAbv: number | null
@@ -589,6 +632,9 @@ export function useProducedBeerInventory() {
         productionDate: string | null
         qtyPackages: number
         qtyLiters: number
+        canVoid: boolean
+        voidTargets: Array<{ lotId: string; siteId: string }>
+        detailMap: Map<string, InventoryMergedDetail>
       }
 
       const accum = new Map<string, InventoryAccumulator>()
@@ -610,8 +656,12 @@ export function useProducedBeerInventory() {
         const unitSizeLiters = pkgInfo?.unitSizeLiters ?? null
         const qtyPackages =
           unitSizeLiters != null && unitSizeLiters > 0 ? qtyLiters / unitSizeLiters : 0
-
-        const key = `${siteId}__${lot.id}`
+        const packageGroupKey = pkgInfo?.packageId ?? `label:${pkgInfo?.packageTypeLabel ?? ''}`
+        const batchGroupKey = lot.batch_id ? String(lot.batch_id) : ''
+        const lotNoGroupKey = String(lot.lot_no ?? '')
+        const lotTaxTypeGroupKey = String(lot.lot_tax_type ?? '')
+        const key = `${batchGroupKey}__${lotNoGroupKey}__${lotTaxTypeGroupKey}__${packageGroupKey}__${siteId}`
+        const detailKey = `${lot.id}__${siteId}`
         if (!accum.has(key)) {
           const siteName = siteLabel(siteId)
           const containerKind = pkgInfo?.containerKind ?? 'tank'
@@ -632,9 +682,13 @@ export function useProducedBeerInventory() {
           accum.set(key, {
             key,
             lotId: String(lot.id),
+            lotIds: new Set([String(lot.id)]),
             siteId,
+            siteIds: new Set([siteId]),
+            siteLabels: new Set(siteName && siteName !== '—' ? [siteName] : []),
             lotNo: lot.lot_no ?? null,
             lotTaxType: lot.lot_tax_type ?? null,
+            batchId: lot.batch_id ? String(lot.batch_id) : null,
             batchCode: batchInfo?.batchCode ?? null,
             beerCategoryId: batchInfo?.beerCategoryId ?? null,
             targetAbv: batchInfo?.targetAbv ?? null,
@@ -649,14 +703,50 @@ export function useProducedBeerInventory() {
             productionDate: lot.produced_at ?? null,
             qtyPackages: 0,
             qtyLiters: 0,
+            canVoid: siteTypeKey(siteId) === 'TAX_STORAGE',
+            voidTargets: siteTypeKey(siteId) === 'TAX_STORAGE'
+              ? [{ lotId: String(lot.id), siteId }]
+              : [],
+            detailMap: new Map(),
           })
         }
 
         const entry = accum.get(key)
         if (!entry) return
+        entry.lotIds.add(String(lot.id))
+        entry.siteIds.add(siteId)
+        const siteName = siteLabel(siteId)
+        if (siteName && siteName !== '—') entry.siteLabels.add(siteName)
         entry.qtyLiters += qtyLiters
         entry.qtyPackages += qtyPackages
+        pushKeyword(entry.keywordParts, lot.id)
         if (!entry.productionDate && lot.produced_at) entry.productionDate = lot.produced_at
+        if (siteTypeKey(siteId) === 'TAX_STORAGE') {
+          const targetKey = `${lot.id}__${siteId}`
+          if (!entry.voidTargets.some((target) => `${target.lotId}__${target.siteId}` === targetKey)) {
+            entry.voidTargets.push({ lotId: String(lot.id), siteId })
+          }
+        } else {
+          entry.canVoid = false
+        }
+
+        const detail = entry.detailMap.get(detailKey)
+        if (detail) {
+          detail.qtyLiters = (detail.qtyLiters ?? 0) + qtyLiters
+          detail.qtyPackages = (detail.qtyPackages ?? 0) + qtyPackages
+          if (!detail.productionDate && lot.produced_at) detail.productionDate = lot.produced_at
+        } else {
+          entry.detailMap.set(detailKey, {
+            id: detailKey,
+            lotId: String(lot.id),
+            lotNo: lot.lot_no ?? null,
+            lotTaxType: lot.lot_tax_type ?? null,
+            productionDate: lot.produced_at ?? null,
+            qtyPackages: qtyPackages > 0 ? qtyPackages : null,
+            qtyLiters: qtyLiters > 0 ? qtyLiters : null,
+            siteId,
+          })
+        }
       })
 
       inventoryRows.value = Array.from(accum.values())
@@ -664,8 +754,11 @@ export function useProducedBeerInventory() {
         .map((row) => ({
           id: row.key,
           lotId: row.lotId,
+          lotIds: Array.from(row.lotIds),
+          mergedCount: row.detailMap.size,
           lotNo: row.lotNo,
           lotTaxType: row.lotTaxType,
+          batchId: row.batchId,
           batchCode: row.batchCode,
           beerCategoryId: row.beerCategoryId,
           targetAbv: row.targetAbv,
@@ -681,6 +774,16 @@ export function useProducedBeerInventory() {
           qtyPackages: row.qtyPackages > 0 ? row.qtyPackages : null,
           qtyLiters: row.qtyLiters > 0 ? row.qtyLiters : null,
           siteId: row.siteId,
+          siteIds: Array.from(row.siteIds),
+          siteLabelText: Array.from(row.siteLabels).sort((a, b) => a.localeCompare(b)).join(', ') || '—',
+          canShowDag: row.lotIds.size === 1,
+          canVoid: row.canVoid && row.voidTargets.length > 0,
+          voidTargets: row.voidTargets,
+          mergedDetails: Array.from(row.detailMap.values()).sort((a, b) => {
+            const dateCompare = (b.productionDate ?? '').localeCompare(a.productionDate ?? '')
+            if (dateCompare !== 0) return dateCompare
+            return a.lotId.localeCompare(b.lotId)
+          }),
         }))
     } catch (err) {
       console.error(err)

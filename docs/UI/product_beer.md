@@ -1,5 +1,5 @@
 ## Purpose
-- Show produced beer movement history with filter, table view, and CSV export.
+- Show produced beer movement history with filter, table view, and Excel export.
 - Provide entry points to create, fast-create, and edit produced beer movement records.
 - Keep inventory browsing on the dedicated `ProducedBeerInventory` page, not on this page.
 
@@ -17,7 +17,6 @@
 ### Header
 - Title: `producedBeer.title`
 - Subtitle: `producedBeer.subtitle`
-- Action: refresh movements
 
 ### Body
 - 1 main section:
@@ -33,11 +32,10 @@
 - Subtitle: `producedBeer.movement.subtitle`
 - View: table only
 - Actions:
-  - Export CSV
+  - Export Excel
   - Fast movement
   - New movement
   - Reset filters
-  - Refresh movements
 - Filters:
   - Beer name
   - Category
@@ -63,14 +61,14 @@
 - Actions (reverse)
 
 ## Actions
-- Refresh header action:
-  - reload movement headers and lines.
 - Reset filters:
   - clear beer/category/package/batch/date filters.
   - set tax removal type to `all`.
-- Export CSV:
-  - exports currently filtered movement table rows/lines.
-  - file name format: `movements-YYYYMMDD.csv`.
+- Export Excel:
+  - exports the currently visible filtered movement table rows.
+  - exported columns match the visible movement table columns except the actions column.
+  - file name format: `movements-YYYYMMDD.xlsx`.
+  - exported sheet has bordered cells, gray header background, and bold header font.
 - Fast movement:
   - navigate to `/producedBeerMovementFast`.
 - New movement:

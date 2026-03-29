@@ -92,7 +92,7 @@
 ### Row Actions
 - Each inventory row must show:
   - `関連履歴` / `Show DAG`
-  - `数量0` / `Set Qty 0`
+  - `移出取消` / `Cancel Removal`
 
 #### `関連履歴` / `Show DAG`
 - Purpose:
@@ -105,19 +105,29 @@
   - preferred read source is `public.lot_trace_full(p_lot_id uuid, p_max_depth int default 10)`
   - UI may render graph, table, or mixed representation as long as all related movement is traceable from the selected lot
 
-#### `数量0` / `Set Qty 0`
+#### `移出取消` / `Cancel Removal`
 - Purpose:
-  - set the remaining quantity of the selected inventory lot to `0` through a backend business action
+  - cancel inventory removal for the selected visible inventory row through a backend business action
 - UI behavior:
   - show confirmation dialog before execution
-  - after success, refresh inventory grid and remove the zeroed row from visible positive inventory result
+  - this action is only available when all underlying source rows of the visible inventory row are in `TAX_STORAGE` (`蔵置所`)
+  - after success, refresh inventory grid and remove or update the affected merged row from the visible positive inventory result
   - if the action is rejected by backend business rules, show an explicit error message
 - Backend direction:
   - UI must not update `inv_inventory` or `lot` directly
-  - implement or call a backend endpoint / RPC that creates an `adjustment` movement to set inventory quantity to `0`
-  - the generated movement uses `dest_site_id = '00000000-0000-0000-0000-000000000000'::uuid`
+  - implement or call a backend endpoint / RPC that performs the cancellation through business logic
+  - backend must reject the action for non-`TAX_STORAGE` sites
   - backend should update inventory / lot quantity consistently and keep audit metadata
   - backend should not delete rows
+
+### Row Merge
+- inventory rows are merged only when manufacturing batch, lot code, lot tax type, package type, and site all match
+- merged row quantities are summed
+- merged rows no longer cross site boundaries
+- `関連履歴` stays available only when the merged row resolves to one underlying lot id
+- when a visible row contains multiple underlying lots, show an unfold toggle at the right side of the `ロットコード` cell
+- clicking the unfold toggle shows the merged row detail directly below the parent row
+- the detail view lists the underlying lots and their quantities for that merged row
 
 ## ProducedBeer Page Changes
 - Remove the inventory section from `ProducedBeer.vue`.
@@ -132,7 +142,7 @@
   - the new sidebar label if a distinct label is needed
 - Reuse search/filter behavior from `inventory-search-shortcut-modal-spec.md` where practical.
 - Reuse lot genealogy backend from `public.lot_trace_full` for `関連履歴`.
-- Add new locale keys for row actions and confirmation/error messages related to `数量0` if they do not already exist.
+- Add new locale keys for row actions and confirmation/error messages related to `移出取消` if they do not already exist.
 
 ## Acceptance Criteria
 1. `在庫管理` appears in the sidebar directly under `製造管理`.
@@ -142,7 +152,7 @@
 5. The inventory page includes a search section with `Keyword`, `Product`, `Site`, `Package`, and `Show Non-Package` filters.
 6. `Show Non-Package` defaults to `off`, and rows without `package_id` are hidden until the checkbox is turned on.
 7. The inventory grid supports sort on each visible data column.
-8. Each inventory row includes `関連履歴` and `数量0` actions.
+8. Each inventory row includes `関連履歴` and `移出取消` actions.
 9. `関連履歴` shows all related movement / lot genealogy for the selected row.
-10. `数量0` executes through backend business logic and removes the row from the visible positive inventory list after refresh.
+10. `移出取消` executes through backend business logic, only for `TAX_STORAGE` rows, and removes or updates the visible merged row after refresh.
 11. The new page and existing movement page both load successfully without TypeScript or build regressions.

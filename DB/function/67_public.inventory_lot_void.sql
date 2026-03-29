@@ -12,6 +12,7 @@ declare
   v_status text;
   v_site_id uuid;
   v_reason text;
+  v_site_type text;
   v_qty numeric;
   v_uom_id uuid;
   v_material_id uuid;
@@ -66,6 +67,23 @@ begin
   v_site_id := coalesce(p_site_id, v_site_id);
   if v_site_id is null then
     raise exception 'ILV003: site_id is required';
+  end if;
+
+  select rd.def_key
+    into v_site_type
+  from public.mst_sites s
+  join public.registry_def rd
+    on rd.def_id = s.site_type_id
+   and rd.kind = 'site_type'
+  where s.tenant_id = v_tenant
+    and s.id = v_site_id;
+
+  if v_site_type is null then
+    raise exception 'ILV007: site_id not found or site_type is invalid';
+  end if;
+
+  if v_site_type <> 'TAX_STORAGE' then
+    raise exception 'ILV008: inventory_lot_void is only allowed for TAX_STORAGE';
   end if;
 
   select i.id, i.qty

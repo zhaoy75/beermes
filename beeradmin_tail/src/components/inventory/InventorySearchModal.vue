@@ -38,7 +38,7 @@
 
           <div class="space-y-4 overflow-y-auto px-5 py-4">
             <section class="rounded-xl border border-gray-200 bg-gray-50/70 p-4">
-              <form class="grid grid-cols-1 gap-4 md:grid-cols-4" @submit.prevent>
+              <form class="grid grid-cols-1 gap-4 md:grid-cols-5" @submit.prevent>
                 <div>
                   <label class="mb-1 block text-sm text-gray-600">
                     {{ t('inventorySearchModal.fields.keyword') }}
@@ -105,6 +105,15 @@
                     </option>
                   </select>
                 </div>
+
+                <label class="flex items-center gap-2 pt-7 text-sm text-gray-700">
+                  <input
+                    v-model="filters.showNonPackage"
+                    type="checkbox"
+                    class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span>{{ t('producedBeerInventory.filters.showNonPackage') }}</span>
+                </label>
               </form>
             </section>
 
@@ -196,43 +205,93 @@
                         {{ t('common.noData') }}
                       </td>
                     </tr>
-                    <tr
-                      v-for="row in sortedRows"
-                      v-else
-                      :key="row.id"
-                      :ref="(el) => setResultRowRef(row.id, el)"
-                      class="hover:bg-gray-50"
-                      :class="{
-                        'cursor-pointer': selectable,
-                        'bg-blue-50 ring-1 ring-inset ring-blue-200': activeRowId === row.id,
-                      }"
-                      :tabindex="selectable ? 0 : -1"
-                      :role="selectable ? 'button' : undefined"
-                      @click="setActiveRow(row.id)"
-                      @dblclick.stop.prevent="handleRowDoubleClick(row)"
-                      @keydown.enter.prevent="handleRowDoubleClick(row)"
-                    >
-                      <td class="px-3 py-2 text-gray-600">
-                        <div class="font-mono text-xs">{{ row.lotNo || '—' }}</div>
-                        <div class="text-[11px] text-gray-400">{{ rowDisambiguationText(row) }}</div>
-                      </td>
-                      <td class="px-3 py-2 font-mono text-xs text-gray-600">
-                        {{ row.lotTaxType || '—' }}
-                      </td>
-                      <td class="px-3 py-2 font-mono text-xs text-gray-600">
-                        {{ row.batchCode || '—' }}
-                      </td>
-                      <td class="px-3 py-2">{{ categoryLabel(row.beerCategoryId) }}</td>
-                      <td class="px-3 py-2 text-right">{{ formatAbv(row.targetAbv) }}</td>
-                      <td class="px-3 py-2">{{ row.styleName || row.productName || '—' }}</td>
-                      <td class="px-3 py-2">{{ row.packageTypeLabel || '—' }}</td>
-                      <td class="px-3 py-2 text-xs text-gray-500">
-                        {{ formatDate(row.productionDate) }}
-                      </td>
-                      <td class="px-3 py-2 text-right">{{ formatNumber(row.qtyLiters) }}</td>
-                      <td class="px-3 py-2 text-right">{{ formatNumber(row.qtyPackages) }}</td>
-                      <td class="px-3 py-2">{{ siteLabel(row.siteId) }}</td>
-                    </tr>
+                    <template v-for="row in sortedRows" :key="row.id">
+                      <tr
+                        :ref="(el) => setResultRowRef(row.id, el)"
+                        class="hover:bg-gray-50"
+                        :class="{
+                          'cursor-pointer': selectable,
+                          'bg-blue-50 ring-1 ring-inset ring-blue-200': activeRowId === row.id,
+                        }"
+                        :tabindex="selectable ? 0 : -1"
+                        :role="selectable ? 'button' : undefined"
+                        @click="setActiveRow(row.id)"
+                        @dblclick.stop.prevent="handleRowDoubleClick(row)"
+                        @keydown.enter.prevent="handleRowDoubleClick(row)"
+                      >
+                        <td class="px-3 py-2 text-gray-600">
+                          <div class="flex items-center justify-between gap-2">
+                            <div class="font-mono text-xs">{{ row.lotNo || '—' }}</div>
+                            <button
+                              v-if="row.mergedCount > 1"
+                              class="rounded border border-gray-300 px-1.5 py-0.5 text-[11px] hover:bg-gray-100"
+                              type="button"
+                              :title="
+                                isExpanded(row.id)
+                                  ? t('producedBeerInventory.merge.collapse')
+                                  : t('producedBeerInventory.merge.expand')
+                              "
+                              @click.stop="toggleExpanded(row.id)"
+                            >
+                              {{ isExpanded(row.id) ? 'v' : '>' }}
+                            </button>
+                          </div>
+                          <div class="text-[11px] text-gray-400">{{ rowDisambiguationText(row) }}</div>
+                        </td>
+                        <td class="px-3 py-2 font-mono text-xs text-gray-600">
+                          {{ row.lotTaxType || '—' }}
+                        </td>
+                        <td class="px-3 py-2 font-mono text-xs text-gray-600">
+                          {{ row.batchCode || '—' }}
+                        </td>
+                        <td class="px-3 py-2">{{ categoryLabel(row.beerCategoryId) }}</td>
+                        <td class="px-3 py-2 text-right">{{ formatAbv(row.targetAbv) }}</td>
+                        <td class="px-3 py-2">{{ row.styleName || row.productName || '—' }}</td>
+                        <td class="px-3 py-2">{{ row.packageTypeLabel || '—' }}</td>
+                        <td class="px-3 py-2 text-xs text-gray-500">
+                          {{ formatDate(row.productionDate) }}
+                        </td>
+                        <td class="px-3 py-2 text-right">{{ formatNumber(row.qtyLiters) }}</td>
+                        <td class="px-3 py-2 text-right">{{ formatNumber(row.qtyPackages) }}</td>
+                        <td class="px-3 py-2">{{ siteLabel(row.siteId) }}</td>
+                      </tr>
+                      <tr v-if="isExpanded(row.id)" class="bg-gray-50/80">
+                        <td colspan="11" class="px-4 py-3">
+                          <div class="rounded-lg border border-gray-200 bg-white">
+                            <div class="border-b border-gray-200 px-3 py-2 text-xs font-medium text-gray-600">
+                              {{ t('producedBeerInventory.merge.detailsTitle') }}
+                            </div>
+                            <div class="overflow-x-auto">
+                              <table class="min-w-full divide-y divide-gray-200 text-xs">
+                                <thead class="bg-gray-50 text-gray-600">
+                                  <tr>
+                                    <th class="px-3 py-2 text-left">{{ t('producedBeer.inventory.table.lotNo') }}</th>
+                                    <th class="px-3 py-2 text-left">{{ t('producedBeer.inventory.table.lotTaxType') }}</th>
+                                    <th class="px-3 py-2 text-left">{{ t('producedBeer.inventory.table.productionDate') }}</th>
+                                    <th class="px-3 py-2 text-right">{{ t('producedBeer.inventory.table.qtyLiters') }}</th>
+                                    <th class="px-3 py-2 text-right">{{ t('producedBeer.inventory.table.qtyPackages') }}</th>
+                                  </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100 bg-white">
+                                  <tr
+                                    v-for="detail in row.mergedDetails"
+                                    :key="detail.id"
+                                    :class="{ 'cursor-pointer hover:bg-blue-50': selectable }"
+                                    @dblclick.stop.prevent="handleMergedDetailDoubleClick(row, detail)"
+                                  >
+                                    <td class="px-3 py-2 font-mono text-gray-600">{{ detail.lotNo || '—' }}</td>
+                                    <td class="px-3 py-2 font-mono text-gray-600">{{ detail.lotTaxType || '—' }}</td>
+                                    <td class="px-3 py-2 text-gray-500">{{ formatDate(detail.productionDate) }}</td>
+                                    <td class="px-3 py-2 text-right text-gray-700">{{ formatNumber(detail.qtyLiters) }}</td>
+                                    <td class="px-3 py-2 text-right text-gray-700">{{ formatNumber(detail.qtyPackages) }}</td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    </template>
                   </tbody>
                 </table>
               </div>
@@ -275,12 +334,14 @@ const keywordInputRef = ref<HTMLInputElement | null>(null)
 const dialogRef = ref<HTMLElement | null>(null)
 const activeRowId = ref('')
 const resultRowRefs = new Map<string, HTMLTableRowElement>()
+const expandedRowIds = ref<string[]>([])
 
 const filters = reactive({
   keyword: '',
   product: '',
   site: '',
   packageId: '',
+  showNonPackage: false,
 })
 
 const siteLocked = computed(() => props.siteLocked && !!props.siteId)
@@ -351,6 +412,7 @@ const filteredRows = computed(() => {
     if (filters.product && productFilterValue(row) !== filters.product) return false
     if (activeSiteFilter && row.siteId !== activeSiteFilter) return false
     if (filters.packageId && row.packageId !== filters.packageId) return false
+    if (!filters.showNonPackage && !row.packageId) return false
     return true
   })
 })
@@ -370,6 +432,9 @@ function shortLotId(value: string | null | undefined) {
 }
 
 function rowDisambiguationText(row: (typeof inventoryRows.value)[number]) {
+  if (row.mergedCount > 1) {
+    return t('producedBeerInventory.merge.summary', { count: row.mergedCount })
+  }
   const parts: string[] = []
   const site = row.siteId ? siteLabel(row.siteId) : ''
   if (site && site !== '—') parts.push(site)
@@ -427,6 +492,18 @@ function setResultRowRef(id: string, el: unknown) {
 
 function setActiveRow(id: string) {
   activeRowId.value = id
+}
+
+function isExpanded(rowId: string) {
+  return expandedRowIds.value.includes(rowId)
+}
+
+function toggleExpanded(rowId: string) {
+  if (isExpanded(rowId)) {
+    expandedRowIds.value = expandedRowIds.value.filter((id) => id !== rowId)
+    return
+  }
+  expandedRowIds.value = [...expandedRowIds.value, rowId]
 }
 
 function scrollActiveRowIntoView() {
@@ -515,19 +592,40 @@ function handleWindowKeydown(event: KeyboardEvent) {
 }
 
 function handleRowDoubleClick(row: (typeof inventoryRows.value)[number]) {
+  if (row.mergedCount > 1) {
+    toggleExpanded(row.id)
+    return
+  }
+  emitSelection(row, row)
+}
+
+function handleMergedDetailDoubleClick(
+  row: (typeof inventoryRows.value)[number],
+  detail: (typeof inventoryRows.value)[number]['mergedDetails'][number],
+) {
+  emitSelection(row, detail)
+}
+
+function emitSelection(
+  row: (typeof inventoryRows.value)[number],
+  detail: Pick<
+    (typeof inventoryRows.value)[number]['mergedDetails'][number],
+    'lotId' | 'lotNo' | 'siteId' | 'qtyLiters' | 'qtyPackages'
+  >,
+) {
   if (!selectable.value) return
   emit('select', {
-    id: row.id,
-    lotId: row.lotId,
-    lotNo: row.lotNo,
+    id: detail.lotId,
+    lotId: detail.lotId,
+    lotNo: detail.lotNo,
     batchCode: row.batchCode,
     productName: row.productName,
     styleName: row.styleName,
     packageId: row.packageId,
     packageTypeLabel: row.packageTypeLabel,
-    siteId: row.siteId,
-    qtyLiters: row.qtyLiters,
-    qtyPackages: row.qtyPackages,
+    siteId: detail.siteId,
+    qtyLiters: detail.qtyLiters,
+    qtyPackages: detail.qtyPackages,
   })
 }
 

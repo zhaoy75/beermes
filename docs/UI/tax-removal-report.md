@@ -144,6 +144,8 @@
 - Show a download link after generation succeeds.
 - File name format:
   - `課税移出一覧表_<business-year>.xlsx`
+- Shared export source:
+  - the same monthly sheet-generation source is reused by the `酒税申告` editor when it creates the related selected-month Excel
 - Workbook structure:
   - first sheet: same rows and columns as `年度サマリー`
   - then one sheet per month in the selected business year

@@ -2520,6 +2520,14 @@
       "breakdownRequired": "Reportable movement data is required."
     }
   },
+  "taxReportEditor": {
+    "newTitle": "Create Tax Report",
+    "editTitle": "Edit Tax Report",
+    "subtitle": "Review and edit the tax report details and generate related files.",
+    "actions": {
+      "back": "Back to list"
+    }
+  },
   "taxableRemovalReport": {
     "title": "Taxable Removal Report",
     "subtitle": "Review taxable-removal records with business-year summary and detail rows.",

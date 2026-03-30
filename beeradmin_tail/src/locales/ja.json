@@ -2512,6 +2512,14 @@
       "breakdownRequired": "申告対象データの集計が必要です。"
     }
   },
+  "taxReportEditor": {
+    "newTitle": "申告書作成",
+    "editTitle": "申告書編集",
+    "subtitle": "申告内容を確認・編集し、関連ファイルを生成します。",
+    "actions": {
+      "back": "一覧へ戻る"
+    }
+  },
   "taxableRemovalReport": {
     "title": "課税移出一覧表",
     "subtitle": "課税移出の記録を年度サマリーと明細で確認します。",

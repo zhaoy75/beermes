@@ -1,391 +1,176 @@
 <template>
   <AdminLayout>
     <PageBreadcrumb :pageTitle="pageTitle" />
-    <div class="min-h-screen bg-white text-gray-900 p-4 max-w-6xl mx-auto space-y-4">
-      <header class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 class="text-xl font-semibold">{{ t('taxReport.title') }}</h1>
-          <p class="text-sm text-gray-500">{{ t('taxReport.subtitle') }}</p>
-        </div>
-        <div class="flex flex-wrap items-center gap-2">
-          <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" @click="openCreate">
-            {{ t('taxReport.actions.new') }}
-          </button>
-          <button
-            class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
-            :disabled="loading"
-            @click="fetchReports"
-          >
-            {{ t('common.refresh') }}
-          </button>
-        </div>
-      </header>
-
-      <section class="border border-gray-200 rounded-xl shadow-sm p-4 bg-white">
-        <form class="grid grid-cols-1 md:grid-cols-6 gap-3" @submit.prevent>
+    <div class="min-h-screen bg-white p-4 text-gray-900">
+      <div class="mx-auto max-w-6xl space-y-4">
+        <header class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <label class="block text-sm text-gray-600 mb-1">{{ t('taxReport.filters.taxType') }}</label>
-            <select v-model="filters.taxType" class="w-full h-[40px] border rounded px-3 bg-white">
-              <option value="">{{ t('common.all') }}</option>
-              <option v-for="type in taxTypeOptions" :key="type" :value="type">{{ taxTypeLabel(type) }}</option>
-            </select>
+            <h1 class="text-xl font-semibold">{{ t('taxReport.title') }}</h1>
+            <p class="text-sm text-gray-500">{{ t('taxReport.subtitle') }}</p>
           </div>
-          <div>
-            <label class="block text-sm text-gray-600 mb-1">{{ t('taxReport.filters.taxYear') }}</label>
-            <select v-model="filters.taxYear" class="w-full h-[40px] border rounded px-3 bg-white">
-              <option value="">{{ t('common.all') }}</option>
-              <option v-for="year in yearOptions" :key="year" :value="String(year)">{{ year }}</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-sm text-gray-600 mb-1">{{ t('taxReport.filters.taxMonth') }}</label>
-            <select
-              v-model="filters.taxMonth"
-              class="w-full h-[40px] border rounded px-3 bg-white"
-              :disabled="filters.taxType === 'yearly'"
-            >
-              <option value="">{{ t('common.all') }}</option>
-              <option v-for="month in monthOptions" :key="month" :value="String(month)">{{ month }}</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-sm text-gray-600 mb-1">{{ t('taxReport.filters.status') }}</label>
-            <select v-model="filters.status" class="w-full h-[40px] border rounded px-3 bg-white">
-              <option value="">{{ t('common.all') }}</option>
-              <option v-for="status in statusOptions" :key="status" :value="status">{{ statusLabel(status) }}</option>
-            </select>
-          </div>
-        </form>
-      </section>
-
-      <section class="border border-gray-200 rounded-xl shadow-sm bg-white overflow-x-auto">
-        <table class="min-w-full text-sm">
-          <thead class="bg-gray-50 text-xs uppercase text-gray-500">
-            <tr>
-              <th class="px-3 py-2 text-left">{{ t('taxReport.card.taxType') }}</th>
-              <th class="px-3 py-2 text-left">{{ t('taxReport.card.period') }}</th>
-              <th class="px-3 py-2 text-left">{{ t('taxReport.card.status') }}</th>
-              <th class="px-3 py-2 text-right">{{ t('taxReport.card.totalTax') }}</th>
-              <th class="px-3 py-2 text-left">{{ t('taxReport.card.productionVolume') }}</th>
-              <th class="px-3 py-2 text-left">{{ t('taxReport.card.xmlFiles') }}</th>
-              <th class="px-3 py-2 text-left">{{ t('taxReport.card.attachments') }}</th>
-              <th class="px-3 py-2 text-left">{{ t('common.actions') }}</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-100">
-            <tr v-for="row in rows" :key="row.id" class="align-top">
-              <td class="px-3 py-3 text-gray-700">{{ taxTypeLabel(row.tax_type) }}</td>
-              <td class="px-3 py-3 text-gray-700">
-                <button class="text-left text-blue-600 hover:underline" type="button" @click="openEdit(row)">
-                  {{ formatPeriod(row) }}
-                </button>
-              </td>
-              <td class="px-3 py-3 text-gray-700">{{ statusLabel(row.status) }}</td>
-              <td class="px-3 py-3 text-right font-medium text-gray-900">{{ formatCurrency(row.total_tax_amount) }}</td>
-              <td class="px-3 py-3 text-gray-700 wrap-cell">
-                <div v-if="row.volume_breakdown.length" class="space-y-1">
-                  <div v-for="item in row.volume_breakdown" :key="item.key">
-                    {{ breakdownLabel(item) }}
-                  </div>
-                </div>
-                <span v-else class="text-gray-400">—</span>
-              </td>
-              <td class="px-3 py-3 wrap-cell">
-                <div v-if="row.report_files.length" class="space-y-1 text-blue-600">
-                  <button
-                    v-for="file in row.report_files"
-                    :key="file"
-                    class="block text-left hover:underline"
-                    type="button"
-                    @click="downloadXmlForRowFile(row, file)"
-                  >
-                    {{ file }}
-                  </button>
-                </div>
-                <span v-else class="text-gray-400">—</span>
-              </td>
-              <td class="px-3 py-3 wrap-cell">
-                <div v-if="row.attachment_files.length" class="space-y-1 text-blue-600">
-                  <div v-for="file in row.attachment_files" :key="file">{{ file }}</div>
-                </div>
-                <span v-else class="text-gray-400">—</span>
-              </td>
-              <td class="px-3 py-3">
-                <div class="flex flex-wrap items-center gap-2">
-                  <button
-                    class="px-3 py-1.5 text-xs rounded border hover:bg-gray-100 disabled:opacity-50"
-                    type="button"
-                    :disabled="deletingReportId === row.id || !canDeleteReport(row)"
-                    @click="deleteReport(row)"
-                  >
-                    {{ t('common.delete') }}
-                  </button>
-                </div>
-              </td>
-            </tr>
-            <tr v-if="!loading && rows.length === 0">
-              <td colspan="8" class="px-3 py-8 text-center text-gray-500">{{ t('common.noData') }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </section>
-
-      <div v-if="showCreatePrompt" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-        <div class="w-full max-w-xl bg-white rounded-xl shadow-lg border">
-          <header class="px-4 py-3 border-b">
-            <h3 class="font-semibold">{{ t('taxReport.createPrompt.title') }}</h3>
-          </header>
-          <section class="p-4 space-y-4">
-            <p class="text-sm text-gray-500">{{ t('taxReport.createPrompt.subtitle') }}</p>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label class="block text-sm text-gray-600 mb-1">{{ t('taxReport.form.taxType') }}</label>
-                <select v-model="promptForm.tax_type" class="w-full h-[40px] border rounded px-3 bg-white">
-                  <option v-for="type in taxTypeOptions" :key="type" :value="type">{{ taxTypeLabel(type) }}</option>
-                </select>
-              </div>
-              <div>
-                <label class="block text-sm text-gray-600 mb-1">{{ t('taxReport.form.taxYear') }}</label>
-                <input v-model.number="promptForm.tax_year" type="number" min="2000" class="w-full h-[40px] border rounded px-3" />
-              </div>
-              <div v-if="promptForm.tax_type === 'monthly'">
-                <label class="block text-sm text-gray-600 mb-1">{{ t('taxReport.form.taxMonth') }}</label>
-                <select v-model.number="promptForm.tax_month" class="w-full h-[40px] border rounded px-3 bg-white">
-                  <option v-for="month in monthOptions" :key="month" :value="month">{{ month }}</option>
-                </select>
-              </div>
-            </div>
-          </section>
-          <footer class="px-4 py-3 border-t flex items-center justify-end gap-2">
-            <button class="px-3 py-2 rounded border hover:bg-gray-50" @click="closeCreatePrompt">{{ t('common.cancel') }}</button>
-            <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" @click="startCreateFromPrompt">
-              {{ t('taxReport.createPrompt.confirm') }}
+          <div class="flex flex-wrap items-center gap-2">
+            <button class="rounded bg-blue-600 px-3 py-2 text-white hover:bg-blue-700" @click="openCreate">
+              {{ t('taxReport.actions.new') }}
             </button>
-          </footer>
-        </div>
-      </div>
+            <button
+              class="rounded border border-gray-300 px-3 py-2 hover:bg-gray-50 disabled:opacity-50"
+              :disabled="loading"
+              @click="fetchReports"
+            >
+              {{ t('common.refresh') }}
+            </button>
+          </div>
+        </header>
 
-      <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-        <div class="w-full max-w-3xl bg-white rounded-xl shadow-lg border">
-          <header class="px-4 py-3 border-b">
-            <h3 class="font-semibold">{{ editing ? t('taxReport.modal.editTitle') : t('taxReport.modal.newTitle') }}</h3>
-          </header>
-          <section class="p-4 space-y-6">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div>
-                <label class="block text-sm text-gray-600 mb-1">{{ t('taxReport.form.taxType') }}<span class="text-red-600">*</span></label>
-                <select
-                  v-model="form.tax_type"
-                  class="w-full h-[40px] border rounded px-3 bg-white"
-                  :disabled="editing"
-                  @change="handlePeriodChange"
-                >
-                  <option v-for="type in taxTypeOptions" :key="type" :value="type">{{ taxTypeLabel(type) }}</option>
-                </select>
-                <p v-if="errors.tax_type" class="text-xs text-red-600 mt-1">{{ errors.tax_type }}</p>
-              </div>
-              <div>
-                <label class="block text-sm text-gray-600 mb-1">{{ t('taxReport.form.taxYear') }}<span class="text-red-600">*</span></label>
-                <input
-                  v-model.number="form.tax_year"
-                  type="number"
-                  min="2000"
-                  class="w-full h-[40px] border rounded px-3"
-                  :disabled="editing"
-                  @change="handlePeriodChange"
-                />
-                <p v-if="errors.tax_year" class="text-xs text-red-600 mt-1">{{ errors.tax_year }}</p>
-              </div>
-              <div v-if="form.tax_type === 'monthly'">
-                <label class="block text-sm text-gray-600 mb-1">{{ t('taxReport.form.taxMonth') }}<span class="text-red-600">*</span></label>
-                <select
-                  v-model.number="form.tax_month"
-                  class="w-full h-[40px] border rounded px-3 bg-white"
-                  :disabled="editing"
-                  @change="handlePeriodChange"
-                >
-                  <option v-for="month in monthOptions" :key="month" :value="month">{{ month }}</option>
-                </select>
-                <p v-if="errors.tax_month" class="text-xs text-red-600 mt-1">{{ errors.tax_month }}</p>
-              </div>
-              <div>
-                <label class="block text-sm text-gray-600 mb-1">{{ t('taxReport.form.status') }}<span class="text-red-600">*</span></label>
-                <select v-model="form.status" class="w-full h-[40px] border rounded px-3 bg-white" :disabled="!editing">
-                  <option v-for="status in statusOptions" :key="status" :value="status">{{ statusLabel(status) }}</option>
-                </select>
-                <p v-if="errors.status" class="text-xs text-red-600 mt-1">{{ errors.status }}</p>
-              </div>
-              <div class="md:col-span-4">
-                <label class="block text-sm text-gray-600 mb-1">{{ t('taxReport.form.totalTax') }}</label>
-                <div class="h-[40px] flex items-center border rounded px-3 text-sm text-gray-700 bg-gray-50">
-                  {{ formatCurrency(totalTaxAmount) }}
-                </div>
-              </div>
+        <section class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+          <form class="grid grid-cols-1 gap-3 md:grid-cols-6" @submit.prevent>
+            <div>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('taxReport.filters.taxType') }}</label>
+              <select v-model="filters.taxType" class="h-[40px] w-full rounded border bg-white px-3">
+                <option value="">{{ t('common.all') }}</option>
+                <option v-for="type in taxTypeOptions" :key="type" :value="type">{{ taxTypeLabel(type) }}</option>
+              </select>
             </div>
-
-            <section class="space-y-3">
-              <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                <div>
-                  <h4 class="text-base font-semibold">{{ t('taxReport.sections.summary.title') }}</h4>
-                  <p class="text-xs text-gray-500">{{ t('taxReport.sections.summary.subtitle') }}</p>
-                </div>
-                <div class="flex flex-wrap items-center gap-2">
-                  <button
-                    class="px-3 py-2 rounded border hover:bg-gray-50"
-                    :disabled="generating"
-                    @click="createXmlForSummary"
-                  >
-                    {{ t('taxReport.actions.createXml') }}
-                  </button>
-                  <a v-if="summaryXmlUrl" :href="summaryXmlUrl" :download="summaryXmlName" class="text-xs text-blue-600">
-                    {{ t('taxReport.actions.downloadXml') }}
-                  </a>
-                </div>
-              </div>
-              <div class="border rounded bg-gray-50 overflow-x-auto">
-                <table class="min-w-full text-sm">
-                  <thead class="text-xs uppercase text-gray-500 bg-white">
-                    <tr>
-                      <th class="px-3 py-2 text-left">{{ t('taxReport.breakdown.columns.movementType') }}</th>
-                      <th class="px-3 py-2 text-left">{{ t('taxReport.breakdown.columns.category') }}</th>
-                      <th class="px-3 py-2 text-left">{{ t('taxReport.breakdown.columns.abv') }}</th>
-                      <th class="px-3 py-2 text-right">{{ t('taxReport.breakdown.columns.volume') }}</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-gray-100">
-                    <tr v-for="(item, index) in reportBreakdown" :key="item.key">
-                      <td class="px-3 py-2 text-gray-700">{{ movementTypeLabel(item.move_type) }}</td>
-                      <td class="px-3 py-2 text-gray-700">{{ item.categoryName }}</td>
-                      <td class="px-3 py-2">
-                        <input
-                          v-model.number="item.abv"
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          class="w-full h-[36px] border rounded px-2 bg-white"
-                          @input="handleBreakdownChange(index)"
-                        />
-                      </td>
-                      <td class="px-3 py-2 text-right">
-                        <input
-                          v-model.number="item.volume_l"
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          class="w-full h-[36px] border rounded px-2 text-right bg-white"
-                          @input="handleBreakdownChange(index)"
-                        />
-                      </td>
-                    </tr>
-                    <tr v-if="reportBreakdown.length === 0">
-                      <td colspan="4" class="px-3 py-4 text-center text-xs text-gray-400">{{ t('taxReport.emptyBreakdown') }}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              <p v-if="errors.breakdown" class="text-xs text-red-600">{{ errors.breakdown }}</p>
-            </section>
-
-            <section class="space-y-3">
-              <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                <div>
-                  <h4 class="text-base font-semibold">{{ t('taxReport.sections.dispose.title') }}</h4>
-                  <p class="text-xs text-gray-500">{{ t('taxReport.sections.dispose.subtitle') }}</p>
-                </div>
-                <div class="flex flex-wrap items-center gap-2">
-                  <button
-                    class="px-3 py-2 rounded border hover:bg-gray-50"
-                    :disabled="generating"
-                    @click="createXmlForDispose"
-                  >
-                    {{ t('taxReport.actions.createXml') }}
-                  </button>
-                  <a v-if="disposeXmlUrl" :href="disposeXmlUrl" :download="disposeXmlName" class="text-xs text-blue-600">
-                    {{ t('taxReport.actions.downloadXml') }}
-                  </a>
-                </div>
-              </div>
-              <div class="border rounded bg-gray-50 overflow-x-auto">
-                <table class="min-w-full text-sm">
-                  <thead class="text-xs uppercase text-gray-500 bg-white">
-                    <tr>
-                      <th class="px-3 py-2 text-left">{{ t('taxReport.breakdown.columns.movementType') }}</th>
-                      <th class="px-3 py-2 text-left">{{ t('taxReport.breakdown.columns.category') }}</th>
-                      <th class="px-3 py-2 text-left">{{ t('taxReport.breakdown.columns.abv') }}</th>
-                      <th class="px-3 py-2 text-right">{{ t('taxReport.breakdown.columns.volume') }}</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-gray-100">
-                    <tr v-for="(item, index) in disposeBreakdown" :key="item.key">
-                      <td class="px-3 py-2 text-gray-700">{{ movementTypeLabel(item.move_type) }}</td>
-                      <td class="px-3 py-2 text-gray-700">{{ item.categoryName }}</td>
-                      <td class="px-3 py-2">
-                        <input
-                          v-model.number="item.abv"
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          class="w-full h-[36px] border rounded px-2 bg-white"
-                          @input="handleDisposeChange(index)"
-                        />
-                      </td>
-                      <td class="px-3 py-2 text-right">
-                        <input
-                          v-model.number="item.volume_l"
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          class="w-full h-[36px] border rounded px-2 text-right bg-white"
-                          @input="handleDisposeChange(index)"
-                        />
-                      </td>
-                    </tr>
-                    <tr v-if="disposeBreakdown.length === 0">
-                      <td colspan="4" class="px-3 py-4 text-center text-xs text-gray-400">{{ t('taxReport.emptyBreakdown') }}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </section>
-
-            <section class="space-y-3">
-              <label class="block text-sm text-gray-600">{{ t('taxReport.form.xmlFiles') }}</label>
-              <textarea
-                v-model.trim="form.report_files"
-                rows="3"
-                class="w-full border rounded px-3 py-2"
-                :placeholder="t('taxReport.form.xmlPlaceholder')"
-              ></textarea>
-              <label class="block text-sm text-gray-600">{{ t('taxReport.form.attachments') }}</label>
-              <input type="file" multiple class="w-full h-[40px] border rounded px-3 py-2" @change="handleAttachmentUpload" />
-              <div v-if="attachmentList.length" class="flex flex-wrap gap-2 text-xs">
-                <span
-                  v-for="file in attachmentList"
-                  :key="file"
-                  class="inline-flex items-center gap-2 rounded-full border border-gray-200 px-2.5 py-1 text-gray-700"
-                >
-                  {{ file }}
-                  <button class="text-gray-400 hover:text-gray-700" type="button" @click="removeAttachment(file)">×</button>
-                </span>
-              </div>
-              <p v-else class="text-xs text-gray-400">{{ t('taxReport.form.attachmentsHint') }}</p>
-            </section>
-          </section>
-          <footer class="px-4 py-3 border-t flex items-center justify-between">
-            <div class="text-xs text-gray-500">
-              <span v-if="generating">{{ t('taxReport.generating') }}</span>
+            <div>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('taxReport.filters.taxYear') }}</label>
+              <select v-model="filters.taxYear" class="h-[40px] w-full rounded border bg-white px-3">
+                <option value="">{{ t('common.all') }}</option>
+                <option v-for="year in yearOptions" :key="year" :value="String(year)">{{ year }}</option>
+              </select>
             </div>
-            <div class="flex items-center gap-2">
-              <button class="px-3 py-2 rounded border hover:bg-gray-50" @click="closeModal">{{ t('common.cancel') }}</button>
-              <button
-                class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
-                :disabled="saving || generating"
-                @click="saveReport"
+            <div>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('taxReport.filters.taxMonth') }}</label>
+              <select
+                v-model="filters.taxMonth"
+                class="h-[40px] w-full rounded border bg-white px-3"
+                :disabled="filters.taxType === 'yearly'"
               >
-                {{ saving ? t('common.saving') : t('common.save') }}
-              </button>
+                <option value="">{{ t('common.all') }}</option>
+                <option v-for="month in monthOptions" :key="month" :value="String(month)">{{ month }}</option>
+              </select>
             </div>
-          </footer>
+            <div>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('taxReport.filters.status') }}</label>
+              <select v-model="filters.status" class="h-[40px] w-full rounded border bg-white px-3">
+                <option value="">{{ t('common.all') }}</option>
+                <option v-for="status in statusOptions" :key="status" :value="status">{{ statusLabel(status) }}</option>
+              </select>
+            </div>
+          </form>
+        </section>
+
+        <section class="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
+          <table class="min-w-full text-sm">
+            <thead class="bg-gray-50 text-xs uppercase text-gray-500">
+              <tr>
+                <th class="px-3 py-2 text-left">{{ t('taxReport.card.taxType') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('taxReport.card.period') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('taxReport.card.status') }}</th>
+                <th class="px-3 py-2 text-right">{{ t('taxReport.card.totalTax') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('taxReport.card.productionVolume') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('taxReport.card.xmlFiles') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('taxReport.card.attachments') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('common.actions') }}</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              <tr v-for="row in rows" :key="row.id" class="align-top">
+                <td class="px-3 py-3 text-gray-700">{{ taxTypeLabel(row.tax_type) }}</td>
+                <td class="px-3 py-3 text-gray-700">
+                  <button class="text-left text-blue-600 hover:underline" type="button" @click="openEdit(row)">
+                    {{ formatPeriod(row) }}
+                  </button>
+                </td>
+                <td class="px-3 py-3 text-gray-700">{{ statusLabel(row.status) }}</td>
+                <td class="px-3 py-3 text-right font-medium text-gray-900">{{ formatCurrency(row.total_tax_amount) }}</td>
+                <td class="wrap-cell px-3 py-3 text-gray-700">
+                  <div v-if="row.volume_breakdown.length" class="space-y-1">
+                    <div v-for="item in row.volume_breakdown" :key="item.key">
+                      {{ breakdownLabel(item) }}
+                    </div>
+                  </div>
+                  <span v-else class="text-gray-400">—</span>
+                </td>
+                <td class="wrap-cell px-3 py-3">
+                  <div v-if="row.report_files.length" class="space-y-1 text-blue-600">
+                    <button
+                      v-for="file in row.report_files"
+                      :key="file"
+                      class="block text-left hover:underline"
+                      type="button"
+                      @click="downloadXmlForRowFile(row, file)"
+                    >
+                      {{ file }}
+                    </button>
+                  </div>
+                  <span v-else class="text-gray-400">—</span>
+                </td>
+                <td class="wrap-cell px-3 py-3">
+                  <div v-if="row.attachment_files.length" class="space-y-1 text-blue-600">
+                    <div v-for="file in row.attachment_files" :key="file">{{ file }}</div>
+                  </div>
+                  <span v-else class="text-gray-400">—</span>
+                </td>
+                <td class="px-3 py-3">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <button
+                      class="rounded border px-3 py-1.5 text-xs hover:bg-gray-100 disabled:opacity-50"
+                      type="button"
+                      :disabled="deletingReportId === row.id || !canDeleteReport(row)"
+                      @click="deleteReport(row)"
+                    >
+                      {{ t('common.delete') }}
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              <tr v-if="!loading && rows.length === 0">
+                <td colspan="8" class="px-3 py-8 text-center text-gray-500">{{ t('common.noData') }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <div v-if="showCreatePrompt" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div class="w-full max-w-xl rounded-xl border bg-white shadow-lg">
+            <header class="border-b px-4 py-3">
+              <h3 class="font-semibold">{{ t('taxReport.createPrompt.title') }}</h3>
+            </header>
+            <section class="space-y-4 p-4">
+              <p class="text-sm text-gray-500">{{ t('taxReport.createPrompt.subtitle') }}</p>
+              <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <div>
+                  <label class="mb-1 block text-sm text-gray-600">{{ t('taxReport.form.taxType') }}</label>
+                  <select v-model="promptForm.tax_type" class="h-[40px] w-full rounded border bg-white px-3">
+                    <option v-for="type in taxTypeOptions" :key="type" :value="type">{{ taxTypeLabel(type) }}</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="mb-1 block text-sm text-gray-600">{{ t('taxReport.form.taxYear') }}</label>
+                  <input
+                    v-model.number="promptForm.tax_year"
+                    type="number"
+                    min="2000"
+                    class="h-[40px] w-full rounded border px-3"
+                  />
+                </div>
+                <div v-if="promptForm.tax_type === 'monthly'">
+                  <label class="mb-1 block text-sm text-gray-600">{{ t('taxReport.form.taxMonth') }}</label>
+                  <select v-model.number="promptForm.tax_month" class="h-[40px] w-full rounded border bg-white px-3">
+                    <option v-for="month in monthOptions" :key="month" :value="month">{{ month }}</option>
+                  </select>
+                </div>
+              </div>
+            </section>
+            <footer class="flex items-center justify-end gap-2 border-t px-4 py-3">
+              <button class="rounded border px-3 py-2 hover:bg-gray-50" @click="closeCreatePrompt">
+                {{ t('common.cancel') }}
+              </button>
+              <button class="rounded bg-blue-600 px-3 py-2 text-white hover:bg-blue-700" @click="startCreateFromPrompt">
+                {{ t('taxReport.createPrompt.confirm') }}
+              </button>
+            </footer>
+          </div>
         </div>
       </div>
     </div>
@@ -395,153 +180,47 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import {
-  buildAlcoholTypeLookupKeys,
-  loadAlcoholTypeReferenceData,
-} from '@/lib/alcoholTypeRegistry'
-import { supabase } from '@/lib/supabase'
+import { useRouter } from 'vue-router'
+import { toast } from 'vue3-toastify'
+import 'vue3-toastify/dist/index.css'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { formatVolume as formatVolumeDisplay } from '@/lib/volumeFormat'
-import { toast } from 'vue3-toastify'
-import 'vue3-toastify/dist/index.css'
-
-type JsonMap = Record<string, unknown>
-
-interface CategoryRow {
-  id: string
-  code: string
-  name: string | null
-  lookupKeys: string[]
-}
-
-interface TaxRateRecord {
-  taxrate: number
-  effectDate: Date | null
-  expireDate: Date | null
-}
-
-interface TaxVolumeItem {
-  key: string
-  move_type: string
-  categoryId: string
-  categoryCode: string
-  categoryName: string
-  abv: number | null
-  volume_l: number
-  tax_rate: number | null
-}
-
-interface TaxReportRow {
-  id: string
-  tax_type: string
-  tax_year: number
-  tax_month: number
-  status: string
-  total_tax_amount: number
-  volume_breakdown: TaxVolumeItem[]
-  report_files: string[]
-  attachment_files: string[]
-  created_at: string | null
-}
-
-interface MovementHeader {
-  id: string
-  movement_at: string | null
-  doc_type: string
-}
-
-interface MovementLine {
-  movement_id: string
-  package_id: string | null
-  batch_id: string | null
-  qty: number | null
-  uom_id: string | null
-  meta?: JsonMap | null
-}
-
-interface PackageCategoryInfo {
-  id: string
-  unit_size_l: number | null
-}
-
-interface PackageLookupRow {
-  id: string
-  unit_volume: unknown
-  volume_uom: unknown
-}
-
-interface BatchLookupRow {
-  id: string
-}
-
-interface AttrDefRow {
-  attr_id: number | string
-  code: string | null
-}
-
-interface EntityAttrRow {
-  entity_id: string | number | null
-  attr_id: number | string | null
-  value_text?: string | null
-  value_num: unknown
-  value_ref_type_id?: string | number | null
-  value_json?: Record<string, unknown> | null
-}
+import { supabase } from '@/lib/supabase'
+import {
+  buildXmlFilename,
+  buildXmlPayload,
+  disposeItemsFromBreakdown,
+  isDisposeFilename,
+  normalizeReport,
+  summaryItemsFromBreakdown,
+  type JsonMap,
+  type TaxReportRow,
+  type TaxVolumeItem,
+} from '@/lib/taxReport'
 
 const TABLE = 'tax_reports'
 const STATUS_OPTIONS = ['draft', 'submitted', 'approved'] as const
 const TAX_TYPE_OPTIONS = ['monthly'] as const
-const SUMMARY_DOC_TYPES = ['sale', 'tax_transfer', 'return', 'transfer'] as const
-const DISPOSE_DOC_TYPES = ['waste'] as const
-const REPORT_DOC_TYPES = [...SUMMARY_DOC_TYPES, ...DISPOSE_DOC_TYPES] as const
+const TAX_TEMPLATE_PATH = '/etax/R7年11月_納税申告.xtx'
 
 const { t, tm, locale } = useI18n()
-const pageTitle = computed(() => t('taxReport.title'))
+const router = useRouter()
 
+const pageTitle = computed(() => t('taxReport.title'))
 const rows = ref<TaxReportRow[]>([])
 const loading = ref(false)
-const saving = ref(false)
-const showModal = ref(false)
-const editing = ref(false)
-const generating = ref(false)
 const deletingReportId = ref('')
 const showCreatePrompt = ref(false)
 const templateXml = ref('')
-
-const TAX_TEMPLATE_PATH = '/etax/R7年11月_納税申告.xtx'
-
-const filters = reactive({ taxType: '', taxYear: '', taxMonth: '', status: '' })
-
-const categories = ref<CategoryRow[]>([])
-const uoms = ref<Array<{ id: string; code: string | null }>>([])
-const taxRateIndex = ref<Record<string, TaxRateRecord[]>>({})
 const tenantId = ref<string | null>(null)
 
-const form = reactive({
-  id: '',
-  tax_type: 'monthly',
-  tax_year: new Date().getFullYear(),
-  tax_month: new Date().getMonth() + 1,
-  status: 'draft',
-  report_files: '',
-  attachment_files: '',
-})
-
+const filters = reactive({ taxType: '', taxYear: '', taxMonth: '', status: '' })
 const promptForm = reactive({
   tax_type: 'monthly',
   tax_year: new Date().getFullYear(),
   tax_month: new Date().getMonth() + 1,
 })
-
-const errors = reactive<Record<string, string>>({})
-const reportBreakdown = ref<TaxVolumeItem[]>([])
-const disposeBreakdown = ref<TaxVolumeItem[]>([])
-const totalTaxAmount = ref(0)
-const summaryXmlUrl = ref('')
-const summaryXmlName = ref('')
-const disposeXmlUrl = ref('')
-const disposeXmlName = ref('')
 
 const statusOptions = STATUS_OPTIONS
 const taxTypeOptions = TAX_TYPE_OPTIONS
@@ -555,9 +234,8 @@ const yearOptions = computed(() => {
 })
 
 const monthOptions = computed(() => Array.from({ length: 12 }, (_, idx) => idx + 1))
-
 const currencyFormatter = computed(
-  () => new Intl.NumberFormat(locale.value, { style: 'currency', currency: 'JPY', maximumFractionDigits: 0 })
+  () => new Intl.NumberFormat(locale.value, { style: 'currency', currency: 'JPY', maximumFractionDigits: 0 }),
 )
 
 function statusLabel(status: string) {
@@ -574,14 +252,6 @@ function taxTypeLabel(taxType: string) {
   return typeof label === 'string' ? label : taxType
 }
 
-function isSummaryDocType(value: string): value is (typeof SUMMARY_DOC_TYPES)[number] {
-  return (SUMMARY_DOC_TYPES as readonly string[]).includes(value)
-}
-
-function isDisposeDocType(value: string): value is (typeof DISPOSE_DOC_TYPES)[number] {
-  return (DISPOSE_DOC_TYPES as readonly string[]).includes(value)
-}
-
 function movementTypeLabel(value: string) {
   const map = tm('taxReport.movementTypeMap')
   if (!map || typeof map !== 'object') return value
@@ -589,24 +259,10 @@ function movementTypeLabel(value: string) {
   return typeof label === 'string' ? label : value
 }
 
-function summaryItemsFromBreakdown(items: TaxVolumeItem[]) {
-  return items.filter((item) => isSummaryDocType(item.move_type))
-}
-
-function disposeItemsFromBreakdown(items: TaxVolumeItem[]) {
-  return items.filter((item) => isDisposeDocType(item.move_type))
-}
-
 function formatPeriod(row: TaxReportRow) {
   if (row.tax_type === 'yearly') return `${row.tax_year} / —`
   return `${row.tax_year} / ${row.tax_month || '—'}`
 }
-
-function canDeleteReport(row: TaxReportRow) {
-  return row.status === 'draft'
-}
-
-const attachmentList = computed(() => parseFileList(form.attachment_files))
 
 function formatCurrency(value: number | null | undefined) {
   if (value == null || Number.isNaN(value)) return '—'
@@ -630,173 +286,8 @@ function breakdownLabel(item: TaxVolumeItem) {
   return `${movementTypeLabel(item.move_type)} · ${item.categoryName} (${formatAbv(item.abv)}): ${formatVolume(item.volume_l)}`
 }
 
-function parseFileList(text: string) {
-  return text
-    .split(/[\n,]/)
-    .map((entry) => entry.trim())
-    .filter(Boolean)
-}
-
-function reiwaYear(year: number) {
-  if (year >= 2019) return { era: 5, yy: year - 2018 }
-  if (year >= 1989) return { era: 4, yy: year - 1988 }
-  return { era: 3, yy: year }
-}
-
-function formatXmlVolume(value: number) {
-  if (!Number.isFinite(value)) return '0'
-  return String(Math.round(value * 1000))
-}
-
-function resolveCategoryCode(item: TaxVolumeItem) {
-  if (item.categoryCode && /^\d+$/.test(item.categoryCode)) return item.categoryCode
-  return '000'
-}
-
-function kubunCodeForMoveType(moveType: string, fallback = '1') {
-  switch (moveType) {
-    case 'sale':
-      return '1'
-    case 'tax_transfer':
-      return '2'
-    case 'transfer':
-      return '3'
-    case 'waste':
-      return '4'
-    default:
-      return fallback
-  }
-}
-
-function recalcTotalTax() {
-  totalTaxAmount.value = summaryItemsFromBreakdown(reportBreakdown.value).reduce((sum, item) => {
-    const volume = Number.isFinite(item.volume_l) ? item.volume_l : 0
-    const rate = item.tax_rate ?? 0
-    return sum + volume * rate
-  }, 0)
-}
-
-function handleBreakdownChange(index: number) {
-  const item = reportBreakdown.value[index]
-  if (!item) return
-  if (!Number.isFinite(item.volume_l)) item.volume_l = 0
-  if (!Number.isFinite(item.abv)) item.abv = null
-  recalcTotalTax()
-}
-
-function handleDisposeChange(index: number) {
-  const item = disposeBreakdown.value[index]
-  if (!item) return
-  if (!Number.isFinite(item.volume_l)) item.volume_l = 0
-  if (!Number.isFinite(item.abv)) item.abv = null
-  recalcTotalTax()
-}
-
-function setXmlLink(kind: 'summary' | 'dispose', name: string, xml: string) {
-  const url = URL.createObjectURL(new Blob([xml], { type: 'application/xml' }))
-  if (kind === 'summary') {
-    if (summaryXmlUrl.value) URL.revokeObjectURL(summaryXmlUrl.value)
-    summaryXmlUrl.value = url
-    summaryXmlName.value = name
-  } else {
-    if (disposeXmlUrl.value) URL.revokeObjectURL(disposeXmlUrl.value)
-    disposeXmlUrl.value = url
-    disposeXmlName.value = name
-  }
-}
-
-function xmlEscape(value: string) {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;')
-}
-
-function buildXmlPayload(row: {
-  taxType: string
-  taxYear: number
-  taxMonth: number
-  status: string
-  totalTax: number
-  breakdown: TaxVolumeItem[]
-}) {
-  if (!templateXml.value) {
-    throw new Error('TEMPLATE_NOT_LOADED')
-  }
-
-  const { era, yy } = reiwaYear(row.taxYear)
-  const mm = row.taxType === 'monthly' ? row.taxMonth : 12
-  const dateStr = new Date().toISOString().slice(0, 10)
-
-  const taxableItems = row.breakdown.filter((item) => item.move_type !== 'return')
-  const returnItems = row.breakdown.filter((item) => item.move_type === 'return')
-
-  const ehdBlocks = taxableItems
-    .map((item) => {
-      const categoryCode = resolveCategoryCode(item)
-      const abvTag = item.abv != null ? `\n                    <EHD00040>${item.abv}</EHD00040>` : ''
-      const volume = formatXmlVolume(item.volume_l)
-      return `                <EHD00000>
-                    <EHD00010>
-                        <kubun_CD>${kubunCodeForMoveType(item.move_type)}</kubun_CD>
-                    </EHD00010>
-                    <EHD00020>${categoryCode}</EHD00020>
-                    <EHD00030>${xmlEscape(item.categoryName)}</EHD00030>${abvTag}
-                    <EHD00050>${volume}</EHD00050>
-                    <EHD00080 AutoCalc="1">${volume}</EHD00080>
-                    <EHD00100 AutoCalc="1">0</EHD00100>
-                </EHD00000>`
-    })
-    .join('\n')
-
-  const ekdBlocks = returnItems
-    .map((item) => {
-      const categoryCode = resolveCategoryCode(item)
-      const abvTag = item.abv != null ? `\n                    <EKD00040>${item.abv}</EKD00040>` : ''
-      const volume = formatXmlVolume(item.volume_l)
-      return `                <EKD00000>
-                    <EKD00010>
-                        <kubun_CD>1</kubun_CD>
-                    </EKD00010>
-                    <EKD00020>${categoryCode}</EKD00020>
-                    <EKD00030>${xmlEscape(item.categoryName)}</EKD00030>${abvTag}
-                    <EKD00080>${volume}</EKD00080>
-                    <EKD00100 AutoCalc="1">0</EKD00100>
-                    <EKD00120>${xmlEscape(movementTypeLabel(item.move_type))}</EKD00120>
-                </EKD00000>`
-    })
-    .join('\n')
-
-  let xml = templateXml.value
-
-  xml = xml.replace(new RegExp('sakuseiDay="\\d{4}-\\d{2}-\\d{2}"', 'g'), `sakuseiDay="${dateStr}"`)
-  xml = xml.replace(new RegExp('<gen:era>\\d+<\\/gen:era>', 'g'), `<gen:era>${era}</gen:era>`)
-  xml = xml.replace(new RegExp('<gen:yy>\\d+<\\/gen:yy>', 'g'), `<gen:yy>${yy}</gen:yy>`)
-  xml = xml.replace(new RegExp('<gen:mm>\\d+<\\/gen:mm>', 'g'), `<gen:mm>${mm}</gen:mm>`)
-
-  xml = xml.replace(new RegExp('<LIA110[\\s\\S]*?<\\/LIA110>'), (section) => {
-    let updated = section.replace(new RegExp('<EHD00000>[\\s\\S]*?<\\/EHD00000>', 'g'), '')
-    updated = updated.replace(new RegExp('(<EHC00000>[\\s\\S]*?<\\/EHC00000>)'), `$1\n${ehdBlocks}`)
-    return updated
-  })
-
-  xml = xml.replace(new RegExp('<LIA220[\\s\\S]*?<\\/LIA220>'), (section) => {
-    let updated = section.replace(new RegExp('<EKD00000>[\\s\\S]*?<\\/EKD00000>', 'g'), '')
-    updated = updated.replace(new RegExp('(<EKC00000>[\\s\\S]*?<\\/EKC00000>)'), `$1\n${ekdBlocks}`)
-    return updated
-  })
-
-  return xml
-}
-
-function buildXmlFilename(taxType: string, taxYear: number, taxMonth: number) {
-  const reiwa = taxYear >= 2019 ? `R${taxYear - 2018}年` : `${taxYear}年`
-  if (taxType === 'yearly') {
-    return `${reiwa}_納税申告.xtx`
-  }
-  return `${reiwa}${taxMonth}月_納税申告.xtx`
+function canDeleteReport(row: TaxReportRow) {
+  return row.status === 'draft'
 }
 
 function downloadTextFile(filename: string, content: string, mime = 'application/xml') {
@@ -811,53 +302,6 @@ function downloadTextFile(filename: string, content: string, mime = 'application
   URL.revokeObjectURL(url)
 }
 
-function normalizeReport(row: JsonMap): TaxReportRow {
-  const files = Array.isArray(row.report_files) ? row.report_files : []
-  const attachments = Array.isArray(row.attachment_files) ? row.attachment_files : []
-  const breakdown = Array.isArray(row.volume_breakdown) ? row.volume_breakdown : []
-  const normalizedBreakdown: TaxVolumeItem[] = breakdown
-    .map((item: unknown, index: number) => {
-      const record = item && typeof item === 'object' ? (item as JsonMap) : {}
-      return {
-        key: String(record.key ?? `${String(row.id ?? '')}-${index}`),
-        move_type: String(record.move_type ?? record.moveType ?? record.doc_type ?? 'unknown'),
-        categoryId: String(record.categoryId ?? record.category_id ?? ''),
-        categoryCode: String(record.categoryCode ?? record.category_code ?? ''),
-        categoryName: String(record.categoryName ?? record.category_name ?? '—'),
-        abv: typeof record.abv === 'number' ? record.abv : record.abv ? Number(record.abv) : null,
-        volume_l: typeof record.volume_l === 'number' ? record.volume_l : Number(record.volume_l || 0),
-      tax_rate:
-          typeof record.tax_rate === 'number'
-            ? record.tax_rate
-            : record.tax_rate
-              ? Number(record.tax_rate)
-              : record.taxRate
-                ? Number(record.taxRate)
-                : null,
-      }
-    })
-    .filter((item: TaxVolumeItem) => item.categoryId || item.categoryName)
-  if (normalizedBreakdown.length > 0 && normalizedBreakdown.every((item) => item.tax_rate == null)) {
-    const totalVolume = normalizedBreakdown.reduce((sum, item) => sum + (item.volume_l || 0), 0)
-    const fallbackRate = totalVolume > 0 ? Number(row.total_tax_amount ?? 0) / totalVolume : 0
-    normalizedBreakdown.forEach((item) => {
-      item.tax_rate = fallbackRate
-    })
-  }
-  return {
-    id: String(row.id ?? ''),
-    tax_type: toNullableString(row.tax_type) ?? 'monthly',
-    tax_year: Number(row.tax_year),
-    tax_month: row.tax_month ? Number(row.tax_month) : 0,
-    status: toNullableString(row.status) ?? 'draft',
-    total_tax_amount: Number(row.total_tax_amount ?? 0),
-    volume_breakdown: normalizedBreakdown,
-    report_files: files.map((file: unknown) => String(file)),
-    attachment_files: attachments.map((file: unknown) => String(file)),
-    created_at: toNullableString(row.created_at),
-  }
-}
-
 async function ensureTenant() {
   if (tenantId.value) return tenantId.value
   const { data, error } = await supabase.auth.getUser()
@@ -866,111 +310,6 @@ async function ensureTenant() {
   if (!id) throw new Error('Tenant not resolved in session')
   tenantId.value = id
   return id
-}
-
-async function loadCategories() {
-  const { optionRows, fallbackRows } = await loadAlcoholTypeReferenceData(supabase)
-  categories.value = optionRows.map((row: { def_id?: unknown; def_key?: unknown; spec?: Record<string, unknown> | null }) => ({
-    id: String(row.def_id ?? ''),
-    code: String(row.spec?.tax_category_code ?? row.spec?.code ?? row.def_key ?? ''),
-    name: typeof row.spec?.name === 'string' ? row.spec.name : (typeof row.def_key === 'string' ? row.def_key : null),
-    lookupKeys: buildAlcoholTypeLookupKeys(row, fallbackRows),
-  }))
-}
-
-async function loadUoms() {
-  const { data, error } = await supabase.from('mst_uom').select('id, code').order('code', { ascending: true })
-  if (error) throw error
-  uoms.value = data ?? []
-}
-
-async function loadPackageCategories(packageIds: string[]) {
-  const map = new Map<string, PackageCategoryInfo>()
-  if (packageIds.length === 0) return map
-  const tenant = await ensureTenant()
-  const { data, error } = await supabase
-    .from('mst_package')
-    .select('id, unit_volume, volume_uom, is_active')
-    .eq('tenant_id', tenant)
-    .eq('is_active', true)
-    .in('id', packageIds)
-  if (error) throw error
-  ;((data ?? []) as PackageLookupRow[]).forEach((row) => {
-    map.set(row.id, {
-      id: row.id,
-      unit_size_l: convertToLiters(
-        toNullableNumber(row.unit_volume),
-        typeof row.volume_uom === 'string' ? row.volume_uom : null,
-      ),
-    })
-  })
-  return map
-}
-
-async function loadBatchEntityAttrsByBatchIds(batchIds: string[]) {
-  const map = new Map<string, { categoryId: string | null; abv: number | null }>()
-  if (batchIds.length === 0) return map
-
-  const uniqueIds = Array.from(new Set(batchIds))
-  const { data: attrDefs, error: attrDefError } = await supabase
-    .from('attr_def')
-    .select('attr_id, code')
-    .eq('domain', 'batch')
-    .in('code', ['beer_category', 'actual_abv', 'target_abv'])
-    .eq('is_active', true)
-  if (attrDefError) throw attrDefError
-
-  const attrIdToCode = new Map<string, string>()
-  const attrIds = ((attrDefs ?? []) as AttrDefRow[])
-    .map((row) => {
-      const id = Number(row.attr_id)
-      if (!Number.isFinite(id)) return null
-      const code = typeof row.code === 'string' ? row.code : null
-      if (code) attrIdToCode.set(String(row.attr_id), code)
-      return id
-    })
-    .filter((id): id is number => id != null)
-  if (!attrIds.length) return map
-
-  const { data: attrValues, error: attrValueError } = await supabase
-    .from('entity_attr')
-    .select('entity_id, attr_id, value_text, value_num, value_ref_type_id, value_json')
-    .eq('entity_type', 'batch')
-    .in('entity_id', uniqueIds)
-    .in('attr_id', attrIds)
-  if (attrValueError) throw attrValueError
-
-  ;((attrValues ?? []) as EntityAttrRow[]).forEach((row) => {
-    const batchId = String(row.entity_id ?? '')
-    if (!batchId) return
-    if (!map.has(batchId)) {
-      map.set(batchId, { categoryId: null, abv: null })
-    }
-    const entry = map.get(batchId)
-    if (!entry) return
-
-    const code = attrIdToCode.get(String(row.attr_id))
-    if (!code) return
-
-    if (code === 'beer_category') {
-      const jsonDefId = row.value_json?.def_id
-      if (typeof jsonDefId === 'string' && jsonDefId.trim()) entry.categoryId = jsonDefId.trim()
-      else if (typeof row.value_text === 'string' && row.value_text.trim()) entry.categoryId = row.value_text.trim()
-      else if (row.value_ref_type_id != null) entry.categoryId = String(row.value_ref_type_id)
-    }
-
-    if (code === 'actual_abv') {
-      const abv = toNullableNumber(row.value_num)
-      if (abv != null) entry.abv = abv
-    }
-
-    if (code === 'target_abv' && entry.abv == null) {
-      const abv = toNullableNumber(row.value_num)
-      if (abv != null) entry.abv = abv
-    }
-  })
-
-  return map
 }
 
 async function loadTemplate() {
@@ -982,278 +321,6 @@ async function loadTemplate() {
     console.error(err)
     toast.error(t('taxReport.templateMissing'))
     templateXml.value = ''
-  }
-}
-
-function normalizeTaxCategoryCode(value: unknown) {
-  if (value == null) return ''
-  if (typeof value === 'number' && Number.isFinite(value)) return String(Math.trunc(value))
-  const text = String(value).trim()
-  if (!text) return ''
-  const num = Number(text)
-  return Number.isFinite(num) ? String(Math.trunc(num)) : text
-}
-
-function toNullableNumber(value: unknown) {
-  if (value == null || value === '') return null
-  const numeric = Number(value)
-  return Number.isFinite(numeric) ? numeric : null
-}
-
-function toNullableString(value: unknown) {
-  if (typeof value !== 'string') return null
-  const trimmed = value.trim()
-  return trimmed ? trimmed : null
-}
-
-function buildTaxRateIndex(rows: Array<{ spec?: Record<string, unknown> | null }>) {
-  const index: Record<string, TaxRateRecord[]> = {}
-  rows.forEach((row) => {
-    const spec = (row.spec && typeof row.spec === 'object') ? row.spec : {}
-    const categoryCode = normalizeTaxCategoryCode(spec.tax_category_code)
-    if (!categoryCode) return
-
-    const taxRateRaw = Number(spec.tax_rate ?? 0)
-    if (!Number.isFinite(taxRateRaw)) return
-
-    const entry: TaxRateRecord = {
-      taxrate: taxRateRaw,
-      effectDate: spec.start_date ? new Date(String(spec.start_date)) : null,
-      expireDate: spec.expiration_date ? new Date(String(spec.expiration_date)) : null,
-    }
-    if (!index[categoryCode]) index[categoryCode] = []
-    index[categoryCode].push(entry)
-  })
-
-  Object.values(index).forEach((list) => {
-    list.sort((a, b) => {
-      if (!a.effectDate || !b.effectDate) return 0
-      return a.effectDate.getTime() - b.effectDate.getTime()
-    })
-  })
-  taxRateIndex.value = index
-}
-
-async function loadTaxRates() {
-  const { data, error } = await supabase
-    .from('registry_def')
-    .select('spec')
-    .eq('kind', 'alcohol_tax')
-    .eq('is_active', true)
-  if (error) throw error
-  buildTaxRateIndex((data ?? []) as Array<{ spec?: Record<string, unknown> | null }>)
-}
-
-function applicableTaxRate(categoryCode: string | null | undefined, dateStr: string | null | undefined) {
-  const code = normalizeTaxCategoryCode(categoryCode)
-  if (!code) return 0
-  const records = taxRateIndex.value[code]
-  if (!records || records.length === 0) return 0
-  if (!dateStr) return records[records.length - 1]?.taxrate ?? 0
-  const date = new Date(dateStr)
-  let candidate: TaxRateRecord | null = null
-  for (const record of records) {
-    const effectOk = !record.effectDate || date >= record.effectDate
-    const expireOk = !record.expireDate || date <= record.expireDate
-    if (effectOk && expireOk) {
-      candidate = record
-    }
-    if (record.effectDate && date < record.effectDate) break
-  }
-  return candidate?.taxrate ?? records[records.length - 1]?.taxrate ?? 0
-}
-
-function convertToLiters(size: number | null, uomCode: string | null | undefined) {
-  if (size == null || Number.isNaN(size)) return null
-  const normalized = uomCode ? uomCode.toLowerCase() : null
-  switch (normalized) {
-    case 'l':
-    case null:
-    case undefined:
-      return size
-    case 'ml':
-      return size / 1000
-    case 'kl':
-      return size * 1000
-    case 'gal_us':
-      return size * 3.78541
-    default:
-      return size
-  }
-}
-
-function resolvePackageSizeLiters(row: PackageCategoryInfo | undefined) {
-  return row?.unit_size_l ?? null
-}
-
-const categoryLookup = computed(() => {
-  const map = new Map<string, CategoryRow>()
-  categories.value.forEach((row) => {
-    row.lookupKeys.forEach((key) => {
-      const normalized = String(key ?? '').trim()
-      if (normalized) map.set(normalized, row)
-    })
-    if (row.id) map.set(row.id, row)
-    if (row.code) map.set(row.code, row)
-  })
-  return map
-})
-
-const uomLookup = computed(() => {
-  const map = new Map<string, string>()
-  uoms.value.forEach((row) => map.set(row.id, row.code ?? ''))
-  return map
-})
-
-async function generateReportForPeriod(taxType: string, year: number, month: number) {
-  try {
-    generating.value = true
-    reportBreakdown.value = []
-    disposeBreakdown.value = []
-    totalTaxAmount.value = 0
-
-    const tenant = await ensureTenant()
-    const start = taxType === 'yearly' ? new Date(year, 0, 1) : new Date(year, month - 1, 1)
-    const end = taxType === 'yearly' ? new Date(year + 1, 0, 1) : new Date(year, month, 1)
-    const startDate = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-01`
-    const endDate = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-01`
-
-    const { data: movementHeaders, error: headerError } = await supabase
-      .from('inv_movements')
-      .select('id, movement_at, doc_type')
-      .eq('tenant_id', tenant)
-      .in('doc_type', REPORT_DOC_TYPES as unknown as string[])
-      .gte('movement_at', startDate)
-      .lt('movement_at', endDate)
-
-    if (headerError) throw headerError
-    const headers = (movementHeaders ?? []) as MovementHeader[]
-    if (headers.length === 0) {
-      reportBreakdown.value = []
-      totalTaxAmount.value = 0
-      return
-    }
-
-    const headerMap = new Map(headers.map((row) => [row.id, { movementAt: row.movement_at, docType: row.doc_type }]))
-    const movementIds = headers.map((row) => row.id)
-
-    const { data: movementLines, error: lineError } = await supabase
-      .from('inv_movement_lines')
-      .select('movement_id, package_id, batch_id, qty, uom_id, meta')
-      .in('movement_id', movementIds)
-
-    if (lineError) throw lineError
-
-    const lines = ((movementLines ?? []) as MovementLine[]).filter((row) => row.package_id || row.batch_id)
-    if (lines.length === 0) {
-      reportBreakdown.value = []
-      totalTaxAmount.value = 0
-      return
-    }
-
-    const packageIds = Array.from(new Set(lines.map((line) => line.package_id).filter(Boolean))) as string[]
-    const batchIds = Array.from(new Set(lines.map((line) => line.batch_id).filter(Boolean))) as string[]
-
-    const packageMap = await loadPackageCategories(packageIds)
-    const batchAttrMap = await loadBatchEntityAttrsByBatchIds(batchIds)
-
-    const batchMap = new Map<string, { categoryId: string | null; categoryName: string; abv: number | null }>()
-    if (batchIds.length > 0) {
-      const { data: batches, error: batchError } = await supabase
-        .from('mes_batches')
-        .select('id')
-        .eq('tenant_id', tenant)
-        .in('id', batchIds)
-      if (batchError) throw batchError
-      ;((batches ?? []) as BatchLookupRow[]).forEach((row) => {
-        const attr = batchAttrMap.get(String(row.id))
-        const categoryId = attr?.categoryId ?? null
-        const category = categoryId ? categoryLookup.value.get(categoryId) : null
-        batchMap.set(String(row.id), {
-          categoryId,
-          categoryName: category?.name || category?.code || categoryId || '—',
-          abv: attr?.abv ?? null,
-        })
-      })
-    }
-
-    const breakdownMap = new Map<string, TaxVolumeItem>()
-    const taxTotalMap = new Map<string, number>()
-    let totalTax = 0
-
-    lines.forEach((line) => {
-      const header = headerMap.get(line.movement_id)
-      const movementAt = header?.movementAt ?? null
-      const moveType = header?.docType ?? 'unknown'
-      const packageRow = line.package_id ? packageMap.get(line.package_id) : undefined
-      const batchId = line.batch_id ?? null
-      const batchInfo = batchId ? batchMap.get(batchId) : undefined
-
-      const categoryId = batchInfo?.categoryId ?? null
-      if (!categoryId) return
-      const category = categoryLookup.value.get(categoryId)
-      const categoryName = category?.name || category?.code || categoryId
-      const categoryCode = category?.code ?? ''
-      const abv = batchInfo?.abv ?? null
-
-      if (!(REPORT_DOC_TYPES as readonly string[]).includes(moveType)) {
-        return
-      }
-
-      const uomCode = line.uom_id ? uomLookup.value.get(line.uom_id) : null
-      let volume = line.qty != null ? convertToLiters(Number(line.qty), uomCode) : null
-
-      if (!volume || volume <= 0) {
-        const unitSize = resolvePackageSizeLiters(packageRow)
-        const pkgQty = Number(line.meta?.package_qty ?? 0)
-        if (unitSize && pkgQty > 0) {
-          volume = pkgQty * unitSize
-        }
-      }
-
-      if (!volume || Number.isNaN(volume)) return
-
-      const key = `${moveType}-${categoryId}-${abv ?? 'na'}`
-      const existing = breakdownMap.get(key)
-      if (existing) {
-        existing.volume_l += volume
-      } else {
-        breakdownMap.set(key, {
-          key,
-          move_type: moveType,
-          categoryId,
-          categoryCode,
-          categoryName,
-          abv: abv != null ? Number(abv) : null,
-          volume_l: volume,
-          tax_rate: null,
-        })
-      }
-
-      const taxRate = applicableTaxRate(categoryCode, movementAt)
-      if (isSummaryDocType(moveType)) {
-        totalTax += volume * taxRate
-      }
-      taxTotalMap.set(key, (taxTotalMap.get(key) ?? 0) + volume * taxRate)
-    })
-
-    breakdownMap.forEach((item, key) => {
-      const taxTotal = taxTotalMap.get(key) ?? 0
-      item.tax_rate = item.volume_l > 0 ? taxTotal / item.volume_l : 0
-    })
-
-    const generatedItems = Array.from(breakdownMap.values()).sort((a, b) => {
-      if (a.categoryName !== b.categoryName) return a.categoryName.localeCompare(b.categoryName)
-      return (a.abv ?? 0) - (b.abv ?? 0)
-    })
-    reportBreakdown.value = summaryItemsFromBreakdown(generatedItems)
-    disposeBreakdown.value = disposeItemsFromBreakdown(generatedItems)
-    totalTaxAmount.value = totalTax
-  } catch (err) {
-    console.error(err)
-    toast.error(err instanceof Error ? err.message : String(err))
-  } finally {
-    generating.value = false
   }
 }
 
@@ -1276,7 +343,7 @@ async function fetchReports() {
     const { data, error } = await query
     if (error) throw error
 
-    rows.value = (data ?? []).map(normalizeReport)
+    rows.value = (data ?? []).map((row) => normalizeReport(row as JsonMap))
   } catch (err) {
     console.error(err)
     toast.error(err instanceof Error ? err.message : String(err))
@@ -1285,30 +352,8 @@ async function fetchReports() {
   }
 }
 
-function resetForm() {
-  form.id = ''
-  form.tax_type = (filters.taxType as string) || 'monthly'
-  form.tax_year = filters.taxYear ? Number(filters.taxYear) : new Date().getFullYear()
-  form.tax_month = filters.taxMonth ? Number(filters.taxMonth) : new Date().getMonth() + 1
-  if (form.tax_type === 'yearly') form.tax_month = 12
-  form.status = 'draft'
-  form.report_files = ''
-  form.attachment_files = ''
-  reportBreakdown.value = []
-  disposeBreakdown.value = []
-  totalTaxAmount.value = 0
-  if (summaryXmlUrl.value) URL.revokeObjectURL(summaryXmlUrl.value)
-  if (disposeXmlUrl.value) URL.revokeObjectURL(disposeXmlUrl.value)
-  summaryXmlUrl.value = ''
-  summaryXmlName.value = ''
-  disposeXmlUrl.value = ''
-  disposeXmlName.value = ''
-  Object.keys(errors).forEach((key) => delete errors[key])
-}
-
-async function openCreate() {
-  editing.value = false
-  promptForm.tax_type = (filters.taxType as string) || 'monthly'
+function openCreate() {
+  promptForm.tax_type = filters.taxType || 'monthly'
   promptForm.tax_year = filters.taxYear ? Number(filters.taxYear) : new Date().getFullYear()
   promptForm.tax_month = filters.taxMonth ? Number(filters.taxMonth) : new Date().getMonth() + 1
   showCreatePrompt.value = true
@@ -1327,35 +372,19 @@ async function startCreateFromPrompt() {
     toast.info(t('taxReport.errors.taxMonthRequired'))
     return
   }
-  editing.value = false
-  resetForm()
-  form.tax_type = promptForm.tax_type
-  form.tax_year = promptForm.tax_year
-  form.tax_month = promptForm.tax_type === 'monthly' ? promptForm.tax_month : 12
-  form.status = 'draft'
-  showModal.value = true
   showCreatePrompt.value = false
-  await generateReportForPeriod(form.tax_type, form.tax_year, form.tax_month)
-}
-
-function closeModal() {
-  showModal.value = false
+  await router.push({
+    name: 'TaxReportCreate',
+    query: {
+      taxType: promptForm.tax_type,
+      taxYear: String(promptForm.tax_year),
+      taxMonth: promptForm.tax_type === 'monthly' ? String(promptForm.tax_month) : undefined,
+    },
+  })
 }
 
 async function openEdit(row: TaxReportRow) {
-  editing.value = true
-  resetForm()
-  form.id = row.id
-  form.tax_type = row.tax_type || 'monthly'
-  form.tax_year = row.tax_year
-  form.tax_month = row.tax_month
-  form.status = row.status
-  form.report_files = row.report_files.join('\n')
-  form.attachment_files = row.attachment_files.join('\n')
-  reportBreakdown.value = summaryItemsFromBreakdown(row.volume_breakdown).map((item) => ({ ...item }))
-  disposeBreakdown.value = disposeItemsFromBreakdown(row.volume_breakdown).map((item) => ({ ...item }))
-  totalTaxAmount.value = row.total_tax_amount
-  showModal.value = true
+  await router.push({ name: 'TaxReportEdit', params: { id: row.id } })
 }
 
 async function deleteReport(row: TaxReportRow) {
@@ -1381,160 +410,9 @@ async function deleteReport(row: TaxReportRow) {
   }
 }
 
-async function handlePeriodChange() {
-  if (editing.value) return
-  if (!form.tax_year) return
-  if (form.tax_type === 'monthly' && !form.tax_month) return
-  if (form.tax_type === 'yearly') {
-    form.tax_month = 12
-  }
-  await generateReportForPeriod(form.tax_type, form.tax_year, form.tax_month)
-}
-
-function validateForm() {
-  Object.keys(errors).forEach((key) => delete errors[key])
-  if (!form.tax_type) errors.tax_type = t('taxReport.errors.taxTypeRequired')
-  if (!form.tax_year) errors.tax_year = t('taxReport.errors.taxYearRequired')
-  if (form.tax_type === 'monthly' && !form.tax_month) errors.tax_month = t('taxReport.errors.taxMonthRequired')
-  if (!form.status) errors.status = t('taxReport.errors.statusRequired')
-  if (reportBreakdown.value.length === 0) errors.breakdown = t('taxReport.errors.breakdownRequired')
-  return Object.keys(errors).length === 0
-}
-
-async function saveReport() {
-  if (!validateForm()) return
-  try {
-    saving.value = true
-    const tenant = await ensureTenant()
-    const isNew = !editing.value
-    const status = isNew ? 'draft' : form.status
-    if (form.tax_type === 'yearly') {
-      form.tax_month = 12
-    }
-    if (isNew) {
-      const filename = buildXmlFilename(form.tax_type, form.tax_year, form.tax_month)
-      const fileSet = new Set(parseFileList(form.report_files))
-      if (!fileSet.has(filename)) {
-        try {
-          const xml = buildXmlPayload({
-            taxType: form.tax_type,
-            taxYear: form.tax_year,
-            taxMonth: form.tax_month,
-            status,
-            totalTax: totalTaxAmount.value,
-            breakdown: reportBreakdown.value,
-          })
-          downloadTextFile(filename, xml)
-          fileSet.add(filename)
-          form.report_files = Array.from(fileSet).join('\n')
-        } catch (err) {
-          toast.error(t('taxReport.templateMissing'))
-          console.error(err)
-        }
-      }
-    }
-    const payload = {
-      tenant_id: tenant,
-      tax_type: form.tax_type,
-      tax_year: form.tax_year,
-      tax_month: form.tax_month,
-      status,
-      total_tax_amount: totalTaxAmount.value,
-      volume_breakdown: [...reportBreakdown.value, ...disposeBreakdown.value],
-      report_files: parseFileList(form.report_files),
-      attachment_files: parseFileList(form.attachment_files),
-    }
-
-    if (editing.value && form.id) {
-      const { error } = await supabase.from(TABLE).update(payload).eq('id', form.id)
-      if (error) throw error
-    } else {
-      const { error } = await supabase.from(TABLE).insert(payload)
-      if (error) throw error
-    }
-
-    showModal.value = false
-    await fetchReports()
-  } catch (err) {
-    console.error(err)
-    toast.error(err instanceof Error ? err.message : String(err))
-  } finally {
-    saving.value = false
-  }
-}
-
-function buildDisposeXmlFilename(taxType: string, taxYear: number, taxMonth: number) {
-  const base = buildXmlFilename(taxType, taxYear, taxMonth)
-  return base.replace('.xtx', '_廃棄.xtx')
-}
-
-function createXmlForSummary() {
-  const summaryBreakdown = summaryItemsFromBreakdown(reportBreakdown.value)
-  if (summaryBreakdown.length === 0) {
-    toast.info(t('taxReport.emptyBreakdown'))
-    return
-  }
-  const filename = buildXmlFilename(form.tax_type, form.tax_year, form.tax_month)
-  let xml = ''
-  try {
-    xml = buildXmlPayload({
-      taxType: form.tax_type,
-      taxYear: form.tax_year,
-      taxMonth: form.tax_month,
-      status: editing.value ? form.status : 'draft',
-      totalTax: totalTaxAmount.value,
-      breakdown: summaryBreakdown,
-    })
-    downloadTextFile(filename, xml)
-    setXmlLink('summary', filename, xml)
-  } catch (err) {
-    toast.error(t('taxReport.templateMissing'))
-    console.error(err)
-    return
-  }
-
-  const files = new Set(parseFileList(form.report_files))
-  files.add(filename)
-  form.report_files = Array.from(files).join('\n')
-}
-
-function createXmlForDispose() {
-  if (disposeBreakdown.value.length === 0) {
-    toast.info(t('taxReport.emptyBreakdown'))
-    return
-  }
-  const filename = buildDisposeXmlFilename(form.tax_type, form.tax_year, form.tax_month)
-  let xml = ''
-  try {
-    xml = buildXmlPayload({
-      taxType: form.tax_type,
-      taxYear: form.tax_year,
-      taxMonth: form.tax_month,
-      status: editing.value ? form.status : 'draft',
-      totalTax: totalTaxAmount.value,
-      breakdown: disposeBreakdown.value,
-    })
-    downloadTextFile(filename, xml)
-    setXmlLink('dispose', filename, xml)
-  } catch (err) {
-    toast.error(t('taxReport.templateMissing'))
-    console.error(err)
-    return
-  }
-
-  const files = new Set(parseFileList(form.report_files))
-  files.add(filename)
-  form.report_files = Array.from(files).join('\n')
-}
-
-function isDisposeFilename(filename: string, row: TaxReportRow) {
-  const expectedDisposeName = buildDisposeXmlFilename(row.tax_type, row.tax_year, row.tax_month)
-  return filename === expectedDisposeName || filename.includes('廃棄')
-}
-
 function downloadXmlForRowFile(row: TaxReportRow, filename: string) {
-  const isDispose = isDisposeFilename(filename, row)
-  const breakdown = isDispose ? disposeItemsFromBreakdown(row.volume_breakdown) : summaryItemsFromBreakdown(row.volume_breakdown)
+  const dispose = isDisposeFilename(filename, row)
+  const breakdown = dispose ? disposeItemsFromBreakdown(row.volume_breakdown) : summaryItemsFromBreakdown(row.volume_breakdown)
   if (!breakdown.length) {
     toast.info(t('taxReport.emptyBreakdown'))
     return
@@ -1542,14 +420,14 @@ function downloadXmlForRowFile(row: TaxReportRow, filename: string) {
 
   try {
     const xml = buildXmlPayload({
+      templateXml: templateXml.value,
+      movementTypeLabel,
       taxType: row.tax_type,
       taxYear: row.tax_year,
       taxMonth: row.tax_month,
-      status: row.status,
-      totalTax: row.total_tax_amount,
       breakdown,
     })
-    downloadTextFile(filename, xml)
+    downloadTextFile(filename || buildXmlFilename(row.tax_type, row.tax_year, row.tax_month), xml)
   } catch (err) {
     toast.error(t('taxReport.templateMissing'))
     console.error(err)
@@ -1559,7 +437,7 @@ function downloadXmlForRowFile(row: TaxReportRow, filename: string) {
 onMounted(async () => {
   try {
     await ensureTenant()
-    await Promise.all([loadCategories(), loadUoms(), loadTaxRates(), loadTemplate()])
+    await loadTemplate()
     await fetchReports()
   } catch (err) {
     console.error(err)
@@ -1572,30 +450,15 @@ watch(
   async () => {
     await fetchReports()
   },
-  { deep: true }
+  { deep: true },
 )
 
 watch(
   () => filters.taxType,
   (value) => {
     if (value === 'yearly') filters.taxMonth = ''
-  }
+  },
 )
-
-function handleAttachmentUpload(event: Event) {
-  const input = event.target as HTMLInputElement
-  const files = Array.from(input.files ?? [])
-  if (!files.length) return
-  const current = new Set(parseFileList(form.attachment_files))
-  files.forEach((file) => current.add(file.name))
-  form.attachment_files = Array.from(current).join('\n')
-  input.value = ''
-}
-
-function removeAttachment(file: string) {
-  const updated = parseFileList(form.attachment_files).filter((name) => name !== file)
-  form.attachment_files = updated.join('\n')
-}
 </script>
 
 <style scoped>
@@ -1605,7 +468,7 @@ td {
 }
 
 .wrap-cell {
-  white-space: normal;
   min-width: 14rem;
+  white-space: normal;
 }
 </style>

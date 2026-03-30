@@ -164,6 +164,24 @@ export const tenantRoutes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/taxReports/new',
+    name: 'TaxReportCreate',
+    component: () => import('@/views/Pages/TaxReportEditor.vue'),
+    meta: {
+      title: 'Create Tax Report',
+      requiresAuth: true,
+    },
+  },
+  {
+    path: '/taxReports/:id',
+    name: 'TaxReportEdit',
+    component: () => import('@/views/Pages/TaxReportEditor.vue'),
+    meta: {
+      title: 'Edit Tax Report',
+      requiresAuth: true,
+    },
+  },
+  {
     path: '/taxableRemovalReport',
     name: 'TaxableRemovalReport',
     component: () => import('@/views/Pages/TaxableRemovalReport.vue'),

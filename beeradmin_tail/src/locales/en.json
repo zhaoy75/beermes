@@ -2443,7 +2443,8 @@
       "period": "Period",
       "status": "Status",
       "totalTax": "Total tax amount",
-      "productionVolume": "Report breakdown (by type & ABV)",
+      "productionVolume": "Report breakdown (by tax movement type & ABV)",
+      "reportFiles": "Report files",
       "xmlFiles": "XML files",
       "attachments": "Attachments"
     },
@@ -2474,6 +2475,7 @@
       "confirm": "Generate"
     },
     "templateMissing": "Template file is not available for XML generation.",
+    "fileUnavailable": "The saved file is not available for download.",
     "generating": "Generating report data…",
     "abvUnknown": "ABV n/a",
     "taxTypeMap": {
@@ -2487,6 +2489,14 @@
       "return": "Return",
       "transfer": "Internal transfer",
       "waste": "Disposal",
+      "unknown": "Unknown"
+    },
+    "taxEventMap": {
+      "TAXABLE_REMOVAL": "Taxable removal",
+      "NON_TAXABLE_REMOVAL": "Non-taxable removal",
+      "EXPORT_EXEMPT": "Export exempt",
+      "RETURN_TO_FACTORY": "Return to factory",
+      "NONE": "Not applicable",
       "unknown": "Unknown"
     },
     "breakdown": {
@@ -2526,6 +2536,23 @@
     "subtitle": "Review and edit the tax report details and generate related files.",
     "actions": {
       "back": "Back to list"
+    },
+    "columns": {
+      "taxEvent": "Tax movement type"
+    },
+    "sections": {
+      "movement": {
+        "title": "Movement Summary",
+        "subtitle": "Review and edit the reportable movement rows."
+      },
+      "files": {
+        "title": "Generated Files",
+        "subtitle": "These files will be saved to Supabase Storage when you save the report.",
+        "saved": "Saved",
+        "pending": "Not saved yet",
+        "download": "Download",
+        "empty": "No report files have been generated yet."
+      }
     }
   },
   "taxableRemovalReport": {

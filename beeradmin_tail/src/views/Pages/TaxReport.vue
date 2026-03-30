@@ -68,7 +68,7 @@
                 <th class="px-3 py-2 text-left">{{ t('taxReport.card.status') }}</th>
                 <th class="px-3 py-2 text-right">{{ t('taxReport.card.totalTax') }}</th>
                 <th class="px-3 py-2 text-left">{{ t('taxReport.card.productionVolume') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('taxReport.card.xmlFiles') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('taxReport.card.reportFiles') || t('taxReport.card.xmlFiles') }}</th>
                 <th class="px-3 py-2 text-left">{{ t('taxReport.card.attachments') }}</th>
                 <th class="px-3 py-2 text-left">{{ t('common.actions') }}</th>
               </tr>
@@ -82,12 +82,13 @@
                   </button>
                 </td>
                 <td class="px-3 py-3 text-gray-700">{{ statusLabel(row.status) }}</td>
-                <td class="px-3 py-3 text-right font-medium text-gray-900">{{ formatCurrency(row.total_tax_amount) }}</td>
+                <td class="px-3 py-3 text-right font-medium text-gray-900">{{ formatCurrency(displayTotalTax(row)) }}</td>
                 <td class="wrap-cell px-3 py-3 text-gray-700">
                   <div v-if="row.volume_breakdown.length" class="space-y-1">
-                    <div v-for="item in row.volume_breakdown" :key="item.key">
+                    <div v-for="item in visibleBreakdownItems(row)" :key="item.key">
                       {{ breakdownLabel(item) }}
                     </div>
+                    <div v-if="hasOverflowBreakdown(row)">...</div>
                   </div>
                   <span v-else class="text-gray-400">—</span>
                 </td>
@@ -95,12 +96,12 @@
                   <div v-if="row.report_files.length" class="space-y-1 text-blue-600">
                     <button
                       v-for="file in row.report_files"
-                      :key="file"
+                      :key="`${row.id}-${file.fileType}-${file.fileName}`"
                       class="block text-left hover:underline"
                       type="button"
                       @click="downloadXmlForRowFile(row, file)"
                     >
-                      {{ file }}
+                      {{ file.fileName }}
                     </button>
                   </div>
                   <span v-else class="text-gray-400">—</span>
@@ -188,13 +189,17 @@ import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { formatVolume as formatVolumeDisplay } from '@/lib/volumeFormat'
 import { supabase } from '@/lib/supabase'
 import {
-  buildXmlFilename,
+  calculateTaxTotalAmount,
   buildXmlPayload,
+  downloadStoredTaxReportFile,
   disposeItemsFromBreakdown,
+  inferStoredFileType,
   isDisposeFilename,
   normalizeReport,
+  resolveTaxEvent,
   summaryItemsFromBreakdown,
   type JsonMap,
+  type TaxReportStoredFile,
   type TaxReportRow,
   type TaxVolumeItem,
 } from '@/lib/taxReport'
@@ -259,6 +264,14 @@ function movementTypeLabel(value: string) {
   return typeof label === 'string' ? label : value
 }
 
+function taxEventLabel(value: string | null | undefined) {
+  if (!value) return ''
+  const map = tm('taxReport.taxEventMap')
+  if (!map || typeof map !== 'object') return value
+  const label = (map as Record<string, unknown>)[value]
+  return typeof label === 'string' ? label : value
+}
+
 function formatPeriod(row: TaxReportRow) {
   if (row.tax_type === 'yearly') return `${row.tax_year} / —`
   return `${row.tax_year} / ${row.tax_month || '—'}`
@@ -283,15 +296,31 @@ function formatAbv(value: number | null | undefined) {
 }
 
 function breakdownLabel(item: TaxVolumeItem) {
-  return `${movementTypeLabel(item.move_type)} · ${item.categoryName} (${formatAbv(item.abv)}): ${formatVolume(item.volume_l)}`
+  const actualTaxEvent = resolveTaxEvent(item.move_type, item.tax_event)
+  const movementLabel = taxEventLabel(actualTaxEvent) || movementTypeLabel(item.move_type)
+  return `${movementLabel} · ${item.categoryName} (${formatAbv(item.abv)}): ${formatVolume(item.volume_l)}`
+}
+
+function visibleBreakdownItems(row: Pick<TaxReportRow, 'volume_breakdown'>) {
+  return row.volume_breakdown.slice(0, 3)
+}
+
+function hasOverflowBreakdown(row: Pick<TaxReportRow, 'volume_breakdown'>) {
+  return row.volume_breakdown.length > 3
+}
+
+function displayTotalTax(row: TaxReportRow) {
+  if (row.volume_breakdown.length > 0) {
+    return calculateTaxTotalAmount(row.volume_breakdown)
+  }
+  return row.total_tax_amount
 }
 
 function canDeleteReport(row: TaxReportRow) {
   return row.status === 'draft'
 }
 
-function downloadTextFile(filename: string, content: string, mime = 'application/xml') {
-  const blob = new Blob([content], { type: mime })
+function downloadBlob(filename: string, blob: Blob) {
   const url = URL.createObjectURL(blob)
   const anchor = document.createElement('a')
   anchor.href = url
@@ -300,6 +329,10 @@ function downloadTextFile(filename: string, content: string, mime = 'application
   anchor.click()
   anchor.remove()
   URL.revokeObjectURL(url)
+}
+
+function downloadTextFile(filename: string, content: string, mime = 'application/xml') {
+  downloadBlob(filename, new Blob([content], { type: mime }))
 }
 
 async function ensureTenant() {
@@ -410,9 +443,31 @@ async function deleteReport(row: TaxReportRow) {
   }
 }
 
-function downloadXmlForRowFile(row: TaxReportRow, filename: string) {
-  const dispose = isDisposeFilename(filename, row)
-  const breakdown = dispose ? disposeItemsFromBreakdown(row.volume_breakdown) : summaryItemsFromBreakdown(row.volume_breakdown)
+async function downloadXmlForRowFile(row: TaxReportRow, file: TaxReportStoredFile) {
+  if (file.storageBucket && file.storagePath) {
+    try {
+      const blob = await downloadStoredTaxReportFile({ supabase, file })
+      downloadBlob(file.fileName, blob)
+      return
+    } catch (err) {
+      console.error(err)
+      toast.error(err instanceof Error ? err.message : String(err))
+      return
+    }
+  }
+
+  const dispose =
+    file.fileType === 'tax_report_dispose_xml' ||
+    (file.fileType === 'legacy' && isDisposeFilename(file.fileName, row))
+  const fileType = inferStoredFileType(file.fileName)
+  if (fileType === 'taxable_removal_excel') {
+    toast.info(t('taxReport.fileUnavailable'))
+    return
+  }
+
+  const breakdown = dispose
+    ? disposeItemsFromBreakdown(row.volume_breakdown)
+    : summaryItemsFromBreakdown(row.volume_breakdown)
   if (!breakdown.length) {
     toast.info(t('taxReport.emptyBreakdown'))
     return
@@ -427,7 +482,7 @@ function downloadXmlForRowFile(row: TaxReportRow, filename: string) {
       taxMonth: row.tax_month,
       breakdown,
     })
-    downloadTextFile(filename || buildXmlFilename(row.tax_type, row.tax_year, row.tax_month), xml)
+    downloadTextFile(file.fileName, xml)
   } catch (err) {
     toast.error(t('taxReport.templateMissing'))
     console.error(err)

@@ -24,12 +24,10 @@
               <select
                 v-model="form.tax_type"
                 class="h-[40px] w-full rounded border bg-white px-3"
-                :disabled="editing"
-                @change="handlePeriodChange"
+                disabled
               >
                 <option v-for="type in taxTypeOptions" :key="type" :value="type">{{ taxTypeLabel(type) }}</option>
               </select>
-              <p v-if="errors.tax_type" class="mt-1 text-xs text-red-600">{{ errors.tax_type }}</p>
             </div>
             <div>
               <label class="mb-1 block text-sm text-gray-600">
@@ -40,10 +38,8 @@
                 type="number"
                 min="2000"
                 class="h-[40px] w-full rounded border px-3"
-                :disabled="editing"
-                @change="handlePeriodChange"
+                disabled
               />
-              <p v-if="errors.tax_year" class="mt-1 text-xs text-red-600">{{ errors.tax_year }}</p>
             </div>
             <div v-if="form.tax_type === 'monthly'">
               <label class="mb-1 block text-sm text-gray-600">
@@ -52,12 +48,10 @@
               <select
                 v-model.number="form.tax_month"
                 class="h-[40px] w-full rounded border bg-white px-3"
-                :disabled="editing"
-                @change="handlePeriodChange"
+                disabled
               >
                 <option v-for="month in monthOptions" :key="month" :value="month">{{ month }}</option>
               </select>
-              <p v-if="errors.tax_month" class="mt-1 text-xs text-red-600">{{ errors.tax_month }}</p>
             </div>
             <div>
               <label class="mb-1 block text-sm text-gray-600">
@@ -79,8 +73,8 @@
           <section class="space-y-3">
             <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
               <div>
-                <h2 class="text-base font-semibold">{{ t('taxReport.sections.summary.title') }}</h2>
-                <p class="text-xs text-gray-500">{{ t('taxReport.sections.summary.subtitle') }}</p>
+                <h2 class="text-base font-semibold">{{ t('taxReportEditor.sections.movement.title') }}</h2>
+                <p class="text-xs text-gray-500">{{ t('taxReportEditor.sections.movement.subtitle') }}</p>
               </div>
               <div class="flex flex-wrap items-center gap-2">
                 <button
@@ -99,15 +93,35 @@
               <table class="min-w-full text-sm">
                 <thead class="bg-white text-xs uppercase text-gray-500">
                   <tr>
-                    <th class="px-3 py-2 text-left">{{ t('taxReport.breakdown.columns.movementType') }}</th>
-                    <th class="px-3 py-2 text-left">{{ t('taxReport.breakdown.columns.category') }}</th>
-                    <th class="px-3 py-2 text-left">{{ t('taxReport.breakdown.columns.abv') }}</th>
-                    <th class="px-3 py-2 text-right">{{ t('taxReport.breakdown.columns.volume') }}</th>
+                    <th class="px-3 py-2 text-left">
+                      <button class="inline-flex items-center gap-1 hover:text-gray-700" type="button" @click="sortMovementTable('taxEvent')">
+                        <span>{{ t('taxReportEditor.columns.taxEvent') }}</span>
+                        <span>{{ movementSortIndicator('taxEvent') }}</span>
+                      </button>
+                    </th>
+                    <th class="px-3 py-2 text-left">
+                      <button class="inline-flex items-center gap-1 hover:text-gray-700" type="button" @click="sortMovementTable('category')">
+                        <span>{{ t('taxReport.breakdown.columns.category') }}</span>
+                        <span>{{ movementSortIndicator('category') }}</span>
+                      </button>
+                    </th>
+                    <th class="px-3 py-2 text-left">
+                      <button class="inline-flex items-center gap-1 hover:text-gray-700" type="button" @click="sortMovementTable('abv')">
+                        <span>{{ t('taxReport.breakdown.columns.abv') }}</span>
+                        <span>{{ movementSortIndicator('abv') }}</span>
+                      </button>
+                    </th>
+                    <th class="px-3 py-2 text-right">
+                      <button class="inline-flex items-center gap-1 hover:text-gray-700" type="button" @click="sortMovementTable('volume')">
+                        <span>{{ t('taxReport.breakdown.columns.volume') }}</span>
+                        <span>{{ movementSortIndicator('volume') }}</span>
+                      </button>
+                    </th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
                   <tr v-for="(item, index) in reportBreakdown" :key="item.key">
-                    <td class="px-3 py-2 text-gray-700">{{ movementTypeLabel(item.move_type) }}</td>
+                    <td class="px-3 py-2 text-gray-700">{{ breakdownMovementLabel(item) }}</td>
                     <td class="px-3 py-2 text-gray-700">{{ item.categoryName }}</td>
                     <td class="px-3 py-2">
                       <input
@@ -162,7 +176,7 @@
               <table class="min-w-full text-sm">
                 <thead class="bg-white text-xs uppercase text-gray-500">
                   <tr>
-                    <th class="px-3 py-2 text-left">{{ t('taxReport.breakdown.columns.movementType') }}</th>
+                    <th class="px-3 py-2 text-left">{{ t('taxReportEditor.columns.taxEvent') }}</th>
                     <th class="px-3 py-2 text-left">{{ t('taxReport.breakdown.columns.category') }}</th>
                     <th class="px-3 py-2 text-left">{{ t('taxReport.breakdown.columns.abv') }}</th>
                     <th class="px-3 py-2 text-right">{{ t('taxReport.breakdown.columns.volume') }}</th>
@@ -170,7 +184,7 @@
                 </thead>
                 <tbody class="divide-y divide-gray-100">
                   <tr v-for="(item, index) in disposeBreakdown" :key="item.key">
-                    <td class="px-3 py-2 text-gray-700">{{ movementTypeLabel(item.move_type) }}</td>
+                    <td class="px-3 py-2 text-gray-700">{{ breakdownMovementLabel(item) }}</td>
                     <td class="px-3 py-2 text-gray-700">{{ item.categoryName }}</td>
                     <td class="px-3 py-2">
                       <input
@@ -202,13 +216,35 @@
           </section>
 
           <section class="space-y-3">
-            <label class="block text-sm text-gray-600">{{ t('taxReport.form.xmlFiles') }}</label>
-            <textarea
-              v-model.trim="form.report_files"
-              rows="3"
-              class="w-full rounded border px-3 py-2"
-              :placeholder="t('taxReport.form.xmlPlaceholder')"
-            ></textarea>
+            <div>
+              <h2 class="text-base font-semibold">{{ t('taxReportEditor.sections.files.title') }}</h2>
+              <p class="text-xs text-gray-500">{{ t('taxReportEditor.sections.files.subtitle') }}</p>
+            </div>
+            <div class="space-y-2 rounded border bg-gray-50 p-3">
+              <div
+                v-for="file in displayReportFiles"
+                :key="`${file.fileType}-${file.fileName}`"
+                class="flex flex-col gap-2 rounded border bg-white px-3 py-2 text-sm md:flex-row md:items-center md:justify-between"
+              >
+                <div class="min-w-0">
+                  <div class="truncate font-medium text-gray-800">{{ file.fileName }}</div>
+                  <div class="text-xs text-gray-500">
+                    {{ file.saved ? t('taxReportEditor.sections.files.saved') : t('taxReportEditor.sections.files.pending') }}
+                  </div>
+                </div>
+                <button
+                  v-if="file.saved"
+                  class="rounded border px-3 py-1.5 text-xs hover:bg-gray-50"
+                  type="button"
+                  @click="downloadSavedReportFile(file)"
+                >
+                  {{ t('taxReportEditor.sections.files.download') }}
+                </button>
+              </div>
+              <p v-if="displayReportFiles.length === 0" class="text-xs text-gray-400">
+                {{ t('taxReportEditor.sections.files.empty') }}
+              </p>
+            </div>
             <label class="block text-sm text-gray-600">{{ t('taxReport.form.attachments') }}</label>
             <input type="file" multiple class="h-[40px] w-full rounded border px-3 py-2" @change="handleAttachmentUpload" />
             <div v-if="attachmentList.length" class="flex flex-wrap gap-2 text-xs">
@@ -259,18 +295,29 @@ import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { supabase } from '@/lib/supabase'
 import {
+  calculateTaxAmount,
+  calculateTaxTotalAmount,
+  buildTaxableRemovalExcelFilename,
   buildDisposeXmlFilename,
   buildXmlFilename,
   buildXmlPayload,
+  downloadStoredTaxReportFile,
   disposeItemsFromBreakdown,
+  type GeneratedTaxReportFile,
+  inferStoredFileType,
+  mergeStoredFiles,
   normalizeReport,
   parseFileList,
+  removeStoredTaxReportFiles,
+  resolveTaxEvent,
+  sortTaxVolumeItems,
   summaryItemsFromBreakdown,
+  type TaxReportStoredFile,
+  uploadGeneratedTaxReportFiles,
   type JsonMap,
   type TaxVolumeItem,
 } from '@/lib/taxReport'
 import {
-  buildTaxableRemovalMonthFileName,
   businessYearForDate,
   createTaxableRemovalMonthWorkbookBlob,
   loadTaxableRemovalDetailRows,
@@ -290,10 +337,23 @@ interface TaxRateRecord {
   expireDate: Date | null
 }
 
+interface RuleLabel {
+  ja?: string | null
+  en?: string | null
+}
+
+interface MovementRules {
+  tax_event_labels?: Record<string, RuleLabel>
+}
+
+type MovementSortKey = 'taxEvent' | 'category' | 'abv' | 'volume'
+type MovementSortDirection = 'asc' | 'desc'
+
 interface MovementHeader {
   id: string
   movement_at: string | null
   doc_type: string
+  meta?: JsonMap | null
 }
 
 interface MovementLine {
@@ -349,13 +409,13 @@ const router = useRouter()
 const loadingInitial = ref(false)
 const saving = ref(false)
 const generating = ref(false)
-const taxableRemovalLoading = ref(false)
 const templateXml = ref('')
 const tenantId = ref<string | null>(null)
 
 const categories = ref<CategoryRow[]>([])
 const uoms = ref<Array<{ id: string; code: string | null }>>([])
 const taxRateIndex = ref<Record<string, TaxRateRecord[]>>({})
+const movementRules = ref<MovementRules | null>(null)
 
 const form = reactive({
   id: '',
@@ -363,7 +423,6 @@ const form = reactive({
   tax_year: new Date().getFullYear(),
   tax_month: new Date().getMonth() + 1,
   status: 'draft',
-  report_files: '',
   attachment_files: '',
 })
 
@@ -375,6 +434,14 @@ const summaryXmlUrl = ref('')
 const summaryXmlName = ref('')
 const disposeXmlUrl = ref('')
 const disposeXmlName = ref('')
+const storedReportFiles = ref<TaxReportStoredFile[]>([])
+const movementSort = reactive<{
+  key: MovementSortKey
+  direction: MovementSortDirection
+}>({
+  key: 'taxEvent',
+  direction: 'asc',
+})
 
 const editing = computed(() => typeof route.params.id === 'string' && route.params.id.length > 0)
 const pageTitle = computed(() => (editing.value ? t('taxReportEditor.editTitle') : t('taxReportEditor.newTitle')))
@@ -385,6 +452,57 @@ const currencyFormatter = computed(
   () => new Intl.NumberFormat(locale.value, { style: 'currency', currency: 'JPY', maximumFractionDigits: 0 }),
 )
 const attachmentList = computed(() => parseFileList(form.attachment_files))
+const expectedGeneratedFiles = computed(() => {
+  const files: Array<{ fileName: string; fileType: GeneratedTaxReportFile['fileType'] }> = []
+  if (reportBreakdown.value.length > 0) {
+    files.push({
+      fileName: buildXmlFilename(form.tax_type, form.tax_year, form.tax_month),
+      fileType: 'tax_report_xml',
+    })
+  }
+  if (disposeBreakdown.value.length > 0) {
+    files.push({
+      fileName: buildDisposeXmlFilename(form.tax_type, form.tax_year, form.tax_month),
+      fileType: 'tax_report_dispose_xml',
+    })
+  }
+  if (form.tax_type === 'monthly' && form.tax_month) {
+    files.push({
+      fileName: buildTaxableRemovalExcelFilename(form.tax_year, form.tax_month),
+      fileType: 'taxable_removal_excel',
+    })
+  }
+  return files
+})
+const displayReportFiles = computed(() => {
+  type DisplayReportFile = {
+    fileName: string
+    fileType: string
+    saved: boolean
+    stored: TaxReportStoredFile | null
+  }
+  const storedByType = new Map(storedReportFiles.value.map((file) => [String(file.fileType), file]))
+  const rows: DisplayReportFile[] = expectedGeneratedFiles.value.map((file) => ({
+    fileName: file.fileName,
+    fileType: file.fileType,
+    saved: storedByType.has(file.fileType),
+    stored: storedByType.get(file.fileType) ?? null,
+  }))
+
+  storedReportFiles.value.forEach((file) => {
+    const alreadyIncluded = rows.some((row) => row.fileType === file.fileType)
+    if (!alreadyIncluded) {
+      rows.push({
+        fileName: file.fileName,
+        fileType: file.fileType,
+        saved: true,
+        stored: file,
+      })
+    }
+  })
+
+  return rows.sort((a, b) => a.fileName.localeCompare(b.fileName))
+})
 const taxableRemovalExportLabels = computed<TaxableRemovalExportLabels>(() => ({
   summaryTitle: t('taxableRemovalReport.summary.title'),
   tableTitle: t('taxableRemovalReport.table.title'),
@@ -431,11 +549,93 @@ function taxTypeLabel(taxType: string) {
   return typeof label === 'string' ? label : taxType
 }
 
-function movementTypeLabel(value: string) {
+function xmlMovementTypeLabel(value: string) {
   const map = tm('taxReport.movementTypeMap')
   if (!map || typeof map !== 'object') return value
   const label = (map as Record<string, unknown>)[value]
   return typeof label === 'string' ? label : value
+}
+
+function pickLabel(label: RuleLabel | null | undefined, fallback: string) {
+  if (!label) return fallback
+  const isJa = String(locale.value || '')
+    .toLowerCase()
+    .startsWith('ja')
+  if (isJa) return label.ja || label.en || fallback
+  return label.en || label.ja || fallback
+}
+
+function mapRuleLabel(map: Record<string, RuleLabel> | undefined, code: string | null | undefined) {
+  if (!code) return '—'
+  return pickLabel(map?.[code], code)
+}
+
+function taxEventLabel(value: string | null | undefined) {
+  return mapRuleLabel(movementRules.value?.tax_event_labels, value)
+}
+
+function breakdownMovementLabel(item: TaxVolumeItem) {
+  const actualTaxEvent = resolveTaxEvent(item.move_type, item.tax_event)
+  return taxEventLabel(actualTaxEvent)
+}
+
+function movementSortIndicator(key: MovementSortKey) {
+  if (movementSort.key !== key) return ''
+  return movementSort.direction === 'asc' ? '↑' : '↓'
+}
+
+function compareNullableNumbers(
+  left: number | null | undefined,
+  right: number | null | undefined,
+  direction: MovementSortDirection,
+) {
+  const a = Number.isFinite(left) ? Number(left) : null
+  const b = Number.isFinite(right) ? Number(right) : null
+  if (a == null && b == null) return 0
+  if (a == null) return 1
+  if (b == null) return -1
+  return direction === 'asc' ? a - b : b - a
+}
+
+function compareStrings(left: string, right: string, direction: MovementSortDirection) {
+  const result = left.localeCompare(right, locale.value)
+  return direction === 'asc' ? result : -result
+}
+
+function sortMovementBreakdown(
+  items: TaxVolumeItem[],
+  key = movementSort.key,
+  direction = movementSort.direction,
+) {
+  items.sort((a, b) => {
+    if (key === 'taxEvent') {
+      const result = compareStrings(breakdownMovementLabel(a), breakdownMovementLabel(b), direction)
+      if (result !== 0) return result
+    } else if (key === 'category') {
+      const result = compareStrings(a.categoryName, b.categoryName, direction)
+      if (result !== 0) return result
+    } else if (key === 'abv') {
+      const result = compareNullableNumbers(a.abv, b.abv, direction)
+      if (result !== 0) return result
+    } else if (key === 'volume') {
+      const result = compareNullableNumbers(a.volume_l, b.volume_l, direction)
+      if (result !== 0) return result
+    }
+
+    const categoryResult = compareStrings(a.categoryName, b.categoryName, 'asc')
+    if (categoryResult !== 0) return categoryResult
+    return compareNullableNumbers(a.abv, b.abv, 'asc')
+  })
+}
+
+function sortMovementTable(key: MovementSortKey) {
+  if (movementSort.key === key) {
+    movementSort.direction = movementSort.direction === 'asc' ? 'desc' : 'asc'
+  } else {
+    movementSort.key = key
+    movementSort.direction = 'asc'
+  }
+  sortMovementBreakdown(reportBreakdown.value)
 }
 
 function formatCurrency(value: number | null | undefined) {
@@ -452,11 +652,7 @@ function isSummaryDocType(value: string): value is (typeof SUMMARY_DOC_TYPES)[nu
 }
 
 function recalcTotalTax() {
-  totalTaxAmount.value = summaryItemsFromBreakdown(reportBreakdown.value).reduce((sum, item) => {
-    const volume = Number.isFinite(item.volume_l) ? item.volume_l : 0
-    const rate = item.tax_rate ?? 0
-    return sum + volume * rate
-  }, 0)
+  totalTaxAmount.value = calculateTaxTotalAmount(reportBreakdown.value)
 }
 
 function handleBreakdownChange(index: number) {
@@ -488,6 +684,11 @@ function setXmlLink(kind: 'summary' | 'dispose', name: string, xml: string) {
   }
 }
 
+function resolveMetaString(meta: JsonMap | null | undefined, key: string) {
+  const value = meta?.[key]
+  return typeof value === 'string' && value.trim() ? value.trim() : null
+}
+
 function downloadBlob(filename: string, blob: Blob) {
   const url = URL.createObjectURL(blob)
   const anchor = document.createElement('a')
@@ -501,6 +702,68 @@ function downloadBlob(filename: string, blob: Blob) {
 
 function downloadTextFile(filename: string, content: string, mime = 'application/xml') {
   downloadBlob(filename, new Blob([content], { type: mime }))
+}
+
+function createReportId() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+
+  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+    const bytes = crypto.getRandomValues(new Uint8Array(16))
+    bytes[6] = (bytes[6] & 0x0f) | 0x40
+    bytes[8] = (bytes[8] & 0x3f) | 0x80
+    const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('')
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
+  }
+
+  const timestamp = Date.now().toString(16).padStart(12, '0').slice(-12)
+  const randomHex = Array.from({ length: 20 }, () => Math.floor(Math.random() * 16).toString(16)).join('')
+  const hex = `${randomHex}${timestamp}`.slice(0, 32)
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20)}`
+}
+
+async function downloadSavedReportFile(entry: {
+  stored: TaxReportStoredFile | null
+  fileName: string
+}) {
+  if (!entry.stored) return
+  if (!entry.stored.storageBucket || !entry.stored.storagePath) {
+    try {
+      const fileType = inferStoredFileType(entry.fileName)
+      if (fileType === 'tax_report_xml') {
+        const summaryFile = buildSummaryXmlFile()
+        if (summaryFile) {
+          const xml = await summaryFile.blob.text()
+          downloadTextFile(summaryFile.fileName, xml)
+        }
+        return
+      }
+      if (fileType === 'tax_report_dispose_xml') {
+        const disposeFile = buildDisposeXmlFile()
+        if (disposeFile) {
+          const xml = await disposeFile.blob.text()
+          downloadTextFile(disposeFile.fileName, xml)
+        }
+        return
+      }
+      toast.info(t('taxReport.fileUnavailable'))
+    } catch (err) {
+      console.error(err)
+      toast.error(t('taxReport.templateMissing'))
+    }
+    return
+  }
+  try {
+    const blob = await downloadStoredTaxReportFile({
+      supabase,
+      file: entry.stored,
+    })
+    downloadBlob(entry.fileName, blob)
+  } catch (err) {
+    console.error(err)
+    toast.error(err instanceof Error ? err.message : String(err))
+  }
 }
 
 function toNullableNumber(value: unknown) {
@@ -622,6 +885,14 @@ async function loadTaxRates() {
     .eq('is_active', true)
   if (error) throw error
   buildTaxRateIndex((data ?? []) as Array<{ spec?: Record<string, unknown> | null }>)
+}
+
+async function loadMovementRules() {
+  const { data, error } = await supabase.rpc('movement_get_rules', {
+    p_movement_intent: null,
+  })
+  if (error) throw error
+  movementRules.value = ((Array.isArray(data) ? data[0] : data) ?? null) as MovementRules | null
 }
 
 function applicableTaxRate(categoryCode: string | null | undefined, dateStr: string | null | undefined) {
@@ -759,7 +1030,7 @@ async function generateReportForPeriod(taxType: string, year: number, month: num
 
     const { data: movementHeaders, error: headerError } = await supabase
       .from('inv_movements')
-      .select('id, movement_at, doc_type')
+      .select('id, movement_at, doc_type, meta')
       .eq('tenant_id', tenant)
       .in('doc_type', REPORT_DOC_TYPES as unknown as string[])
       .gte('movement_at', startDate)
@@ -774,7 +1045,20 @@ async function generateReportForPeriod(taxType: string, year: number, month: num
       return
     }
 
-    const headerMap = new Map(headers.map((row) => [row.id, { movementAt: row.movement_at, docType: row.doc_type }]))
+    const headerMap = new Map(
+      headers.map((row) => [
+        row.id,
+        {
+          movementAt: row.movement_at,
+          docType: row.doc_type,
+          taxEvent: resolveTaxEvent(
+            row.doc_type,
+            resolveMetaString(row.meta, 'tax_event'),
+            resolveMetaString(row.meta, 'tax_decision_code'),
+          ),
+        },
+      ]),
+    )
     const movementIds = headers.map((row) => row.id)
 
     const { data: movementLines, error: lineError } = await supabase
@@ -826,6 +1110,7 @@ async function generateReportForPeriod(taxType: string, year: number, month: num
       const header = headerMap.get(line.movement_id)
       const movementAt = header?.movementAt ?? null
       const moveType = header?.docType ?? 'unknown'
+      const taxEvent = header?.taxEvent ?? resolveTaxEvent(moveType)
       const packageRow = line.package_id ? packageMap.get(line.package_id) : undefined
       const batchId = line.batch_id ?? null
       const batchInfo = batchId ? batchMap.get(batchId) : undefined
@@ -852,7 +1137,7 @@ async function generateReportForPeriod(taxType: string, year: number, month: num
 
       if (!volume || Number.isNaN(volume)) return
 
-      const key = `${moveType}-${categoryId}-${abv ?? 'na'}`
+      const key = `${moveType}-${taxEvent ?? 'unknown'}-${categoryId}-${abv ?? 'na'}`
       const existing = breakdownMap.get(key)
       if (existing) {
         existing.volume_l += volume
@@ -860,6 +1145,7 @@ async function generateReportForPeriod(taxType: string, year: number, month: num
         breakdownMap.set(key, {
           key,
           move_type: moveType,
+          tax_event: taxEvent,
           categoryId,
           categoryCode,
           categoryName,
@@ -870,23 +1156,23 @@ async function generateReportForPeriod(taxType: string, year: number, month: num
       }
 
       const taxRate = applicableTaxRate(categoryCode, movementAt)
+      const lineTaxAmount = calculateTaxAmount(moveType, volume, taxRate, taxEvent)
       if (isSummaryDocType(moveType)) {
-        totalTax += volume * taxRate
+        totalTax += lineTaxAmount
       }
-      taxTotalMap.set(key, (taxTotalMap.get(key) ?? 0) + volume * taxRate)
+      taxTotalMap.set(key, (taxTotalMap.get(key) ?? 0) + lineTaxAmount)
     })
 
     breakdownMap.forEach((item, key) => {
       const taxTotal = taxTotalMap.get(key) ?? 0
-      item.tax_rate = item.volume_l > 0 ? taxTotal / item.volume_l : 0
+      const direction = Math.sign(calculateTaxAmount(item.move_type, item.volume_l, 1, item.tax_event))
+      item.tax_rate = item.volume_l > 0 && direction !== 0 ? (taxTotal * 1000) / (item.volume_l * direction) : 0
     })
 
-    const generatedItems = Array.from(breakdownMap.values()).sort((a, b) => {
-      if (a.categoryName !== b.categoryName) return a.categoryName.localeCompare(b.categoryName)
-      return (a.abv ?? 0) - (b.abv ?? 0)
-    })
+    const generatedItems = sortTaxVolumeItems(Array.from(breakdownMap.values()))
     reportBreakdown.value = summaryItemsFromBreakdown(generatedItems)
     disposeBreakdown.value = disposeItemsFromBreakdown(generatedItems)
+    sortMovementBreakdown(reportBreakdown.value)
     totalTaxAmount.value = totalTax
   } catch (err) {
     console.error(err)
@@ -894,15 +1180,6 @@ async function generateReportForPeriod(taxType: string, year: number, month: num
   } finally {
     generating.value = false
   }
-}
-
-async function handlePeriodChange() {
-  if (editing.value) return
-  if (!form.tax_year) return
-  if (form.tax_type === 'monthly' && !form.tax_month) return
-  if (form.tax_type === 'yearly') form.tax_month = 12
-  await generateReportForPeriod(form.tax_type, form.tax_year, form.tax_month)
-  if (form.tax_type === 'monthly') await generateTaxableRemovalExcelForCurrentPeriod()
 }
 
 function validateForm() {
@@ -915,39 +1192,119 @@ function validateForm() {
   return Object.keys(errors).length === 0
 }
 
+function buildSummaryXmlFile() {
+  const summaryBreakdown = summaryItemsFromBreakdown(reportBreakdown.value)
+  if (summaryBreakdown.length === 0) return null
+  const fileName = buildXmlFilename(form.tax_type, form.tax_year, form.tax_month)
+  const content = buildXmlPayload({
+    templateXml: templateXml.value,
+    movementTypeLabel: xmlMovementTypeLabel,
+    taxType: form.tax_type,
+    taxYear: form.tax_year,
+    taxMonth: form.tax_month,
+    breakdown: summaryBreakdown,
+  })
+  return {
+    blob: new Blob([content], { type: 'application/xml' }),
+    fileName,
+    fileType: 'tax_report_xml' as const,
+    generatedAt: new Date().toISOString(),
+    mimeType: 'application/xml',
+  }
+}
+
+function buildDisposeXmlFile() {
+  if (disposeBreakdown.value.length === 0) return null
+  const fileName = buildDisposeXmlFilename(form.tax_type, form.tax_year, form.tax_month)
+  const content = buildXmlPayload({
+    templateXml: templateXml.value,
+    movementTypeLabel: xmlMovementTypeLabel,
+    taxType: form.tax_type,
+    taxYear: form.tax_year,
+    taxMonth: form.tax_month,
+    breakdown: disposeBreakdown.value,
+  })
+  return {
+    blob: new Blob([content], { type: 'application/xml' }),
+    fileName,
+    fileType: 'tax_report_dispose_xml' as const,
+    generatedAt: new Date().toISOString(),
+    mimeType: 'application/xml',
+  }
+}
+
+async function buildTaxableRemovalExcelFile() {
+  if (form.tax_type !== 'monthly' || !form.tax_year || !form.tax_month) return null
+
+  const tenant = await ensureTenant()
+  const detailRows = await loadTaxableRemovalDetailRows({
+    supabase,
+    tenantId: tenant,
+    locale: locale.value,
+    removalTypeLabel: t('taxableRemovalReport.defaults.taxableRemovalType'),
+  })
+  const businessYear =
+    businessYearForDate(`${form.tax_year}-${String(form.tax_month).padStart(2, '0')}-01`) ??
+    form.tax_year
+  const fileName = buildTaxableRemovalExcelFilename(form.tax_year, form.tax_month)
+  const createdAt = new Date()
+  const blob = createTaxableRemovalMonthWorkbookBlob({
+    detailRows,
+    businessYear,
+    month: form.tax_month,
+    labels: taxableRemovalExportLabels.value,
+    locale: locale.value,
+    createdAt,
+    creator: 'beeradmin_tail',
+  })
+
+  return {
+    blob,
+    fileName,
+    fileType: 'taxable_removal_excel' as const,
+    generatedAt: createdAt.toISOString(),
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  }
+}
+
 async function saveReport() {
   if (!validateForm()) return
+  let uploadedFiles: TaxReportStoredFile[] = []
   try {
     saving.value = true
     const tenant = await ensureTenant()
+    const reportId = form.id || createReportId()
     const isNew = !editing.value
     const status = isNew ? 'draft' : form.status
     if (form.tax_type === 'yearly') form.tax_month = 12
+    const generatedFiles: GeneratedTaxReportFile[] = []
 
-    if (isNew) {
-      const filename = buildXmlFilename(form.tax_type, form.tax_year, form.tax_month)
-      const fileSet = new Set(parseFileList(form.report_files))
-      if (!fileSet.has(filename)) {
-        try {
-          const xml = buildXmlPayload({
-            templateXml: templateXml.value,
-            movementTypeLabel,
-            taxType: form.tax_type,
-            taxYear: form.tax_year,
-            taxMonth: form.tax_month,
-            breakdown: reportBreakdown.value,
-          })
-          downloadTextFile(filename, xml)
-          fileSet.add(filename)
-          form.report_files = Array.from(fileSet).join('\n')
-        } catch (err) {
-          toast.error(t('taxReport.templateMissing'))
-          console.error(err)
-        }
-      }
-    }
+    const summaryFile = buildSummaryXmlFile()
+    if (summaryFile) generatedFiles.push(summaryFile)
+
+    const disposeFile = buildDisposeXmlFile()
+    if (disposeFile) generatedFiles.push(disposeFile)
+
+    const taxableRemovalFile = await buildTaxableRemovalExcelFile()
+    if (taxableRemovalFile) generatedFiles.push(taxableRemovalFile)
+
+    const activeFileTypes = new Set(generatedFiles.map((file) => file.fileType))
+    const obsoleteStoredFiles = storedReportFiles.value.filter(
+      (file) => !activeFileTypes.has(file.fileType as GeneratedTaxReportFile['fileType']),
+    )
+    const retainedStoredFiles = storedReportFiles.value.filter(
+      (file) => activeFileTypes.has(file.fileType as GeneratedTaxReportFile['fileType']),
+    )
+
+    uploadedFiles = await uploadGeneratedTaxReportFiles({
+      supabase,
+      files: generatedFiles,
+      reportId,
+      tenantId: tenant,
+    })
 
     const payload = {
+      id: reportId,
       tenant_id: tenant,
       tax_type: form.tax_type,
       tax_year: form.tax_year,
@@ -955,7 +1312,7 @@ async function saveReport() {
       status,
       total_tax_amount: totalTaxAmount.value,
       volume_breakdown: [...reportBreakdown.value, ...disposeBreakdown.value],
-      report_files: parseFileList(form.report_files),
+      report_files: mergeStoredFiles(retainedStoredFiles, uploadedFiles),
       attachment_files: parseFileList(form.attachment_files),
     }
 
@@ -967,8 +1324,25 @@ async function saveReport() {
       if (error) throw error
     }
 
+    storedReportFiles.value = payload.report_files
+    if (obsoleteStoredFiles.length > 0) {
+      try {
+        await removeStoredTaxReportFiles({
+          supabase,
+          files: obsoleteStoredFiles,
+        })
+      } catch (cleanupErr) {
+        console.warn('Failed to remove obsolete tax report files from storage', cleanupErr)
+      }
+    }
     await router.push({ name: 'TaxReport' })
   } catch (err) {
+    if (uploadedFiles.length > 0) {
+      await removeStoredTaxReportFiles({
+        supabase,
+        files: uploadedFiles,
+      })
+    }
     console.error(err)
     toast.error(err instanceof Error ? err.message : String(err))
   } finally {
@@ -976,93 +1350,48 @@ async function saveReport() {
   }
 }
 
-function createXmlForSummary() {
-  const summaryBreakdown = summaryItemsFromBreakdown(reportBreakdown.value)
-  if (summaryBreakdown.length === 0) {
+async function createXmlForSummary() {
+  const summaryFile = buildSummaryXmlFile()
+  if (!summaryFile) {
     toast.info(t('taxReport.emptyBreakdown'))
     return
   }
-  const filename = buildXmlFilename(form.tax_type, form.tax_year, form.tax_month)
+
   try {
-    const xml = buildXmlPayload({
-      templateXml: templateXml.value,
-      movementTypeLabel,
-      taxType: form.tax_type,
-      taxYear: form.tax_year,
-      taxMonth: form.tax_month,
-      breakdown: summaryBreakdown,
-    })
-    downloadTextFile(filename, xml)
-    setXmlLink('summary', filename, xml)
+    const xml = await summaryFile.blob.text()
+    downloadTextFile(summaryFile.fileName, xml)
+    setXmlLink('summary', summaryFile.fileName, xml)
   } catch (err) {
     toast.error(t('taxReport.templateMissing'))
     console.error(err)
-    return
   }
-
-  const files = new Set(parseFileList(form.report_files))
-  files.add(filename)
-  form.report_files = Array.from(files).join('\n')
 }
 
-function createXmlForDispose() {
-  if (disposeBreakdown.value.length === 0) {
+async function createXmlForDispose() {
+  const disposeFile = buildDisposeXmlFile()
+  if (!disposeFile) {
     toast.info(t('taxReport.emptyBreakdown'))
     return
   }
-  const filename = buildDisposeXmlFilename(form.tax_type, form.tax_year, form.tax_month)
+
   try {
-    const xml = buildXmlPayload({
-      templateXml: templateXml.value,
-      movementTypeLabel,
-      taxType: form.tax_type,
-      taxYear: form.tax_year,
-      taxMonth: form.tax_month,
-      breakdown: disposeBreakdown.value,
-    })
-    downloadTextFile(filename, xml)
-    setXmlLink('dispose', filename, xml)
+    const xml = await disposeFile.blob.text()
+    downloadTextFile(disposeFile.fileName, xml)
+    setXmlLink('dispose', disposeFile.fileName, xml)
   } catch (err) {
     toast.error(t('taxReport.templateMissing'))
     console.error(err)
-    return
   }
-
-  const files = new Set(parseFileList(form.report_files))
-  files.add(filename)
-  form.report_files = Array.from(files).join('\n')
 }
 
 async function generateTaxableRemovalExcelForCurrentPeriod() {
   if (form.tax_type !== 'monthly' || !form.tax_year || !form.tax_month) return
 
   try {
-    taxableRemovalLoading.value = true
-    const tenant = await ensureTenant()
-    const detailRows = await loadTaxableRemovalDetailRows({
-      supabase,
-      tenantId: tenant,
-      locale: locale.value,
-      removalTypeLabel: t('taxableRemovalReport.defaults.taxableRemovalType'),
-    })
-    const businessYear = businessYearForDate(`${form.tax_year}-${String(form.tax_month).padStart(2, '0')}-01`) ?? form.tax_year
-    const fileName = buildTaxableRemovalMonthFileName(form.tax_year, form.tax_month)
-    const createdAt = new Date()
-    const blob = createTaxableRemovalMonthWorkbookBlob({
-      detailRows,
-      businessYear,
-      month: form.tax_month,
-      labels: taxableRemovalExportLabels.value,
-      locale: locale.value,
-      createdAt,
-      creator: 'beeradmin_tail',
-    })
-    downloadBlob(fileName, blob)
+    await buildTaxableRemovalExcelFile()
   } catch (err) {
     console.error(err)
     toast.error(t('taxableRemovalReport.export.failed'))
-  } finally {
-    taxableRemovalLoading.value = false
   }
 }
 
@@ -1099,10 +1428,11 @@ async function loadExistingReport(id: string) {
   form.tax_year = row.tax_year
   form.tax_month = row.tax_month
   form.status = row.status
-  form.report_files = row.report_files.join('\n')
   form.attachment_files = row.attachment_files.join('\n')
-  reportBreakdown.value = summaryItemsFromBreakdown(row.volume_breakdown).map((item) => ({ ...item }))
-  disposeBreakdown.value = disposeItemsFromBreakdown(row.volume_breakdown).map((item) => ({ ...item }))
+  storedReportFiles.value = row.report_files
+  reportBreakdown.value = sortTaxVolumeItems(summaryItemsFromBreakdown(row.volume_breakdown)).map((item) => ({ ...item }))
+  disposeBreakdown.value = sortTaxVolumeItems(disposeItemsFromBreakdown(row.volume_breakdown)).map((item) => ({ ...item }))
+  sortMovementBreakdown(reportBreakdown.value)
   totalTaxAmount.value = row.total_tax_amount
 }
 
@@ -1128,7 +1458,7 @@ onMounted(async () => {
   try {
     loadingInitial.value = true
     await ensureTenant()
-    await Promise.all([loadCategories(), loadUoms(), loadTaxRates(), loadTemplate()])
+    await Promise.all([loadCategories(), loadUoms(), loadTaxRates(), loadTemplate(), loadMovementRules()])
     if (editing.value && typeof route.params.id === 'string') {
       await loadExistingReport(route.params.id)
     } else {

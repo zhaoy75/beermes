@@ -2435,7 +2435,8 @@
       "period": "対象期間",
       "status": "ステータス",
       "totalTax": "酒税額合計",
-      "productionVolume": "申告内訳（種別・ABV別）",
+      "productionVolume": "申告内訳（税務移出種別・ABV別）",
+      "reportFiles": "申告ファイル",
       "xmlFiles": "申告XML",
       "attachments": "添付ファイル"
     },
@@ -2466,6 +2467,7 @@
       "confirm": "生成"
     },
     "templateMissing": "XMLテンプレートが見つかりません。",
+    "fileUnavailable": "保存済みファイルが見つからないためダウンロードできません。",
     "generating": "申告データを生成中…",
     "abvUnknown": "ABV不明",
     "taxTypeMap": {
@@ -2479,6 +2481,14 @@
       "return": "戻入",
       "transfer": "社内移出",
       "waste": "廃棄",
+      "unknown": "不明"
+    },
+    "taxEventMap": {
+      "TAXABLE_REMOVAL": "課税移出",
+      "NON_TAXABLE_REMOVAL": "非課税移出",
+      "EXPORT_EXEMPT": "輸出免税",
+      "RETURN_TO_FACTORY": "戻入",
+      "NONE": "対象外",
       "unknown": "不明"
     },
     "breakdown": {
@@ -2518,6 +2528,23 @@
     "subtitle": "申告内容を確認・編集し、関連ファイルを生成します。",
     "actions": {
       "back": "一覧へ戻る"
+    },
+    "columns": {
+      "taxEvent": "税務移出種別"
+    },
+    "sections": {
+      "movement": {
+        "title": "移出・移入概要",
+        "subtitle": "申告対象の移動内訳を確認・編集します。"
+      },
+      "files": {
+        "title": "生成ファイル",
+        "subtitle": "保存時に Supabase Storage へ保存されるファイル一覧です。",
+        "saved": "保存済み",
+        "pending": "未保存",
+        "download": "ダウンロード",
+        "empty": "生成対象のファイルはまだありません。"
+      }
     }
   },
   "taxableRemovalReport": {

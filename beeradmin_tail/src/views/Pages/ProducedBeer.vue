@@ -369,12 +369,13 @@ const siteOptions = ref<SiteOption[]>([])
 const movementRules = ref<MovementRules | null>(null)
 
 const movementCards = ref<MovementCard[]>([])
+const defaultMovementDateFrom = oneMonthAgoDateInput()
 const movementFilters = reactive({
   beerName: '',
   category: '',
   packageType: '',
   batchNo: '',
-  dateFrom: '',
+  dateFrom: defaultMovementDateFrom,
   dateTo: '',
 })
 
@@ -457,6 +458,19 @@ const numberFormatter = computed(
 function formatNumber(value: number | null | undefined) {
   if (value == null || Number.isNaN(value)) return '—'
   return numberFormatter.value.format(value)
+}
+
+function oneMonthAgoDateInput() {
+  const date = new Date()
+  date.setMonth(date.getMonth() - 1)
+  return formatDateInput(date)
+}
+
+function formatDateInput(date: Date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 function formatVolumeNumberValue(value: number | null | undefined) {
@@ -1066,7 +1080,7 @@ function resetMovementFilters() {
   movementFilters.category = ''
   movementFilters.packageType = ''
   movementFilters.batchNo = ''
-  movementFilters.dateFrom = ''
+  movementFilters.dateFrom = defaultMovementDateFrom
   movementFilters.dateTo = ''
   movementTypeFilter.value = 'all'
 }

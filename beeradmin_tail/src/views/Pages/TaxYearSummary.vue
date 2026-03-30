@@ -90,7 +90,7 @@
                   <tr>
                     <th class="px-3 py-2 text-left">{{ t('taxYearSummary.batch') }}</th>
                     <th class="px-3 py-2 text-left">{{ t('taxYearSummary.category') }}</th>
-                    <th class="px-3 py-2 text-left">{{ t('taxYearSummary.fillDate') }}</th>
+                    <th class="px-3 py-2 text-left">{{ t('taxYearSummary.movementDate') }}</th>
                     <th class="px-3 py-2 text-right">{{ t('taxYearSummary.volumeShort') }}</th>
                     <th class="px-3 py-2 text-right">{{ t('taxYearSummary.taxShort') }}</th>
                   </tr>
@@ -99,7 +99,7 @@
                   <tr v-for="row in month.batches" :key="row.key" class="hover:bg-gray-50">
                     <td class="px-3 py-2 font-mono text-xs text-gray-700">{{ row.batchCode }}</td>
                     <td class="px-3 py-2 text-gray-700">{{ row.categoryName }}</td>
-                    <td class="px-3 py-2 text-gray-600">{{ formatDate(row.fillDate) }}</td>
+                    <td class="px-3 py-2 text-gray-600">{{ formatDate(row.movementDate) }}</td>
                     <td class="px-3 py-2 text-right font-semibold text-gray-800">{{ formatVolume(row.totalVolume) }}</td>
                     <td class="px-3 py-2 text-right font-semibold text-gray-800">{{ formatCurrency(row.totalTax) }}</td>
                   </tr>
@@ -129,6 +129,7 @@ import {
   loadAlcoholTypeReferenceData,
 } from '@/lib/alcoholTypeRegistry'
 import { supabase } from '@/lib/supabase'
+import { calculateTaxAmount, normalizeTaxEventValue, resolveTaxEvent } from '@/lib/taxReport'
 import { formatVolume as formatVolumeDisplay } from '@/lib/volumeFormat'
 
 Chart.register(...registerables)
@@ -167,6 +168,8 @@ interface MovementHeader {
   id: string
   movement_at: string | null
   doc_type: string
+  status: string | null
+  meta: Record<string, unknown> | null
 }
 
 interface MovementLine {
@@ -174,6 +177,7 @@ interface MovementLine {
   package_id: string | null
   batch_id: string | null
   qty: number | null
+  tax_rate: number | string | null
   uom_id: string | null
   meta: Record<string, unknown> | null
 }
@@ -221,7 +225,7 @@ interface MonthBatchRow {
   batchCode: string
   categoryId: string
   categoryName: string
-  fillDate: string
+  movementDate: string
   totalVolume: number
   totalTax: number
 }
@@ -454,11 +458,38 @@ function applicableTaxRate(categoryId: string | null | undefined, dateStr: strin
   return records[records.length - 1]?.taxrate ?? 0
 }
 
+function resolveMovementTaxEvent(header: MovementHeader) {
+  return resolveTaxEvent(
+    header.doc_type,
+    normalizeTaxEventValue(header.meta?.tax_event),
+    normalizeTaxEventValue(header.meta?.tax_decision_code),
+  )
+}
+
+function includeInYearSummary(taxEvent: string | null) {
+  return (
+    taxEvent === 'TAXABLE_REMOVAL' ||
+    taxEvent === 'RETURN_TO_FACTORY' ||
+    taxEvent === 'NON_TAXABLE_REMOVAL' ||
+    taxEvent === 'EXPORT_EXEMPT'
+  )
+}
+
+function resolveMovementTaxRate(
+  line: MovementLine,
+  header: MovementHeader,
+  categoryCode: string,
+) {
+  const explicitLineRate = toNumber(line.tax_rate)
+  if (explicitLineRate != null && explicitLineRate > 0) return explicitLineRate
+  return applicableTaxRate(categoryCode, header.movement_at)
+}
+
 async function loadMovementLines(movementIds: string[]) {
   if (movementIds.length === 0) return [] as MovementLine[]
   const { data, error } = await supabase
     .from('inv_movement_lines')
-    .select('movement_id, package_id, batch_id, qty, uom_id, meta')
+    .select('movement_id, package_id, batch_id, qty, tax_rate, uom_id, meta')
     .in('movement_id', movementIds)
   if (error) throw error
   return ((data ?? []) as MovementLine[]).filter((row) => row.package_id || row.batch_id)
@@ -563,9 +594,9 @@ async function loadSummary() {
 
     const { data, error } = await supabase
       .from('inv_movements')
-      .select('id, movement_at, doc_type')
+      .select('id, movement_at, doc_type, status, meta')
       .eq('tenant_id', tenant)
-      .eq('doc_type', 'production_receipt')
+      .neq('status', 'void')
       .gte('movement_at', startDate)
       .lt('movement_at', endDate)
 
@@ -625,6 +656,8 @@ function processMovementLines(
   rows.forEach((row) => {
     const header = headerMap.get(row.movement_id)
     if (!header?.movement_at) return
+    const taxEvent = resolveMovementTaxEvent(header)
+    if (!includeInYearSummary(taxEvent)) return
     const movementAt = header.movement_at
     const movementDate = new Date(movementAt)
     if (Number.isNaN(movementDate.getTime())) return
@@ -643,8 +676,8 @@ function processMovementLines(
     const volume = resolveLineVolume(row, packageRow)
     if (volume == null || volume <= 0) return
 
-    const taxRate = applicableTaxRate(categoryRecord?.code ?? rawCategoryId, movementAt)
-    const taxAmount = volume * taxRate
+    const taxRate = resolveMovementTaxRate(row, header, categoryRecord?.code ?? rawCategoryId)
+    const taxAmount = calculateTaxAmount(header.doc_type, volume, taxRate, taxEvent)
 
     const categoryEntry = categoryTotals.get(categoryId) || { volume: 0, tax: 0 }
     categoryEntry.volume += volume
@@ -664,7 +697,7 @@ function processMovementLines(
         batchCode: batchInfo?.batch_code ?? batchId,
         categoryId,
         categoryName,
-        fillDate: movementAt,
+        movementDate: movementAt,
         totalVolume: 0,
         totalTax: 0,
       }
@@ -672,8 +705,8 @@ function processMovementLines(
     }
     batchEntry.totalVolume += volume
     batchEntry.totalTax += taxAmount
-    if (movementDate < new Date(batchEntry.fillDate)) {
-      batchEntry.fillDate = movementAt
+    if (movementDate < new Date(batchEntry.movementDate)) {
+      batchEntry.movementDate = movementAt
     }
   })
 
@@ -693,7 +726,7 @@ function processMovementLines(
   for (let month = 0; month < 12; month += 1) {
     const batches = Array.from(monthBatchMap.values()).filter((row) => row.month === month)
     if (batches.length === 0) continue
-    batches.sort((a, b) => new Date(a.fillDate).getTime() - new Date(b.fillDate).getTime() || a.batchCode.localeCompare(b.batchCode))
+    batches.sort((a, b) => new Date(a.movementDate).getTime() - new Date(b.movementDate).getTime() || a.batchCode.localeCompare(b.batchCode))
     const subtotalVolume = batches.reduce((sum, row) => sum + row.totalVolume, 0)
     const subtotalTax = batches.reduce((sum, row) => sum + row.totalTax, 0)
     groups.push({

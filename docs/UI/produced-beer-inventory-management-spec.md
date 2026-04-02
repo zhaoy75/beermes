@@ -92,7 +92,7 @@
 ### Row Actions
 - Each inventory row must show:
   - `関連履歴` / `Show DAG`
-  - `移出取消` / `Cancel Removal`
+  - `国内移出完了` / `Cancel Removal`
 
 #### `関連履歴` / `Show DAG`
 - Purpose:
@@ -105,7 +105,7 @@
   - preferred read source is `public.lot_trace_full(p_lot_id uuid, p_max_depth int default 10)`
   - UI may render graph, table, or mixed representation as long as all related movement is traceable from the selected lot
 
-#### `移出取消` / `Cancel Removal`
+#### `国内移出完了` / `Cancel Removal`
 - Purpose:
   - cancel inventory removal for the selected visible inventory row through a backend business action
 - UI behavior:
@@ -142,7 +142,7 @@
   - the new sidebar label if a distinct label is needed
 - Reuse search/filter behavior from `inventory-search-shortcut-modal-spec.md` where practical.
 - Reuse lot genealogy backend from `public.lot_trace_full` for `関連履歴`.
-- Add new locale keys for row actions and confirmation/error messages related to `移出取消` if they do not already exist.
+- Add new locale keys for row actions and confirmation/error messages related to `国内移出完了` if they do not already exist.
 
 ## Acceptance Criteria
 1. `在庫管理` appears in the sidebar directly under `製造管理`.
@@ -152,7 +152,7 @@
 5. The inventory page includes a search section with `Keyword`, `Product`, `Site`, `Package`, and `Show Non-Package` filters.
 6. `Show Non-Package` defaults to `off`, and rows without `package_id` are hidden until the checkbox is turned on.
 7. The inventory grid supports sort on each visible data column.
-8. Each inventory row includes `関連履歴` and `移出取消` actions.
+8. Each inventory row includes `関連履歴` and `国内移出完了` actions.
 9. `関連履歴` shows all related movement / lot genealogy for the selected row.
-10. `移出取消` executes through backend business logic, only for `TAX_STORAGE` rows, and removes or updates the visible merged row after refresh.
+10. `国内移出完了` executes through backend business logic, only for `TAX_STORAGE` rows, and removes or updates the visible merged row after refresh.
 11. The new page and existing movement page both load successfully without TypeScript or build regressions.

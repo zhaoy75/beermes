@@ -42,6 +42,7 @@
   - Package type
   - Batch no
   - Date from
+    - default: one month ago
   - Date to
   - Tax removal type (`税務移出種別`)
 
@@ -63,6 +64,7 @@
 ## Actions
 - Reset filters:
   - clear beer/category/package/batch/date filters.
+  - restore `Date from` to one month ago.
   - set tax removal type to `all`.
 - Export Excel:
   - exports the currently visible filtered movement table rows.
@@ -137,6 +139,7 @@
 - On mount:
   - resolve tenant
   - load sites, categories, packages, and UOMs in parallel
+  - initialize `Date from` to one month ago
   - load movements
 - On change of `dateFrom`, `dateTo`, or tax removal type:
   - automatically reload movements

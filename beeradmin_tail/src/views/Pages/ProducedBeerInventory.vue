@@ -480,6 +480,45 @@ type TraceMovementRow = {
   relatedLotLabel: string
 }
 
+type TracePayloadRecord = Record<string, unknown> & {
+  nodes?: unknown
+  edges?: unknown
+}
+
+type TraceNodeRecord = Record<string, unknown> & {
+  id?: unknown
+  lot_no?: unknown
+  lot_tax_type?: unknown
+  site_id?: unknown
+  qty?: unknown
+  status?: unknown
+}
+
+type TraceEdge = {
+  key: string
+  movementId: string | null
+  relatedLotId: string | null
+  relationType: string | null
+  occurredAt: string | null
+}
+
+type TraceEdgeRecord = Record<string, unknown> & {
+  movement_id?: unknown
+  related_lot_id?: unknown
+  relation_type?: unknown
+  occurred_at?: unknown
+}
+
+type MovementRecord = Record<string, unknown> & {
+  id?: unknown
+  doc_no?: unknown
+  doc_type?: unknown
+  status?: unknown
+  movement_at?: unknown
+  src_site_id?: unknown
+  dest_site_id?: unknown
+}
+
 const filters = reactive({
   keyword: '',
   product: '',
@@ -622,6 +661,14 @@ function toNumber(value: unknown): number | null {
   return Number.isFinite(parsed) ? parsed : null
 }
 
+function toRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : null
+}
+
+function toStringOrNull(value: unknown): string | null {
+  return value != null ? String(value) : null
+}
+
 function formatDateTime(value: string | null | undefined) {
   if (!value) return '—'
   try {
@@ -669,21 +716,24 @@ async function openDagDialog(row: InventoryPageRow) {
     })
     if (error) throw error
 
-    const payload = Array.isArray(data)
-      ? ((data[0] && typeof data[0] === 'object') ? data[0] as Record<string, any> : {})
-      : ((data && typeof data === 'object') ? data as Record<string, any> : {})
+    const payloadValue = Array.isArray(data) ? data[0] : data
+    const payload = (toRecord(payloadValue) as TracePayloadRecord | null) ?? {}
 
     const nodes = Array.isArray(payload.nodes)
       ? payload.nodes
-          .map((node: any) => ({
-            id: String(node?.id ?? ''),
-            lotNo: node?.lot_no != null ? String(node.lot_no) : null,
-            lotTaxType: node?.lot_tax_type != null ? String(node.lot_tax_type) : null,
-            siteId: node?.site_id != null ? String(node.site_id) : null,
-            qty: toNumber(node?.qty),
-            status: node?.status != null ? String(node.status) : null,
-          }))
-          .filter((node: TraceLotNode) => node.id)
+          .map((node): TraceLotNode | null => {
+            const record = toRecord(node) as TraceNodeRecord | null
+            if (!record) return null
+            return {
+              id: String(record.id ?? ''),
+              lotNo: record.lot_no != null ? String(record.lot_no) : null,
+              lotTaxType: record.lot_tax_type != null ? String(record.lot_tax_type) : null,
+              siteId: record.site_id != null ? String(record.site_id) : null,
+              qty: toNumber(record.qty),
+              status: record.status != null ? String(record.status) : null,
+            }
+          })
+          .filter((node): node is TraceLotNode => Boolean(node?.id))
       : []
 
     const rootLot = nodes.find((node: TraceLotNode) => node.id === row.lotId) ?? {
@@ -699,44 +749,50 @@ async function openDagDialog(row: InventoryPageRow) {
 
     const edges = Array.isArray(payload.edges)
       ? payload.edges
-          .map((edge: any) => ({
-            key: [
-              String(edge?.movement_id ?? ''),
-              String(edge?.related_lot_id ?? ''),
-              String(edge?.relation_type ?? ''),
-              String(edge?.occurred_at ?? ''),
-            ].join('__'),
-            movementId: edge?.movement_id != null ? String(edge.movement_id) : null,
-            relatedLotId: edge?.related_lot_id != null ? String(edge.related_lot_id) : null,
-            relationType: edge?.relation_type != null ? String(edge.relation_type) : null,
-            occurredAt: edge?.occurred_at != null ? String(edge.occurred_at) : null,
-          }))
+          .map((edge): TraceEdge | null => {
+            const record = toRecord(edge) as TraceEdgeRecord | null
+            if (!record) return null
+            return {
+              key: [
+                String(record.movement_id ?? ''),
+                String(record.related_lot_id ?? ''),
+                String(record.relation_type ?? ''),
+                String(record.occurred_at ?? ''),
+              ].join('__'),
+              movementId: record.movement_id != null ? String(record.movement_id) : null,
+              relatedLotId: record.related_lot_id != null ? String(record.related_lot_id) : null,
+              relationType: record.relation_type != null ? String(record.relation_type) : null,
+              occurredAt: record.occurred_at != null ? String(record.occurred_at) : null,
+            }
+          })
+          .filter((edge): edge is TraceEdge => Boolean(edge))
       : []
 
     const movementIds = Array.from(
       new Set(
         edges
-          .map((edge: any) => edge.movementId)
+          .map((edge) => edge.movementId)
           .filter((value: string | null): value is string => typeof value === 'string' && value.length > 0),
       ),
     )
 
-    const movementMap = new Map<string, any>()
+    const movementMap = new Map<string, MovementRecord>()
     if (movementIds.length) {
       const { data: movementRows, error: movementError } = await supabase
         .from('inv_movements')
         .select('id, doc_no, doc_type, status, movement_at, src_site_id, dest_site_id')
         .in('id', movementIds)
       if (movementError) throw movementError
-      ;(movementRows ?? []).forEach((movement: any) => {
-        if (!movement?.id) return
-        movementMap.set(String(movement.id), movement)
+      ;(movementRows ?? []).forEach((movement) => {
+        const record = toRecord(movement) as MovementRecord | null
+        if (!record?.id) return
+        movementMap.set(String(record.id), record)
       })
     }
 
     dagDialog.movements = edges
-      .filter((edge: any) => edge.movementId)
-      .map((edge: any) => {
+      .filter((edge) => edge.movementId)
+      .map((edge) => {
         const movement = movementMap.get(edge.movementId as string)
         const relatedLot = dagDialog.relatedLots.find((node) => node.id === edge.relatedLotId)
         return {
@@ -746,8 +802,8 @@ async function openDagDialog(row: InventoryPageRow) {
           docNo: movement?.doc_no != null ? String(movement.doc_no) : null,
           docType: movement?.doc_type != null ? String(movement.doc_type) : null,
           status: movement?.status != null ? String(movement.status) : null,
-          srcSiteLabel: siteLabel(movement?.src_site_id ?? null),
-          destSiteLabel: siteLabel(movement?.dest_site_id ?? null),
+          srcSiteLabel: siteLabel(toStringOrNull(movement?.src_site_id)),
+          destSiteLabel: siteLabel(toStringOrNull(movement?.dest_site_id)),
           relatedLotLabel: relatedLot?.lotNo || edge.relatedLotId || '—',
         } as TraceMovementRow
       })

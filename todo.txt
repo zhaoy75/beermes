@@ -814,3 +814,5 @@ Labelを統一してください。複数の画面にビール分類、酒類分
 I want to move システム関連　pages to system admin route, these pages include. Please give me advice first
 - 属性定義管理
 - 属性セット管理
+
+I want y

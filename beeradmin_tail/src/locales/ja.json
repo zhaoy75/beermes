@@ -1925,7 +1925,7 @@
     },
     "actions": {
       "showDag": "関連履歴",
-      "cancelRemoval": "移出取消"
+      "cancelRemoval": "国内移出完了"
     },
     "merge": {
       "expand": "内訳を表示",

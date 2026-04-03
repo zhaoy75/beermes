@@ -191,5 +191,241 @@
 ### Validation Outcome
 - `npm run type-check` in `beeradmin_tail`: pass.
 - `npm run test` in `beeradmin_tail`: failed because `package.json` has no `test` script.
-- `npx eslint src/locales/ja.json` in `beeradmin_tail`: exits with a warning because the locale JSON file is ignored by the current ESLint configuration.
-- `npx eslint src/views/Pages/ProducedBeerInventory.vue` in `beeradmin_tail`: pass after replacing pre-existing `any` annotations with narrow local types.
+- `npm run lint` in `beeradmin_tail`: failed on many pre-existing project-wide ESLint violations unrelated to this schema change, including existing `vue/block-lang`, `vue/multi-word-component-names`, `@typescript-eslint/no-explicit-any`, and unused-symbol errors across unchanged files.
+
+## Task Addendum 2026-04-03: Tenant Tax Report Profile Page
+
+### Goal
+- Create a tenant-scoped Vue page to maintain liquor-tax report profile information used by the current monthly 酒税申告 flow.
+
+### Scope
+- Add a tenant-facing page that loads and saves tax-report profile data inside `tenants.meta`.
+- Group fields around the IT/XSD data used by the current monthly liquor-tax report flow:
+  - tax bureau
+  - taxpayer/company
+  - refund account
+  - representative
+  - brewery
+  - optional tax accountant
+- Make the page read-only for normal tenant users.
+- Allow tenant `owner` / `admin` users to edit and save the profile.
+- Keep the metadata namespaced inside `tenants.meta.tax_report_profile` instead of flattening it into the top level `meta` object.
+- Add the tenant table access policy needed for tenant-scoped read and admin-only update from the frontend.
+
+### Non-Goals
+- No full generic editor for every optional field defined in `ITdefinition.xsd`.
+- No automatic rewiring of the existing tax-report XML generator to consume this tenant profile in the same task.
+- No redesign of unrelated tenant settings pages.
+
+### Affected Files
+- `specs/current-task.md`
+- `DB/ddl/tenant.sql`
+- `docs/UI/tax-report-profile.md`
+- `beeradmin_tail/src/router/tenant-routes.ts`
+- `beeradmin_tail/src/components/layout/AppSidebar.vue`
+- `beeradmin_tail/src/views/Pages/TaxReportProfile.vue`
+- `beeradmin_tail/src/lib/*` helper file(s) for tenant tax-report profile normalization if needed
+- `beeradmin_tail/src/locales/ja.json`
+- `beeradmin_tail/src/locales/en.json`
+
+### Data Model / API Changes
+- `tenants.meta.tax_report_profile` stores grouped tax-report profile JSON.
+- `tenants` frontend access is constrained so:
+  - current-tenant members can read their tenant row
+  - current-tenant `owner` / `admin` users can update their tenant row
+  - system admins retain tenant-row access
+
+### Planned File Changes
+- Append this addendum for the tenant tax-report profile page.
+- Add `tenants` select/update RLS policies that match the page’s permission model.
+- Add a dedicated tax-report profile page and route.
+- Add a liquor-tax sidebar entry for the new page.
+- Add localized labels and validation text for the grouped tax-report profile fields.
+- Add a small UI spec documenting the page layout, data grouping, and read-only/edit behavior.
+
+### Final Decisions
+- The page is tenant-scoped and stores all page data under `tenants.meta.tax_report_profile`.
+- The edited field set mirrors the IT fields currently needed by the existing monthly 酒税申告 template flow, not the full superset of `ITdefinition.xsd`.
+- Normal tenant users can view the stored profile but cannot modify it.
+- Tenant `owner` / `admin` users can save profile changes, and system admins remain allowed to access the tenant row.
+
+### Validation Plan
+- Run required checks before finishing:
+  - unit tests
+  - lint
+  - type-check
+- If a required script does not exist, report that explicitly.
+
+### Validation Outcome
+- `npm run type-check` in `beeradmin_tail`: pass.
+- `npm run test` in `beeradmin_tail`: failed because `package.json` has no `test` script.
+- `npx eslint src/views/Pages/TaxReportProfile.vue src/lib/taxReportProfile.ts src/router/tenant-routes.ts src/components/layout/AppSidebar.vue` in `beeradmin_tail`: pass.
+- `npm run lint` in `beeradmin_tail`: failed on many pre-existing project-wide ESLint violations unrelated to this task, including existing `vue/block-lang`, `vue/multi-word-component-names`, `@typescript-eslint/no-explicit-any`, and unused-symbol errors across unchanged files.
+
+## Task Addendum 2026-04-03: Tax Report Profile IT Name Mapping
+
+### Goal
+- Align the `taxReportProfile` in-memory field names and stored JSON keys with the element names used in `ITdefinition.xsd`.
+
+### Scope
+- Rename the `TaxReportProfile` helper structure so keys follow the relevant `ITdefinition.xsd` element names used by the tenant tax-report profile page.
+- Update the Vue page bindings to use the schema-aligned names.
+- Keep backward read compatibility for tenant metadata already saved with the previous ad hoc key names.
+
+### Non-Goals
+- No expansion to a full editor for every optional field in `ITdefinition.xsd`.
+- No change to page permissions, route structure, or tenant metadata path.
+- No XML generation rewiring in this task.
+
+### Affected Files
+- `specs/current-task.md`
+- `beeradmin_tail/src/lib/taxReportProfile.ts`
+- `beeradmin_tail/src/views/Pages/TaxReportProfile.vue`
+- `docs/UI/tax-report-profile.md`
+
+### Data Model / API Changes
+- `tenants.meta.tax_report_profile` is now written with keys that mirror the current `ITdefinition.xsd` element names used by the page.
+- The loader accepts both the new schema-aligned keys and the earlier ad hoc keys.
+
+### Planned File Changes
+- Append this addendum for the naming-alignment task.
+- Rename the helper interface and serializer output to use `ITdefinition.xsd` names.
+- Rebind the tenant tax-report profile page to the renamed helper fields.
+- Update the UI spec to document that the stored JSON keys follow the IT definition names.
+
+### Final Decisions
+- The tenant tax-report profile helper and page bindings now use the relevant `ITdefinition.xsd` element names directly, such as `ZEIMUSHO`, `NOZEISHA_ID`, `NOZEISHA_BANGO`, `KANPU_KINYUKIKAN`, `DAIHYO_*`, `SEIZOJO_*`, and `DAIRI_*`.
+- New saves write the schema-aligned key names into `tenants.meta.tax_report_profile`.
+- Existing tenant metadata saved with the earlier ad hoc names remains readable through fallback normalization.
+
+### Validation Plan
+- Run required checks before finishing:
+  - unit tests
+  - lint
+  - type-check
+- If a required script does not exist, report that explicitly.
+
+### Validation Outcome
+- `npx eslint src/views/Pages/TaxReportProfile.vue src/lib/taxReportProfile.ts` in `beeradmin_tail`: pass.
+- `npm run type-check` in `beeradmin_tail`: pass.
+- `npm run test` in `beeradmin_tail`: failed because `package.json` has no `test` script.
+- `npm run lint` in `beeradmin_tail`: failed on many pre-existing project-wide ESLint violations unrelated to this task, including existing `vue/block-lang`, `vue/multi-word-component-names`, `@typescript-eslint/no-explicit-any`, and unused-symbol errors across unchanged files.
+
+## Task Addendum 2026-04-02: Batch Edit Filling Table Action Simplification
+
+### Goal
+- Remove the `編集` button from the `詰口` table on the `バッチ実績入力` page.
+
+### Scope
+- Update the `バッチ実績入力` page so the filling summary table no longer renders the row-level `編集` action.
+- Align the batch edit UI spec with the read-only filling table action set.
+
+### Non-Goals
+- No change to `移送詰口管理` page navigation.
+- No change to row deletion behavior or the underlying packing/filling data model.
+- No change to other tables on the `バッチ実績入力` page.
+
+### Affected Files
+- `specs/current-task.md`
+- `docs/UI/batchedit.md`
+- `beeradmin_tail/src/views/Pages/BatchEdit.vue`
+
+### Data Model / API Changes
+- None.
+
+### Planned File Changes
+- Append this addendum for the filling-table action removal.
+- Update the batch edit UI spec text so the filling table no longer implies row-level editing from this page.
+- Remove the `編集` button from the filling table action column in `BatchEdit.vue`.
+
+### Final Decisions
+- The `バッチ実績入力` page `詰口` summary table no longer shows a row-level `編集` button.
+- The table keeps the existing row-level `削除` action.
+- The unused row-edit navigation helpers tied only to that removed button were deleted from `BatchEdit.vue`.
+
+### Validation Plan
+- Run required checks before finishing:
+  - unit tests
+  - lint
+  - type-check
+- If a required script does not exist, report that explicitly.
+
+### Validation Outcome
+- `npm run type-check` in `beeradmin_tail`: pass.
+- `npm run test` in `beeradmin_tail`: failed because `package.json` has no `test` script.
+- `npx eslint src/views/Pages/BatchEdit.vue` in `beeradmin_tail`: failed on many pre-existing file-level `@typescript-eslint/no-explicit-any` violations unrelated to this task; the change-specific unused-helper issue introduced by removing the button was cleaned up.
+
+## Task Addendum 2026-04-03: Alcohol Tax Master Label Rename
+
+### Goal
+- Change the displayed `酒税管理` label for the alcohol-tax master page/menu to `酒税率管理`.
+
+### Scope
+- Update the Japanese UI label for the alcohol-tax master page title and related menu text.
+- Update adjacent Japanese labels that refer to that page from other master-management screens.
+- Align the tax-report UI spec entry text with the renamed sidebar label.
+
+### Non-Goals
+- No route, key, or behavior changes.
+- No English copy changes unless required by the existing implementation.
+
+### Affected Files
+- `specs/current-task.md`
+- `docs/UI/tax-report.md`
+- `beeradmin_tail/src/locales/ja.json`
+
+### Data Model / API Changes
+- None.
+
+### Planned File Changes
+- Append this addendum to capture the label rename scope.
+- Change the Japanese alcohol-tax page title/menu labels from `酒税管理` to `酒税率管理`.
+- Update the tax-report UI spec sidebar path text to match the renamed label.
+
+### Final Decisions
+- The alcohol-tax master page keeps its existing route, locale keys, and functionality.
+- The displayed Japanese label changes to `酒税率管理` for the page title, sidebar/menu label, and related master-form references.
+- The tax-report UI spec now refers to the renamed sidebar label.
+
+### Validation Plan
+- Run required checks before finishing:
+  - unit tests
+  - lint
+  - type-check
+- If a required script does not exist, report that explicitly.
+
+## Task Addendum 2026-04-03: Tenant Meta Column
+
+### Goal
+- Add a `meta jsonb` column to the `tenants` table.
+
+### Scope
+- Update the tenant DDL so newly created environments include the `meta` column on `tenants`.
+- Add an idempotent `alter table` clause so existing environments can apply the same DDL file safely.
+
+### Non-Goals
+- No application behavior changes that consume tenant metadata yet.
+- No changes to tenant member metadata or other tables.
+
+### Affected Files
+- `specs/current-task.md`
+- `DB/ddl/tenant.sql`
+
+### Data Model / API Changes
+- `public.tenants.meta jsonb not null default '{}'::jsonb` is added.
+
+### Planned File Changes
+- Append this addendum to capture the `tenants.meta` schema change.
+- Add `meta jsonb not null default '{}'::jsonb` to the `tenants` table definition.
+- Add an idempotent `alter table tenants add column if not exists meta ...` clause for existing databases.
+
+### Final Decisions
+- The `tenants` table stores metadata in `meta jsonb not null default '{}'::jsonb`.
+- The DDL remains idempotent for both fresh setup and existing environments.
+
+### Validation Plan
+- Run required checks before finishing:
+  - unit tests
+  - lint
+  - type-check
+- If a required script does not exist, report that explicitly.

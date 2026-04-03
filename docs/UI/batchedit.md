@@ -104,6 +104,8 @@
 ### filling section
     a summary of move and filling information
     a button to edit filling information (a click will move to packing page, not launch a dialog)
+    the filling summary table on this page is read-only for editing; do not show a row-level 編集 button
+    keep row-level deletion only when deletion is allowed by the current implementation
     add a "Lot DAG" button at the left side of 移送詰口管理 button
     if click "Lot DAG" button, move to lot dag page for current batch
     lot dag page data should be retrieved by rpc:

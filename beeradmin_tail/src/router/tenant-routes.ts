@@ -164,6 +164,15 @@ export const tenantRoutes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/taxReportProfile',
+    name: 'TaxReportProfile',
+    component: () => import('@/views/Pages/TaxReportProfile.vue'),
+    meta: {
+      title: 'Tax Report Profile',
+      requiresAuth: true,
+    },
+  },
+  {
     path: '/taxReports/new',
     name: 'TaxReportCreate',
     component: () => import('@/views/Pages/TaxReportEditor.vue'),

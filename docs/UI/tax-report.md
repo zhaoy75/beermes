@@ -6,7 +6,7 @@
 - Allow users to download saved XML/XLSX files from metadata stored on the saved report row.
 
 ## Entry Points
-- Sidebar -> `酒税管理` -> `酒税申告`
+- Sidebar -> `酒税率管理` -> `酒税申告`
 - Route: `/taxReports`
 - Route name: `TaxReport`
 

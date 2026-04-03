@@ -2114,6 +2114,59 @@
       }
     }
   },
+  "taxReportProfile": {
+    "title": "Tax Report Profile",
+    "subtitle": "Maintain tenant-level profile data used by liquor-tax reports.",
+    "description": "This page stores the current monthly liquor-tax report IT-section profile in tenant metadata.",
+    "readonlyNotice": "This page is read-only for standard tenant users. Only tenant admins or owners can edit it.",
+    "mode": {
+      "editable": "Editable",
+      "readonly": "Read-only"
+    },
+    "sections": {
+      "tenant": "Tenant",
+      "taxOffice": "Tax Bureau",
+      "taxpayer": "Taxpayer / Company",
+      "refundAccount": "Refund Account",
+      "representative": "Representative",
+      "brewery": "Brewery",
+      "taxAccountant": "Tax Accountant"
+    },
+    "fields": {
+      "tenantName": "Tenant name",
+      "tenantId": "Tenant ID",
+      "taxOfficeCode": "Tax bureau code",
+      "taxOfficeName": "Tax bureau name",
+      "userId": "User identification number",
+      "corporateNumber": "Corporate number",
+      "nameKana": "Kana name",
+      "name": "Name",
+      "zip1": "Postal code 1",
+      "zip2": "Postal code 2",
+      "addressKana": "Kana address",
+      "address": "Address",
+      "tel1": "Phone 1",
+      "tel2": "Phone 2",
+      "tel3": "Phone 3",
+      "financialInstitutionName": "Financial institution",
+      "financialInstitutionType": "Institution type code",
+      "branchName": "Branch name",
+      "branchType": "Branch type code",
+      "accountType": "Account type code",
+      "accountNumber": "Account number",
+      "taxAccountantName": "Tax accountant name"
+    },
+    "hints": {
+      "refundAccountCodes": "Enter the e-Tax account codes. Example: institution type=1, branch type=2, account type=1.",
+      "taxAccountantOptional": "Fill this only when the tax accountant signature section is used."
+    },
+    "errors": {
+      "tenantMissing": "Unable to determine the tenant from the current session.",
+      "loadFailed": "Failed to load the tax report profile.",
+      "saveFailed": "Failed to save the tax report profile.",
+      "readOnly": "You do not have permission to update this profile."
+    }
+  },
   "sidebar": {
     "group": {
       "main": "Menu",
@@ -2127,6 +2180,7 @@
       "liquorTax": "Liquor Tax",
       "taxYearSummary": "Tax Year Summary",
       "taxReport": "Tax Report",
+      "taxReportProfile": "Tax Report Profile",
       "taxableRemovalReport": "Taxable Removal Report",
       "packing": "Packing",
       "taxCalc": "Tax Calculation",

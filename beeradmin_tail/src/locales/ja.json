@@ -635,7 +635,7 @@
     }
   },
   "alcoholTax": {
-    "title": "酒税管理",
+    "title": "酒税率管理",
     "subtitle": "酒税の税率を管理します。",
     "newTitle": "酒税の追加",
     "editTitle": "酒税の編集",
@@ -684,7 +684,7 @@
       "name": "名称",
       "label": "表示名",
       "category": "カテゴリ",
-      "alcoholTaxRequired": "酒税管理",
+      "alcoholTaxRequired": "酒税率管理",
       "manufacturingRequired": "製造申請",
       "movingControlRequired": "移出管理",
       "shipmentControlRequired": "出荷管理",
@@ -695,7 +695,7 @@
       "name": "名称",
       "label": "表示名",
       "category": "カテゴリ",
-      "alcoholTaxRequired": "酒税管理",
+      "alcoholTaxRequired": "酒税率管理",
       "manufacturingRequired": "製造申請",
       "movingControlRequired": "移出管理",
       "shipmentControlRequired": "出荷管理",
@@ -2106,6 +2106,59 @@
       }
     }
   },
+  "taxReportProfile": {
+    "title": "酒税申告基本情報",
+    "subtitle": "酒税申告で使うテナント基本情報を管理します。",
+    "description": "現在の月次酒税申告テンプレートで利用する IT 部相当の情報を、テナントメタデータとして保存します。",
+    "readonlyNotice": "このページは参照のみです。テナント管理者またはオーナーのみ編集できます。",
+    "mode": {
+      "editable": "編集可",
+      "readonly": "参照のみ"
+    },
+    "sections": {
+      "tenant": "テナント情報",
+      "taxOffice": "税務署情報",
+      "taxpayer": "納税者 / 会社情報",
+      "refundAccount": "還付口座情報",
+      "representative": "代表者情報",
+      "brewery": "製造場情報",
+      "taxAccountant": "税理士情報"
+    },
+    "fields": {
+      "tenantName": "テナント名",
+      "tenantId": "テナントID",
+      "taxOfficeCode": "税務署コード",
+      "taxOfficeName": "税務署名",
+      "userId": "利用者識別番号",
+      "corporateNumber": "法人番号",
+      "nameKana": "名称・氏名カナ",
+      "name": "名称・氏名",
+      "zip1": "郵便番号1",
+      "zip2": "郵便番号2",
+      "addressKana": "住所カナ",
+      "address": "住所",
+      "tel1": "電話番号1",
+      "tel2": "電話番号2",
+      "tel3": "電話番号3",
+      "financialInstitutionName": "金融機関名",
+      "financialInstitutionType": "金融機関種別コード",
+      "branchName": "支店名",
+      "branchType": "支店種別コード",
+      "accountType": "預金種別コード",
+      "accountNumber": "口座番号",
+      "taxAccountantName": "税理士名"
+    },
+    "hints": {
+      "refundAccountCodes": "e-Tax 用のコードを入力してください。例: 金融機関種別=1、支店種別=2、預金種別=1。",
+      "taxAccountantOptional": "税理士署名欄を使う場合のみ入力してください。"
+    },
+    "errors": {
+      "tenantMissing": "現在のセッションからテナントを特定できません。",
+      "loadFailed": "酒税申告基本情報の取得に失敗しました。",
+      "saveFailed": "酒税申告基本情報の保存に失敗しました。",
+      "readOnly": "この情報を更新する権限がありません。"
+    }
+  },
   "sidebar": {
     "group": {
       "main": "メニュー",
@@ -2119,6 +2172,7 @@
       "liquorTax": "税務管理",
       "taxYearSummary": "年間課税概要",
       "taxReport": "酒税申告",
+      "taxReportProfile": "申告基本情報",
       "taxableRemovalReport": "課税移出一覧表",
       "packing": "充填管理",
       "taxCalc": "課税計算",
@@ -2142,7 +2196,7 @@
       "masterMaintenance": "マスタ管理",
       "systemMaintenance": "システム管理",
       "alcoholTypeMaster": "酒類種別管理",
-      "alcoholTaxMaster": "酒税管理",
+      "alcoholTaxMaster": "酒税率管理",
       "materialClassMaster": "原材料区分管理",
       "materialTypeMaster": "原材料種別管理",
       "systemRelated": "システム関連",

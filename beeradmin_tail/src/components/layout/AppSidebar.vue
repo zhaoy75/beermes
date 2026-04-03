@@ -408,6 +408,7 @@ const menuGroups = computed<MenuGroup[]>(() => [
         subItems: [
           { name: t('sidebar.items.producedBeer'), path: "/producedBeer", pro: false },
           { name: t('sidebar.items.taxReport'), path: "/taxReports", pro: false },
+
           {
             name: t('sidebar.items.reportList'),
             subItems: [
@@ -443,11 +444,11 @@ const menuGroups = computed<MenuGroup[]>(() => [
         subItems: [
           { name: t('sidebar.items.alcoholTypeMaster'), path: "/alcoholTypeMaster", pro: false },
           { name: t('sidebar.items.alcoholTaxMaster'), path: "/alcoholTaxMaster", pro: false },
-          { name: t('sidebar.items.materialClassMaster'), path: "/materialClassMaster", pro: false },
-          { name: t('sidebar.items.materialTypeMaster'), path: "/materialTypeMaster", pro: false },
+          // { name: t('sidebar.items.materialClassMaster'), path: "/materialClassMaster", pro: false },
+          // { name: t('sidebar.items.materialTypeMaster'), path: "/materialTypeMaster", pro: false },
           { name: t('sidebar.items.siteTypeMaster'), path: "/siteTypeMaster", pro: false },
           { name: t('sidebar.items.uomMaster'), path: "/uomMaster", pro: false },
-
+          { name: t('sidebar.items.taxReportProfile'), path: "/taxReportProfile", pro: false },
         ],
       },
       {

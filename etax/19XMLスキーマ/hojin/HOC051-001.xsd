@@ -1,0 +1,838 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<xsd:schema targetNamespace="http://xml.e-tax.nta.go.jp/XSD/hojin"
+xmlns="http://xml.e-tax.nta.go.jp/XSD/hojin"
+xmlns:gen="http://xml.e-tax.nta.go.jp/XSD/general" xmlns:kyo="http://xml.e-tax.nta.go.jp/XSD/kyotsu"
+
+xmlns:xsd="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified" version="1.0" > 
+<xsd:annotation> 
+<xsd:documentation> 
+様式名：別表十(五)　特許権等の譲渡等による所得の特別控除に関する明細書
+version：1.0
+Date：2025年06月20日
+</xsd:documentation> 
+</xsd:annotation> 
+
+<!-- import -->
+<xsd:import namespace="http://xml.e-tax.nta.go.jp/XSD/general" schemaLocation="../general/General.xsd"/>
+
+<!-- version -->
+<xsd:simpleType name="HOC051-1-0VRtype"><xsd:restriction base="xsd:string"><xsd:enumeration value="1.0"/></xsd:restriction></xsd:simpleType>
+
+<xsd:group name="HOC051-1-0group">
+<xsd:sequence>
+<xsd:element name="HOC051">
+<xsd:complexType>
+<xsd:sequence>
+<xsd:element name="YRA00000" type="YRA00000-1-0type" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"納税者等部"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRB00000" type="YRB00000-1-0type" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"明細"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00000" type="YRC00000-1-0type" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"適用対象所得金額の計算"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+
+<xsd:element name="YRD00000" type="YRD00000-1-0Rtype" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"特許権譲渡等所得減少規定"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRE00000" type="YRE00000-1-0Rtype" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"適用事業年度等"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+</xsd:sequence>
+<xsd:attribute name="VR"
+type="HOC051-1-0VRtype"
+use="required"/>
+<xsd:attributeGroup ref="gen:FormAttribute"/>
+</xsd:complexType>
+</xsd:element>
+</xsd:sequence>
+</xsd:group>
+
+<xsd:complexType name="YRA00000-1-0type">
+<xsd:sequence>
+
+<xsd:element name="YRA00010" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"事業年度"</xsd:appinfo>
+</xsd:annotation>
+<xsd:complexType>
+<xsd:sequence>
+<xsd:element name="YRA00020" type="gen:JIGYO_NENDO_FROMref" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"自"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRA00030" type="gen:JIGYO_NENDO_TOref" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"至"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+</xsd:sequence>
+</xsd:complexType>
+</xsd:element>
+<xsd:element name="YRA00040" type="gen:NOZEISHA_NMref" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"法人名"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+</xsd:sequence>
+</xsd:complexType><xsd:complexType name="YRB00000-1-0type">
+<xsd:sequence>
+
+<xsd:element name="YRB00010" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"適用対象所得金額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRB00020" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"所得基準額の計算"</xsd:appinfo>
+</xsd:annotation>
+<xsd:complexType>
+<xsd:sequence>
+<xsd:element name="YRB00030" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"所得金額総計基準額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRB00040" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"新鉱床探鉱費又は海外新鉱床探鉱費の特別控除額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRB00050" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"農業経営基盤強化準備金積立額の損金算入額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRB00060" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"農用地等を取得した場合の圧縮額の損金算入額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRB00070" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"関西国際空港用地整備準備金積立額又は中部国際空港整備準備金積立額の損金算入額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRB00080" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"特定事業活動として特別新事業開拓事業者の株式の取得をした場合の特別勘定繰入額の損金算入額又は特別勘定取崩額の益金算入額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRB00090" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"控除未済欠損金額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRB00100" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"欠損金当期控除額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRB00110" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"翌期繰越欠損金額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRB00120" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"所得基準額"</xsd:appinfo>
+</xsd:annotation>
+<xsd:complexType>
+<xsd:sequence>
+<xsd:element name="YRB00130" type="YRB00130-1-0Rtype" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"区分"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRB00140" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"金額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+</xsd:sequence>
+</xsd:complexType>
+</xsd:element>
+</xsd:sequence>
+</xsd:complexType>
+</xsd:element>
+<xsd:element name="YRB00150" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"特別控除額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+</xsd:sequence>
+</xsd:complexType><xsd:complexType name="YRC00000-1-0type">
+<xsd:sequence>
+
+<xsd:element name="YRC00010" type="YRC00010-1-0Rtype" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"((14)*(24))又は(14)　区分"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00020" type="YRC00020-1-0Rtype" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"個別繰越損失控除額　区分"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00030" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"明細１"</xsd:appinfo>
+</xsd:annotation>
+<xsd:complexType>
+<xsd:sequence>
+<xsd:element name="YRC00040" type="YRC00040-1-0Rtype" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"特許権譲渡等取引の内容"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00050" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"特許権譲渡等損益額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00060" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"個別控除対象繰越損失額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00070" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"((14)*(24))又は(14)"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00080" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"個別繰越損失控除額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00090" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"控除後特許権譲渡等損益額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00100" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"措法第59条の３第１項第１号イの場合"</xsd:appinfo>
+</xsd:annotation>
+<xsd:complexType>
+<xsd:sequence>
+<xsd:element name="YRC00110" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"対象事業年度及び対象事業年度前の各事業年度(令和７年４月１日以後開始事業年度に限る。)の研究開発費の額のうち(13)に係る特定特許権等に直接関連する研究開発に係る金額の合計額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00120" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"(19)のうち特許権譲受等取引によって生じた金額"</xsd:appinfo>
+</xsd:annotation>
+<xsd:complexType>
+<xsd:sequence>
+<xsd:element name="YRC00130" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"内書き"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00140" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"本書き"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+</xsd:sequence>
+</xsd:complexType>
+</xsd:element>
+<xsd:element name="YRC00150" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"(19)のうち国外関連者に直接又は間接に委託する研究開発に係る金額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00160" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"(19)のうち国外事業所等を通じて行う事業に係る金額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00170" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"適格研究開発費の額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00180" type="YRC00180-1-0type" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"研究開発費割合"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00190" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"適用対象所得金額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+</xsd:sequence>
+</xsd:complexType>
+</xsd:element>
+</xsd:sequence>
+</xsd:complexType>
+</xsd:element>
+<xsd:element name="YRC00200" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"明細２"</xsd:appinfo>
+</xsd:annotation>
+<xsd:complexType>
+<xsd:sequence>
+<xsd:element name="YRC00210" type="YRC00210-1-0Rtype" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"特許権譲渡等取引の内容"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00220" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"特許権譲渡等損益額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00230" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"個別控除対象繰越損失額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00240" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"((14)*(24))又は(14)"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00250" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"個別繰越損失控除額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00260" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"控除後特許権譲渡等損益額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00270" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"措法第59条の３第１項第１号イの場合"</xsd:appinfo>
+</xsd:annotation>
+<xsd:complexType>
+<xsd:sequence>
+<xsd:element name="YRC00280" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"対象事業年度及び対象事業年度前の各事業年度(令和７年４月１日以後開始事業年度に限る。)の研究開発費の額のうち(13)に係る特定特許権等に直接関連する研究開発に係る金額の合計額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00290" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"(19)のうち特許権譲受等取引によって生じた金額"</xsd:appinfo>
+</xsd:annotation>
+<xsd:complexType>
+<xsd:sequence>
+<xsd:element name="YRC00300" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"内書き"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00310" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"本書き"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+</xsd:sequence>
+</xsd:complexType>
+</xsd:element>
+<xsd:element name="YRC00320" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"(19)のうち国外関連者に直接又は間接に委託する研究開発に係る金額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00330" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"(19)のうち国外事業所等を通じて行う事業に係る金額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00340" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"適格研究開発費の額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00350" type="YRC00350-1-0type" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"研究開発費割合"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00360" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"適用対象所得金額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+</xsd:sequence>
+</xsd:complexType>
+</xsd:element>
+</xsd:sequence>
+</xsd:complexType>
+</xsd:element>
+<xsd:element name="YRC00370" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"明細３"</xsd:appinfo>
+</xsd:annotation>
+<xsd:complexType>
+<xsd:sequence>
+<xsd:element name="YRC00380" type="YRC00380-1-0Rtype" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"特許権譲渡等取引の内容"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00390" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"特許権譲渡等損益額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00400" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"個別控除対象繰越損失額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00410" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"((14)*(24))又は(14)"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00420" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"個別繰越損失控除額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00430" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"控除後特許権譲渡等損益額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00440" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"措法第59条の３第１項第１号イの場合"</xsd:appinfo>
+</xsd:annotation>
+<xsd:complexType>
+<xsd:sequence>
+<xsd:element name="YRC00450" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"対象事業年度及び対象事業年度前の各事業年度(令和７年４月１日以後開始事業年度に限る。)の研究開発費の額のうち(13)に係る特定特許権等に直接関連する研究開発に係る金額の合計額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00460" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"(19)のうち特許権譲受等取引によって生じた金額"</xsd:appinfo>
+</xsd:annotation>
+<xsd:complexType>
+<xsd:sequence>
+<xsd:element name="YRC00470" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"内書き"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00480" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"本書き"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+</xsd:sequence>
+</xsd:complexType>
+</xsd:element>
+<xsd:element name="YRC00490" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"(19)のうち国外関連者に直接又は間接に委託する研究開発に係る金額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00500" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"(19)のうち国外事業所等を通じて行う事業に係る金額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00510" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"適格研究開発費の額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00520" type="YRC00520-1-0type" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"研究開発費割合"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00530" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"適用対象所得金額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+</xsd:sequence>
+</xsd:complexType>
+</xsd:element>
+</xsd:sequence>
+</xsd:complexType>
+</xsd:element>
+<xsd:element name="YRC00540" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"明細４"</xsd:appinfo>
+</xsd:annotation>
+<xsd:complexType>
+<xsd:sequence>
+<xsd:element name="YRC00550" type="YRC00550-1-0Rtype" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"特許権譲渡等取引の内容"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00560" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"特許権譲渡等損益額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00570" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"個別控除対象繰越損失額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00580" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"((14)*(24))又は(14)"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00590" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"個別繰越損失控除額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00600" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"控除後特許権譲渡等損益額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00610" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"措法第59条の３第１項第１号イの場合"</xsd:appinfo>
+</xsd:annotation>
+<xsd:complexType>
+<xsd:sequence>
+<xsd:element name="YRC00620" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"対象事業年度及び対象事業年度前の各事業年度(令和７年４月１日以後開始事業年度に限る。)の研究開発費の額のうち(13)に係る特定特許権等に直接関連する研究開発に係る金額の合計額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00630" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"(19)のうち特許権譲受等取引によって生じた金額"</xsd:appinfo>
+</xsd:annotation>
+<xsd:complexType>
+<xsd:sequence>
+<xsd:element name="YRC00640" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"内書き"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00650" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"本書き"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+</xsd:sequence>
+</xsd:complexType>
+</xsd:element>
+<xsd:element name="YRC00660" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"(19)のうち国外関連者に直接又は間接に委託する研究開発に係る金額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00670" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"(19)のうち国外事業所等を通じて行う事業に係る金額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00680" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"適格研究開発費の額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00690" type="YRC00690-1-0type" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"研究開発費割合"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00700" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"適用対象所得金額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+</xsd:sequence>
+</xsd:complexType>
+</xsd:element>
+</xsd:sequence>
+</xsd:complexType>
+</xsd:element>
+<xsd:element name="YRC00710" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"計"</xsd:appinfo>
+</xsd:annotation>
+<xsd:complexType>
+<xsd:sequence>
+<xsd:element name="YRC00720" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"特許権譲渡等損益額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00730" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"((14)*(24))又は(14)"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00740" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"控除後特許権譲渡等損益額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00750" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"措法第59条の３第１項第１号イの場合　適用対象所得金額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+</xsd:sequence>
+</xsd:complexType>
+</xsd:element>
+<xsd:element name="YRC00760" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"上記以外の場合"</xsd:appinfo>
+</xsd:annotation>
+<xsd:complexType>
+<xsd:sequence>
+<xsd:element name="YRC00770" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"対象事業年度及び対象事業年度開始の日前２年以内に開始した各事業年度の研究開発費の額の合計額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00780" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"(26)のうち特許権譲受等取引によって生じた金額"</xsd:appinfo>
+</xsd:annotation>
+<xsd:complexType>
+<xsd:sequence>
+<xsd:element name="YRC00790" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"内書き"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00800" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"本書き"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+</xsd:sequence>
+</xsd:complexType>
+</xsd:element>
+<xsd:element name="YRC00810" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"(26)のうち国外関連者に直接又は間接に委託する研究開発に係る金額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00820" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"(26)のうち国外事業所等を通じて行う事業に係る金額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00830" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"適格研究開発費の額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00840" type="YRC00840-1-0type" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"研究開発費割合"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="YRC00850" type="gen:kingaku" minOccurs="0">
+<xsd:annotation>
+<xsd:appinfo>"適用対象所得金額"</xsd:appinfo>
+</xsd:annotation>
+</xsd:element>
+</xsd:sequence>
+</xsd:complexType>
+</xsd:element>
+</xsd:sequence>
+</xsd:complexType>
+
+
+<xsd:complexType name="YRB00130-1-0Rtype">
+    <xsd:complexContent>
+        <xsd:restriction base="gen:kubun">
+            <xsd:sequence>
+                <xsd:element name="kubun_CD">
+                    <xsd:simpleType>
+                        <xsd:restriction base="gen:kubun_CD">
+                            <xsd:enumeration value="1"/><xsd:enumeration value="2"/>
+                        </xsd:restriction>
+                    </xsd:simpleType>
+                </xsd:element>
+                <xsd:element name="kubun_NM" minOccurs="0">
+                    <xsd:simpleType>
+                        <xsd:restriction base="gen:kubun_NM">
+                        </xsd:restriction>
+                    </xsd:simpleType>
+                </xsd:element>
+            </xsd:sequence>
+        </xsd:restriction>
+    </xsd:complexContent>
+</xsd:complexType>
+
+<xsd:complexType name="YRC00010-1-0Rtype">
+    <xsd:complexContent>
+        <xsd:restriction base="gen:kubun">
+            <xsd:sequence>
+                <xsd:element name="kubun_CD">
+                    <xsd:simpleType>
+                        <xsd:restriction base="gen:kubun_CD">
+                            <xsd:enumeration value="1"/><xsd:enumeration value="2"/>
+                        </xsd:restriction>
+                    </xsd:simpleType>
+                </xsd:element>
+                <xsd:element name="kubun_NM" minOccurs="0">
+                    <xsd:simpleType>
+                        <xsd:restriction base="gen:kubun_NM">
+                        </xsd:restriction>
+                    </xsd:simpleType>
+                </xsd:element>
+            </xsd:sequence>
+        </xsd:restriction>
+    </xsd:complexContent>
+</xsd:complexType>
+
+<xsd:complexType name="YRC00020-1-0Rtype">
+    <xsd:complexContent>
+        <xsd:restriction base="gen:kubun">
+            <xsd:sequence>
+                <xsd:element name="kubun_CD">
+                    <xsd:simpleType>
+                        <xsd:restriction base="gen:kubun_CD">
+                            <xsd:enumeration value="1"/><xsd:enumeration value="2"/>
+                        </xsd:restriction>
+                    </xsd:simpleType>
+                </xsd:element>
+                <xsd:element name="kubun_NM" minOccurs="0">
+                    <xsd:simpleType>
+                        <xsd:restriction base="gen:kubun_NM">
+                        </xsd:restriction>
+                    </xsd:simpleType>
+                </xsd:element>
+            </xsd:sequence>
+        </xsd:restriction>
+    </xsd:complexContent>
+</xsd:complexType>
+
+<xsd:simpleType name="YRC00040-1-0Rtype">
+    <xsd:restriction base="gen:str">
+        <xsd:maxLength value="30"/>
+    </xsd:restriction>
+</xsd:simpleType>
+
+<xsd:simpleType name="YRC00180-1-0Rtype">
+    <xsd:restriction base="gen:decimalType">
+        <xsd:pattern value="[-]?\d?"/><xsd:pattern value="[-]?\d?[.]\d"/><xsd:pattern value="[-]?\d?[.]\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d\d\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d\d\d\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d\d\d\d\d\d\d\d\d\d"/>
+    </xsd:restriction>
+</xsd:simpleType>
+
+<xsd:simpleType name="YRC00210-1-0Rtype">
+    <xsd:restriction base="gen:str">
+        <xsd:maxLength value="30"/>
+    </xsd:restriction>
+</xsd:simpleType>
+
+<xsd:simpleType name="YRC00350-1-0Rtype">
+    <xsd:restriction base="gen:decimalType">
+        <xsd:pattern value="[-]?\d?"/><xsd:pattern value="[-]?\d?[.]\d"/><xsd:pattern value="[-]?\d?[.]\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d\d\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d\d\d\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d\d\d\d\d\d\d\d\d\d"/>
+    </xsd:restriction>
+</xsd:simpleType>
+
+<xsd:simpleType name="YRC00380-1-0Rtype">
+    <xsd:restriction base="gen:str">
+        <xsd:maxLength value="30"/>
+    </xsd:restriction>
+</xsd:simpleType>
+
+<xsd:simpleType name="YRC00520-1-0Rtype">
+    <xsd:restriction base="gen:decimalType">
+        <xsd:pattern value="[-]?\d?"/><xsd:pattern value="[-]?\d?[.]\d"/><xsd:pattern value="[-]?\d?[.]\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d\d\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d\d\d\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d\d\d\d\d\d\d\d\d\d"/>
+    </xsd:restriction>
+</xsd:simpleType>
+
+<xsd:simpleType name="YRC00550-1-0Rtype">
+    <xsd:restriction base="gen:str">
+        <xsd:maxLength value="30"/>
+    </xsd:restriction>
+</xsd:simpleType>
+
+<xsd:simpleType name="YRC00690-1-0Rtype">
+    <xsd:restriction base="gen:decimalType">
+        <xsd:pattern value="[-]?\d?"/><xsd:pattern value="[-]?\d?[.]\d"/><xsd:pattern value="[-]?\d?[.]\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d\d\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d\d\d\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d\d\d\d\d\d\d\d\d\d"/>
+    </xsd:restriction>
+</xsd:simpleType>
+
+<xsd:simpleType name="YRC00840-1-0Rtype">
+    <xsd:restriction base="gen:decimalType">
+        <xsd:pattern value="[-]?\d?"/><xsd:pattern value="[-]?\d?[.]\d"/><xsd:pattern value="[-]?\d?[.]\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d\d\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d\d\d\d\d\d\d\d\d"/><xsd:pattern value="[-]?\d?[.]\d\d\d\d\d\d\d\d\d\d\d\d\d\d\d\d"/>
+    </xsd:restriction>
+</xsd:simpleType>
+
+<xsd:simpleType name="YRD00000-1-0Rtype">
+    <xsd:restriction base="gen:str">
+        <xsd:maxLength value="100"/>
+    </xsd:restriction>
+</xsd:simpleType>
+
+<xsd:simpleType name="YRE00000-1-0Rtype">
+    <xsd:restriction base="gen:str">
+        <xsd:maxLength value="15"/>
+    </xsd:restriction>
+</xsd:simpleType>
+
+
+
+<xsd:complexType name="YRC00180-1-0type">
+<xsd:simpleContent>
+<xsd:extension base="YRC00180-1-0Rtype">
+<xsd:attribute name="AutoCalc" type="xsd:string"/>
+</xsd:extension>
+</xsd:simpleContent>
+</xsd:complexType>
+<xsd:complexType name="YRC00350-1-0type">
+<xsd:simpleContent>
+<xsd:extension base="YRC00350-1-0Rtype">
+<xsd:attribute name="AutoCalc" type="xsd:string"/>
+</xsd:extension>
+</xsd:simpleContent>
+</xsd:complexType>
+<xsd:complexType name="YRC00520-1-0type">
+<xsd:simpleContent>
+<xsd:extension base="YRC00520-1-0Rtype">
+<xsd:attribute name="AutoCalc" type="xsd:string"/>
+</xsd:extension>
+</xsd:simpleContent>
+</xsd:complexType>
+<xsd:complexType name="YRC00690-1-0type">
+<xsd:simpleContent>
+<xsd:extension base="YRC00690-1-0Rtype">
+<xsd:attribute name="AutoCalc" type="xsd:string"/>
+</xsd:extension>
+</xsd:simpleContent>
+</xsd:complexType>
+<xsd:complexType name="YRC00840-1-0type">
+<xsd:simpleContent>
+<xsd:extension base="YRC00840-1-0Rtype">
+<xsd:attribute name="AutoCalc" type="xsd:string"/>
+</xsd:extension>
+</xsd:simpleContent>
+</xsd:complexType>
+</xsd:schema>

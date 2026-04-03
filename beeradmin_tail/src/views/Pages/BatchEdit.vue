@@ -250,15 +250,7 @@
                 <td class="px-3 py-2 text-right text-gray-700">{{ formatPackingFillingRemaining(event) }}</td>
                 <td class="px-3 py-2 text-right text-gray-700">{{ formatPackingLoss(event) }}</td>
                 <td class="px-3 py-2 text-gray-600">{{ event.memo || '—' }}</td>
-                <td class="px-3 py-2 space-x-2">
-                  <button
-                    class="px-2 py-1 text-xs rounded border hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                    type="button"
-                    :disabled="!canEditPackingEvent(event)"
-                    @click="openPackingEdit(event)"
-                  >
-                    {{ t('batch.packaging.actions.edit') }}
-                  </button>
+                <td class="px-3 py-2">
                   <button class="px-2 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700" type="button" @click="deletePackingEvent(event)">
                     {{ t('batch.packaging.actions.delete') }}
                   </button>
@@ -1644,15 +1636,6 @@ function openPackingDialog() {
   void goToPackingPage()
 }
 
-function canEditPackingEvent(event: PackingEvent) {
-  return event.packing_type !== 'filling' && event.packing_type !== 'transfer'
-}
-
-function openPackingEdit(event: PackingEvent) {
-  if (!canEditPackingEvent(event)) return
-  void goToPackingPage(event.id)
-}
-
 function validateRelationForm(form: RelationFormState) {
   const errors: Record<string, string> = {}
   if (!form.relation_type) errors.relation_type = t('batch.relation.errors.typeRequired')
@@ -1921,12 +1904,6 @@ function showPackingNotice(message: string) {
   window.setTimeout(() => {
     if (packingNotice.value === message) packingNotice.value = ''
   }, 3000)
-}
-
-function siteLabel(siteId?: string | null) {
-  if (!siteId) return '—'
-  const match = siteOptions.value.find((row) => row.value === siteId)
-  return match?.label ?? '—'
 }
 
 function isSelectableManufacturingSite(siteId: string | null | undefined) {

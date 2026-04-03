@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<xsd:schema targetNamespace="http://xml.e-tax.nta.go.jp/XSD/hojin"
+xmlns="http://xml.e-tax.nta.go.jp/XSD/hojin"
+xmlns:gen="http://xml.e-tax.nta.go.jp/XSD/general" xmlns:kyo="http://xml.e-tax.nta.go.jp/XSD/kyotsu"
+
+xmlns:xsd="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified" version="1.0" > 
+<xsd:annotation> 
+<xsd:documentation> 
+様式名：国際最低課税額CSV
+version：1.0
+Date：2024年12月18日
+</xsd:documentation> 
+</xsd:annotation> 
+
+<!-- import -->
+<xsd:import namespace="http://xml.e-tax.nta.go.jp/XSD/general" schemaLocation="../general/General.xsd"/>
+
+<!-- version -->
+<xsd:simpleType name="HOV990-1-0VRtype">
+	<xsd:restriction base="xsd:string">
+	<xsd:enumeration value="1.0"/>
+	</xsd:restriction>
+</xsd:simpleType>
+<!-- Root Element Definition -->
+<xsd:element name="HOV990" type="HOV990-1-0type"/>
+
+<xsd:complexType name="HOV990-1-0type">
+<xsd:simpleContent>
+	<xsd:extension base="xsd:string">
+		<xsd:attribute name="VR" type="HOV990-1-0VRtype" use="required"/>
+		<xsd:attributeGroup ref="gen:FormAttribute"/>
+		<xsd:attribute name="csvFileNM" type="gen:str" use="required"/>
+	</xsd:extension>
+</xsd:simpleContent>
+</xsd:complexType>
+
+</xsd:schema>

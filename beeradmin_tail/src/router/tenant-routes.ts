@@ -17,6 +17,7 @@ export const tenantRoutes: RouteRecordRaw[] = [
     meta: {
       title: 'レシピ編集',
       requiresAuth: true,
+      requiresDevelopmentMode: true,
     },
   },
   {
@@ -26,6 +27,7 @@ export const tenantRoutes: RouteRecordRaw[] = [
     meta: {
       title: 'レシピ管理',
       requiresAuth: true,
+      requiresDevelopmentMode: true,
     },
   },
   {
@@ -341,6 +343,7 @@ export const tenantRoutes: RouteRecordRaw[] = [
     meta: {
       title: 'Material Master',
       requiresAuth: true,
+      requiresDevelopmentMode: true,
     },
   },
   {

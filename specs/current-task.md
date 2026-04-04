@@ -890,3 +890,204 @@
 - `npm run type-check` in `beeradmin_tail`: pass.
 - `npm run test` in `beeradmin_tail`: failed because `package.json` has no `test` script.
 - `npm run lint` in `beeradmin_tail`: failed on the existing repo-wide ESLint backlog outside this cleanup task.
+
+## Task Addendum 2026-04-04: Development Mode Feature Flag
+
+### Goal
+- Add a frontend development mode that is controlled by `.env` and defaults to disabled.
+- Show in-development tenant features such as the recipe menu and material master only when development mode is enabled.
+- Allow the GUI to switch dev-only sections on or off through the same shared flag.
+
+### Scope
+- Add a Vite env flag for development mode to the local and test frontend env files.
+- Introduce one shared frontend helper that parses the env flag with a default of `false`.
+- Use that helper to reveal dev-only menu entries in the tenant sidebar.
+- Prevent direct route access to dev-only pages when the flag is disabled.
+
+### Non-Goals
+- No backend data-model or API changes.
+- No redesign of existing pages.
+- No broad feature-flag system beyond the single shared development-mode helper needed for this task.
+
+### Affected Files
+- `specs/current-task.md`
+- `beeradmin_tail/.env`
+- `beeradmin_tail/.env.test`
+- `beeradmin_tail/src/lib/devMode.ts`
+- `beeradmin_tail/src/components/layout/AppSidebar.vue`
+- `beeradmin_tail/src/router/index.ts`
+- `beeradmin_tail/src/router/tenant-routes.ts`
+
+### Data Model / API Changes
+- Add `VITE_DEVELOPMENT_MODE` as a frontend env flag. Missing or falsy values keep development mode disabled.
+- Add route metadata for dev-only tenant pages so the router can block access when the flag is off.
+
+### Planned File Changes
+- Append this addendum for the development-mode task.
+- Add `VITE_DEVELOPMENT_MODE=false` to `.env` and `.env.test`.
+- Create a shared helper that parses env values like `true`, `1`, `on`, and `yes`.
+- Mark recipe and material-master routes as dev-only.
+- Update the tenant sidebar so dev-only menu items are only rendered when development mode is enabled.
+- Add a router guard that redirects dev-only routes to `/error-404` when the flag is disabled.
+
+### Final Decisions
+- `VITE_DEVELOPMENT_MODE` is the shared frontend switch for development mode, and missing values still resolve to disabled.
+- The shared `beeradmin_tail/src/lib/devMode.ts` helper parses `true`, `1`, `on`, and `yes` as enabled values.
+- The tenant sidebar now shows the recipe menu entry and material master entry only when development mode is enabled.
+- Direct navigation to `/recipeList`, `/recipeEdit/:recipeId/:versionId?`, and `/MaterialMaster` now redirects to `/error-404` when development mode is disabled.
+- The route-level metadata and shared helper are the intended reuse points for additional dev-only GUI sections.
+
+### Validation Plan
+- Run required checks before finishing:
+  - unit tests
+  - lint
+  - type-check
+- If repo-wide lint fails for unrelated files, run task-level lint on the changed frontend sources and record both outcomes.
+
+### Validation Outcome
+- `npm run type-check` in `beeradmin_tail`: pass.
+- `npm run test` in `beeradmin_tail`: failed because `package.json` has no `test` script.
+- `npx eslint . --fix-dry-run` in `beeradmin_tail`: failed on the existing repo-wide ESLint backlog outside this task, including long-standing `vue/block-lang`, `vue/multi-word-component-names`, `@typescript-eslint/no-explicit-any`, and unused-symbol errors across unchanged files.
+- `npx eslint src/lib/devMode.ts src/router/index.ts src/router/tenant-routes.ts src/components/layout/AppSidebar.vue` in `beeradmin_tail`: pass.
+
+## Task Addendum 2026-04-04: Tax Report Year Label
+
+### Goal
+- Change the `酒税申告` field label `課税年度` to `year`.
+
+### Scope
+- Update the shared `酒税申告` locale strings that render the year field label on the list page, create prompt, and editor page.
+- Keep the `酒税申告` UI specification docs aligned with the new visible label.
+
+### Non-Goals
+- No database or API field rename.
+- No change to the underlying `tax_year` property names in code.
+- No change to unrelated pages outside the `酒税申告` flow.
+
+### Affected Files
+- `specs/current-task.md`
+- `beeradmin_tail/src/locales/ja.json`
+- `docs/UI/tax-report.md`
+- `docs/UI/tax-report-editor.md`
+
+### Data Model / API Changes
+- None.
+
+### Planned File Changes
+- Append this addendum for the tax-report label task.
+- Change the Japanese `taxReport` year label strings from `課税年度` to `year`.
+- Update the `酒税申告` UI specs so the documented visible labels match the app.
+
+### Final Decisions
+- The shared `taxReport.filters.taxYear` and `taxReport.form.taxYear` Japanese labels now display `year` across the `酒税申告` list page, create prompt, and editor page.
+- The `taxReport.errors.taxYearRequired` Japanese validation message was aligned to the new visible label.
+- The `酒税申告` list-page and editor-page UI specs now document the visible field label as `year`.
+
+### Validation Plan
+- Run required checks before finishing:
+  - unit tests
+  - lint
+  - type-check
+- If repo-wide lint fails for unrelated files, run task-level lint on any changed frontend source files and record both outcomes.
+
+### Validation Outcome
+- `npm run type-check` in `beeradmin_tail`: pass.
+- `npm run test` in `beeradmin_tail`: failed because `package.json` has no `test` script.
+- `npx eslint . --fix-dry-run` in `beeradmin_tail`: failed on the existing repo-wide ESLint backlog outside this task, including long-standing `vue/block-lang`, `vue/multi-word-component-names`, `@typescript-eslint/no-explicit-any`, and unused-symbol errors across unchanged files.
+- No task-level ESLint target was needed for this task because the implementation changed locale JSON and markdown docs only, with no JS/TS/Vue runtime source changes.
+
+## Task Addendum 2026-04-04: Tax Report Fiscal Month Order
+
+### Goal
+- Change the `酒税申告` month selection order so visible month options start at `4` and end at `3`.
+
+### Scope
+- Update the month option ordering on the `酒税申告` list-page filter, create prompt, and editor page.
+- Keep the underlying `tax_month` values unchanged.
+- Align the `酒税申告` UI specification docs with the new visible month order.
+
+### Non-Goals
+- No database or API change.
+- No change to saved month values or report generation logic beyond the displayed selection order.
+- No change to month ordering on unrelated pages.
+
+### Affected Files
+- `specs/current-task.md`
+- `beeradmin_tail/src/views/Pages/TaxReport.vue`
+- `beeradmin_tail/src/views/Pages/TaxReportEditor.vue`
+- `docs/UI/tax-report.md`
+- `docs/UI/tax-report-editor.md`
+
+### Data Model / API Changes
+- None.
+
+### Planned File Changes
+- Append this addendum for the month-order task.
+- Change the `酒税申告` month option arrays from calendar order `1..12` to visible order `4..12, 1..3`.
+- Update the `酒税申告` UI specs so the documented month option order matches the app.
+
+### Final Decisions
+- The `酒税申告` month dropdowns now display fiscal-year order `4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3` on both the list page and editor page.
+- The underlying `tax_month` values remain unchanged numeric month values, so filtering, routing, storage, and report generation continue to use the existing month semantics.
+- The `酒税申告` list-page and editor-page UI specs now document the visible month option order as `4` to `12`, then `1` to `3`.
+
+### Validation Plan
+- Run required checks before finishing:
+  - unit tests
+  - lint
+  - type-check
+- If repo-wide lint fails for unrelated files, run task-level lint on the changed frontend source files and record both outcomes.
+
+### Validation Outcome
+- `npm run type-check` in `beeradmin_tail`: pass.
+- `npm run test` in `beeradmin_tail`: failed because `package.json` has no `test` script.
+- `npx eslint . --fix-dry-run` in `beeradmin_tail`: failed on the existing repo-wide ESLint backlog outside this task, including long-standing `vue/block-lang`, `vue/multi-word-component-names`, `@typescript-eslint/no-explicit-any`, and unused-symbol errors across unchanged files.
+- `npx eslint src/views/Pages/TaxReport.vue src/views/Pages/TaxReportEditor.vue` in `beeradmin_tail`: pass.
+
+## Task Addendum 2026-04-04: Tax Report Year Label Follow-up
+
+### Goal
+- Change the `酒税申告` field label from `year` to `年`.
+
+### Scope
+- Update the shared `酒税申告` Japanese locale strings that render the year field label on the list page, create prompt, and editor page.
+- Update the related Japanese validation message for the year field.
+- Keep the `酒税申告` UI specification docs aligned with the new visible label.
+
+### Non-Goals
+- No database or API field rename.
+- No change to the underlying `tax_year` property names in code.
+- No change to unrelated pages outside the `酒税申告` flow.
+
+### Affected Files
+- `specs/current-task.md`
+- `beeradmin_tail/src/locales/ja.json`
+- `docs/UI/tax-report.md`
+- `docs/UI/tax-report-editor.md`
+
+### Data Model / API Changes
+- None.
+
+### Planned File Changes
+- Append this addendum for the year-label follow-up task.
+- Change the Japanese `taxReport` year label strings from `year` to `年`.
+- Change the Japanese `taxReport.errors.taxYearRequired` message to use `年`.
+- Update the `酒税申告` UI specs so the documented visible label matches the app.
+
+### Final Decisions
+- The shared `taxReport.filters.taxYear` and `taxReport.form.taxYear` Japanese labels now display `年` across the `酒税申告` list page, create prompt, and editor page.
+- The Japanese `taxReport.errors.taxYearRequired` message now reads `年は必須です。`.
+- The `酒税申告` list-page and editor-page UI specs now document the visible field label as `年`.
+
+### Validation Plan
+- Run required checks before finishing:
+  - unit tests
+  - lint
+  - type-check
+- If repo-wide lint fails for unrelated files, record that explicitly and note whether task-level lint is unnecessary because only locale/docs changed.
+
+### Validation Outcome
+- `npm run type-check` in `beeradmin_tail`: pass.
+- `npm run test` in `beeradmin_tail`: failed because `package.json` has no `test` script.
+- `npx eslint . --fix-dry-run` in `beeradmin_tail`: failed on the existing repo-wide ESLint backlog outside this task, including long-standing `vue/block-lang`, `vue/multi-word-component-names`, `@typescript-eslint/no-explicit-any`, and unused-symbol errors across unchanged files.
+- No task-level ESLint target was needed for this task because the implementation changed locale JSON and markdown docs only, with no JS/TS/Vue runtime source changes.

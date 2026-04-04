@@ -28,7 +28,7 @@
 ### Body
 1. Search section
    - `課税種別`
-   - `課税年度`
+   - `年`
    - `月`
    - `ステータス`
 2. Saved report table
@@ -40,7 +40,7 @@
 - Opened from `申告書作成`
 - Fields:
   - `課税種別`
-  - `課税年度`
+  - `年`
   - `月`
 - Actions:
   - `Cancel`
@@ -64,10 +64,10 @@
 - `課税種別`
   - current visible option set is `monthly`
   - filter value is stored in `filters.taxType`
-- `課税年度`
+- `年`
   - select built from current year range plus saved report years
 - `月`
-  - values: `1` to `12`
+  - visible option order: `4` to `12`, then `1` to `3`
   - disabled when filter tax type is `yearly`
 - `ステータス`
   - values:

@@ -855,3 +855,10 @@ i want to create a vue page to maintain tenant tax report related information
 - fields should be save in tenants table meta field with json format 
 - the page should be readonly for normal tenant user
 - tenant admin user can edit the information
+
+I want add a development mode 
+- the mode can be set in .env file
+- default value is false, when it is true, the development mode will be enabled
+- Feature under develop like recipe menu and material master can be viewed
+- Some section in gui can also be switch on/off by this mode
+

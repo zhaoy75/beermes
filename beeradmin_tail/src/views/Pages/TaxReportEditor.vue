@@ -452,7 +452,7 @@ const editing = computed(() => typeof route.params.id === 'string' && route.para
 const pageTitle = computed(() => (editing.value ? t('taxReportEditor.editTitle') : t('taxReportEditor.newTitle')))
 const statusOptions = STATUS_OPTIONS
 const taxTypeOptions = TAX_TYPE_OPTIONS
-const monthOptions = computed(() => Array.from({ length: 12 }, (_, idx) => idx + 1))
+const monthOptions = computed(() => [4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3])
 const currencyFormatter = computed(
   () => new Intl.NumberFormat(locale.value, { style: 'currency', currency: 'JPY', maximumFractionDigits: 0 }),
 )

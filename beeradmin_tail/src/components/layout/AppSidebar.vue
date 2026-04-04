@@ -284,6 +284,7 @@ import { ref, computed, onMounted } from "vue";
 import type { Component } from 'vue'
 import { useRoute } from "vue-router";
 import { useI18n } from 'vue-i18n'
+import { DEVELOPMENT_MODE_ENABLED } from '@/lib/devMode'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/auth'
 
@@ -301,6 +302,7 @@ const { t } = useI18n()
 const auth = useAuthStore()
 const canSeeUsers = ref(false)
 const canSeeSystemAdmin = computed(() => auth.isSystemAdmin)
+const canSeeDevelopmentFeatures = DEVELOPMENT_MODE_ENABLED
 
 type MenuItem = {
   name: string
@@ -384,7 +386,7 @@ const menuGroups = computed<MenuGroup[]>(() => [
         icon: CalenderIcon,
         name: t('sidebar.items.production'),
         subItems: [
-          { name: t('sidebar.items.recipeList'), path: "/recipeList", pro: false },
+          ...(canSeeDevelopmentFeatures ? [{ name: t('sidebar.items.recipeList'), path: "/recipeList", pro: false }] : []),
           { name: t('sidebar.items.batchList'), path: "/batches", pro: false },
           { name: t('sidebar.items.fillingReport'), path: "/fillingReport", pro: false },
           // { name: t('sidebar.items.waste'), path: "/waste", pro: false },
@@ -431,7 +433,7 @@ const menuGroups = computed<MenuGroup[]>(() => [
         icon: CalenderIcon,
         name: t('sidebar.items.masterMaintenance'),
         subItems: [
-          // { name: t('sidebar.items.materialMaster'), path: "/MaterialMaster", pro: false },
+          ...(canSeeDevelopmentFeatures ? [{ name: t('sidebar.items.materialMaster'), path: "/MaterialMaster", pro: false }] : []),
           { name: t('sidebar.items.siteMaster'), path: "/siteMaster", pro: false },
           { name: t('sidebar.items.equipmentMaster'), path: "/equipmentMaster", pro: false },
           { name: t('sidebar.items.packageMaster'), path: "/packageMaster", pro: false },

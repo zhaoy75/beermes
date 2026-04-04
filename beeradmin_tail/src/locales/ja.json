@@ -2480,7 +2480,7 @@
     },
     "filters": {
       "taxType": "課税種別",
-      "taxYear": "課税年度",
+      "taxYear": "年",
       "taxMonth": "月",
       "status": "ステータス"
     },
@@ -2500,7 +2500,7 @@
     },
     "form": {
       "taxType": "課税種別",
-      "taxYear": "課税年度",
+      "taxYear": "年",
       "taxMonth": "月",
       "status": "ステータス",
       "totalTax": "酒税額合計",
@@ -2570,7 +2570,7 @@
     },
     "errors": {
       "taxTypeRequired": "課税種別は必須です。",
-      "taxYearRequired": "課税年度は必須です。",
+      "taxYearRequired": "年は必須です。",
       "taxMonthRequired": "月は必須です。",
       "statusRequired": "ステータスは必須です。",
       "breakdownRequired": "申告対象データの集計が必要です。"

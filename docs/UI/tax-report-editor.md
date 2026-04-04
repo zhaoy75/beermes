@@ -33,7 +33,7 @@
 ### Form Area
 - `課税種別`
   - read only
-- `課税年度`
+- `年`
   - read only
 - `月`
   - read only
@@ -87,12 +87,13 @@
 - `課税種別`
   - default: `monthly`
   - read only on the editor page
-- `課税年度`
+- `年`
   - derived from the create prompt or the saved row
   - read only on the editor page
 - `月`
   - required for monthly reports
   - derived from the create prompt or the saved row
+  - visible option order: `4` to `12`, then `1` to `3`
   - read only on the editor page
 - `ステータス`
   - editable only for existing rows

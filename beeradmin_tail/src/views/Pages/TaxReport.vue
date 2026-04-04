@@ -189,6 +189,11 @@ import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { formatVolume as formatVolumeDisplay } from '@/lib/volumeFormat'
 import { supabase } from '@/lib/supabase'
 import {
+  createEmptyTaxReportProfile,
+  fetchTaxReportProfileForTenant,
+  type TaxReportProfile,
+} from '@/lib/taxReportProfile'
+import {
   calculateTaxTotalAmount,
   buildXmlPayload,
   downloadStoredTaxReportFile,
@@ -207,7 +212,6 @@ import {
 const TABLE = 'tax_reports'
 const STATUS_OPTIONS = ['draft', 'submitted', 'approved'] as const
 const TAX_TYPE_OPTIONS = ['monthly'] as const
-const TAX_TEMPLATE_PATH = '/etax/R7年11月_納税申告.xtx'
 
 const { t, tm, locale } = useI18n()
 const router = useRouter()
@@ -217,8 +221,9 @@ const rows = ref<TaxReportRow[]>([])
 const loading = ref(false)
 const deletingReportId = ref('')
 const showCreatePrompt = ref(false)
-const templateXml = ref('')
 const tenantId = ref<string | null>(null)
+const tenantName = ref('')
+const tenantProfile = ref<TaxReportProfile>(createEmptyTaxReportProfile())
 
 const filters = reactive({ taxType: '', taxYear: '', taxMonth: '', status: '' })
 const promptForm = reactive({
@@ -345,16 +350,11 @@ async function ensureTenant() {
   return id
 }
 
-async function loadTemplate() {
-  try {
-    const response = await fetch(TAX_TEMPLATE_PATH)
-    if (!response.ok) throw new Error(`Template fetch failed: ${response.status}`)
-    templateXml.value = await response.text()
-  } catch (err) {
-    console.error(err)
-    toast.error(t('taxReport.templateMissing'))
-    templateXml.value = ''
-  }
+async function loadTenantTaxReportProfile() {
+  const tenant = await ensureTenant()
+  const loaded = await fetchTaxReportProfileForTenant(supabase, tenant)
+  tenantName.value = loaded.tenantName
+  tenantProfile.value = loaded.profile
 }
 
 async function fetchReports() {
@@ -475,16 +475,17 @@ async function downloadXmlForRowFile(row: TaxReportRow, file: TaxReportStoredFil
 
   try {
     const xml = buildXmlPayload({
-      templateXml: templateXml.value,
-      movementTypeLabel,
       taxType: row.tax_type,
       taxYear: row.tax_year,
       taxMonth: row.tax_month,
       breakdown,
+      profile: tenantProfile.value,
+      tenantId: tenantId.value ?? '',
+      tenantName: tenantName.value,
     })
-    downloadTextFile(file.fileName, xml)
+    downloadTextFile(file.fileName, await xml)
   } catch (err) {
-    toast.error(t('taxReport.templateMissing'))
+    toast.error(err instanceof Error ? err.message : String(err))
     console.error(err)
   }
 }
@@ -492,7 +493,7 @@ async function downloadXmlForRowFile(row: TaxReportRow, file: TaxReportStoredFil
 onMounted(async () => {
   try {
     await ensureTenant()
-    await loadTemplate()
+    await loadTenantTaxReportProfile()
     await fetchReports()
   } catch (err) {
     console.error(err)

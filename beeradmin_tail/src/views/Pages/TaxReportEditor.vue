@@ -295,6 +295,11 @@ import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { supabase } from '@/lib/supabase'
 import {
+  createEmptyTaxReportProfile,
+  fetchTaxReportProfileForTenant,
+  type TaxReportProfile,
+} from '@/lib/taxReportProfile'
+import {
   calculateTaxAmount,
   calculateTaxTotalAmount,
   buildTaxableRemovalExcelFilename,
@@ -400,7 +405,6 @@ const TAX_TYPE_OPTIONS = ['monthly'] as const
 const SUMMARY_DOC_TYPES = ['sale', 'tax_transfer', 'return', 'transfer'] as const
 const DISPOSE_DOC_TYPES = ['waste'] as const
 const REPORT_DOC_TYPES = [...SUMMARY_DOC_TYPES, ...DISPOSE_DOC_TYPES] as const
-const TAX_TEMPLATE_PATH = '/etax/R7年11月_納税申告.xtx'
 
 const { t, tm, locale } = useI18n()
 const route = useRoute()
@@ -409,8 +413,9 @@ const router = useRouter()
 const loadingInitial = ref(false)
 const saving = ref(false)
 const generating = ref(false)
-const templateXml = ref('')
 const tenantId = ref<string | null>(null)
+const tenantName = ref('')
+const tenantProfile = ref<TaxReportProfile>(createEmptyTaxReportProfile())
 
 const categories = ref<CategoryRow[]>([])
 const uoms = ref<Array<{ id: string; code: string | null }>>([])
@@ -547,13 +552,6 @@ function taxTypeLabel(taxType: string) {
   if (!map || typeof map !== 'object') return taxType
   const label = (map as Record<string, unknown>)[taxType]
   return typeof label === 'string' ? label : taxType
-}
-
-function xmlMovementTypeLabel(value: string) {
-  const map = tm('taxReport.movementTypeMap')
-  if (!map || typeof map !== 'object') return value
-  const label = (map as Record<string, unknown>)[value]
-  return typeof label === 'string' ? label : value
 }
 
 function pickLabel(label: RuleLabel | null | undefined, fallback: string) {
@@ -732,7 +730,7 @@ async function downloadSavedReportFile(entry: {
     try {
       const fileType = inferStoredFileType(entry.fileName)
       if (fileType === 'tax_report_xml') {
-        const summaryFile = buildSummaryXmlFile()
+        const summaryFile = await buildSummaryXmlFile()
         if (summaryFile) {
           const xml = await summaryFile.blob.text()
           downloadTextFile(summaryFile.fileName, xml)
@@ -740,7 +738,7 @@ async function downloadSavedReportFile(entry: {
         return
       }
       if (fileType === 'tax_report_dispose_xml') {
-        const disposeFile = buildDisposeXmlFile()
+        const disposeFile = await buildDisposeXmlFile()
         if (disposeFile) {
           const xml = await disposeFile.blob.text()
           downloadTextFile(disposeFile.fileName, xml)
@@ -750,7 +748,7 @@ async function downloadSavedReportFile(entry: {
       toast.info(t('taxReport.fileUnavailable'))
     } catch (err) {
       console.error(err)
-      toast.error(t('taxReport.templateMissing'))
+      toast.error(err instanceof Error ? err.message : String(err))
     }
     return
   }
@@ -833,6 +831,13 @@ async function ensureTenant() {
   return id
 }
 
+async function loadTenantTaxReportProfile() {
+  const tenant = await ensureTenant()
+  const loaded = await fetchTaxReportProfileForTenant(supabase, tenant)
+  tenantName.value = loaded.tenantName
+  tenantProfile.value = loaded.profile
+}
+
 async function loadCategories() {
   const { optionRows, fallbackRows } = await loadAlcoholTypeReferenceData(supabase)
   categories.value = optionRows.map((row: { def_id?: unknown; def_key?: unknown; spec?: Record<string, unknown> | null }) => ({
@@ -912,18 +917,6 @@ function applicableTaxRate(categoryCode: string | null | undefined, dateStr: str
     if (record.effectDate && date < record.effectDate) break
   }
   return candidate?.taxrate ?? records[records.length - 1]?.taxrate ?? 0
-}
-
-async function loadTemplate() {
-  try {
-    const response = await fetch(TAX_TEMPLATE_PATH)
-    if (!response.ok) throw new Error(`Template fetch failed: ${response.status}`)
-    templateXml.value = await response.text()
-  } catch (err) {
-    console.error(err)
-    toast.error(t('taxReport.templateMissing'))
-    templateXml.value = ''
-  }
 }
 
 async function loadPackageCategories(packageIds: string[]) {
@@ -1192,17 +1185,18 @@ function validateForm() {
   return Object.keys(errors).length === 0
 }
 
-function buildSummaryXmlFile() {
+async function buildSummaryXmlFile() {
   const summaryBreakdown = summaryItemsFromBreakdown(reportBreakdown.value)
   if (summaryBreakdown.length === 0) return null
   const fileName = buildXmlFilename(form.tax_type, form.tax_year, form.tax_month)
-  const content = buildXmlPayload({
-    templateXml: templateXml.value,
-    movementTypeLabel: xmlMovementTypeLabel,
+  const content = await buildXmlPayload({
     taxType: form.tax_type,
     taxYear: form.tax_year,
     taxMonth: form.tax_month,
     breakdown: summaryBreakdown,
+    profile: tenantProfile.value,
+    tenantId: tenantId.value ?? '',
+    tenantName: tenantName.value,
   })
   return {
     blob: new Blob([content], { type: 'application/xml' }),
@@ -1213,16 +1207,17 @@ function buildSummaryXmlFile() {
   }
 }
 
-function buildDisposeXmlFile() {
+async function buildDisposeXmlFile() {
   if (disposeBreakdown.value.length === 0) return null
   const fileName = buildDisposeXmlFilename(form.tax_type, form.tax_year, form.tax_month)
-  const content = buildXmlPayload({
-    templateXml: templateXml.value,
-    movementTypeLabel: xmlMovementTypeLabel,
+  const content = await buildXmlPayload({
     taxType: form.tax_type,
     taxYear: form.tax_year,
     taxMonth: form.tax_month,
     breakdown: disposeBreakdown.value,
+    profile: tenantProfile.value,
+    tenantId: tenantId.value ?? '',
+    tenantName: tenantName.value,
   })
   return {
     blob: new Blob([content], { type: 'application/xml' }),
@@ -1279,10 +1274,10 @@ async function saveReport() {
     if (form.tax_type === 'yearly') form.tax_month = 12
     const generatedFiles: GeneratedTaxReportFile[] = []
 
-    const summaryFile = buildSummaryXmlFile()
+    const summaryFile = await buildSummaryXmlFile()
     if (summaryFile) generatedFiles.push(summaryFile)
 
-    const disposeFile = buildDisposeXmlFile()
+    const disposeFile = await buildDisposeXmlFile()
     if (disposeFile) generatedFiles.push(disposeFile)
 
     const taxableRemovalFile = await buildTaxableRemovalExcelFile()
@@ -1351,7 +1346,7 @@ async function saveReport() {
 }
 
 async function createXmlForSummary() {
-  const summaryFile = buildSummaryXmlFile()
+  const summaryFile = await buildSummaryXmlFile()
   if (!summaryFile) {
     toast.info(t('taxReport.emptyBreakdown'))
     return
@@ -1362,13 +1357,13 @@ async function createXmlForSummary() {
     downloadTextFile(summaryFile.fileName, xml)
     setXmlLink('summary', summaryFile.fileName, xml)
   } catch (err) {
-    toast.error(t('taxReport.templateMissing'))
+    toast.error(err instanceof Error ? err.message : String(err))
     console.error(err)
   }
 }
 
 async function createXmlForDispose() {
-  const disposeFile = buildDisposeXmlFile()
+  const disposeFile = await buildDisposeXmlFile()
   if (!disposeFile) {
     toast.info(t('taxReport.emptyBreakdown'))
     return
@@ -1379,7 +1374,7 @@ async function createXmlForDispose() {
     downloadTextFile(disposeFile.fileName, xml)
     setXmlLink('dispose', disposeFile.fileName, xml)
   } catch (err) {
-    toast.error(t('taxReport.templateMissing'))
+    toast.error(err instanceof Error ? err.message : String(err))
     console.error(err)
   }
 }
@@ -1458,7 +1453,7 @@ onMounted(async () => {
   try {
     loadingInitial.value = true
     await ensureTenant()
-    await Promise.all([loadCategories(), loadUoms(), loadTaxRates(), loadTemplate(), loadMovementRules()])
+    await Promise.all([loadCategories(), loadUoms(), loadTaxRates(), loadMovementRules(), loadTenantTaxReportProfile()])
     if (editing.value && typeof route.params.id === 'string') {
       await loadExistingReport(route.params.id)
     } else {

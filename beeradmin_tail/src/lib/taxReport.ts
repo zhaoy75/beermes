@@ -1,4 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import type { TaxReportProfile } from '@/lib/taxReportProfile'
+import { generateRLI0010_232 } from '@/lib/taxreportxml/RLI0010_232'
 
 export type JsonMap = Record<string, unknown>
 
@@ -337,84 +339,57 @@ export function inferMimeType(fileName: string) {
   return 'application/octet-stream'
 }
 
-export function buildXmlPayload(options: {
-  templateXml: string
-  movementTypeLabel: (value: string) => string
+export async function buildXmlPayload(options: {
   taxType: string
   taxYear: number
   taxMonth: number
   breakdown: TaxVolumeItem[]
+  profile: TaxReportProfile
+  tenantId: string
+  tenantName: string
 }) {
-  const { templateXml, movementTypeLabel, taxType, taxYear, taxMonth, breakdown } = options
-  if (!templateXml) {
-    throw new Error('TEMPLATE_NOT_LOADED')
+  const { taxType, taxYear, taxMonth, breakdown, profile, tenantId, tenantName } = options
+  if (taxType !== 'monthly') {
+    throw new Error('UNSUPPORTED_TAX_TYPE')
   }
-
-  const { era, yy } = reiwaYear(taxYear)
-  const mm = taxType === 'monthly' ? taxMonth : 12
-  const dateStr = new Date().toISOString().slice(0, 10)
-
   const taxableItems = breakdown.filter((item) => !isReturnTaxEvent(item.move_type, item.tax_event))
   const returnItems = breakdown.filter((item) => isReturnTaxEvent(item.move_type, item.tax_event))
+  const rawTotalTaxAmount = calculateTaxTotalAmount(breakdown)
+  const totalTaxAmount = Math.max(0, Math.round(rawTotalTaxAmount))
+  const roundedDownAmount = totalTaxAmount > 0 ? totalTaxAmount % 100 : 0
+  const payableTaxAmount = Math.max(0, totalTaxAmount - roundedDownAmount)
+  const refundableTaxAmount = Math.max(0, Math.round(rawTotalTaxAmount < 0 ? Math.abs(rawTotalTaxAmount) : 0))
+  const generatedAt = new Date().toISOString()
 
-  const ehdBlocks = taxableItems
-    .map((item) => {
-      const categoryCode = resolveCategoryCode(item)
-      const abvTag =
-        item.abv != null ? `\n                    <EHD00040>${item.abv}</EHD00040>` : ''
-      const volume = formatXmlVolume(item.volume_l)
-      return `                <EHD00000>
-                    <EHD00010>
-                        <kubun_CD>${kubunCodeForMoveType(item.move_type)}</kubun_CD>
-                    </EHD00010>
-                    <EHD00020>${categoryCode}</EHD00020>
-                    <EHD00030>${xmlEscape(item.categoryName)}</EHD00030>${abvTag}
-                    <EHD00050>${volume}</EHD00050>
-                    <EHD00080 AutoCalc="1">${volume}</EHD00080>
-                    <EHD00100 AutoCalc="1">0</EHD00100>
-                </EHD00000>`
-    })
-    .join('\n')
-
-  const ekdBlocks = returnItems
-    .map((item) => {
-      const categoryCode = resolveCategoryCode(item)
-      const abvTag =
-        item.abv != null ? `\n                    <EKD00040>${item.abv}</EKD00040>` : ''
-      const volume = formatXmlVolume(item.volume_l)
-      return `                <EKD00000>
-                    <EKD00010>
-                        <kubun_CD>1</kubun_CD>
-                    </EKD00010>
-                    <EKD00020>${categoryCode}</EKD00020>
-                    <EKD00030>${xmlEscape(item.categoryName)}</EKD00030>${abvTag}
-                    <EKD00080>${volume}</EKD00080>
-                    <EKD00100 AutoCalc="1">0</EKD00100>
-                    <EKD00120>${xmlEscape(movementTypeLabel(item.move_type))}</EKD00120>
-                </EKD00000>`
-    })
-    .join('\n')
-
-  let xml = templateXml
-
-  xml = xml.replace(/sakuseiDay="\d{4}-\d{2}-\d{2}"/g, `sakuseiDay="${dateStr}"`)
-  xml = xml.replace(/<gen:era>\d+<\/gen:era>/g, `<gen:era>${era}</gen:era>`)
-  xml = xml.replace(/<gen:yy>\d+<\/gen:yy>/g, `<gen:yy>${yy}</gen:yy>`)
-  xml = xml.replace(/<gen:mm>\d+<\/gen:mm>/g, `<gen:mm>${mm}</gen:mm>`)
-
-  xml = xml.replace(/<LIA110[\s\S]*?<\/LIA110>/, (section) => {
-    let updated = section.replace(/<EHD00000>[\s\S]*?<\/EHD00000>/g, '')
-    updated = updated.replace(/(<EHC00000>[\s\S]*?<\/EHC00000>)/, `$1\n${ehdBlocks}`)
-    return updated
+  const result = await generateRLI0010_232({
+    input: {
+      report: {
+        taxType: 'monthly',
+        taxYear,
+        taxMonth,
+        generatedAt,
+      },
+      tenant: {
+        tenantId,
+        tenantName,
+      },
+      profile,
+      totals: {
+        totalTaxAmount,
+        refundableTaxAmount,
+        roundedDownAmount,
+        payableTaxAmount,
+        netPayableTaxAmount: payableTaxAmount,
+      },
+      breakdown: {
+        summary: taxableItems,
+        returns: returnItems,
+      },
+      attachments: [],
+    },
   })
 
-  xml = xml.replace(/<LIA220[\s\S]*?<\/LIA220>/, (section) => {
-    let updated = section.replace(/<EKD00000>[\s\S]*?<\/EKD00000>/g, '')
-    updated = updated.replace(/(<EKC00000>[\s\S]*?<\/EKC00000>)/, `$1\n${ekdBlocks}`)
-    return updated
-  })
-
-  return xml
+  return result.xml
 }
 
 export async function uploadGeneratedTaxReportFiles(options: {
@@ -542,22 +517,6 @@ function toNullableNumber(value: unknown) {
   return Number.isFinite(numeric) ? numeric : null
 }
 
-function reiwaYear(year: number) {
-  if (year >= 2019) return { era: 5, yy: year - 2018 }
-  if (year >= 1989) return { era: 4, yy: year - 1988 }
-  return { era: 3, yy: year }
-}
-
-function formatXmlVolume(value: number) {
-  if (!Number.isFinite(value)) return '0'
-  return String(Math.round(value * 1000))
-}
-
-function resolveCategoryCode(item: TaxVolumeItem) {
-  if (item.categoryCode && /^\d+$/.test(item.categoryCode)) return item.categoryCode
-  return '000'
-}
-
 function taxDirectionForMovement(moveType: string, taxEvent?: string | null) {
   if (!isSummaryDocType(moveType)) return 0
 
@@ -598,28 +557,4 @@ function normalizeStoredBreakdownTaxRates(
 function isApproximatelyEqual(left: number, right: number) {
   const tolerance = Math.max(1, Math.abs(right) * 0.01)
   return Math.abs(left - right) <= tolerance
-}
-
-function kubunCodeForMoveType(moveType: string, fallback = '1') {
-  switch (moveType) {
-    case 'sale':
-      return '1'
-    case 'tax_transfer':
-      return '2'
-    case 'transfer':
-      return '3'
-    case 'waste':
-      return '4'
-    default:
-      return fallback
-  }
-}
-
-function xmlEscape(value: string) {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;')
 }

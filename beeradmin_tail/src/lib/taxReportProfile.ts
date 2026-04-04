@@ -1,3 +1,5 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
+
 export type JsonRecord = Record<string, unknown>
 
 export const TAX_REPORT_PROFILE_META_KEY = 'tax_report_profile'
@@ -279,4 +281,23 @@ function readStringOrFallback(value: unknown, fallback: unknown): string {
 
 function clean(value: string): string {
   return value.trim()
+}
+
+export async function fetchTaxReportProfileForTenant(
+  supabase: SupabaseClient,
+  tenantId: string,
+) {
+  const { data, error } = await supabase
+    .from('tenants')
+    .select('id, name, meta')
+    .eq('id', tenantId)
+    .maybeSingle()
+
+  if (error) throw error
+
+  const record = data && typeof data === 'object' ? (data as JsonRecord) : {}
+  return {
+    tenantName: typeof record.name === 'string' ? record.name : '',
+    profile: normalizeTaxReportProfile(record.meta),
+  }
 }

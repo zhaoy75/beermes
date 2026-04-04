@@ -191,6 +191,16 @@
 ### Validation Outcome
 - `npm run type-check` in `beeradmin_tail`: pass.
 - `npm run test` in `beeradmin_tail`: failed because `package.json` has no `test` script.
+- `npm run lint` in `beeradmin_tail`: failed on many pre-existing project-wide ESLint violations unrelated to this specification task, including existing `vue/block-lang`, `vue/multi-word-component-names`, `@typescript-eslint/no-explicit-any`, and unused-symbol errors across unchanged files.
+
+### Validation Outcome
+- `npm run type-check` in `beeradmin_tail`: pass.
+- `npm run test` in `beeradmin_tail`: failed because `package.json` has no `test` script.
+- `npm run lint` in `beeradmin_tail`: failed on many pre-existing project-wide ESLint violations unrelated to this documentation task, including existing `vue/block-lang`, `vue/multi-word-component-names`, `@typescript-eslint/no-explicit-any`, and unused-symbol errors across unchanged files.
+
+### Validation Outcome
+- `npm run type-check` in `beeradmin_tail`: pass.
+- `npm run test` in `beeradmin_tail`: failed because `package.json` has no `test` script.
 - `npm run lint` in `beeradmin_tail`: failed on many pre-existing project-wide ESLint violations unrelated to this schema change, including existing `vue/block-lang`, `vue/multi-word-component-names`, `@typescript-eslint/no-explicit-any`, and unused-symbol errors across unchanged files.
 
 ## Task Addendum 2026-04-03: Tenant Tax Report Profile Page
@@ -429,3 +439,454 @@
   - lint
   - type-check
 - If a required script does not exist, report that explicitly.
+
+## Task Addendum 2026-04-04: Schema-Driven Tax Report XML Grand Design
+
+### Goal
+- Refine the schema-driven `酒税申告` XML migration design and write it to a markdown document.
+
+### Scope
+- Document a schema-driven replacement for the current template-based XML generator.
+- Constrain the design so XSD changes require minimal source-code modification.
+- Standardize the target implementation area under `beeradmin_tail/src/lib/taxreportxml`.
+- Infer likely data sources from the current template-based implementation and record those guesses explicitly.
+- Describe the required `TaxReportEditor` GUI changes needed to support the new architecture.
+- Add a requirement that generated XML must be validated against the target XSD before it is treated as successful output.
+
+### Non-Goals
+- No code implementation of the schema-driven generator in this task.
+- No change to current runtime behavior in this task.
+- No attempt to cover every possible e-Tax form outside the current monthly `RLI0010` flow.
+
+### Affected Files
+- `specs/current-task.md`
+- `docs/UI/tax-report-editor.md` or a new markdown design document under `docs/`
+
+### Data Model / API Changes
+- None in this task. This task is design documentation only.
+
+### Planned File Changes
+- Append this addendum for the schema-driven design task.
+- Add a dedicated markdown document for the schema-driven `taxreportxml` grand design.
+- Include a section describing the intended `TaxReportEditor` GUI changes as part of the migration plan.
+
+### Final Decisions
+- The refined grand design is documented in a dedicated markdown file under `docs/UI/`.
+- The target implementation root is `beeradmin_tail/src/lib/taxreportxml`.
+- The concrete report module root should be `beeradmin_tail/src/lib/taxreportxml/RLI0010_232`.
+- XSD-version-specific logic should be sandboxed in report-name-rooted folders such as `src/lib/taxreportxml/RLI0010_232` so future schema changes stay localized.
+- The design document records explicit guesses for XML data sources based on the current template-based implementation.
+- The design document includes a revised `TaxReportEditor` GUI model centered on readiness, validation, form coverage, and generation status rather than template-based XML actions.
+- Generated XML is required to pass XSD validation before download/save is considered successful in the target design.
+- The design document now defines the exact public API around `src/lib/taxreportxml/RLI0010_232`.
+- When XSD validation fails, the target system contract is an HTTP error response rather than a soft warning.
+
+### Validation Plan
+- Run required checks before finishing:
+  - unit tests
+  - lint
+  - type-check
+- If a required script does not exist, report that explicitly.
+
+## Task Addendum 2026-04-04: RLI0010_232 Implementation Spec
+
+### Goal
+- Create a concrete implementation spec for the schema-driven `RLI0010_232` tax report XML subsystem.
+
+### Scope
+- Define the exact public API for `beeradmin_tail/src/lib/taxreportxml/RLI0010_232`.
+- Define the canonical input and output contracts for generation.
+- Define the XSD validation service contract, including HTTP error behavior.
+- Define the `TaxReportEditor` state model and UI interaction flow for the new generator.
+- Record phased implementation guidance for the initial rollout.
+
+### Non-Goals
+- No code implementation in this task.
+- No database schema change in this task.
+- No attempt to spec every optional e-Tax attachment/form outside the current monthly scope.
+
+### Affected Files
+- `specs/current-task.md`
+- `docs/UI/tax-report-schema-driven-design.md`
+- `docs/UI/` technical spec markdown for `RLI0010_232`
+
+### Data Model / API Changes
+- None in this task. This task is specification only.
+
+### Planned File Changes
+- Append this addendum for the implementation-spec task.
+- Add a technical spec markdown document for `RLI0010_232`.
+- Keep `specs/current-task.md` as the source-of-truth summary and use the markdown doc for the detailed technical contract.
+
+### Final Decisions
+- The concrete implementation spec is documented in `docs/UI/tax-report-rli0010-232-implementation-spec.md`.
+- The concrete report module root is `beeradmin_tail/src/lib/taxreportxml/RLI0010_232`.
+- The exact public API is now defined around `generateRLI0010_232()` and the supporting validation/build exports from that folder.
+- XSD validation failure is specified as an HTTP error contract, with `422 Unprocessable Entity` as the recommended response for schema-invalid XML.
+- `TaxReportEditor` is specified to block successful save/download until `RLI0010_232` XML has passed XSD validation.
+
+### Validation Plan
+- Run required checks before finishing:
+  - unit tests
+  - lint
+  - type-check
+- If a required script does not exist, report that explicitly.
+
+## Task Addendum 2026-04-04: RLI0010_232 Source Implementation
+
+### Goal
+- Implement the first schema-driven tax report XML source around `RLI0010_232` and switch the current tax-report flow over to it.
+
+### Scope
+- Add `beeradmin_tail/src/lib/taxreportxml/RLI0010_232` and its shared `taxreportxml` entrypoints.
+- Replace the current template-based `buildXmlPayload()` path with the new schema-driven module.
+- Load tenant tax-report profile data during XML generation so `IT` and `LIA010` can be built dynamically.
+- Add an XSD-validation function boundary and wire the frontend XML generation flow through it.
+- Remove the editor/list dependency on `public/etax/R7年11月_納税申告.xtx` for XML generation.
+
+### Non-Goals
+- No implementation of optional forms outside the current `IT`, `LIA010`, `LIA110`, and `LIA220` subset.
+- No redesign of unrelated tax-report list/editor features outside what is needed to support the new generator.
+- No implementation of digital signature support.
+
+### Affected Files
+- `specs/current-task.md`
+- `beeradmin_tail/src/lib/taxReport.ts`
+- `beeradmin_tail/src/lib/taxReportProfile.ts`
+- `beeradmin_tail/src/lib/taxreportxml/**`
+- `beeradmin_tail/src/views/Pages/TaxReport.vue`
+- `beeradmin_tail/src/views/Pages/TaxReportEditor.vue`
+- `supabase/supabase/config.toml`
+- `supabase/supabase/functions/**` for the tax-report XML validation function
+
+### Data Model / API Changes
+- Frontend XML generation now depends on the tenant tax-report profile as structured input.
+- XML validation is invoked through a dedicated HTTP function boundary before generation is treated as successful.
+
+### Planned File Changes
+- Append this addendum for the source implementation task.
+- Create the schema-driven `RLI0010_232` source tree.
+- Add frontend helper wiring to build XML through the new module.
+- Add a function client/server boundary for XSD validation.
+- Update the tax-report pages so XML generation no longer fetches the fixed `.xtx` template.
+
+### Final Decisions
+- The schema-driven source now lives under `beeradmin_tail/src/lib/taxreportxml/RLI0010_232` with shared XML/pagination/catalog helpers in `beeradmin_tail/src/lib/taxreportxml/core`.
+- `taxReport.ts` no longer performs template-string replacement. `buildXmlPayload()` now maps the current report breakdown plus tenant tax-report profile into `generateRLI0010_232()`.
+- The implemented first-phase form set is `IT`, `LIA010`, paged `LIA110`, and optional paged `LIA220`.
+- `TaxReport.vue` and `TaxReportEditor.vue` no longer fetch `public/etax/R7年11月_納税申告.xtx`. Both pages now load the tenant tax-report profile from `tenants.meta.tax_report_profile` and pass it into XML generation.
+- `taxReportProfile.ts` now exposes `fetchTaxReportProfileForTenant()` so the list/editor pages can share the same tenant-profile loading path.
+- The generated XML now uses consistent form ids and `CATALOG` references (`IT`, `LIA010-1`, `LIA110-n`, `LIA220-n`) instead of an inert placeholder catalog block.
+- `LIA010` total fields now round to whole yen and compute the 100-yen cutdown amount separately before deriving `納付すべき税額`.
+- XSD validation is now wired through a Supabase Edge Function named `validate-tax-report-xml`, with the `19XMLスキーマ` bundle copied into the function package and validation performed by `xmllint`.
+- XSD validation failure is treated as an HTTP error path and surfaced to the frontend generator as a thrown validation error before save/download succeeds.
+
+### Validation Plan
+- Run required checks before finishing:
+  - unit tests
+  - lint
+  - type-check
+- Run task-level lint on the changed frontend source if the repo-wide lint backlog still blocks `npm run lint`.
+- Verify the bundled XSD set with `xmllint` against a known-good `RLI0010` sample so the function-side schema path is confirmed locally.
+
+### Validation Outcome
+- `npm run type-check` in `beeradmin_tail`: pass.
+- `npx eslint src/lib/taxReport.ts src/lib/taxReportProfile.ts src/lib/taxreportxml src/views/Pages/TaxReport.vue src/views/Pages/TaxReportEditor.vue` in `beeradmin_tail`: pass.
+- `npm run test` in `beeradmin_tail`: failed because `package.json` has no `test` script.
+- `npm run lint` in `beeradmin_tail`: failed on many pre-existing project-wide ESLint violations outside this task.
+- `xmllint --noout --schema supabase/supabase/functions/validate-tax-report-xml/schemas/shuzei/RLI0010-232.xsd beeradmin_tail/public/etax/R7年11月_納税申告.xtx`: pass.
+- `xmllint --noout --schema supabase/supabase/functions/validate-tax-report-xml/schemas/shuzei/RLI0010-232.xsd etax/R7年11月_納税申告_添付書類-2.xtx`: expected failure because that sample is `RLI9000`, not `RLI0010`.
+
+## Task Addendum 2026-04-04: XSD Validator Transport Error Handling
+
+### Goal
+- Make local save/generate failures from an unavailable XSD validation function diagnosable from the UI error message.
+
+### Scope
+- Improve the frontend XSD validation error parsing so transport failures clearly state which Edge Function endpoint could not be reached.
+- Preserve the existing HTTP-error behavior for real XSD validation failures.
+
+### Non-Goals
+- No bypass of XSD validation.
+- No change to the validation contract for successful requests or `422` schema failures.
+
+### Affected Files
+- `specs/current-task.md`
+- `beeradmin_tail/src/lib/taxreportxml/RLI0010_232/validation/xsd.ts`
+
+### Data Model / API Changes
+- None.
+
+### Planned File Changes
+- Append this addendum for the transport-error handling task.
+- Detect network-level invoke failures and rewrite them into a clearer `XsdValidationError` message that includes the target function endpoint.
+
+### Final Decisions
+- Transport-level failures from `supabase.functions.invoke('validate-tax-report-xml')` are now normalized into an `XsdValidationError` that names the concrete function endpoint derived from `VITE_SUPABASE_URL`.
+- The clearer message is only used when the invoke status is `null` and the upstream message indicates a request/fetch failure, so real `422` XSD errors are left intact.
+- When the transport failure contains no structured validation payload, the parser now synthesizes a single `XSD_VALIDATION_FUNCTION_UNAVAILABLE` validation message so the UI can display a useful cause.
+
+### Validation Plan
+- Run task-level lint on the modified validator parser.
+- Run type-check after the parser change.
+- Confirm the local function endpoint is currently unreachable to explain the original failure mode.
+
+### Validation Outcome
+- `curl -i http://localhost:54321/functions/v1/validate-tax-report-xml -X OPTIONS`: failed to connect, confirming the local validation function endpoint is currently unavailable.
+- `npx eslint src/lib/taxreportxml/RLI0010_232/validation/xsd.ts` in `beeradmin_tail`: pass.
+- `npm run type-check` in `beeradmin_tail`: pass.
+
+## Task Addendum 2026-04-04: XSD Validator Boot Fix
+
+### Goal
+- Fix the local `validate-tax-report-xml` Edge Function boot failure so schema validation can run under the local Supabase stack.
+
+### Scope
+- Replace the oversized full-schema function bundle with a minimal `RLI0010_232` schema bundle containing only the XSD dependency closure actually required by the report root.
+- Point the function config and runtime path at that minimal bundle.
+- Align local frontend Supabase URL configuration with the address reported by `supabase status` if needed for this repo's local development flow.
+
+### Non-Goals
+- No change to the XML validation rules.
+- No support for additional report roots beyond `RLI0010_232`.
+
+### Affected Files
+- `specs/current-task.md`
+- `supabase/supabase/config.toml`
+- `supabase/supabase/functions/validate-tax-report-xml/index.ts`
+- `supabase/supabase/functions/validate-tax-report-xml/**` minimal schema bundle
+- `beeradmin_tail/.env` if the local Supabase URL needs alignment
+
+### Data Model / API Changes
+- None.
+
+### Planned File Changes
+- Append this addendum for the boot-fix task.
+- Add a report-scoped schema bundle for `RLI0010_232`.
+- Update `static_files` and the runtime schema path to that bundle.
+- Adjust local frontend Supabase URL config if the current `localhost` host is inconsistent with the running local stack.
+- Improve frontend parsing of non-2xx Edge Function responses so runtime validation errors are shown verbatim.
+
+### Final Decisions
+- The `validate-tax-report-xml` function now uses a report-scoped schema bundle for `RLI0010_232` instead of the full `19XMLスキーマ` tree, reducing the packaged schema payload from roughly `254M` to about `596K`.
+- The runtime schema path now points to `schema-bundles/RLI0010_232/shuzei/RLI0010-232.xsd`.
+- The function `static_files` glob is restricted to `**/*.xsd` so the Edge Runtime does not try to mount directories as static files during worker boot.
+- Local frontend development now points at `http://127.0.0.1:54321/` in `beeradmin_tail/.env` to match the actual local Supabase API address reported by `supabase status`.
+
+### Validation Plan
+- Restart the local Supabase stack so the updated function config is applied.
+- Verify the function endpoint no longer returns `BOOT_ERROR`.
+- Re-run type-check after any frontend/env-related changes.
+
+### Validation Outcome
+- `supabase status`: local stack running at `http://127.0.0.1:54321`.
+- Direct requests to `/functions/v1/validate-tax-report-xml` returned `503 BOOT_ERROR` before this glob fix.
+- Runtime log showed `called Result::unwrap() on an Err value: Os { code: 21, kind: IsADirectory, message: "Is a directory" }`, which matches the previous `**/*` static file glob including directories.
+- After changing `static_files` to `**/*.xsd` and restarting local Supabase, `OPTIONS /functions/v1/validate-tax-report-xml` returned `200 OK`.
+- Direct `POST /functions/v1/validate-tax-report-xml` now reaches the function and returns a function-side `500 XSD_VALIDATION_ERROR` with message `Spawning subprocesses is not allowed on Supabase Edge Runtime.`
+- `npx eslint src/lib/taxreportxml/RLI0010_232/validation/xsd.ts` in `beeradmin_tail`: pass.
+- `npm run type-check` in `beeradmin_tail`: pass.
+
+## Task Addendum 2026-04-04: External XSD Validator Service
+
+### Goal
+- Replace the Supabase Edge XSD validation path with a local/server-side Node validator service that can execute `xmllint`.
+
+### Scope
+- Add a small HTTP validator service under `beeradmin_tail/scripts`.
+- Configure the frontend to call that service when `VITE_TAX_REPORT_XML_VALIDATOR_URL` is set.
+- Keep the existing validation request/response contract (`reportName`, `xml`, `valid`, `messages`) so the generator path remains stable.
+- Add a package script so local development can start the validator explicitly.
+
+### Non-Goals
+- No change to the XML generation rules.
+- No production deployment automation for the validator service in this task.
+- No attempt to keep `xmllint` inside Supabase Edge Functions.
+
+### Affected Files
+- `specs/current-task.md`
+- `beeradmin_tail/package.json`
+- `beeradmin_tail/.env`
+- `beeradmin_tail/src/lib/taxreportxml/RLI0010_232/validation/xsd.ts`
+- `beeradmin_tail/scripts/tax-report-xml-validator.mjs`
+
+### Data Model / API Changes
+- Frontend XSD validation can now target an external HTTP endpoint defined by `VITE_TAX_REPORT_XML_VALIDATOR_URL`.
+
+### Planned File Changes
+- Append this addendum for the external-validator task.
+- Add a Node HTTP validator service that shells out to `xmllint`.
+- Switch frontend validation to use the external validator URL when configured.
+- Add a package script and local env value for the validator service endpoint.
+
+## Task Addendum 2026-04-04: TEISYUTSU_DAY Date Shape Fix
+
+### Goal
+- Fix the generated `IT/TEISYUTSU_DAY` shape so it matches `gen:yymmdd` in the e-Tax schema.
+
+### Scope
+- Update the `RLI0010_232` IT builder to emit `gen:era`, `gen:yy`, `gen:mm`, `gen:dd` for `TEISYUTSU_DAY`.
+- Validate the changed builder source with task-level lint and type-check.
+
+### Non-Goals
+- No broader redesign of date handling beyond the failing `TEISYUTSU_DAY` path.
+- No changes to the external validator service contract.
+
+### Affected Files
+- `specs/current-task.md`
+- `beeradmin_tail/src/lib/taxreportxml/RLI0010_232/builders/it.ts`
+
+### Data Model / API Changes
+- None.
+
+### Planned File Changes
+- Append this addendum for the `TEISYUTSU_DAY` schema fix.
+- Replace `gen:yyyy` output with wareki-style `gen:era` and `gen:yy` in the IT builder.
+
+### Final Decisions
+- XSD validation now prefers an external HTTP validator defined by `VITE_TAX_REPORT_XML_VALIDATOR_URL`, and the local repo default is `http://127.0.0.1:54331/validate-tax-report-xml`.
+- The frontend no longer relies on Supabase Edge Functions for the active XSD validation path in local development.
+- A small Node validator service now lives at `beeradmin_tail/scripts/tax-report-xml-validator.mjs` and validates XML by invoking local `xmllint` against the repo’s `etax/19XMLスキーマ` files.
+- The validator service exposes a minimal `POST /validate-tax-report-xml` contract compatible with the existing generator flow and returns `200` on success or `422` with validation messages on schema failure.
+- `beeradmin_tail/package.json` now provides `npm run tax-report-validator` to start the validator service explicitly.
+
+### Validation Plan
+- Run task-level lint on the modified frontend validator parser and the new Node service.
+- Run type-check after switching the frontend validation path.
+- Start the validator service locally and verify:
+  - `OPTIONS` returns `200`
+  - invalid XML returns `422` with XSD messages
+
+### Validation Outcome
+- `npx eslint src/lib/taxreportxml/RLI0010_232/validation/xsd.ts scripts/tax-report-xml-validator.mjs` in `beeradmin_tail`: pass.
+- `npm run type-check` in `beeradmin_tail`: pass.
+- `npm run tax-report-validator`: starts successfully and listens on `http://127.0.0.1:54331/validate-tax-report-xml`.
+- `OPTIONS http://127.0.0.1:54331/validate-tax-report-xml`: `200 OK`.
+- `POST http://127.0.0.1:54331/validate-tax-report-xml` with invalid XML (`<x/>`): `422 Unprocessable Entity` with XSD validation messages, confirming the replacement path works.
+- `npm run test` in `beeradmin_tail`: failed because `package.json` has no `test` script.
+- `npm run lint` in `beeradmin_tail`: failed on the existing repo-wide ESLint backlog outside this task.
+
+## Task Addendum 2026-04-04: XML Validation Env Switch
+
+### Goal
+- Add a frontend `.env` option to turn XML XSD validation on or off during tax report generation.
+
+### Scope
+- Add a Vite env flag in `beeradmin_tail/.env`.
+- Make the shared `RLI0010_232` XSD validation layer respect that flag.
+- Keep business and structural validation enabled even when XSD validation is turned off.
+
+### Non-Goals
+- No change to XML generation rules.
+- No change to the external validator service contract.
+- No change to save/upload behavior beyond skipping the XSD HTTP call when the flag is off.
+
+### Affected Files
+- `specs/current-task.md`
+- `beeradmin_tail/.env`
+- `beeradmin_tail/src/lib/taxreportxml/RLI0010_232/validation/xsd.ts`
+
+### Data Model / API Changes
+- Add `VITE_TAX_REPORT_XML_VALIDATION_ENABLED` as a frontend env flag.
+
+### Planned File Changes
+- Append this addendum for the env-switch task.
+- Add the env flag to local frontend config.
+- Parse the flag in the shared XSD validation module and short-circuit the external validator call when disabled.
+
+### Final Decisions
+- `VITE_TAX_REPORT_XML_VALIDATION_ENABLED=true` enables the current XSD validation flow.
+- Values `false`, `0`, `off`, and `no` disable only the XSD validation step.
+- When disabled, the generator treats XSD validation as intentionally bypassed and returns a warning validation message instead of calling the external validator.
+
+### Validation Plan
+- Run task-level lint on the modified XSD validation source.
+- Run type-check after the env-flag change.
+- Confirm the env-disabled path skips the validator request cleanly.
+
+### Validation Outcome
+- `npx eslint src/lib/taxreportxml/RLI0010_232/validation/xsd.ts` in `beeradmin_tail`: pass.
+- `npm run type-check` in `beeradmin_tail`: pass.
+- The shared validator layer now short-circuits before any HTTP request when `VITE_TAX_REPORT_XML_VALIDATION_ENABLED` is set to `false`, `0`, `off`, or `no`.
+- `npm run test` in `beeradmin_tail`: failed because `package.json` has no `test` script.
+- `npm run lint` in `beeradmin_tail`: failed on the existing repo-wide ESLint backlog outside this env-flag task.
+
+## Task Addendum 2026-04-04: Test Env Counterpart Settings
+
+### Goal
+- Keep `.env.test` aligned with the tax-report XML validation settings introduced in `.env`.
+
+### Scope
+- Add the tax-report XML validation env keys to `beeradmin_tail/.env.test`.
+
+### Non-Goals
+- No code changes.
+- No change to test build behavior beyond exposing the same env keys in test mode.
+
+### Affected Files
+- `specs/current-task.md`
+- `beeradmin_tail/.env.test`
+
+### Data Model / API Changes
+- Add `VITE_TAX_REPORT_XML_VALIDATION_ENABLED` and `VITE_TAX_REPORT_XML_VALIDATOR_URL` to `.env.test`.
+
+### Planned File Changes
+- Append this addendum for the test env counterpart task.
+- Add the matching validation env keys to `.env.test`.
+
+### Final Decisions
+- `.env.test` now carries the same tax-report XML validation keys as `.env` so test-mode builds can resolve the same configuration surface.
+
+### Validation Plan
+- Run type-check to confirm the env-only change does not affect the build.
+- Run repo-required test and lint checks and report existing failures explicitly.
+
+### Validation Outcome
+- `npm run type-check` in `beeradmin_tail`: pass.
+- `npm run test` in `beeradmin_tail`: failed because `package.json` has no `test` script.
+- `npm run lint` in `beeradmin_tail`: failed on the existing repo-wide ESLint backlog outside this env-only task.
+
+## Task Addendum 2026-04-04: Remove Obsolete Supabase XML Validator
+
+### Goal
+- Remove the unused Supabase Edge function path for tax-report XML validation now that the app uses the external validator service exclusively.
+
+### Scope
+- Delete the unused `validate-tax-report-xml` Supabase function source and schema bundle.
+- Remove its function registration from Supabase config.
+- Simplify frontend XSD validation messaging so it no longer references the removed Edge fallback.
+
+### Non-Goals
+- No change to the external validator service.
+- No change to XML generation rules.
+- No attempt to preserve the Supabase validator as an inactive fallback.
+
+### Affected Files
+- `specs/current-task.md`
+- `supabase/supabase/config.toml`
+- `supabase/supabase/functions/validate-tax-report-xml/**`
+- `beeradmin_tail/src/lib/taxreportxml/RLI0010_232/validation/xsd.ts`
+
+### Data Model / API Changes
+- None.
+
+### Planned File Changes
+- Append this addendum for the cleanup task.
+- Remove the Supabase function entry from config.
+- Delete the obsolete function directory.
+- Remove Edge-specific fallback text from the frontend validator module.
+
+### Final Decisions
+- The repo now treats the external Node validator service as the only supported XML XSD validation backend.
+- The obsolete Supabase Edge function path is removed instead of retained as dormant fallback code.
+
+### Validation Plan
+- Run task-level lint on the modified frontend validator source.
+- Run type-check after the cleanup.
+- Run repo-required test and lint checks and report existing failures explicitly.
+
+### Validation Outcome
+- `npx eslint src/lib/taxreportxml/RLI0010_232/validation/xsd.ts` in `beeradmin_tail`: pass.
+- `npm run type-check` in `beeradmin_tail`: pass.
+- `npm run test` in `beeradmin_tail`: failed because `package.json` has no `test` script.
+- `npm run lint` in `beeradmin_tail`: failed on the existing repo-wide ESLint backlog outside this cleanup task.

@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "tax-report-validator": "node ./scripts/tax-report-xml-validator.mjs",
     "build": "run-p type-check \"build-only {@}\" --",
     "build:test": "vite build --mode test",
     "preview": "vite preview",

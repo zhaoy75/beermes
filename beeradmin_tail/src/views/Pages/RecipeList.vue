@@ -2,297 +2,192 @@
   <AdminLayout>
     <PageBreadcrumb :pageTitle="pageTitle" />
 
-    <section
-      class="mb-6 bg-white shadow rounded-lg p-4 border border-gray-200"
-      aria-labelledby="recipeSearchHeading"
-    >
-      <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-4">
+    <section class="mb-6 rounded-lg border border-gray-200 bg-white p-4 shadow" aria-labelledby="recipeListSearch">
+      <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 id="recipeSearchHeading" class="text-lg font-semibold text-gray-900">
-            {{ t('recipe.list.searchTitle') }}
-          </h2>
-          <p class="text-sm text-gray-500">{{ t('recipe.list.showing', { count: filteredRecipes.length }) }}</p>
+          <h2 id="recipeListSearch" class="text-lg font-semibold text-gray-900">{{ t('recipe.list.searchTitle') }}</h2>
+          <p class="text-sm text-gray-500">{{ t('recipe.list.rowCount', { count: visibleRows.length }) }}</p>
         </div>
         <div class="flex flex-wrap items-center gap-2">
-          <button
-            class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
-            :disabled="loading"
-            @click="openCreate"
-          >
+          <button class="rounded bg-blue-600 px-3 py-2 text-white hover:bg-blue-700" :disabled="loading" @click="openCreate">
             {{ t('common.new') }}
           </button>
-          <button
-            class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-60"
-            :disabled="loading"
-            @click="refresh"
-          >
+          <button class="rounded border border-gray-300 px-3 py-2 hover:bg-gray-100" :disabled="loading" @click="refresh">
             {{ t('common.refresh') }}
           </button>
-          <button
-            class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-100"
-            :disabled="loading"
-            @click="resetFilters"
-          >
-            {{ t('recipe.list.reset') }}
+          <button class="rounded border border-gray-300 px-3 py-2 hover:bg-gray-100" :disabled="loading" @click="resetFilters">
+            {{ t('common.reset') }}
           </button>
         </div>
       </div>
 
-      <form class="grid grid-cols-1 md:grid-cols-4 gap-4" @submit.prevent>
+      <form class="grid grid-cols-1 gap-4 md:grid-cols-4" @submit.prevent>
         <div>
-          <label for="recipeName" class="block text-sm text-gray-600 mb-1">
-            {{ t('recipe.list.name') }}
-          </label>
-          <input
-            id="recipeName"
-            v-model.trim="filters.name"
-            type="search"
-            class="w-full h-[40px] border rounded px-3"
-            :placeholder="t('recipe.list.keywordPh')"
-          />
+          <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.list.keyword') }}</label>
+          <input v-model.trim="filters.keyword" class="h-[40px] w-full rounded border px-3" :placeholder="t('recipe.list.keywordPlaceholder')" />
         </div>
         <div>
-          <label for="recipeStyle" class="block text-sm text-gray-600 mb-1">
-            {{ t('recipe.list.style') }}
-          </label>
-          <select
-            id="recipeStyle"
-            v-model="filters.style"
-            class="w-full h-[40px] border rounded px-3 bg-white"
-          >
-            <option value="">{{ t('recipe.list.all') }}</option>
-            <option v-for="style in styleOptions" :key="style" :value="style">
-              {{ style || '—' }}
-            </option>
+          <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.list.category') }}</label>
+          <select v-model="filters.category" class="h-[40px] w-full rounded border bg-white px-3">
+            <option value="">{{ t('common.all') }}</option>
+            <option v-for="option in categoryOptions" :key="option" :value="option">{{ option }}</option>
           </select>
         </div>
         <div>
-          <label for="recipeStatus" class="block text-sm text-gray-600 mb-1">
-            {{ t('recipe.list.status') }}
-          </label>
-          <select
-            id="recipeStatus"
-            v-model="filters.status"
-            class="w-full h-[40px] border rounded px-3 bg-white"
-          >
-            <option value="">{{ t('recipe.list.all') }}</option>
-            <option v-for="status in STATUSES" :key="status" :value="status">
-              {{ statusLabel(status) }}
-            </option>
+          <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.list.industry') }}</label>
+          <select v-model="filters.industry" class="h-[40px] w-full rounded border bg-white px-3">
+            <option value="">{{ t('common.all') }}</option>
+            <option v-for="option in industryOptions" :key="option" :value="option">{{ option }}</option>
           </select>
         </div>
-        <div class="flex items-center gap-2 pt-6">
-          <input
-            id="showAllVersions"
-            v-model="showAllVersions"
-            type="checkbox"
-            class="h-4 w-4"
-          />
-          <label for="showAllVersions" class="text-sm text-gray-700">
-            {{ t('recipe.list.showAllVersions') }}
-          </label>
+        <div>
+          <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.list.versionStatus') }}</label>
+          <select v-model="filters.versionStatus" class="h-[40px] w-full rounded border bg-white px-3">
+            <option value="">{{ t('common.all') }}</option>
+            <option v-for="status in VERSION_STATUSES" :key="status" :value="status">{{ formatVersionStatus(status) }}</option>
+          </select>
+        </div>
+        <div class="md:col-span-4 flex items-center gap-2">
+          <input id="showAllVersions" v-model="showAllVersions" type="checkbox" class="h-4 w-4" />
+          <label for="showAllVersions" class="text-sm text-gray-700">{{ t('recipe.list.showAllVersions') }}</label>
         </div>
       </form>
     </section>
 
-    <section class="bg-white shadow rounded-lg border border-gray-200 overflow-hidden" aria-labelledby="recipeTableHeading">
-      <h2 id="recipeTableHeading" class="sr-only">{{ t('recipe.list.title') }}</h2>
-
-      <div class="hidden md:block overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200">
-          <thead class="bg-gray-50 text-xs text-gray-600 uppercase">
+    <section class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow">
+      <div class="hidden overflow-x-auto md:block">
+        <table class="min-w-full divide-y divide-gray-200 text-sm">
+          <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500">
             <tr>
-              <th class="px-3 py-2 text-left">
-                <button class="inline-flex items-center gap-1" @click="setSort('code')">
-                  {{ t('recipe.list.recipeId') }}
-                  <span class="text-xs">{{ sortIcon('code') }}</span>
-                </button>
-              </th>
-              <th class="px-3 py-2 text-left">
-                <button class="inline-flex items-center gap-1" @click="setSort('name')">
-                  {{ t('recipe.list.name') }}
-                  <span class="text-xs">{{ sortIcon('name') }}</span>
-                </button>
-              </th>
-              <th class="px-3 py-2 text-left">
-                <button class="inline-flex items-center gap-1" @click="setSort('version')">
-                  {{ t('recipe.list.version') }}
-                  <span class="text-xs">{{ sortIcon('version') }}</span>
-                </button>
-              </th>
-              <th class="px-3 py-2 text-left">
-                <button class="inline-flex items-center gap-1" @click="setSort('status')">
-                  {{ t('recipe.list.status') }}
-                  <span class="text-xs">{{ sortIcon('status') }}</span>
-                </button>
-              </th>
-              <th class="px-3 py-2 text-left">
-                <button class="inline-flex items-center gap-1" @click="setSort('created_at')">
-                  {{ t('recipe.list.created') }}
-                  <span class="text-xs">{{ sortIcon('created_at') }}</span>
-                </button>
-              </th>
-              <th class="px-3 py-2 text-left">{{ t('recipe.list.category') }}</th>
-              <th class="px-3 py-2 text-left">{{ t('recipe.list.style') }}</th>
-              <th class="px-3 py-2 text-left">{{ t('common.actions') }}</th>
+              <th class="px-3 py-2">{{ t('recipe.list.recipeCode') }}</th>
+              <th class="px-3 py-2">{{ t('recipe.list.recipeName') }}</th>
+              <th class="px-3 py-2">{{ t('recipe.list.version') }}</th>
+              <th class="px-3 py-2">{{ t('recipe.list.versionStatus') }}</th>
+              <th class="px-3 py-2">{{ t('recipe.list.recipeStatus') }}</th>
+              <th class="px-3 py-2">{{ t('recipe.list.category') }}</th>
+              <th class="px-3 py-2">{{ t('recipe.list.industry') }}</th>
+              <th class="px-3 py-2">{{ t('recipe.list.schema') }}</th>
+              <th class="px-3 py-2">{{ t('recipe.list.updated') }}</th>
+              <th class="px-3 py-2">{{ t('recipe.list.actions') }}</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-100 text-sm">
-            <tr v-for="row in sortedRecipes" :key="row.id" class="hover:bg-gray-50">
-              <td class="px-3 py-2 font-mono text-xs text-gray-700">{{ row.code }}</td>
+          <tbody class="divide-y divide-gray-100">
+            <tr v-for="row in visibleRows" :key="`${row.recipe_id}:${row.version_id}`" class="hover:bg-gray-50">
+              <td class="px-3 py-2 font-mono text-xs text-gray-700">{{ row.recipe_code }}</td>
               <td class="px-3 py-2">
-                <button class="text-blue-600 hover:underline" @click="goEdit(row)">
-                  {{ row.name }}
+                <button class="text-left text-blue-600 hover:underline" @click="goEdit(row)">
+                  {{ row.recipe_name }}
                 </button>
               </td>
-              <td class="px-3 py-2">v{{ row.version }}</td>
+              <td class="px-3 py-2">v{{ row.version_no }}</td>
               <td class="px-3 py-2">
-                <span class="px-2 py-1 rounded-full text-xs"
-                  :class="statusChip(row.status)">
-                  {{ statusLabel(row.status) }}
+                <span class="rounded-full px-2 py-1 text-xs" :class="versionStatusChip(row.version_status)">
+                  {{ formatVersionStatus(row.version_status) }}
                 </span>
               </td>
-              <td class="px-3 py-2 text-xs text-gray-500">{{ formatDate(row.created_at) }}</td>
-              <td class="px-3 py-2">{{ categoryLabel(row.category) }}</td>
-              <td class="px-3 py-2">{{ row.style || '—' }}</td>
+              <td class="px-3 py-2">
+                <span class="rounded-full px-2 py-1 text-xs" :class="recipeStatusChip(row.recipe_status)">
+                  {{ formatRecipeStatus(row.recipe_status) }}
+              </span>
+              </td>
+              <td class="px-3 py-2">{{ row.recipe_category || t('common.none') }}</td>
+              <td class="px-3 py-2">{{ row.industry_type || t('common.none') }}</td>
+              <td class="px-3 py-2 font-mono text-xs text-gray-600">{{ row.schema_code || DEFAULT_SCHEMA_KEY }}</td>
+              <td class="px-3 py-2 text-xs text-gray-500">{{ formatDate(row.updated_at) }}</td>
               <td class="px-3 py-2 space-x-2">
-                <button
-                  class="px-2 py-1 text-xs rounded border hover:bg-gray-100 disabled:opacity-60"
-                  :disabled="copyingId === row.id || copying"
-                  @click="openCopy(row)"
-                >
-                  {{ copyingId === row.id ? t('common.copying') : t('common.copy') }}
+                <button class="rounded border px-2 py-1 text-xs hover:bg-gray-100" :disabled="copyingId === row.version_id" @click="openCopy(row)">
+                  {{ copyingId === row.version_id ? t('common.copying') : t('common.copy') }}
                 </button>
-                <button
-                  class="px-2 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700"
-                  @click="confirmDelete(row)"
-                >
+                <button class="rounded bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-700" @click="confirmDelete(row)">
                   {{ t('common.delete') }}
                 </button>
               </td>
             </tr>
-            <tr v-if="!loading && sortedRecipes.length === 0">
-              <td colspan="8" class="px-3 py-6 text-center text-gray-500">
-                {{ t('common.noData') }}
-              </td>
+            <tr v-if="!loading && visibleRows.length === 0">
+              <td colspan="10" class="px-3 py-8 text-center text-sm text-gray-500">{{ t('common.noData') }}</td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <div class="md:hidden divide-y divide-gray-200">
-        <article
-          v-for="row in sortedRecipes"
-          :key="`card-${row.id}`"
-          class="p-4"
-        >
-          <header class="flex items-start justify-between">
+      <div class="divide-y divide-gray-200 md:hidden">
+        <article v-for="row in visibleRows" :key="`card-${row.recipe_id}-${row.version_id}`" class="p-4">
+          <div class="flex items-start justify-between gap-3">
             <div>
-              <p class="text-xs uppercase tracking-wide text-gray-400">{{ row.code }}</p>
-              <button class="text-base font-semibold text-blue-600" @click="goEdit(row)">
-                {{ row.name }}
+              <p class="font-mono text-xs uppercase tracking-wide text-gray-400">{{ row.recipe_code }}</p>
+              <button class="text-left text-base font-semibold text-blue-600" @click="goEdit(row)">
+                {{ row.recipe_name }}
               </button>
             </div>
-            <span class="px-2 py-1 text-xs rounded-full" :class="statusChip(row.status)">
-              {{ statusLabel(row.status) }}
+            <span class="rounded-full px-2 py-1 text-xs" :class="versionStatusChip(row.version_status)">
+              {{ formatLabel(row.version_status) }}
             </span>
-          </header>
-          <dl class="mt-2 text-sm text-gray-600 space-y-1">
-            <div class="flex justify-between">
+          </div>
+          <dl class="mt-3 space-y-1 text-sm text-gray-600">
+            <div class="flex justify-between gap-3">
               <dt>{{ t('recipe.list.version') }}</dt>
-              <dd>v{{ row.version }}</dd>
+              <dd>v{{ row.version_no }}</dd>
             </div>
-            <div class="flex justify-between">
-              <dt>{{ t('recipe.list.style') }}</dt>
-              <dd>{{ row.style || '—' }}</dd>
-            </div>
-            <div class="flex justify-between">
+            <div class="flex justify-between gap-3">
               <dt>{{ t('recipe.list.category') }}</dt>
-              <dd>{{ categoryLabel(row.category) }}</dd>
+              <dd>{{ row.recipe_category || t('common.none') }}</dd>
             </div>
-            <div class="flex justify-between text-xs text-gray-500">
-              <dt>{{ t('recipe.list.created') }}</dt>
-              <dd>{{ formatDate(row.created_at) }}</dd>
+            <div class="flex justify-between gap-3">
+              <dt>{{ t('recipe.list.industry') }}</dt>
+              <dd>{{ row.industry_type || t('common.none') }}</dd>
+            </div>
+            <div class="flex justify-between gap-3">
+              <dt>{{ t('recipe.list.schema') }}</dt>
+              <dd class="font-mono text-xs">{{ row.schema_code || DEFAULT_SCHEMA_KEY }}</dd>
             </div>
           </dl>
-          <footer class="mt-3 flex gap-2">
-            <button
-              class="px-3 py-2 text-sm rounded border hover:bg-gray-100 disabled:opacity-60"
-              :disabled="copyingId === row.id || copying"
-              @click="openCopy(row)"
-            >
-              {{ copyingId === row.id ? t('common.copying') : t('common.copy') }}
+          <div class="mt-3 flex gap-2">
+            <button class="rounded border px-3 py-2 text-sm hover:bg-gray-100" :disabled="copyingId === row.version_id" @click="openCopy(row)">
+              {{ copyingId === row.version_id ? t('common.copying') : t('common.copy') }}
             </button>
-            <button class="px-3 py-2 text-sm rounded bg-red-600 text-white hover:bg-red-700" @click="confirmDelete(row)">
+            <button class="rounded bg-red-600 px-3 py-2 text-sm text-white hover:bg-red-700" @click="confirmDelete(row)">
               {{ t('common.delete') }}
             </button>
-          </footer>
+          </div>
         </article>
-        <p v-if="!loading && sortedRecipes.length === 0" class="p-4 text-sm text-gray-500 text-center">
-          {{ t('common.noData') }}
-        </p>
       </div>
     </section>
 
-    <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div class="w-full max-w-2xl bg-white rounded-xl shadow-lg border border-gray-200">
-        <header class="px-4 py-3 border-b">
-          <h3 class="font-semibold text-gray-900">
-            {{ editing ? t('recipe.list.editTitle') : t('recipe.list.newTitle') }}
-          </h3>
+    <div v-if="showCreateModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div class="w-full max-w-2xl rounded-xl border border-gray-200 bg-white shadow-lg">
+        <header class="border-b px-4 py-3">
+          <h3 class="font-semibold text-gray-900">{{ t('recipe.list.newRecipe') }}</h3>
         </header>
-        <section class="p-4 space-y-4">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <section class="space-y-4 p-4">
+          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.list.recipeId') }}<span class="text-red-600">*</span></label>
-              <input v-model.trim="form.code" class="w-full h-[40px] border rounded px-3" />
-              <p v-if="errors.code" class="mt-1 text-xs text-red-600">{{ errors.code }}</p>
-            </div>
-            <div>
-              <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.list.version') }}<span class="text-red-600">*</span></label>
-              <input v-model.number="form.version" type="number" min="1" class="w-full h-[40px] border rounded px-3" />
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.list.recipeCode') }}<span class="text-red-600">*</span></label>
+              <input v-model.trim="createForm.recipe_code" class="h-[40px] w-full rounded border px-3" />
+              <p v-if="formErrors.recipe_code" class="mt-1 text-xs text-red-600">{{ formErrors.recipe_code }}</p>
             </div>
             <div>
-              <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.list.name') }}<span class="text-red-600">*</span></label>
-              <input v-model.trim="form.name" class="w-full h-[40px] border rounded px-3" />
-              <p v-if="errors.name" class="mt-1 text-xs text-red-600">{{ errors.name }}</p>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.list.recipeName') }}<span class="text-red-600">*</span></label>
+              <input v-model.trim="createForm.recipe_name" class="h-[40px] w-full rounded border px-3" />
+              <p v-if="formErrors.recipe_name" class="mt-1 text-xs text-red-600">{{ formErrors.recipe_name }}</p>
             </div>
             <div>
-              <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.list.status') }}<span class="text-red-600">*</span></label>
-              <select v-model="form.status" class="w-full h-[40px] border rounded px-3 bg-white">
-                <option v-for="status in STATUSES" :key="status" :value="status">
-                  {{ t('recipe.statusMap.' + status) }}
-                </option>
-              </select>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.list.recipeCategory') }}</label>
+              <input v-model.trim="createForm.recipe_category" class="h-[40px] w-full rounded border px-3" />
             </div>
             <div>
-              <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.list.category') }}</label>
-              <select v-model="form.category" class="w-full h-[40px] border rounded px-3 bg-white">
-                <option value="">{{ t('recipe.list.selectCategory') }}</option>
-                <option v-for="option in categoryOptions" :key="option.value" :value="option.value">
-                  {{ option.label }}
-                </option>
-              </select>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.list.industryType') }}</label>
+              <input v-model.trim="createForm.industry_type" class="h-[40px] w-full rounded border px-3" />
             </div>
-            <div class="md:col-span-2">
-              <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.list.style') }}</label>
-              <input v-model.trim="form.style" class="w-full h-[40px] border rounded px-3" />
-            </div>
-            <div class="md:col-span-2">
-              <label class="block text-sm text-gray-600 mb-1">{{ t('labels.note') }}</label>
-              <textarea v-model.trim="form.notes" rows="3" class="w-full border rounded px-3 py-2"></textarea>
+            <div>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.list.schemaKey') }}<span class="text-red-600">*</span></label>
+              <input v-model.trim="createForm.schema_key" class="h-[40px] w-full rounded border px-3 font-mono text-sm" />
+              <p v-if="formErrors.schema_key" class="mt-1 text-xs text-red-600">{{ formErrors.schema_key }}</p>
             </div>
           </div>
         </section>
-        <footer class="px-4 py-3 border-t flex items-center justify-end gap-2">
-          <button class="px-3 py-2 rounded border hover:bg-gray-100" @click="closeModal">
-            {{ t('common.cancel') }}
-          </button>
-          <button
-            class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
-            :disabled="saving"
-            @click="saveRecipe"
-          >
+        <footer class="flex items-center justify-end gap-2 border-t px-4 py-3">
+          <button class="rounded border px-3 py-2 hover:bg-gray-100" @click="closeCreate">{{ t('common.cancel') }}</button>
+          <button class="rounded bg-blue-600 px-3 py-2 text-white hover:bg-blue-700 disabled:opacity-60" :disabled="saving" @click="createRecipe">
             {{ saving ? t('common.saving') : t('common.save') }}
           </button>
         </footer>
@@ -300,60 +195,57 @@
     </div>
 
     <div v-if="showCopyModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div class="w-full max-w-md bg-white rounded-xl shadow-lg border border-gray-200">
-        <header class="px-4 py-3 border-b">
-          <h3 class="font-semibold text-gray-900">{{ t('recipe.list.copyTitle') }}</h3>
-          <p class="text-sm text-gray-500 mt-1">{{ t('recipe.list.copyDescription') }}</p>
+      <div class="w-full max-w-2xl rounded-xl border border-gray-200 bg-white shadow-lg">
+        <header class="border-b px-4 py-3">
+          <h3 class="font-semibold text-gray-900">{{ t('recipe.list.copyRecipe') }}</h3>
         </header>
-        <section class="p-4 space-y-4">
-          <div>
-            <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.list.recipeId') }}<span class="text-red-600">*</span></label>
-            <input v-model.trim="copyForm.code" class="w-full h-[40px] border rounded px-3" />
-            <p v-if="copyErrors.code" class="text-xs text-red-600 mt-1">{{ copyErrors.code }}</p>
-          </div>
-          <div>
-            <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.list.name') }}<span class="text-red-600">*</span></label>
-            <input v-model.trim="copyForm.name" class="w-full h-[40px] border rounded px-3" />
-            <p v-if="copyErrors.name" class="text-xs text-red-600 mt-1">{{ copyErrors.name }}</p>
-          </div>
-          <div>
-            <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.list.style') }}</label>
-            <input v-model.trim="copyForm.style" class="w-full h-[40px] border rounded px-3" />
-          </div>
-          <div class="text-xs text-gray-500 bg-gray-50 border border-dashed border-gray-200 rounded px-3 py-2">
-            {{ t('recipe.list.copyVersionNote') }}
+        <section class="space-y-4 p-4">
+          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.list.recipeCode') }}<span class="text-red-600">*</span></label>
+              <input v-model.trim="copyForm.recipe_code" class="h-[40px] w-full rounded border px-3" />
+              <p v-if="copyErrors.recipe_code" class="mt-1 text-xs text-red-600">{{ copyErrors.recipe_code }}</p>
+            </div>
+            <div>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.list.recipeName') }}<span class="text-red-600">*</span></label>
+              <input v-model.trim="copyForm.recipe_name" class="h-[40px] w-full rounded border px-3" />
+              <p v-if="copyErrors.recipe_name" class="mt-1 text-xs text-red-600">{{ copyErrors.recipe_name }}</p>
+            </div>
+            <div>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.list.recipeCategory') }}</label>
+              <input v-model.trim="copyForm.recipe_category" class="h-[40px] w-full rounded border px-3" />
+            </div>
+            <div>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.list.industryType') }}</label>
+              <input v-model.trim="copyForm.industry_type" class="h-[40px] w-full rounded border px-3" />
+            </div>
+            <div>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.list.schemaKey') }}<span class="text-red-600">*</span></label>
+              <input v-model.trim="copyForm.schema_key" class="h-[40px] w-full rounded border px-3 font-mono text-sm" />
+              <p v-if="copyErrors.schema_key" class="mt-1 text-xs text-red-600">{{ copyErrors.schema_key }}</p>
+            </div>
           </div>
         </section>
-        <footer class="px-4 py-3 border-t flex items-center justify-end gap-2">
-          <button class="px-3 py-2 rounded border hover:bg-gray-100" @click="closeCopyModal()">
-            {{ t('common.cancel') }}
-          </button>
-          <button
-            class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
-            :disabled="copying"
-            @click="executeCopy"
-          >
-            {{ copying ? t('common.copying') : t('recipe.list.copyConfirm') }}
+        <footer class="flex items-center justify-end gap-2 border-t px-4 py-3">
+          <button class="rounded border px-3 py-2 hover:bg-gray-100" @click="closeCopy">{{ t('common.cancel') }}</button>
+          <button class="rounded bg-blue-600 px-3 py-2 text-white hover:bg-blue-700 disabled:opacity-60" :disabled="copying" @click="copyRecipe">
+            {{ copying ? t('common.copying') : t('common.copy') }}
           </button>
         </footer>
       </div>
     </div>
 
-    <div v-if="showDelete" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div class="w-full max-w-md bg-white rounded-xl shadow-lg border border-gray-200">
-        <header class="px-4 py-3 border-b">
-          <h3 class="font-semibold text-gray-900">{{ t('common.delete') }}</h3>
+    <div v-if="showDeleteModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div class="w-full max-w-md rounded-xl border border-gray-200 bg-white shadow-lg">
+        <header class="border-b px-4 py-3">
+          <h3 class="font-semibold text-gray-900">{{ t('recipe.list.deleteRecipe') }}</h3>
         </header>
         <section class="p-4 text-sm text-gray-700">
-          {{ t('recipe.list.deleteConfirm', { name: toDelete?.name ?? '', version: toDelete?.version ?? '' }) }}
+          {{ t('recipe.list.deleteConfirmFull', { name: deleteTarget?.recipe_name ?? '' }) }}
         </section>
-        <footer class="px-4 py-3 border-t flex items-center justify-end gap-2">
-          <button class="px-3 py-2 rounded border hover:bg-gray-100" @click="showDelete = false">
-            {{ t('common.cancel') }}
-          </button>
-          <button class="px-3 py-2 rounded bg-red-600 text-white hover:bg-red-700" @click="deleteRecipe">
-            {{ t('common.delete') }}
-          </button>
+        <footer class="flex items-center justify-end gap-2 border-t px-4 py-3">
+          <button class="rounded border px-3 py-2 hover:bg-gray-100" @click="showDeleteModal = false">{{ t('common.cancel') }}</button>
+          <button class="rounded bg-red-600 px-3 py-2 text-white hover:bg-red-700" @click="deleteRecipe">{{ t('common.delete') }}</button>
         </footer>
       </div>
     </div>
@@ -361,536 +253,546 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, onMounted } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
-import {
-  buildAlcoholTypeLabelMap,
-  loadAlcoholTypeReferenceData,
-  resolveAlcoholTypeLabel,
-} from '@/lib/alcoholTypeRegistry'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
 
-const STATUSES = ['draft', 'released', 'retired'] as const
+const DEFAULT_SCHEMA_KEY = 'recipe_body_schema_v1'
+const VERSION_STATUSES = ['draft', 'in_review', 'approved', 'obsolete', 'archived'] as const
 
-const { t } = useI18n()
+type JsonObject = Record<string, unknown>
+type RecipeStatus = 'active' | 'inactive'
+type VersionStatus = (typeof VERSION_STATUSES)[number]
+
+interface RecipeHeaderRow {
+  id: string
+  recipe_code: string
+  recipe_name: string
+  recipe_category: string | null
+  industry_type: string | null
+  status: RecipeStatus
+  current_version_id: string | null
+  created_at: string | null
+  updated_at: string | null
+}
+
+interface RecipeVersionRow {
+  id: string
+  recipe_id: string
+  version_no: number
+  version_label: string | null
+  schema_code: string | null
+  status: VersionStatus
+  created_at: string | null
+  updated_at: string | null
+}
+
+interface RecipeListRow {
+  recipe_id: string
+  version_id: string
+  recipe_code: string
+  recipe_name: string
+  recipe_category: string | null
+  industry_type: string | null
+  recipe_status: RecipeStatus
+  version_no: number
+  version_label: string | null
+  version_status: VersionStatus
+  schema_code: string | null
+  created_at: string | null
+  updated_at: string | null
+}
+
+interface RecipeSchemaPayload {
+  def_id: string | null
+  def_key: string
+  scope: string | null
+  schema: JsonObject
+}
+
+const { t, locale } = useI18n()
 const router = useRouter()
-
 const pageTitle = computed(() => t('recipe.list.title'))
 
-interface RecipeRow {
-  id: string
-  code: string
-  name: string
-  style: string | null
-  version: number
-  status: string
-  notes: string | null
-  created_at: string | null
-  category: string | null
-}
-
-interface CategoryRow {
-  def_id: string
-  def_key: string
-  spec: Record<string, any>
-}
-
-type SortKey = 'code' | 'name' | 'version' | 'status' | 'created_at'
-type SortDirection = 'asc' | 'desc'
-
-const recipes = ref<RecipeRow[]>([])
 const loading = ref(false)
 const saving = ref(false)
-const sortKey = ref<SortKey>('created_at')
-const sortDirection = ref<SortDirection>('desc')
-const categories = ref<CategoryRow[]>([])
-const categoryFallbackRows = ref<CategoryRow[]>([])
-
-const filters = reactive({
-  name: '',
-  style: '',
-  status: '',
-})
-
-const form = reactive({
-  id: '',
-  code: '',
-  name: '',
-  style: '',
-  category: '',
-  version: 1,
-  status: STATUSES[0],
-  notes: '',
-})
-
-const errors = reactive<Record<string, string>>({})
-const showModal = ref(false)
-const showDelete = ref(false)
-const editing = ref(false)
-const toDelete = ref<RecipeRow | null>(null)
+const copying = ref(false)
 const copyingId = ref<string | null>(null)
 const showAllVersions = ref(false)
+const showCreateModal = ref(false)
 const showCopyModal = ref(false)
-const copyTarget = ref<RecipeRow | null>(null)
-const copyForm = reactive({ code: '', name: '', style: '' })
-const copyErrors = reactive<Record<string, string>>({})
-const copying = ref(false)
+const showDeleteModal = ref(false)
 
-const styleOptions = computed(() => {
-  const set = new Set<string>()
-  recipes.value.forEach((row) => {
-    if (row.style) set.add(row.style)
-  })
-  return Array.from(set).sort((a, b) => a.localeCompare(b))
+const recipes = ref<RecipeHeaderRow[]>([])
+const versions = ref<RecipeVersionRow[]>([])
+const copySource = ref<RecipeListRow | null>(null)
+const deleteTarget = ref<RecipeListRow | null>(null)
+
+const filters = reactive({
+  keyword: '',
+  category: '',
+  industry: '',
+  versionStatus: '',
 })
 
-const categoryLabelMap = computed(() => buildAlcoholTypeLabelMap(categories.value, categoryFallbackRows.value))
+const createForm = reactive({
+  recipe_code: '',
+  recipe_name: '',
+  recipe_category: '',
+  industry_type: '',
+  schema_key: DEFAULT_SCHEMA_KEY,
+})
+
+const copyForm = reactive({
+  recipe_code: '',
+  recipe_name: '',
+  recipe_category: '',
+  industry_type: '',
+  schema_key: DEFAULT_SCHEMA_KEY,
+})
+
+const formErrors = reactive<Record<string, string>>({})
+const copyErrors = reactive<Record<string, string>>({})
+
+const mesClient = () => supabase.schema('mes')
+
+const versionMap = computed(() => {
+  const map = new Map<string, RecipeVersionRow[]>()
+  for (const version of versions.value) {
+    const list = map.get(version.recipe_id)
+    if (list) {
+      list.push(version)
+    } else {
+      map.set(version.recipe_id, [version])
+    }
+  }
+  for (const list of map.values()) {
+    list.sort((a, b) => {
+      if (a.version_no !== b.version_no) return b.version_no - a.version_no
+      const aTime = a.updated_at ? Date.parse(a.updated_at) : 0
+      const bTime = b.updated_at ? Date.parse(b.updated_at) : 0
+      return bTime - aTime
+    })
+  }
+  return map
+})
 
 const categoryOptions = computed(() =>
-  categories.value.map((row) => ({
-    value: row.def_id,
-    label: resolveAlcoholTypeLabel(categoryLabelMap.value, row.def_id) ?? row.def_key,
-  })),
+  Array.from(new Set(recipes.value.map((row) => row.recipe_category).filter((value): value is string => Boolean(value)))).sort(),
 )
 
-const filteredRecipes = computed(() => {
-  const nameTerm = filters.name.trim().toLowerCase()
-  const styleTerm = filters.style.trim().toLowerCase()
-  const base = recipes.value.filter((row) => {
-    const matchesName = !nameTerm || row.name.toLowerCase().includes(nameTerm) || row.code.toLowerCase().includes(nameTerm)
-    const matchesStyle = !styleTerm || (row.style?.toLowerCase() ?? '').includes(styleTerm)
-    const matchesStatus = !filters.status || row.status === filters.status
-    return matchesName && matchesStyle && matchesStatus
-  })
-  if (showAllVersions.value) return base
+const industryOptions = computed(() =>
+  Array.from(new Set(recipes.value.map((row) => row.industry_type).filter((value): value is string => Boolean(value)))).sort(),
+)
 
-  const latestByCode = new Map<string, RecipeRow>()
-  for (const row of base) {
-    const existing = latestByCode.get(row.code)
-    if (!existing) {
-      latestByCode.set(row.code, row)
-      continue
-    }
+const visibleRows = computed(() => {
+  const rows: RecipeListRow[] = []
 
-    const existingVersion = existing.version ?? 0
-    const currentVersion = row.version ?? 0
-    const existingTimeRaw = existing.created_at ? new Date(existing.created_at).getTime() : Number.NaN
-    const currentTimeRaw = row.created_at ? new Date(row.created_at).getTime() : Number.NaN
-    const existingTime = Number.isNaN(existingTimeRaw) ? 0 : existingTimeRaw
-    const currentTime = Number.isNaN(currentTimeRaw) ? 0 : currentTimeRaw
+  for (const recipe of recipes.value) {
+    const versionRows = versionMap.value.get(recipe.id) ?? []
+    const targetVersions = showAllVersions.value
+      ? versionRows
+      : [pickCurrentVersion(recipe, versionRows)].filter((value): value is RecipeVersionRow => Boolean(value))
 
-    const isNewerVersion = currentVersion > existingVersion
-    const isSameVersionNewerDate = currentVersion === existingVersion && currentTime > existingTime
-
-    if (isNewerVersion || isSameVersionNewerDate) {
-      latestByCode.set(row.code, row)
+    for (const version of targetVersions) {
+      rows.push({
+        recipe_id: recipe.id,
+        version_id: version.id,
+        recipe_code: recipe.recipe_code,
+        recipe_name: recipe.recipe_name,
+        recipe_category: recipe.recipe_category,
+        industry_type: recipe.industry_type,
+        recipe_status: recipe.status,
+        version_no: version.version_no,
+        version_label: version.version_label,
+        version_status: version.status,
+        schema_code: version.schema_code,
+        created_at: version.created_at ?? recipe.created_at,
+        updated_at: version.updated_at ?? recipe.updated_at,
+      })
     }
   }
 
-  return Array.from(latestByCode.values())
-})
-
-const sortedRecipes = computed(() => {
-  const sorted = [...filteredRecipes.value]
-  sorted.sort((a, b) => {
-    const key = sortKey.value
-    const dir = sortDirection.value === 'asc' ? 1 : -1
-
-    const av = a[key]
-    const bv = b[key]
-
-    if (av === null || av === undefined) return 1
-    if (bv === null || bv === undefined) return -1
-
-    if (typeof av === 'number' && typeof bv === 'number') {
-      return (av - bv) * dir
-    }
-
-    const aStr = String(av).toLowerCase()
-    const bStr = String(bv).toLowerCase()
-    if (aStr < bStr) return -1 * dir
-    if (aStr > bStr) return 1 * dir
-    return 0
+  const keyword = filters.keyword.trim().toLowerCase()
+  const filtered = rows.filter((row) => {
+    const matchesKeyword =
+      !keyword
+      || row.recipe_code.toLowerCase().includes(keyword)
+      || row.recipe_name.toLowerCase().includes(keyword)
+    const matchesCategory = !filters.category || row.recipe_category === filters.category
+    const matchesIndustry = !filters.industry || row.industry_type === filters.industry
+    const matchesVersionStatus = !filters.versionStatus || row.version_status === filters.versionStatus
+    return matchesKeyword && matchesCategory && matchesIndustry && matchesVersionStatus
   })
-  return sorted
+
+  filtered.sort((a, b) => {
+    const aTime = a.updated_at ? Date.parse(a.updated_at) : 0
+    const bTime = b.updated_at ? Date.parse(b.updated_at) : 0
+    if (aTime !== bTime) return bTime - aTime
+    if (a.recipe_code !== b.recipe_code) return a.recipe_code.localeCompare(b.recipe_code)
+    return b.version_no - a.version_no
+  })
+
+  return filtered
 })
 
-const sortIcon = (key: SortKey) => {
-  if (sortKey.value !== key) return ''
-  return sortDirection.value === 'asc' ? '▲' : '▼'
+function pickCurrentVersion(recipe: RecipeHeaderRow, versionRows: RecipeVersionRow[]) {
+  if (recipe.current_version_id) {
+    const matched = versionRows.find((row) => row.id === recipe.current_version_id)
+    if (matched) return matched
+  }
+  return versionRows[0] ?? null
 }
 
-const statusChip = (status: string) => {
-  if (status === 'released') return 'bg-green-100 text-green-800'
+function formatLabel(value: string) {
+  return value
+    .split('_')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
+}
+
+function toTranslationKey(value: string) {
+  return value.replace(/_([a-z])/g, (_, char: string) => char.toUpperCase())
+}
+
+function translateEnum(baseKey: string, value: string) {
+  const key = `${baseKey}.${toTranslationKey(value)}`
+  const translated = t(key)
+  return translated === key ? formatLabel(value) : translated
+}
+
+function formatRecipeStatus(value: RecipeStatus) {
+  return translateEnum('recipe.statuses', value)
+}
+
+function formatVersionStatus(value: VersionStatus) {
+  return translateEnum('recipe.versionStatuses', value)
+}
+
+function formatDate(value: string | null) {
+  if (!value) return t('common.none')
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString(locale.value)
+}
+
+function recipeStatusChip(status: RecipeStatus) {
+  return status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-600'
+}
+
+function versionStatusChip(status: VersionStatus) {
+  if (status === 'approved') return 'bg-green-100 text-green-800'
   if (status === 'draft') return 'bg-yellow-100 text-yellow-800'
-  if (status === 'retired') return 'bg-gray-200 text-gray-600'
-  return 'bg-gray-100 text-gray-600'
+  if (status === 'in_review') return 'bg-blue-100 text-blue-800'
+  return 'bg-gray-200 text-gray-600'
 }
 
-const statusLabel = (status: string) => {
-  const key = `recipe.statusMap.${status}`
-  const label = t(key)
-  return label === key ? status : label
+function normalizeSchemaKey(value: string) {
+  return value.trim() || DEFAULT_SCHEMA_KEY
 }
 
-function setSort(key: SortKey) {
-  if (sortKey.value === key) {
-    sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc'
-  } else {
-    sortKey.value = key
-    sortDirection.value = key === 'created_at' ? 'desc' : 'asc'
+function buildRecipeEditLocation(row: Pick<RecipeListRow, 'recipe_id' | 'version_id' | 'schema_code'>) {
+  return {
+    path: `/recipeEdit/${row.recipe_id}/${row.version_id}`,
+    query: { schemaKey: row.schema_code || DEFAULT_SCHEMA_KEY },
   }
 }
 
-function formatDate(input: string | null) {
-  if (!input) return '—'
-  const date = new Date(input)
-  if (Number.isNaN(date.getTime())) return input
-  return date.toLocaleString()
-}
+function createInitialRecipeBody(schema: JsonObject | null, industryType: string) {
+  const schemaVersion =
+    typeof schema?.properties === 'object'
+    && schema.properties
+    && typeof (schema.properties as JsonObject).schema_version === 'object'
+    && (schema.properties as JsonObject).schema_version
+    && typeof (((schema.properties as JsonObject).schema_version as JsonObject).const) === 'string'
+      ? String(((schema.properties as JsonObject).schema_version as JsonObject).const)
+      : 'recipe_body_v1'
 
-function openCreate() {
-  editing.value = false
-  resetForm()
-  form.version = 1
-  form.status = STATUSES[0]
-  showModal.value = true
-}
-
-function closeModal() {
-  showModal.value = false
-}
-
-function confirmDelete(row: RecipeRow) {
-  toDelete.value = row
-  showDelete.value = true
-}
-
-function resetFilters() {
-  filters.name = ''
-  filters.style = ''
-  filters.status = ''
-}
-
-function resetForm() {
-  form.id = ''
-  form.code = ''
-  form.name = ''
-  form.style = ''
-  form.category = ''
-  form.version = 1
-  form.status = STATUSES[0]
-  form.notes = ''
-  Object.keys(errors).forEach((key) => delete errors[key])
-}
-
-function validate() {
-  Object.keys(errors).forEach((key) => delete errors[key])
-  if (!form.code) errors.code = t('errors.required', { field: t('recipe.list.recipeId') })
-  if (!form.name) errors.name = t('errors.required', { field: t('recipe.list.name') })
-  return Object.keys(errors).length === 0
-}
-
-async function fetchCategories() {
-  try {
-    const { optionRows, fallbackRows } = await loadAlcoholTypeReferenceData(supabase)
-    categories.value = optionRows as CategoryRow[]
-    categoryFallbackRows.value = fallbackRows as CategoryRow[]
-  } catch (err) {
-    console.warn('Failed to load categories', err)
+  return {
+    schema_version: schemaVersion,
+    recipe_info: {
+      recipe_type: 'process_manufacturing',
+      industry_type: industryType || '',
+      notes: '',
+    },
+    base: {
+      quantity: 1,
+      uom_code: 'PCS',
+    },
+    materials: {
+      required: [],
+      optional: [],
+    },
+    flow: {
+      steps: [],
+    },
   }
+}
+
+async function ensureSchema(schemaKey: string) {
+  const normalized = normalizeSchemaKey(schemaKey)
+  const { data, error } = await supabase.rpc('recipe_schema_get', {
+    p_def_key: normalized,
+  })
+  if (error) throw error
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    throw new Error(t('recipe.list.invalidSchemaResponse'))
+  }
+  const payload = data as RecipeSchemaPayload
+  return payload
 }
 
 async function fetchRecipes() {
   loading.value = true
-  const { data, error } = await supabase
-    .from('mes_recipes')
-    .select('id, code, name, style, version, status, notes, created_at, category')
-    .order('created_at', { ascending: false, nullsFirst: false })
+  const [{ data: recipeData, error: recipeError }, { data: versionData, error: versionError }] = await Promise.all([
+    mesClient()
+      .from('mst_recipe')
+      .select('id, recipe_code, recipe_name, recipe_category, industry_type, status, current_version_id, created_at, updated_at')
+      .order('updated_at', { ascending: false }),
+    mesClient()
+      .from('mst_recipe_version')
+      .select('id, recipe_id, version_no, version_label, schema_code, status, created_at, updated_at')
+      .order('version_no', { ascending: false }),
+  ])
   loading.value = false
-  if (error) {
-    toast.error('Load error: ' + error.message)
+
+  if (recipeError) {
+    toast.error(t('recipe.list.loadRecipesFailed', { message: recipeError.message }))
     return
   }
-  recipes.value = data ?? []
+  if (versionError) {
+    toast.error(t('recipe.list.loadVersionsFailed', { message: versionError.message }))
+    return
+  }
+
+  recipes.value = (recipeData ?? []) as RecipeHeaderRow[]
+  versions.value = (versionData ?? []) as RecipeVersionRow[]
 }
 
 async function refresh() {
   await fetchRecipes()
 }
 
-async function saveRecipe() {
-  if (!validate()) return
-
-  saving.value = true
-  const payload = {
-    code: form.code.trim(),
-    name: form.name.trim(),
-    style: form.style.trim() || null,
-    version: form.version || 1,
-    status: form.status,
-    notes: form.notes.trim() || null,
-    category: form.category || null,
-  }
-
-  let response
-  if (editing.value && form.id) {
-    response = await supabase
-      .from('mes_recipes')
-      .update(payload)
-      .eq('id', form.id)
-      .select('id, code, name, style, version, status, notes, created_at, category')
-      .single()
-  } else {
-    response = await supabase
-      .from('mes_recipes')
-      .insert({ ...payload })
-      .select('id, code, name, style, version, status, notes, created_at, category')
-      .single()
-  }
-
-  saving.value = false
-  if (response.error) {
-    toast.error('Save error: ' + response.error.message)
-    return
-  }
-
-  const saved = response.data
-  if (!saved) return
-
-  if (editing.value) {
-    const idx = recipes.value.findIndex((row) => row.id === saved.id)
-    if (idx >= 0) recipes.value[idx] = saved
-  } else {
-    recipes.value.unshift(saved)
-  }
-
-  closeModal()
+function resetFilters() {
+  filters.keyword = ''
+  filters.category = ''
+  filters.industry = ''
+  filters.versionStatus = ''
 }
 
-async function deleteRecipe() {
-  if (!toDelete.value) return
-  const { error } = await supabase.from('mes_recipes').delete().eq('id', toDelete.value.id)
-  if (error) {
-    toast.error('Delete error: ' + error.message)
-    return
-  }
-  recipes.value = recipes.value.filter((row) => row.id !== toDelete.value?.id)
-  showDelete.value = false
-  toDelete.value = null
+function resetCreateForm() {
+  createForm.recipe_code = ''
+  createForm.recipe_name = ''
+  createForm.recipe_category = ''
+  createForm.industry_type = ''
+  createForm.schema_key = DEFAULT_SCHEMA_KEY
+  Object.keys(formErrors).forEach((key) => delete formErrors[key])
 }
 
-function goEdit(row: RecipeRow) {
-  router.push(`/recipeEdit/${row.id}/${row.version}`)
-}
-
-function categoryLabel(id: string | null | undefined) {
-  if (!id) return '—'
-  return resolveAlcoholTypeLabel(categoryLabelMap.value, id) ?? id
-}
-
-const normalizeObject = (value: unknown) => {
-  if (value && typeof value === 'object' && !Array.isArray(value)) return value as Record<string, unknown>
-  if (typeof value === 'string') {
-    try {
-      const parsed = JSON.parse(value)
-      return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
-        ? (parsed as Record<string, unknown>)
-        : {}
-    } catch {
-      return {}
-    }
-  }
-  return {}
-}
-
-const normalizeArray = (value: unknown) => {
-  if (Array.isArray(value)) return value as unknown[]
-  if (typeof value === 'string') {
-    try {
-      const parsed = JSON.parse(value)
-      return Array.isArray(parsed) ? parsed : []
-    } catch {
-      return []
-    }
-  }
-  return []
-}
-
-function resetCopyErrors() {
+function resetCopyForm() {
+  copyForm.recipe_code = ''
+  copyForm.recipe_name = ''
+  copyForm.recipe_category = ''
+  copyForm.industry_type = ''
+  copyForm.schema_key = DEFAULT_SCHEMA_KEY
   Object.keys(copyErrors).forEach((key) => delete copyErrors[key])
 }
 
-function openCopy(row: RecipeRow) {
-  resetCopyErrors()
-  copyTarget.value = row
-  const suffix = (t('recipe.list.copySuffix') || 'copy').trim()
-  const normalizedSuffix = suffix ? suffix.replace(/\s+/g, '-') : 'copy'
-  const codeLowerSuffix = normalizedSuffix.toLowerCase()
-  const codeAlreadyHasSuffix = row.code.toLowerCase().endsWith(`-${codeLowerSuffix}`)
-  copyForm.code = codeAlreadyHasSuffix ? row.code : `${row.code}-${normalizedSuffix}`
-  copyForm.name = suffix ? `${row.name} ${suffix}`.trim() : row.name
-  copyForm.style = row.style ?? ''
-  copyingId.value = null
+function openCreate() {
+  resetCreateForm()
+  showCreateModal.value = true
+}
+
+function closeCreate() {
+  if (saving.value) return
+  showCreateModal.value = false
+}
+
+function openCopy(row: RecipeListRow) {
+  resetCopyForm()
+  copySource.value = row
+  copyForm.recipe_code = `${row.recipe_code}-copy`
+  copyForm.recipe_name = `${row.recipe_name} Copy`
+  copyForm.recipe_category = row.recipe_category ?? ''
+  copyForm.industry_type = row.industry_type ?? ''
+  copyForm.schema_key = row.schema_code || DEFAULT_SCHEMA_KEY
+  copyingId.value = row.version_id
   showCopyModal.value = true
 }
 
-function closeCopyModal(force = false) {
-  if (copying.value && !force) return
+function closeCopy() {
+  if (copying.value) return
   showCopyModal.value = false
-  copyTarget.value = null
-  copyForm.code = ''
-  copyForm.name = ''
-  copyForm.style = ''
-  copying.value = false
+  copySource.value = null
   copyingId.value = null
-  resetCopyErrors()
 }
 
-async function executeCopy() {
-  if (!copyTarget.value || copying.value) return
+function confirmDelete(row: RecipeListRow) {
+  deleteTarget.value = row
+  showDeleteModal.value = true
+}
 
-  resetCopyErrors()
-  const trimmedCode = copyForm.code.trim()
-  const trimmedName = copyForm.name.trim()
-  const trimmedStyle = copyForm.style.trim()
+function validateCreateForm() {
+  Object.keys(formErrors).forEach((key) => delete formErrors[key])
+  if (!createForm.recipe_code.trim()) formErrors.recipe_code = t('recipe.list.recipeCodeRequired')
+  if (!createForm.recipe_name.trim()) formErrors.recipe_name = t('recipe.list.recipeNameRequired')
+  if (!createForm.schema_key.trim()) formErrors.schema_key = t('recipe.list.schemaKeyRequired')
+  return Object.keys(formErrors).length === 0
+}
 
-  if (!trimmedCode) copyErrors.code = t('errors.required', { field: t('recipe.list.recipeId') })
-  if (!trimmedName) copyErrors.name = t('errors.required', { field: t('recipe.list.name') })
-  if (Object.keys(copyErrors).length > 0) return
+function validateCopyForm() {
+  Object.keys(copyErrors).forEach((key) => delete copyErrors[key])
+  if (!copyForm.recipe_code.trim()) copyErrors.recipe_code = t('recipe.list.recipeCodeRequired')
+  if (!copyForm.recipe_name.trim()) copyErrors.recipe_name = t('recipe.list.recipeNameRequired')
+  if (!copyForm.schema_key.trim()) copyErrors.schema_key = t('recipe.list.schemaKeyRequired')
+  return Object.keys(copyErrors).length === 0
+}
 
-  copying.value = true
-  copyingId.value = copyTarget.value.id
+async function createRecipe() {
+  if (!validateCreateForm()) return
 
+  saving.value = true
   try {
-    const { data: original, error: loadError } = await supabase
-      .from('mes_recipes')
-      .select('id, code, name, style, version, status, notes, batch_size_l, target_og, target_fg, target_abv, target_ibu, target_srm, category')
-      .eq('id', copyTarget.value.id)
-      .single()
-    if (loadError || !original) throw loadError ?? new Error('Missing recipe')
+    const schema = await ensureSchema(createForm.schema_key)
+    const recipeBody = createInitialRecipeBody(schema.schema, createForm.industry_type.trim())
 
-    const { data: inserted, error: insertError } = await supabase
-      .from('mes_recipes')
+    const { data: recipeRow, error: recipeError } = await mesClient()
+      .from('mst_recipe')
       .insert({
-        code: trimmedCode,
-        name: trimmedName,
-        style: trimmedStyle || null,
-        version: 1,
-        status: 'draft',
-        notes: original.notes,
-        batch_size_l: original.batch_size_l,
-        target_og: original.target_og,
-        target_fg: original.target_fg,
-        target_abv: original.target_abv,
-        target_ibu: original.target_ibu,
-        target_srm: original.target_srm,
-        category: original.category,
+        recipe_code: createForm.recipe_code.trim(),
+        recipe_name: createForm.recipe_name.trim(),
+        recipe_category: createForm.recipe_category.trim() || null,
+        industry_type: createForm.industry_type.trim() || null,
+        status: 'active',
       })
-      .select('id, code, name, style, version, status, notes, created_at, category')
+      .select('id, recipe_code, recipe_name, recipe_category, industry_type, status, current_version_id, created_at, updated_at')
       .single()
-    if (insertError || !inserted) throw insertError ?? new Error('Insert failed')
+    if (recipeError || !recipeRow) throw recipeError ?? new Error(t('recipe.list.createRecipeFailed'))
 
-    const { data: ingredientRows, error: ingredientLoadError } = await supabase
-      .from('mes_ingredients')
-      .select('material_id, amount, uom_id, usage_stage, notes')
-      .eq('recipe_id', copyTarget.value.id)
-    if (ingredientLoadError) throw ingredientLoadError
+    const { data: versionRow, error: versionError } = await mesClient()
+      .from('mst_recipe_version')
+      .insert({
+        recipe_id: recipeRow.id,
+        version_no: 1,
+        version_label: 'v1',
+        schema_code: schema.def_key,
+        recipe_body_json: recipeBody,
+        resolved_reference_json: {},
+        status: 'draft',
+      })
+      .select('id, recipe_id, version_no, version_label, schema_code, status, created_at, updated_at')
+      .single()
+    if (versionError || !versionRow) throw versionError ?? new Error(t('recipe.list.createRecipeVersionFailed'))
 
-    if (ingredientRows && ingredientRows.length > 0) {
-      const ingredientPayload = ingredientRows.map((item) => ({
-        recipe_id: inserted.id,
-        material_id: item.material_id,
-        amount: item.amount,
-        uom_id: item.uom_id,
-        usage_stage: item.usage_stage,
-        notes: item.notes,
-      }))
-      const { error: ingredientInsertError } = await supabase
-        .from('mes_ingredients')
-        .insert(ingredientPayload)
-      if (ingredientInsertError) throw ingredientInsertError
-    }
+    const { error: updateError } = await mesClient()
+      .from('mst_recipe')
+      .update({ current_version_id: versionRow.id })
+      .eq('id', recipeRow.id)
+    if (updateError) throw updateError
 
-    const { data: processRows, error: processLoadError } = await supabase
-      .from('mes_recipe_processes')
-      .select('id, name, version, is_active, notes, mes_recipe_steps(id, step_no, step, target_params, qa_checks, notes)')
-      .eq('recipe_id', copyTarget.value.id)
-    if (processLoadError) throw processLoadError
-
-    if (processRows && processRows.length > 0) {
-      type StepRecord = {
-        id: string
-        process_id: string
-        step_no: number
-        step: string
-        target_params: unknown
-        qa_checks: unknown
-        notes: string | null
-      }
-
-      type ProcessRecord = {
-        id: string
-        name: string
-        version: number
-        is_active: boolean
-        notes: string | null
-        mes_recipe_steps?: StepRecord[]
-      }
-
-      const processesToClone = processRows as ProcessRecord[]
-
-      for (const process of processesToClone) {
-        const { data: createdProcess, error: processInsertError } = await supabase
-          .from('mes_recipe_processes')
-          .insert({
-            recipe_id: inserted.id,
-            name: process.name,
-            version: process.version,
-            is_active: process.is_active,
-            notes: process.notes,
-          })
-          .select('id')
-          .single()
-        if (processInsertError || !createdProcess) throw processInsertError ?? new Error('Process copy failed')
-
-        const steps = process.mes_recipe_steps ?? []
-        if (steps.length > 0) {
-          const stepPayload = steps.map((step) => ({
-            process_id: createdProcess.id,
-            step_no: step.step_no,
-            step: step.step,
-            target_params: normalizeObject(step.target_params),
-            qa_checks: normalizeArray(step.qa_checks),
-            notes: step.notes,
-          }))
-          const { error: stepsInsertError } = await supabase
-            .from('mes_recipe_steps')
-            .insert(stepPayload)
-          if (stepsInsertError) throw stepsInsertError
-        }
-      }
-    }
-
-    recipes.value.unshift(inserted)
-    toast.success(t('recipe.list.copySuccess', { name: inserted.name, version: inserted.version }))
-    copying.value = false
-    closeCopyModal(true)
+    closeCreate()
+    await refresh()
+    await router.push(buildRecipeEditLocation({
+      recipe_id: recipeRow.id,
+      version_id: versionRow.id,
+      schema_code: versionRow.schema_code,
+    }))
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error)
-    toast.error(t('recipe.list.copyError', { message }))
+    toast.error(t('recipe.list.createError', { message }))
+  } finally {
+    saving.value = false
+  }
+}
+
+async function copyRecipe() {
+  if (!copySource.value || !validateCopyForm()) return
+
+  copying.value = true
+  try {
+    const schema = await ensureSchema(copyForm.schema_key)
+    const { data: sourceVersion, error: sourceError } = await mesClient()
+      .from('mst_recipe_version')
+      .select('id, recipe_body_json, resolved_reference_json, template_code, schema_code')
+      .eq('id', copySource.value.version_id)
+      .single()
+    if (sourceError || !sourceVersion) throw sourceError ?? new Error(t('recipe.list.sourceRecipeVersionNotFound'))
+
+    const { data: recipeRow, error: recipeError } = await mesClient()
+      .from('mst_recipe')
+      .insert({
+        recipe_code: copyForm.recipe_code.trim(),
+        recipe_name: copyForm.recipe_name.trim(),
+        recipe_category: copyForm.recipe_category.trim() || null,
+        industry_type: copyForm.industry_type.trim() || null,
+        status: 'active',
+      })
+      .select('id, recipe_code, recipe_name, recipe_category, industry_type, status, current_version_id, created_at, updated_at')
+      .single()
+    if (recipeError || !recipeRow) throw recipeError ?? new Error(t('recipe.list.createCopiedRecipeFailed'))
+
+    const { data: versionRow, error: versionError } = await mesClient()
+      .from('mst_recipe_version')
+      .insert({
+        recipe_id: recipeRow.id,
+        version_no: 1,
+        version_label: 'v1',
+        schema_code: schema.def_key,
+        template_code: sourceVersion.template_code ?? null,
+        recipe_body_json: sourceVersion.recipe_body_json,
+        resolved_reference_json: sourceVersion.resolved_reference_json ?? {},
+        status: 'draft',
+      })
+      .select('id, recipe_id, version_no, version_label, schema_code, status, created_at, updated_at')
+      .single()
+    if (versionError || !versionRow) throw versionError ?? new Error(t('recipe.list.createCopiedRecipeVersionFailed'))
+
+    const { error: updateError } = await mesClient()
+      .from('mst_recipe')
+      .update({ current_version_id: versionRow.id })
+      .eq('id', recipeRow.id)
+    if (updateError) throw updateError
+
+    closeCopy()
+    await refresh()
+    await router.push(buildRecipeEditLocation({
+      recipe_id: recipeRow.id,
+      version_id: versionRow.id,
+      schema_code: versionRow.schema_code,
+    }))
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error)
+    toast.error(t('recipe.list.copyErrorToast', { message }))
   } finally {
     copying.value = false
     copyingId.value = null
   }
 }
 
+async function deleteRecipe() {
+  if (!deleteTarget.value) return
+  const { error } = await mesClient()
+    .from('mst_recipe')
+    .delete()
+    .eq('id', deleteTarget.value.recipe_id)
+  if (error) {
+    toast.error(t('recipe.list.deleteError', { message: error.message }))
+    return
+  }
+  showDeleteModal.value = false
+  deleteTarget.value = null
+  await refresh()
+}
+
+function goEdit(row: RecipeListRow) {
+  void router.push(buildRecipeEditLocation(row))
+}
+
 onMounted(async () => {
-  await Promise.all([fetchCategories(), fetchRecipes()])
+  await fetchRecipes()
 })
 </script>

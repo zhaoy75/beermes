@@ -14,7 +14,7 @@ begin
   v_tenant := public._assert_tenant();
 
   insert into public.mes_batches (
-    tenant_id, batch_code, batch_label, recipe_id, process_version, scale_factor,
+    tenant_id, batch_code, batch_label, recipe_id, scale_factor,
     recipe_json, planned_start, planned_end, actual_start, actual_end, notes, meta,
     status, product_name, actual_yield, actual_yield_uom
   ) values (
@@ -22,7 +22,6 @@ begin
     p_doc ->> 'batch_code',
     p_doc ->> 'batch_label',
     nullif(p_doc ->> 'recipe_id', '')::uuid,
-    nullif(p_doc ->> 'process_version', '')::int,
     nullif(p_doc ->> 'scale_factor', '')::numeric,
     coalesce(p_doc -> 'recipe_json', 'null'::jsonb),
     nullif(p_doc ->> 'planned_start', '')::timestamptz,

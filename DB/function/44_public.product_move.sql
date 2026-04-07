@@ -22,7 +22,7 @@ declare
   v_unit numeric;
   v_tax_rate numeric;
   v_beer_category text;
-  v_beer_category_type_id bigint;
+  v_beer_category_type_id uuid;
   v_tax_category_code text;
   v_tax_category_match_count int;
   v_uom_id uuid;

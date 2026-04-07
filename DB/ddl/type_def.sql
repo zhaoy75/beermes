@@ -1,8 +1,10 @@
--- type_def: generic tree/list master (BIGINT PK)
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- type_def: generic tree/list master (UUID PK)
 CREATE TABLE IF NOT EXISTS type_def (
   tenant_id uuid NOT NULL,
 
-  type_id bigint GENERATED ALWAYS AS IDENTITY,
+  type_id uuid NOT NULL DEFAULT gen_random_uuid(),
 
   -- ownership / visibility
   scope	  text NOT NULL DEFAULT 'system',  -- system | tenant | user
@@ -14,7 +16,7 @@ CREATE TABLE IF NOT EXISTS type_def (
   name text NOT NULL,
   name_i18n jsonb NULL,
 
-  parent_type_id bigint NULL,
+  parent_type_id uuid NULL,
   sort_order int NOT NULL DEFAULT 0,
 
   description text NULL,
@@ -125,8 +127,8 @@ CREATE TABLE IF NOT EXISTS type_closure (
   domain text NOT NULL,
   industry_id uuid NULL,
 
-  ancestor_type_id bigint NOT NULL,
-  descendant_type_id bigint NOT NULL,
+  ancestor_type_id uuid NOT NULL,
+  descendant_type_id uuid NOT NULL,
   depth int NOT NULL CHECK (depth >= 0),
 
   PRIMARY KEY (tenant_id, domain, industry_id, ancestor_type_id, descendant_type_id),
@@ -301,6 +303,5 @@ CREATE TRIGGER trg_type_def_prevent_cycle
 BEFORE INSERT OR UPDATE OF parent_type_id, domain, industry_id ON type_def
 FOR EACH ROW
 EXECUTE FUNCTION trg_type_def_prevent_cycle();
-
 
 

@@ -66,7 +66,7 @@ type RecipeOption = {
 const props = defineProps<{ open: boolean, recipes: RecipeOption[], loading: boolean }>()
 const emit = defineEmits<{
   (e: 'close'): void
-  (e: 'submit', payload: { recipeId: string, batchCode: string | null, label: string | null, plannedStart: string | null, plannedEnd: string | null, notes: string | null, processVersion: number | null }): void
+  (e: 'submit', payload: { recipeId: string, batchCode: string | null, label: string | null, plannedStart: string | null, plannedEnd: string | null, notes: string | null }): void
 }>()
 
 const { t } = useI18n()
@@ -77,7 +77,6 @@ const blank = () => ({
   plannedStart: '',
   plannedEnd: '',
   notes: '',
-  processVersion: null as number | null,
 })
 
 const form = reactive(blank())
@@ -106,7 +105,6 @@ function submitForm() {
     plannedStart: form.plannedStart || null,
     plannedEnd: form.plannedEnd || null,
     notes: form.notes ? form.notes.trim() : null,
-    processVersion: form.processVersion || null,
   })
 }
 

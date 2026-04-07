@@ -91,8 +91,7 @@ export function validateBatchAttrField(
 
   if (dataType === 'ref') {
     if (field.ref_kind === 'type_def') {
-      const refId = Number(field.value)
-      if (!Number.isFinite(refId)) {
+      if (typeof field.value !== 'string' || !field.value.trim()) {
         return messages.invalidReference(label)
       }
     } else if (typeof field.value !== 'string' || !field.value.trim()) {

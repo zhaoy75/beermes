@@ -22,7 +22,6 @@ CREATE TABLE public.mes_batches (
 	batch_code text NOT NULL,
 	batch_label varchar NULL,
 	recipe_id uuid NULL,
-	process_version int4 NULL,
 	scale_factor numeric NULL,
 	recipe_json jsonb NULL,
 	planned_start timestamptz NULL,

@@ -1,3 +1,18 @@
+INSERT INTO public.registry_def (
+  kind,
+  def_key,
+  scope,
+  owner_id,
+  is_active,
+  spec
+)
+VALUES (
+  'recipe_schema',
+  'recipe_body_v1',
+  'system',
+  NULL,
+  true,
+  $json$
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://example.com/schemas/mes/recipe_body_v1.json",
@@ -587,3 +602,5 @@
     }
   }
 }
+$json$::jsonb
+);

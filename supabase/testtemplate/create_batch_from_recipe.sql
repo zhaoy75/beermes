@@ -1,6 +1,6 @@
--- Procedure: create a production batch from an existing recipe + process definition.
+-- Procedure: create a production batch from an existing recipe definition.
 -- Usage: call create_batch_from_recipe(<tenant_id>, <recipe_id>, <batch_code>, ...);
--- Copies the latest (or specified) process steps into mes_batch_steps so the batch can be executed.
+-- Copies recipe steps into mes_batch_steps so the batch can be executed.
 
 create or replace function create_batch_from_recipe(
   _tenant_id uuid,
@@ -14,7 +14,6 @@ language plpgsql
 as $$
 declare
   v_recipe mes_recipes%rowtype;
-  v_process mes_recipe_processes%rowtype;
   v_batch_id uuid;
   v_recipe_id uuid;
 begin
@@ -34,7 +33,6 @@ begin
         tenant_id,
         batch_code,
         recipe_id,
-        process_version,
         planned_start,
         status,
         notes
@@ -43,7 +41,6 @@ begin
         _tenant_id,
         _batch_code,
         v_recipe_id,
-        _process_version,
         coalesce(_planned_start, now()),
         'planned',
         _notes
@@ -85,35 +82,11 @@ begin
     raise exception 'Recipe % not found for tenant %', v_recipe_id, _tenant_id;
   end if;
 
-  if _process_version is not null then
-    select *
-      into v_process
-    from mes_recipe_processes
-    where tenant_id = _tenant_id
-      and recipe_id = v_recipe_id
-      and version = _process_version
-    order by is_active desc
-    limit 1;
-  else
-    select *
-      into v_process
-    from mes_recipe_processes
-    where tenant_id = _tenant_id
-      and recipe_id = v_recipe_id
-    order by is_active desc, version desc
-    limit 1;
-  end if;
-
-  if v_process.id is null then
-    raise exception 'No process found for recipe % (tenant %)', _recipe_id, _tenant_id;
-  end if;
-
   begin
     insert into mes_batches (
       tenant_id,
       batch_code,
       recipe_id,
-      process_version,
       planned_start,
       status,
       notes
@@ -122,7 +95,6 @@ begin
       _tenant_id,
       _batch_code,
       v_recipe_id,
-      v_process.version,
       coalesce(_planned_start, now()),
       'planned',
       coalesce(_notes, v_recipe.notes)
@@ -176,7 +148,7 @@ begin
       end,
     ps.notes
   from mes_recipe_steps ps
-  where ps.process_id = v_process.id
+  where ps.recipe_id = v_recipe_id
     and ps.tenant_id = _tenant_id
   order by ps.step_no;
 

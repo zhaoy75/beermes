@@ -181,7 +181,6 @@ interface RawBatchRow {
   batch_code: string
   batch_label?: string | null
   meta?: Record<string, any> | null
-  process_version: number | null
   status: string | null
   created_at: string | null
   planned_start: string | null
@@ -851,7 +850,7 @@ function closeCreate() {
   showCreate.value = false
 }
 
-async function handleCreate(payload: { recipeId: string, batchCode: string | null, label: string | null, plannedStart: string | null, plannedEnd: string | null, notes: string | null, processVersion: number | null }) {
+async function handleCreate(payload: { recipeId: string, batchCode: string | null, label: string | null, plannedStart: string | null, plannedEnd: string | null, notes: string | null }) {
   try {
     loading.value = true
     const tenant = await ensureTenant()
@@ -861,7 +860,6 @@ async function handleCreate(payload: { recipeId: string, batchCode: string | nul
       _recipe_id: payload.recipeId,
       _batch_code: batchCode,
       _planned_start: payload.plannedStart ? new Date(payload.plannedStart).toISOString() : null,
-      _process_version: payload.processVersion,
       _notes: payload.notes,
     })
     if (error) throw error

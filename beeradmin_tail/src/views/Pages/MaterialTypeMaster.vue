@@ -329,10 +329,10 @@ import 'vue3-toastify/dist/index.css'
 import { useTableSort } from '@/composables/useTableSort'
 
 type TypeRow = {
-  type_id: number
+  type_id: string
   code: string
   name: string
-  parent_type_id: number | null
+  parent_type_id: string | null
   sort_order: number | null
   is_active: boolean
   created_at: string | null
@@ -403,8 +403,8 @@ const pageTitle = computed(() => t('materialType.title'))
 
 const typeRows = ref<TypeRow[]>([])
 const loadingTypes = ref(false)
-const selectedTypeId = ref<number | null>(null)
-const expanded = ref<Set<number>>(new Set())
+const selectedTypeId = ref<string | null>(null)
+const expanded = ref<Set<string>>(new Set())
 const expandedAll = ref(true)
 
 const showTypeModal = ref(false)
@@ -415,7 +415,7 @@ const showDelete = ref(false)
 const typeForm = reactive({
   code: '',
   name: '',
-  parent_type_id: null as number | null,
+  parent_type_id: null as string | null,
   sort_order: 0,
   is_active: true,
 })
@@ -517,7 +517,7 @@ const {
 )
 
 function buildTree(rows: TypeRow[]) {
-  const map = new Map<number, TreeNode>()
+  const map = new Map<string, TreeNode>()
   for (const row of rows) {
     map.set(row.type_id, { row, children: [] })
   }
@@ -543,11 +543,11 @@ function buildTree(rows: TypeRow[]) {
   return roots
 }
 
-function isExpanded(typeId: number) {
+function isExpanded(typeId: string) {
   return expanded.value.has(typeId)
 }
 
-function toggleExpanded(typeId: number) {
+function toggleExpanded(typeId: string) {
   const next = new Set(expanded.value)
   if (next.has(typeId)) next.delete(typeId)
   else next.add(typeId)
@@ -565,7 +565,7 @@ function toggleExpandAll() {
   }
 }
 
-function selectType(typeId: number) {
+function selectType(typeId: string) {
   selectedTypeId.value = typeId
   loadAttributes()
 }

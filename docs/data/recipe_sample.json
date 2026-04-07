@@ -1,156 +1,442 @@
 {
-  "schema_version": "1.0",
-
-  "metadata": {
-    "recipe_code": "RCP_BEER_LAGER_330",
-    "author": "process_engineer_01",
-    "created_at": "2026-01-23T10:15:00Z",
-    "approved_by": "qa_manager",
-    "approved_at": "2026-01-24T03:00:00Z",
-    "change_reason": "Initial production release",
-    "tags": ["lager", "bottled", "high-volume"]
+  "schema_version": "recipe_body_v1",
+  "recipe_info": {
+    "recipe_type": "process_manufacturing",
+    "industry_type": "beer",
+    "description": "Standard lager recipe for bottled 330 mL product.",
+    "batch_strategy": "fixed",
+    "tags": ["lager", "bottle", "core"],
+    "notes": "Design-time recipe definition only. Approval and execution history are stored outside the body JSON."
   },
-
   "base": {
-    "quantity": 1,
-    "uom": "batch",
-    "scaling": "linear"
+    "quantity": 1000,
+    "uom_code": "L",
+    "scaling_method": "linear",
+    "rounding_rule": "standard"
   },
-
-  "product": {
-    "product_code": "BEER_LAGER_330",
-    "name": "Lager Beer 330ml",
-    "revision": "R1"
-  },
-
-  "materials": {
-    "required": [
-      { "material_id": "MALT_PILSNER", "role": "input", "qty": 200, "uom": "kg", "basis": "per_base" },
-      { "material_id": "HOPS_SAAZ", "role": "input", "qty": 2.5, "uom": "kg", "basis": "per_base" },
-      { "material_id": "YEAST_LAGER", "role": "input", "qty": 5, "uom": "kg", "basis": "per_base" },
-      { "material_id": "WATER_BREWING", "role": "input", "qty": 1200, "uom": "L", "basis": "per_base" },
-
-      { "material_id": "BOTTLE_330", "role": "packaging", "qty": 3000, "uom": "pcs", "basis": "per_base" },
-      { "material_id": "CAP_330", "role": "packaging", "qty": 3000, "uom": "pcs", "basis": "per_base" },
-      { "material_id": "LABEL_STD", "role": "packaging", "qty": 3000, "uom": "pcs", "basis": "per_base" }
-    ]
-  },
-
-  "targets": {
-    "features": [
-      { "code": "ABV", "target": 5.0, "min": 4.8, "max": 5.2, "uom": "%", "criticality": "ctq" },
-      { "code": "COLOR_EBC", "target": 10, "min": 8, "max": 12, "uom": "EBC", "criticality": "major" },
-      { "code": "FILL_VOLUME", "target": 330, "min": 327, "max": 333, "uom": "ml", "criticality": "ctq" }
-    ]
-  },
-
-  "equipment": {
-    "types": [
-      { "equipment_type": "MASH_TUN", "capabilities": { "min_volume_L": 1000, "heating": true } },
-      { "equipment_type": "BOIL_KETTLE", "capabilities": { "min_volume_L": 1000 } },
-      { "equipment_type": "FERMENTER", "capabilities": { "temperature_control": true } },
-      { "equipment_type": "BOTTLING_LINE", "capabilities": { "speed_bph": 5000 } }
-    ]
-  },
-
-  "storage": {
-    "SWEET_WORT": { "max_hold_time": 4, "uom": "hour", "storage_type": "sealed_tank", "max_temp": 10 },
-    "HOT_WORT": { "max_hold_time": 2, "uom": "hour", "storage_type": "sterile_tank", "max_temp": 15 },
-    "BEER_GREEN": { "max_hold_time": 72, "uom": "hour", "storage_type": "fermentation_tank", "max_temp": 4 }
-  },
-
-  "data_collection": {
-    "mandatory_parameters": ["TEMP", "TIME", "BOIL_TIME"],
-    "mandatory_qc": ["ABV_TEST", "FILL_VOLUME"],
-    "sampling_frequency": {
-      "TEMP": "1min",
-      "PH_CHECK": "per_batch"
-    },
-    "retain_years": 5
-  },
-
-  "haccp": {
-    "plan": {
-      "plan_id": "HACCP_BEER_LAGER_330_V1",
-      "version": "1.0",
-      "scope": "Bottled lager beer production",
-      "team": [
-        { "role": "HACCP Leader", "name": "qa_manager" },
-        { "role": "Process Engineer", "name": "process_engineer_01" }
-      ]
-    },
-
-    "hazard_analysis": [
+  "outputs": {
+    "primary": [
       {
-        "id": "HAZ-01",
-        "step_id": "S40",
-        "hazard_type": "physical",
-        "hazard": "Glass fragments in bottle",
-        "severity": "high",
-        "likelihood": "medium",
-        "is_ccp": true,
-        "ccp_id": "CCP-01"
+        "output_code": "BEER_LAGER_330",
+        "output_name": "Lager Beer 330mL",
+        "output_type": "primary",
+        "qty": 3000,
+        "uom_code": "PCS",
+        "basis": "per_base"
       }
     ],
-
-    "ccps": [
+    "co_products": [
       {
-        "ccp_id": "CCP-01",
-        "name": "Bottle inspection",
-        "step_id": "S40",
-        "critical_limits": [
-          { "parameter": "BOTTLE_INSPECTION_PASS_RATE", "min": 99.9, "uom": "%" }
-        ],
-        "monitoring": {
-          "what": "Inspection pass rate",
-          "how": "Vision system",
-          "frequency": "continuous",
-          "responsible_role": "operator"
-        }
+        "output_code": "SPENT_GRAIN",
+        "output_name": "Spent Grain",
+        "output_type": "co_product",
+        "qty": 120,
+        "uom_code": "KG",
+        "basis": "yield_based"
       }
     ]
   },
-
+  "materials": {
+    "required": [
+      {
+        "material_key": "WATER_BREW",
+        "material_name": "Brewing Water",
+        "material_role": "process_water",
+        "material_type_code": "WATER",
+        "material_spec_code": "BREWING_WATER_STD",
+        "qty": 1200,
+        "uom_code": "L",
+        "basis": "per_base"
+      },
+      {
+        "material_key": "MALT_BASE",
+        "material_name": "Pale Malt",
+        "material_role": "main_substrate",
+        "material_type_code": "MALT",
+        "material_spec_code": "PALE_MALT",
+        "qty": 180,
+        "uom_code": "KG",
+        "basis": "per_base"
+      },
+      {
+        "material_key": "HOPS_BITTER",
+        "material_name": "Saaz Hops",
+        "material_role": "flavor",
+        "material_type_code": "HOPS",
+        "material_spec_code": "SAAZ",
+        "qty": 2.5,
+        "uom_code": "KG",
+        "basis": "per_base"
+      },
+      {
+        "material_key": "YEAST_MAIN",
+        "material_name": "Lager Yeast",
+        "material_role": "culture",
+        "material_type_code": "YEAST",
+        "material_spec_code": "LAGER_YEAST",
+        "qty": 5,
+        "uom_code": "KG",
+        "basis": "per_base"
+      },
+      {
+        "material_key": "BOTTLE_330",
+        "material_name": "330mL Bottle",
+        "material_role": "packaging_primary",
+        "material_type_code": "PACKAGING",
+        "material_spec_code": "BOTTLE_330_CLEAR",
+        "qty": 3000,
+        "uom_code": "PCS",
+        "basis": "per_base"
+      },
+      {
+        "material_key": "CAP_330",
+        "material_name": "Bottle Cap",
+        "material_role": "packaging_component",
+        "material_type_code": "PACKAGING",
+        "material_spec_code": "CAP_330_STD",
+        "qty": 3000,
+        "uom_code": "PCS",
+        "basis": "per_base"
+      },
+      {
+        "material_key": "LABEL_STD",
+        "material_name": "Standard Label",
+        "material_role": "packaging_component",
+        "material_type_code": "PACKAGING",
+        "material_spec_code": "LABEL_STD",
+        "qty": 3000,
+        "uom_code": "PCS",
+        "basis": "per_base"
+      }
+    ]
+  },
+  "equipment": {
+    "default_requirements": [
+      {
+        "equipment_type_code": "MASH_TUN",
+        "equipment_template_code": "MASH_TUN_1000L",
+        "quantity": 1
+      },
+      {
+        "equipment_type_code": "BOIL_KETTLE",
+        "equipment_template_code": "BOIL_KETTLE_1000L",
+        "quantity": 1
+      },
+      {
+        "equipment_type_code": "FERMENTER",
+        "equipment_template_code": "FERMENTER_1000L",
+        "quantity": 1
+      },
+      {
+        "equipment_type_code": "BOTTLING_LINE",
+        "equipment_template_code": "BOTTLING_LINE_STD",
+        "quantity": 1
+      }
+    ]
+  },
   "flow": {
     "steps": [
       {
-        "id": "S10",
-        "name": "Mashing",
-        "type": "mixed",
-        "inputs": [
-          { "material_id": "MALT_PILSNER", "qty": 200, "uom": "kg", "basis": "per_base" },
-          { "material_id": "WATER_BREWING", "qty": 800, "uom": "L", "basis": "per_base" }
+        "step_code": "MASH",
+        "step_name": "Mashing",
+        "step_no": 10,
+        "step_type": "process",
+        "step_template_code": "STEP_MASH",
+        "instructions": "Charge water and malt, then hold the mash rest.",
+        "duration_sec": 5400,
+        "material_inputs": [
+          {
+            "material_key": "WATER_BREW",
+            "qty": 800,
+            "uom_code": "L",
+            "basis": "per_base",
+            "consumption_mode": "estimate"
+          },
+          {
+            "material_key": "MALT_BASE",
+            "qty": 180,
+            "uom_code": "KG",
+            "basis": "per_base",
+            "consumption_mode": "estimate"
+          }
         ],
-        "outputs": [
-          { "material_id": "SWEET_WORT", "qty": 750, "uom": "L", "type": "intermediate", "yield_factor": 0.94 }
+        "material_outputs": [
+          {
+            "output_code": "SWEET_WORT",
+            "output_name": "Sweet Wort",
+            "output_type": "intermediate",
+            "qty": 760,
+            "uom_code": "L"
+          }
+        ],
+        "equipment_requirements": [
+          {
+            "equipment_type_code": "MASH_TUN",
+            "equipment_template_code": "MASH_TUN_1000L",
+            "quantity": 1
+          }
         ],
         "parameters": [
-          { "code": "TEMP", "target": 65, "min": 63, "max": 67, "uom": "C", "required": true },
-          { "code": "TIME", "target": 60, "uom": "min", "required": true }
+          {
+            "parameter_code": "MASH_TEMP",
+            "target": 65,
+            "min": 63,
+            "max": 67,
+            "uom_code": "C",
+            "required": true
+          },
+          {
+            "parameter_code": "MASH_TIME",
+            "target": 90,
+            "uom_code": "MIN",
+            "required": true
+          }
         ],
-        "equipment_req": [
-          { "equipment_type": "MASH_TUN", "qty": 1 }
+        "quality_checks": [
+          {
+            "check_code": "QC_PH_MASH",
+            "sampling_point": "end_of_step",
+            "frequency": "per_batch",
+            "required": true
+          }
         ]
       },
-
       {
-        "id": "S40",
-        "name": "Bottling",
-        "inputs": [
-          { "material_id": "BEER_GREEN", "qty": 680, "uom": "L", "basis": "per_base" },
-          { "material_id": "BOTTLE_330", "qty": 3000, "uom": "pcs", "basis": "per_base" }
+        "step_code": "BOIL",
+        "step_name": "Boiling",
+        "step_no": 20,
+        "step_type": "process",
+        "step_template_code": "STEP_BOIL",
+        "instructions": "Boil wort and dose hops according to schedule.",
+        "duration_sec": 4500,
+        "material_inputs": [
+          {
+            "material_key": "HOPS_BITTER",
+            "qty": 2.5,
+            "uom_code": "KG",
+            "basis": "per_base",
+            "consumption_mode": "estimate"
+          }
         ],
-        "outputs": [
-          { "material_id": "BEER_LAGER_330", "qty": 3000, "uom": "pcs", "type": "primary" }
+        "material_outputs": [
+          {
+            "output_code": "HOT_WORT",
+            "output_name": "Hot Wort",
+            "output_type": "intermediate",
+            "qty": 730,
+            "uom_code": "L"
+          }
         ],
-        "equipment_req": [
-          { "equipment_type": "BOTTLING_LINE", "qty": 1 }
+        "equipment_requirements": [
+          {
+            "equipment_type_code": "BOIL_KETTLE",
+            "equipment_template_code": "BOIL_KETTLE_1000L",
+            "quantity": 1
+          }
+        ],
+        "parameters": [
+          {
+            "parameter_code": "BOIL_TIME",
+            "target": 75,
+            "uom_code": "MIN",
+            "required": true
+          }
+        ]
+      },
+      {
+        "step_code": "FERMENT",
+        "step_name": "Fermentation",
+        "step_no": 30,
+        "step_type": "process",
+        "step_template_code": "STEP_FERMENT",
+        "instructions": "Pitch yeast and control fermentation temperature.",
+        "duration_sec": 604800,
+        "material_inputs": [
+          {
+            "material_key": "YEAST_MAIN",
+            "qty": 5,
+            "uom_code": "KG",
+            "basis": "per_base",
+            "consumption_mode": "estimate"
+          }
+        ],
+        "material_outputs": [
+          {
+            "output_code": "GREEN_BEER",
+            "output_name": "Green Beer",
+            "output_type": "intermediate",
+            "qty": 690,
+            "uom_code": "L"
+          }
+        ],
+        "equipment_requirements": [
+          {
+            "equipment_type_code": "FERMENTER",
+            "equipment_template_code": "FERMENTER_1000L",
+            "quantity": 1
+          }
+        ],
+        "parameters": [
+          {
+            "parameter_code": "FERMENT_TEMP",
+            "target": 12,
+            "min": 10,
+            "max": 14,
+            "uom_code": "C",
+            "required": true
+          },
+          {
+            "parameter_code": "FERMENT_TIME",
+            "target": 168,
+            "uom_code": "HOUR",
+            "required": true
+          }
+        ],
+        "quality_checks": [
+          {
+            "check_code": "QC_GRAVITY_END",
+            "sampling_point": "end_of_step",
+            "frequency": "per_batch",
+            "required": true
+          }
+        ]
+      },
+      {
+        "step_code": "PACKAGE",
+        "step_name": "Packaging",
+        "step_no": 40,
+        "step_type": "packaging",
+        "step_template_code": "STEP_BOTTLE",
+        "instructions": "Fill, cap, and label bottles.",
+        "duration_sec": 14400,
+        "material_inputs": [
+          {
+            "material_key": "BOTTLE_330",
+            "qty": 3000,
+            "uom_code": "PCS",
+            "basis": "per_base",
+            "consumption_mode": "backflush"
+          },
+          {
+            "material_key": "CAP_330",
+            "qty": 3000,
+            "uom_code": "PCS",
+            "basis": "per_base",
+            "consumption_mode": "backflush"
+          },
+          {
+            "material_key": "LABEL_STD",
+            "qty": 3000,
+            "uom_code": "PCS",
+            "basis": "per_base",
+            "consumption_mode": "backflush"
+          }
+        ],
+        "material_outputs": [
+          {
+            "output_code": "BEER_LAGER_330",
+            "output_name": "Lager Beer 330mL",
+            "output_type": "primary",
+            "qty": 3000,
+            "uom_code": "PCS"
+          }
+        ],
+        "equipment_requirements": [
+          {
+            "equipment_type_code": "BOTTLING_LINE",
+            "equipment_template_code": "BOTTLING_LINE_STD",
+            "quantity": 1
+          }
+        ],
+        "parameters": [
+          {
+            "parameter_code": "FILL_VOLUME",
+            "target": 330,
+            "min": 327,
+            "max": 333,
+            "uom_code": "ML",
+            "required": true
+          }
+        ],
+        "quality_checks": [
+          {
+            "check_code": "QC_FILL_VOLUME",
+            "sampling_point": "in_process",
+            "frequency": "hourly",
+            "required": true
+          },
+          {
+            "check_code": "QC_LABEL_INSPECTION",
+            "sampling_point": "end_of_step",
+            "frequency": "per_batch",
+            "required": true
+          }
         ]
       }
     ],
-
     "dependencies": [
-      { "from": "S10", "to": "S40", "type": "finish-start" }
+      {
+        "from_step_code": "MASH",
+        "to_step_code": "BOIL",
+        "relation_type": "finish_start"
+      },
+      {
+        "from_step_code": "BOIL",
+        "to_step_code": "FERMENT",
+        "relation_type": "finish_start"
+      },
+      {
+        "from_step_code": "FERMENT",
+        "to_step_code": "PACKAGE",
+        "relation_type": "finish_start"
+      }
     ]
-  }
+  },
+  "quality": {
+    "global_checks": [
+      {
+        "check_code": "QC_ABV_RELEASE",
+        "sampling_point": "release",
+        "frequency": "per_batch",
+        "required": true,
+        "acceptance_criteria": {
+          "min": 4.8,
+          "max": 5.2,
+          "uom_code": "PCT"
+        }
+      }
+    ],
+    "release_criteria": {
+      "ABV": {
+        "min": 4.8,
+        "max": 5.2,
+        "uom_code": "PCT"
+      },
+      "COLOR_EBC": {
+        "min": 8,
+        "max": 12,
+        "uom_code": "EBC"
+      }
+    }
+  },
+  "storage_constraints": [
+    {
+      "constraint_code": "GREEN_BEER_HOLD",
+      "target_code": "GREEN_BEER",
+      "storage_type": "fermenter",
+      "max_hold_time": 72,
+      "uom_code": "HOUR",
+      "max_temp": 4,
+      "temp_uom_code": "C"
+    }
+  ],
+  "documents": [
+    {
+      "doc_code": "SOP_BREW_LAGER",
+      "doc_type": "sop",
+      "title": "Standard Lager Brewing SOP",
+      "revision": "A",
+      "required": true
+    }
+  ]
 }

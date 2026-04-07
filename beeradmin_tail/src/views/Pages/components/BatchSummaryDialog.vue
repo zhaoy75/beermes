@@ -42,10 +42,6 @@
               <dt class="font-medium text-gray-600">{{ t('batch.summary.targetVolume') }}</dt>
               <dd class="text-gray-800">{{ formatVolume(resolvePlannedVolume(detail?.kpi)) }}</dd>
             </div>
-            <div>
-              <dt class="font-medium text-gray-600">{{ t('batch.summary.processVersion') }}</dt>
-              <dd class="text-gray-800">{{ detail?.process_version ?? '—' }}</dd>
-            </div>
             <div class="md:col-span-2">
               <dt class="font-medium text-gray-600">{{ t('batch.summary.notes') }}</dt>
               <dd class="text-gray-800 whitespace-pre-line">{{ detail?.notes || '—' }}</dd>

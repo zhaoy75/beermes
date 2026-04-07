@@ -20,7 +20,6 @@ begin
 
   update public.mes_batches b
      set batch_label = coalesce(p_patch ->> 'batch_label', b.batch_label),
-         process_version = coalesce(nullif(p_patch ->> 'process_version','')::int, b.process_version),
          scale_factor = coalesce(nullif(p_patch ->> 'scale_factor','')::numeric, b.scale_factor),
          planned_start = coalesce(nullif(p_patch ->> 'planned_start','')::timestamptz, b.planned_start),
          planned_end = coalesce(nullif(p_patch ->> 'planned_end','')::timestamptz, b.planned_end),

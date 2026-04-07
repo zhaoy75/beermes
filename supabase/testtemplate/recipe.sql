@@ -1,4 +1,4 @@
--- Seed a basic pale ale template across recipes, ingredients, processes, and steps.
+-- Seed a basic pale ale template across recipes, ingredients, and steps.
 -- Update tenant_name to match the target tenant before running.
 
 do $$
@@ -6,7 +6,6 @@ declare
   tenant_name text := 't';
   v_tenant_id uuid;
   v_recipe_id uuid;
-  v_process_id uuid;
   v_ingredient_rows int := 0;
   v_step_rows int := 0;
 begin
@@ -111,47 +110,12 @@ begin
 
   get diagnostics v_ingredient_rows = ROW_COUNT;
 
-  insert into mes_recipe_processes (
-    tenant_id,
-    recipe_id,
-    name,
-    version,
-    is_active,
-    notes
-  )
-  values (
-    v_tenant_id,
-    v_recipe_id,
-    'Standard Pale Ale Process',
-    1,
-    true,
-    'Baseline process covering mash, boil, fermentation, conditioning, and packaging.'
-  )
-  on conflict (tenant_id, recipe_id, name, version) do update
-    set
-      is_active = excluded.is_active,
-      notes = excluded.notes
-  returning id into v_process_id;
-
-  if v_process_id is null then
-    select id into v_process_id
-    from mes_recipe_processes
-    where tenant_id = v_tenant_id
-      and recipe_id = v_recipe_id
-      and name = 'Standard Pale Ale Process'
-      and version = 1;
-  end if;
-
-  if v_process_id is null then
-    raise exception 'Failed to resolve process_id for tenant %', tenant_name;
-  end if;
-
   delete from mes_recipe_steps
-  where process_id = v_process_id;
+  where recipe_id = v_recipe_id;
 
   insert into mes_recipe_steps (
     tenant_id,
-    process_id,
+    recipe_id,
     step_no,
     step,
     target_params,
@@ -160,7 +124,7 @@ begin
   )
   select
     v_tenant_id,
-    v_process_id,
+    v_recipe_id,
     d.step_no,
     d.step::prc_step_type,
     d.target_params,
@@ -179,9 +143,8 @@ begin
 
   get diagnostics v_step_rows = ROW_COUNT;
 
-  raise notice 'Recipe template seeded. recipe_id=%, process_id=%, ingredients inserted=%, steps inserted=%',
+  raise notice 'Recipe template seeded. recipe_id=%, ingredients inserted=%, steps inserted=%',
     v_recipe_id,
-    v_process_id,
     v_ingredient_rows,
     v_step_rows;
 end;

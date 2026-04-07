@@ -1046,7 +1046,7 @@ async function saveBatchAttributes(batchUuid: string) {
       if (field.ref_kind === 'registry_def') {
         row.value_json = { def_id: field.value, kind: field.ref_domain }
       } else {
-        row.value_ref_type_id = Number(field.value)
+        row.value_ref_type_id = String(field.value).trim()
       }
     } else row.value_text = String(field.value)
 

@@ -3,578 +3,900 @@
     <PageBreadcrumb :pageTitle="pageTitle" />
 
     <div class="space-y-6">
-      <section class="bg-white shadow rounded-lg border border-gray-200" aria-labelledby="recipeInfoHeading">
-        <header class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between p-4 border-b">
+      <section class="rounded-lg border border-gray-200 bg-white shadow" aria-labelledby="recipeEditHeader">
+        <header class="flex flex-col gap-3 border-b p-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 id="recipeInfoHeading" class="text-lg font-semibold text-gray-900">
-              {{ t('recipe.edit.infoTitle') }}
-            </h2>
-            <p class="text-sm text-gray-500">{{ t('recipe.edit.infoSubtitle') }}</p>
+            <h2 id="recipeEditHeader" class="text-lg font-semibold text-gray-900">{{ t('recipe.edit.headerTitle') }}</h2>
+            <p class="text-sm text-gray-500">{{ t('recipe.edit.headerSubtitle') }}</p>
           </div>
           <div class="flex flex-wrap items-center gap-2">
-            <button
-              class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-60"
-              :disabled="loadingRecipe"
-              @click="loadRecipe"
-            >
+            <button class="rounded border border-gray-300 px-3 py-2 hover:bg-gray-100" :disabled="loadingPage" @click="loadRecipeContext">
               {{ t('common.refresh') }}
             </button>
-            <button
-              class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
-              :disabled="savingRecipe"
-              @click="saveRecipeInfo"
-            >
-              {{ savingRecipe ? t('common.saving') : t('common.save') }}
+            <button class="rounded border border-gray-300 px-3 py-2 hover:bg-gray-100" :disabled="schemaLoading" @click="loadSchema">
+              {{ schemaLoading ? t('recipe.edit.loadingSchema') : t('recipe.edit.loadSchema') }}
+            </button>
+            <button class="rounded bg-blue-600 px-3 py-2 text-white hover:bg-blue-700 disabled:opacity-60" :disabled="saving" @click="saveRecipe">
+              {{ saving ? t('common.saving') : t('common.save') }}
+            </button>
+            <button class="rounded bg-blue-600 px-3 py-2 text-white hover:bg-blue-700 disabled:opacity-60" :disabled="versioning" @click="versionUp">
+              {{ versioning ? t('common.saving') : t('recipe.edit.versionUpAction') }}
             </button>
           </div>
         </header>
 
-        <form class="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" @submit.prevent>
-          <div>
-            <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.list.recipeId') }}<span class="text-red-600">*</span></label>
-            <input v-model.trim="recipeForm.code" class="w-full h-[40px] border rounded px-3" />
-            <p v-if="recipeErrors.code" class="text-xs text-red-600 mt-1">{{ recipeErrors.code }}</p>
-          </div>
-          <div>
-            <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.list.name') }}<span class="text-red-600">*</span></label>
-            <input v-model.trim="recipeForm.name" class="w-full h-[40px] border rounded px-3" />
-            <p v-if="recipeErrors.name" class="text-xs text-red-600 mt-1">{{ recipeErrors.name }}</p>
-          </div>
-          <div>
-            <div class="flex items-center justify-between mb-1">
-              <label class="block text-sm text-gray-600">{{ t('recipe.list.name') }}<span class="text-red-600">*</span></label>
-              <div class="flex items-center gap-2">
-                <span class="inline-flex items-center justify-center h-[32px] px-2 border rounded bg-gray-50 text-xs font-semibold">v{{ recipeForm.version }}</span>
-                <button
-                  type="button"
-                  class="px-3 py-1.5 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
-                  :disabled="versioning || savingRecipe"
-                  @click="versionUp"
-                >
-                  {{ versioning ? t('common.saving') : t('recipe.edit.versionUp') }}
-                </button>
-              </div>
+        <div class="grid grid-cols-1 gap-6 p-4 lg:grid-cols-[2fr_1fr]">
+          <form class="grid grid-cols-1 gap-4 md:grid-cols-2" @submit.prevent>
+            <div>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.recipeCode') }}<span class="text-red-600">*</span></label>
+              <input v-model.trim="headerForm.recipe_code" class="h-[40px] w-full rounded border px-3" />
+              <p v-if="headerErrors.recipe_code" class="mt-1 text-xs text-red-600">{{ headerErrors.recipe_code }}</p>
             </div>
-            <input v-model.trim="recipeForm.name" class="w-full h-[40px] border rounded px-3" />
-            <p v-if="recipeErrors.name" class="text-xs text-red-600 mt-1">{{ recipeErrors.name }}</p>
-          </div>
-          <div>
-            <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.list.status') }}</label>
-            <select v-model="recipeForm.status" class="w-full h-[40px] border rounded px-3 bg-white">
-              <option v-for="status in STATUSES" :key="status" :value="status">
-                {{ statusLabel(status) }}
-              </option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.list.style') }}</label>
-            <input v-model.trim="recipeForm.style" class="w-full h-[40px] border rounded px-3" />
-          </div>
-          <div>
-            <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.edit.category') }}</label>
-            <select v-model="recipeForm.category" class="w-full h-[40px] border rounded px-3 bg-white">
-              <option value="">{{ t('recipe.edit.selectCategory') }}</option>
-              <option v-for="category in categories" :key="category.id" :value="category.id">
-                {{ category.name || category.code }}
-              </option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.edit.batchSize') }}</label>
-            <input v-model.trim="recipeForm.batch_size_l" type="number" step="0.01" min="0" class="w-full h-[40px] border rounded px-3" />
-          </div>
-          <div>
-            <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.edit.targetOg') }}</label>
-            <input v-model.trim="recipeForm.target_og" type="number" step="0.001" min="0" class="w-full h-[40px] border rounded px-3" />
-          </div>
-          <div>
-            <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.edit.targetFg') }}</label>
-            <input v-model.trim="recipeForm.target_fg" type="number" step="0.001" min="0" class="w-full h-[40px] border rounded px-3" />
-          </div>
-          <div>
-            <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.edit.targetAbv') }}</label>
-            <input v-model.trim="recipeForm.target_abv" type="number" step="0.01" min="0" class="w-full h-[40px] border rounded px-3" />
-          </div>
-          <div>
-            <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.edit.targetIbu') }}</label>
-            <input v-model.trim="recipeForm.target_ibu" type="number" step="0.1" min="0" class="w-full h-[40px] border rounded px-3" />
-          </div>
-          <div>
-            <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.edit.targetSrm') }}</label>
-            <input v-model.trim="recipeForm.target_srm" type="number" step="0.1" min="0" class="w-full h-[40px] border rounded px-3" />
-          </div>
-          <div class="lg:col-span-3">
-            <label class="block text-sm text-gray-600 mb-1">{{ t('labels.note') }}</label>
-            <textarea v-model.trim="recipeForm.notes" rows="3" class="w-full border rounded px-3 py-2"></textarea>
-          </div>
-        </form>
-      </section>
-
-      <section class="bg-white shadow rounded-lg border border-gray-200" aria-labelledby="ingredientHeading">
-        <header class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between p-4 border-b">
-          <div>
-            <h2 id="ingredientHeading" class="text-lg font-semibold text-gray-900">
-              {{ t('recipe.edit.ingredientsTitle') }}
-            </h2>
-            <p class="text-sm text-gray-500">{{ t('recipe.edit.ingredientsSubtitle') }}</p>
-          </div>
-          <div class="flex flex-wrap items-center gap-2">
-            <div class="flex items-center gap-2">
-              <label for="ingredientTypeFilter" class="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                {{ t('recipe.edit.materialTypeFilter') }}
-              </label>
-              <select
-                id="ingredientTypeFilter"
-                v-model="materialCategoryFilter"
-                class="h-[38px] min-w-[150px] rounded border border-gray-300 bg-white px-3 text-sm"
-              >
-                <option v-for="option in materialTypeOptions" :key="option.value" :value="option.value">
-                  {{ option.label }}
+            <div>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.recipeName') }}<span class="text-red-600">*</span></label>
+              <input v-model.trim="headerForm.recipe_name" class="h-[40px] w-full rounded border px-3" />
+              <p v-if="headerErrors.recipe_name" class="mt-1 text-xs text-red-600">{{ headerErrors.recipe_name }}</p>
+            </div>
+            <div>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.recipeCategory') }}</label>
+              <input v-model.trim="headerForm.recipe_category" class="h-[40px] w-full rounded border px-3" />
+            </div>
+            <div>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.industryType') }}</label>
+              <input v-model.trim="headerForm.industry_type" class="h-[40px] w-full rounded border px-3" />
+            </div>
+            <div>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.recipeStatus') }}</label>
+              <select v-model="headerForm.status" class="h-[40px] w-full rounded border bg-white px-3">
+                <option v-for="status in RECIPE_STATUSES" :key="status" :value="status">{{ formatRecipeStatus(status) }}</option>
+              </select>
+            </div>
+            <div>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.version') }}</label>
+              <select v-model="currentVersionId" class="h-[40px] w-full rounded border bg-white px-3" @change="handleVersionChange">
+                <option v-for="version in versionOptions" :key="version.id" :value="version.id">
+                  v{{ version.version_no }} / {{ formatVersionStatus(version.status) }}
                 </option>
               </select>
             </div>
-            <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" @click="openIngredientCreate">
-              {{ t('recipe.edit.addIngredient') }}
-            </button>
-            <button
-              class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-60"
-              :disabled="ingredientsLoading"
-              @click="loadIngredients"
-            >
-              {{ t('common.refresh') }}
-            </button>
+            <div>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.versionLabel') }}</label>
+              <input v-model.trim="versionForm.version_label" class="h-[40px] w-full rounded border px-3" />
+            </div>
+            <div>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.schemaCode') }}<span class="text-red-600">*</span></label>
+              <input v-model.trim="versionForm.schema_code" class="h-[40px] w-full rounded border px-3 font-mono text-sm" />
+              <p v-if="versionErrors.schema_code" class="mt-1 text-xs text-red-600">{{ versionErrors.schema_code }}</p>
+            </div>
+            <div>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.versionStatus') }}</label>
+              <select v-model="versionForm.status" class="h-[40px] w-full rounded border bg-white px-3">
+                <option v-for="status in VERSION_STATUSES" :key="status" :value="status">{{ formatVersionStatus(status) }}</option>
+              </select>
+            </div>
+            <div>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.effectiveFrom') }}</label>
+              <input v-model="versionForm.effective_from" type="datetime-local" class="h-[40px] w-full rounded border px-3" />
+            </div>
+            <div>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.effectiveTo') }}</label>
+              <input v-model="versionForm.effective_to" type="datetime-local" class="h-[40px] w-full rounded border px-3" />
+            </div>
+            <div class="md:col-span-2">
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.changeSummary') }}</label>
+              <textarea v-model.trim="versionForm.change_summary" rows="3" class="w-full rounded border px-3 py-2"></textarea>
+            </div>
+          </form>
+
+          <div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
+            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ t('recipe.edit.schemaTitle') }}</p>
+            <p class="mt-1 font-mono text-sm text-gray-900">{{ versionForm.schema_code || DEFAULT_SCHEMA_KEY }}</p>
+            <p class="mt-1 text-xs text-gray-500">
+              <span v-if="schemaMeta.scope">{{ t('recipe.edit.schemaScope') }}: {{ schemaMeta.scope }}</span>
+              <span v-if="schemaMeta.def_id" class="ml-2">{{ t('recipe.edit.schemaDefId') }}: {{ schemaMeta.def_id }}</span>
+            </p>
+            <p v-if="schemaError" class="mt-2 text-xs text-red-600">{{ schemaError }}</p>
+
+            <div class="mt-4">
+              <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ t('recipe.edit.visibleSections') }}</p>
+              <div class="mt-2 flex flex-wrap gap-2">
+                <span
+                  v-for="section in schemaSectionBadges"
+                  :key="section.key"
+                  class="inline-flex items-center rounded-full px-2 py-1 text-xs"
+                  :class="section.enabled ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-600'"
+                >
+                  {{ section.label }}
+                </span>
+              </div>
+            </div>
+
+            <div class="mt-4">
+              <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ t('recipe.edit.bodySummary') }}</p>
+              <dl class="mt-2 space-y-1 text-sm text-gray-600">
+                <div class="flex justify-between gap-3">
+                  <dt>{{ t('recipe.edit.requiredMaterials') }}</dt>
+                  <dd>{{ requiredMaterials.length }}</dd>
+                </div>
+                <div class="flex justify-between gap-3">
+                  <dt>{{ t('recipe.edit.optionalMaterials') }}</dt>
+                  <dd>{{ optionalMaterials.length }}</dd>
+                </div>
+                <div class="flex justify-between gap-3">
+                  <dt>{{ t('recipe.edit.steps') }}</dt>
+                  <dd>{{ flowSteps.length }}</dd>
+                </div>
+                <div class="flex justify-between gap-3">
+                  <dt>{{ t('recipe.edit.stepTypeSource') }}</dt>
+                  <dd>{{ usesSchemaStepOptions ? t('recipe.stepTypeSources.schema') : t('recipe.stepTypeSources.fallback') }}</dd>
+                </div>
+              </dl>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section v-if="showMaterialsSection" class="rounded-lg border border-gray-200 bg-white shadow" aria-labelledby="materialsHeading">
+        <header class="flex flex-col gap-3 border-b p-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 id="materialsHeading" class="text-lg font-semibold text-gray-900">{{ t('recipe.schemaSections.materials') }}</h2>
+            <p class="text-sm text-gray-500">{{ t('recipe.edit.materialsStoredIn') }}</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-3">
+            <span v-if="!isSectionExpanded('materials')" class="text-xs text-amber-700">{{ t('recipe.edit.sectionFolded') }}</span>
+            <label class="inline-flex items-center gap-2 text-sm text-gray-600">
+              <span>{{ t('recipe.edit.sectionDisplay') }}</span>
+              <button
+                type="button"
+                role="switch"
+                class="relative inline-flex h-6 w-11 items-center rounded-full transition"
+                :aria-checked="isSectionExpanded('materials')"
+                :title="isSectionExpanded('materials') ? t('recipe.edit.hideSection') : t('recipe.edit.showSection')"
+                :class="isSectionExpanded('materials') ? 'bg-blue-600' : 'bg-gray-300'"
+                @click="toggleSectionExpanded('materials')"
+              >
+                <span class="inline-block h-5 w-5 transform rounded-full bg-white transition" :class="isSectionExpanded('materials') ? 'translate-x-5' : 'translate-x-1'" />
+              </button>
+              <span class="min-w-[2.5rem] text-xs font-medium">{{ isSectionExpanded('materials') ? t('recipe.edit.sectionOn') : t('recipe.edit.sectionOff') }}</span>
+            </label>
+            <button v-if="isSectionExpanded('materials')" type="button" class="rounded bg-blue-600 px-3 py-2 text-white hover:bg-blue-700" @click="openMaterialCreate(false)">{{ t('recipe.edit.addMaterial') }}</button>
           </div>
         </header>
-
-        <div class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50 text-xs uppercase text-gray-500">
+        <div v-show="isSectionExpanded('materials')" class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200 text-sm">
+            <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500">
               <tr>
-                <th class="px-3 py-2 text-left">{{ t('recipe.edit.materialColumn') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('recipe.edit.amountColumn') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('recipe.edit.usageStage') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('labels.note') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('common.actions') }}</th>
+                <th class="px-3 py-2">{{ t('recipe.edit.group') }}</th>
+                <th class="px-3 py-2">{{ t('recipe.edit.materialColumn') }}</th>
+                <th class="px-3 py-2">{{ t('recipe.edit.materialRole') }}</th>
+                <th class="px-3 py-2">{{ t('recipe.edit.quantity') }}</th>
+                <th class="px-3 py-2">{{ t('recipe.edit.uomCode') }}</th>
+                <th class="px-3 py-2">{{ t('recipe.edit.basis') }}</th>
+                <th class="px-3 py-2">{{ t('common.actions') }}</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-gray-100 text-sm">
-              <tr v-for="row in filteredIngredients" :key="row.id" class="hover:bg-gray-50">
+            <tbody class="divide-y divide-gray-100">
+              <tr v-for="row in materialRows" :key="row.key" class="hover:bg-gray-50">
+                <td class="px-3 py-2">{{ formatMaterialSection(row.section) }}</td>
                 <td class="px-3 py-2">
-                  <div class="font-medium text-gray-900">{{ materialLabel(row) }}</div>
-                  <div class="text-xs text-gray-500">{{ row.material?.code }}</div>
-                  <div v-if="ingredientCategoryLabel(row)" class="text-[11px] uppercase tracking-wide text-gray-400">
-                    {{ ingredientCategoryLabel(row) }}
-                  </div>
+                  <div class="font-medium text-gray-900">{{ row.item.material_name || row.item.material_code || row.item.material_key }}</div>
+                  <div class="font-mono text-xs text-gray-500">{{ row.item.material_code || row.item.material_spec_code || row.item.material_key }}</div>
                 </td>
-                <td class="px-3 py-2">
-                  {{ row.amount ?? '—' }}
-                  <span v-if="row.uom" class="text-xs text-gray-500">{{ row.uom.code }}</span>
-                </td>
-                <td class="px-3 py-2">{{ row.usage_stage || '—' }}</td>
-                <td class="px-3 py-2 text-xs text-gray-600">{{ row.notes || '—' }}</td>
+                <td class="px-3 py-2">{{ row.item.material_role }}</td>
+                <td class="px-3 py-2">{{ row.item.qty ?? t('common.none') }}</td>
+                <td class="px-3 py-2">{{ row.item.uom_code || t('common.none') }}</td>
+                <td class="px-3 py-2">{{ row.item.basis ? formatBasis(row.item.basis) : t('common.none') }}</td>
                 <td class="px-3 py-2 space-x-2">
-                  <button class="px-2 py-1 text-xs rounded border hover:bg-gray-100" @click="openIngredientEdit(row)">
-                    {{ t('common.edit') }}
-                  </button>
-                  <button class="px-2 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700" @click="deleteIngredient(row)">
-                    {{ t('common.delete') }}
-                  </button>
+                  <button class="rounded border px-2 py-1 text-xs hover:bg-gray-100" @click="openMaterialEdit(row.section, row.index)">{{ t('common.edit') }}</button>
+                  <button class="rounded bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-700" @click="deleteMaterial(row.section, row.index)">{{ t('common.delete') }}</button>
                 </td>
               </tr>
-              <tr v-if="!ingredientsLoading && filteredIngredients.length === 0">
-                <td colspan="5" class="px-3 py-6 text-center text-gray-500 text-sm">
-                  {{
-                    ingredients.length === 0
-                      ? t('recipe.edit.ingredientsEmpty')
-                      : t('recipe.edit.ingredientsFilteredEmpty')
-                  }}
-                </td>
+              <tr v-if="materialRows.length === 0">
+                <td colspan="7" class="px-3 py-6 text-center text-sm text-gray-500">{{ t('common.noData') }}</td>
               </tr>
             </tbody>
           </table>
         </div>
       </section>
 
-      <section class="bg-white shadow rounded-lg border border-gray-200" aria-labelledby="processHeading">
-        <header class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between p-4 border-b">
+      <section v-if="showOutputsSection" class="rounded-lg border border-gray-200 bg-white shadow" aria-labelledby="outputsHeading">
+        <header class="flex flex-col gap-3 border-b p-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 id="processHeading" class="text-lg font-semibold text-gray-900">
-              {{ t('recipe.edit.processTitle') }}
-            </h2>
-            <p class="text-sm text-gray-500">{{ t('recipe.edit.processSubtitle') }}</p>
+            <h2 id="outputsHeading" class="text-lg font-semibold text-gray-900">{{ t('recipe.schemaSections.outputs') }}</h2>
+            <p class="text-sm text-gray-500">{{ t('recipe.edit.outputsStoredIn') }}</p>
           </div>
-          <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" @click="openProcessCreate">
-            {{ t('recipe.edit.addProcess') }}
-          </button>
+          <div class="flex flex-wrap items-center gap-3">
+            <span v-if="!isSectionExpanded('outputs')" class="text-xs text-amber-700">{{ t('recipe.edit.sectionFolded') }}</span>
+            <label class="inline-flex items-center gap-2 text-sm text-gray-600">
+              <span>{{ t('recipe.edit.sectionDisplay') }}</span>
+              <button
+                type="button"
+                role="switch"
+                class="relative inline-flex h-6 w-11 items-center rounded-full transition"
+                :aria-checked="isSectionExpanded('outputs')"
+                :title="isSectionExpanded('outputs') ? t('recipe.edit.hideSection') : t('recipe.edit.showSection')"
+                :class="isSectionExpanded('outputs') ? 'bg-blue-600' : 'bg-gray-300'"
+                @click="toggleSectionExpanded('outputs')"
+              >
+                <span class="inline-block h-5 w-5 transform rounded-full bg-white transition" :class="isSectionExpanded('outputs') ? 'translate-x-5' : 'translate-x-1'" />
+              </button>
+              <span class="min-w-[2.5rem] text-xs font-medium">{{ isSectionExpanded('outputs') ? t('recipe.edit.sectionOn') : t('recipe.edit.sectionOff') }}</span>
+            </label>
+          </div>
         </header>
-
-        <div v-if="processesLoading" class="p-4 text-sm text-gray-500">{{ t('common.loading') }}</div>
-        <div v-else class="p-4 space-y-4">
-          <div v-if="processes.length === 0" class="text-sm text-gray-500">
-            {{ t('recipe.edit.processEmpty') }}
-          </div>
-          <article
-            v-for="process in processes"
-            :key="process.id"
-            class="border border-gray-200 rounded-lg"
-          >
-            <header class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between px-4 py-3 border-b">
-              <div>
-                <h3 class="text-base font-semibold text-gray-900">
-                  {{ process.name }}
-                  <span class="text-xs text-gray-500">v{{ process.version }}</span>
-                </h3>
-                <p class="text-xs text-gray-500">
-                  {{ process.is_active ? t('recipe.edit.processActive') : t('recipe.edit.processInactive') }}
-                </p>
-              </div>
-              <div class="flex flex-wrap items-center gap-2">
-                <button class="px-3 py-1 text-sm rounded border hover:bg-gray-100" @click="openProcessEdit(process)">
-                  {{ t('common.edit') }}
-                </button>
-                <button class="px-3 py-1 text-sm rounded bg-red-600 text-white hover:bg-red-700" @click="deleteProcess(process)">
-                  {{ t('common.delete') }}
-                </button>
-              </div>
-            </header>
-
-            <div class="px-4 py-3 space-y-3">
-              <div v-if="process.notes" class="text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded p-3">
-                {{ process.notes }}
-              </div>
-
-              <div class="flex justify-between items-center">
-                <h4 class="text-sm font-semibold text-gray-700">{{ t('recipe.edit.stepsTitle') }}</h4>
-                <button class="px-3 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700" @click="openStepCreate(process)">
-                  {{ t('recipe.edit.addStep') }}
-                </button>
-              </div>
-
-              <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200 text-sm">
-                  <thead class="bg-gray-50 text-xs uppercase text-gray-500">
-                    <tr>
-                      <th class="px-3 py-2 text-left">#</th>
-                      <th class="px-3 py-2 text-left">{{ t('recipe.edit.stepType') }}</th>
-                      <th class="px-3 py-2 text-left">{{ t('recipe.edit.targetParams') }}</th>
-                      <th class="px-3 py-2 text-left">{{ t('recipe.edit.qaChecks') }}</th>
-                      <th class="px-3 py-2 text-left">{{ t('labels.note') }}</th>
-                      <th class="px-3 py-2 text-left">{{ t('common.actions') }}</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-gray-100">
-                    <tr v-for="step in process.steps" :key="step.id" class="hover:bg-gray-50">
-                      <td class="px-3 py-2 font-mono text-xs text-gray-600">{{ step.step_no }}</td>
-                      <td class="px-3 py-2">{{ formatStepType(step.step) }}</td>
-                      <td class="px-3 py-2 text-xs text-gray-600">
-                        <div v-if="targetParamSummary(step.target_params).length > 0" class="space-y-1">
-                          <div
-                            v-for="(item, idx) in targetParamSummary(step.target_params)"
-                            :key="`${step.id}-tp-${idx}`"
-                            class="flex flex-wrap items-baseline gap-x-1"
-                          >
-                            <span class="font-medium text-gray-700">{{ item.name }}</span>
-                            <span v-if="item.display" class="text-gray-500">—</span>
-                            <span v-if="item.display">{{ item.display }}</span>
-                          </div>
-                        </div>
-                        <span v-else>—</span>
-                      </td>
-                      <td class="px-3 py-2 text-xs text-gray-600">
-                        <div v-if="qaChecksSummary(step.qa_checks).length > 0" class="space-y-1">
-                          <div
-                            v-for="(item, idx) in qaChecksSummary(step.qa_checks)"
-                            :key="`${step.id}-qa-${idx}`"
-                          >
-                            {{ item }}
-                          </div>
-                        </div>
-                        <span v-else>—</span>
-                      </td>
-                      <td class="px-3 py-2 text-xs text-gray-600">{{ step.notes || '—' }}</td>
-                      <td class="px-3 py-2 space-x-2">
-                        <button class="px-2 py-1 text-xs rounded border hover:bg-gray-100" @click="openStepEdit(process, step)">
-                          {{ t('common.edit') }}
-                        </button>
-                        <button class="px-2 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700" @click="deleteStep(process, step)">
-                          {{ t('common.delete') }}
-                        </button>
-                      </td>
-                    </tr>
-                    <tr v-if="process.steps.length === 0">
-                      <td colspan="6" class="px-3 py-4 text-sm text-gray-500 text-center">
-                        {{ t('recipe.edit.stepsEmpty') }}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+        <div v-show="isSectionExpanded('outputs')" class="grid grid-cols-1 gap-4 p-4 xl:grid-cols-3">
+          <div v-for="group in outputSectionRows" :key="group.key" class="rounded-lg border border-gray-200">
+            <div class="flex items-center justify-between border-b px-4 py-3">
+              <h3 class="font-medium text-gray-900">{{ group.label }}</h3>
+              <button class="rounded bg-blue-600 px-2 py-1 text-xs text-white hover:bg-blue-700" @click="openOutputCreate(group.section)">{{ t('recipe.edit.addOutput') }}</button>
             </div>
-          </article>
+            <div class="overflow-x-auto">
+              <table class="min-w-full divide-y divide-gray-200 text-sm">
+                <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500">
+                  <tr>
+                    <th class="px-3 py-2">{{ t('recipe.edit.outputCode') }}</th>
+                    <th class="px-3 py-2">{{ t('recipe.edit.outputName') }}</th>
+                    <th class="px-3 py-2">{{ t('recipe.edit.quantity') }}</th>
+                    <th class="px-3 py-2">{{ t('recipe.edit.uomCode') }}</th>
+                    <th class="px-3 py-2">{{ t('common.actions') }}</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                  <tr v-for="(row, index) in group.rows" :key="`${group.key}-${row.output_code}-${index}`">
+                    <td class="px-3 py-2 font-mono text-xs text-gray-700">{{ row.output_code }}</td>
+                    <td class="px-3 py-2">{{ row.output_name }}</td>
+                    <td class="px-3 py-2">{{ row.qty }}</td>
+                    <td class="px-3 py-2">{{ row.uom_code }}</td>
+                    <td class="px-3 py-2 space-x-2">
+                      <button class="rounded border px-2 py-1 text-xs hover:bg-gray-100" @click="openOutputEdit(group.section, index)">{{ t('common.edit') }}</button>
+                      <button class="rounded bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-700" @click="deleteOutput(group.section, index)">{{ t('common.delete') }}</button>
+                    </td>
+                  </tr>
+                  <tr v-if="group.rows.length === 0">
+                    <td colspan="5" class="px-3 py-4 text-center text-sm text-gray-500">{{ t('common.noData') }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section v-if="showEquipmentSection" class="rounded-lg border border-gray-200 bg-white shadow" aria-labelledby="equipmentHeading">
+        <header class="flex flex-col gap-3 border-b p-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 id="equipmentHeading" class="text-lg font-semibold text-gray-900">{{ t('recipe.schemaSections.equipment') }}</h2>
+            <p class="text-sm text-gray-500">{{ t('recipe.edit.equipmentStoredIn') }}</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-3">
+            <span v-if="!isSectionExpanded('equipment')" class="text-xs text-amber-700">{{ t('recipe.edit.sectionFolded') }}</span>
+            <label class="inline-flex items-center gap-2 text-sm text-gray-600">
+              <span>{{ t('recipe.edit.sectionDisplay') }}</span>
+              <button
+                type="button"
+                role="switch"
+                class="relative inline-flex h-6 w-11 items-center rounded-full transition"
+                :aria-checked="isSectionExpanded('equipment')"
+                :title="isSectionExpanded('equipment') ? t('recipe.edit.hideSection') : t('recipe.edit.showSection')"
+                :class="isSectionExpanded('equipment') ? 'bg-blue-600' : 'bg-gray-300'"
+                @click="toggleSectionExpanded('equipment')"
+              >
+                <span class="inline-block h-5 w-5 transform rounded-full bg-white transition" :class="isSectionExpanded('equipment') ? 'translate-x-5' : 'translate-x-1'" />
+              </button>
+              <span class="min-w-[2.5rem] text-xs font-medium">{{ isSectionExpanded('equipment') ? t('recipe.edit.sectionOn') : t('recipe.edit.sectionOff') }}</span>
+            </label>
+            <button v-if="isSectionExpanded('equipment')" type="button" class="rounded bg-blue-600 px-3 py-2 text-white hover:bg-blue-700" @click="openEquipmentCreate">{{ t('recipe.edit.addEquipmentRequirement') }}</button>
+          </div>
+        </header>
+        <div v-show="isSectionExpanded('equipment')" class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200 text-sm">
+            <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500">
+              <tr>
+                <th class="px-3 py-2">{{ t('recipe.edit.equipmentType') }}</th>
+                <th class="px-3 py-2">{{ t('recipe.edit.equipmentTemplate') }}</th>
+                <th class="px-3 py-2">{{ t('recipe.edit.quantity') }}</th>
+                <th class="px-3 py-2">{{ t('recipe.edit.notes') }}</th>
+                <th class="px-3 py-2">{{ t('common.actions') }}</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              <tr v-for="(row, index) in equipmentRequirements" :key="`${row.equipment_type_code}-${index}`">
+                <td class="px-3 py-2">{{ row.equipment_type_code }}</td>
+                <td class="px-3 py-2">{{ row.equipment_template_code || t('common.none') }}</td>
+                <td class="px-3 py-2">{{ row.quantity ?? 1 }}</td>
+                <td class="px-3 py-2">{{ row.notes || t('common.none') }}</td>
+                <td class="px-3 py-2 space-x-2">
+                  <button class="rounded border px-2 py-1 text-xs hover:bg-gray-100" @click="openEquipmentEdit(index)">{{ t('common.edit') }}</button>
+                  <button class="rounded bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-700" @click="deleteEquipmentRequirement(index)">{{ t('common.delete') }}</button>
+                </td>
+              </tr>
+              <tr v-if="equipmentRequirements.length === 0">
+                <td colspan="5" class="px-3 py-6 text-center text-sm text-gray-500">{{ t('common.noData') }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section v-if="showFlowSection" class="rounded-lg border border-gray-200 bg-white shadow" aria-labelledby="stepsHeading">
+        <header class="flex flex-col gap-3 border-b p-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 id="stepsHeading" class="text-lg font-semibold text-gray-900">{{ t('recipe.edit.flowTitle') }}</h2>
+            <p class="text-sm text-gray-500">{{ t('recipe.edit.flowSubtitle') }}</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-3">
+            <span v-if="!isSectionExpanded('flow')" class="text-xs text-amber-700">{{ t('recipe.edit.sectionFolded') }}</span>
+            <label class="inline-flex items-center gap-2 text-sm text-gray-600">
+              <span>{{ t('recipe.edit.sectionDisplay') }}</span>
+              <button
+                type="button"
+                role="switch"
+                class="relative inline-flex h-6 w-11 items-center rounded-full transition"
+                :aria-checked="isSectionExpanded('flow')"
+                :title="isSectionExpanded('flow') ? t('recipe.edit.hideSection') : t('recipe.edit.showSection')"
+                :class="isSectionExpanded('flow') ? 'bg-blue-600' : 'bg-gray-300'"
+                @click="toggleSectionExpanded('flow')"
+              >
+                <span class="inline-block h-5 w-5 transform rounded-full bg-white transition" :class="isSectionExpanded('flow') ? 'translate-x-5' : 'translate-x-1'" />
+              </button>
+              <span class="min-w-[2.5rem] text-xs font-medium">{{ isSectionExpanded('flow') ? t('recipe.edit.sectionOn') : t('recipe.edit.sectionOff') }}</span>
+            </label>
+            <button v-if="isSectionExpanded('flow')" type="button" class="rounded bg-blue-600 px-3 py-2 text-white hover:bg-blue-700" @click="openStepCreate">{{ t('recipe.edit.addStep') }}</button>
+          </div>
+        </header>
+        <div v-show="isSectionExpanded('flow')" class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200 text-sm">
+            <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500">
+              <tr>
+                <th class="px-3 py-2">#</th>
+                <th class="px-3 py-2">{{ t('recipe.edit.stepCode') }}</th>
+                <th class="px-3 py-2">{{ t('recipe.edit.stepName') }}</th>
+                <th class="px-3 py-2">{{ t('recipe.edit.stepType') }}</th>
+                <th class="px-3 py-2">{{ t('recipe.edit.durationSec') }}</th>
+                <th class="px-3 py-2">{{ t('recipe.edit.parameters') }}</th>
+                <th class="px-3 py-2">{{ t('recipe.edit.qualityChecks') }}</th>
+                <th class="px-3 py-2">{{ t('common.actions') }}</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              <tr v-for="(step, index) in flowSteps" :key="step.step_code || `step-${index}`" class="hover:bg-gray-50">
+                <td class="px-3 py-2 font-mono text-xs text-gray-600">{{ step.step_no }}</td>
+                <td class="px-3 py-2 font-mono text-xs text-gray-700">{{ step.step_code }}</td>
+                <td class="px-3 py-2">{{ step.step_name }}</td>
+                <td class="px-3 py-2">{{ step.step_type ? formatStepType(step.step_type) : t('common.none') }}</td>
+                <td class="px-3 py-2">{{ step.duration_sec ?? t('common.none') }}</td>
+                <td class="px-3 py-2 text-xs text-gray-600">{{ step.parameters?.length ?? 0 }}</td>
+                <td class="px-3 py-2 text-xs text-gray-600">{{ step.quality_checks?.length ?? 0 }}</td>
+                <td class="px-3 py-2 space-x-2">
+                  <button class="rounded border px-2 py-1 text-xs hover:bg-gray-100" @click="openStepEdit(index)">{{ t('common.edit') }}</button>
+                  <button class="rounded bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-700" @click="deleteStep(index)">{{ t('common.delete') }}</button>
+                </td>
+              </tr>
+              <tr v-if="flowSteps.length === 0">
+                <td colspan="8" class="px-3 py-6 text-center text-sm text-gray-500">{{ t('common.noData') }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section v-if="showQualitySection" class="rounded-lg border border-gray-200 bg-white shadow" aria-labelledby="qualityHeading">
+        <header class="flex flex-col gap-3 border-b p-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 id="qualityHeading" class="text-lg font-semibold text-gray-900">{{ t('recipe.schemaSections.quality') }}</h2>
+            <p class="text-sm text-gray-500">{{ t('recipe.edit.qualityStoredIn') }}</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-3">
+            <span v-if="!isSectionExpanded('quality')" class="text-xs text-amber-700">{{ t('recipe.edit.sectionFolded') }}</span>
+            <label class="inline-flex items-center gap-2 text-sm text-gray-600">
+              <span>{{ t('recipe.edit.sectionDisplay') }}</span>
+              <button
+                type="button"
+                role="switch"
+                class="relative inline-flex h-6 w-11 items-center rounded-full transition"
+                :aria-checked="isSectionExpanded('quality')"
+                :title="isSectionExpanded('quality') ? t('recipe.edit.hideSection') : t('recipe.edit.showSection')"
+                :class="isSectionExpanded('quality') ? 'bg-blue-600' : 'bg-gray-300'"
+                @click="toggleSectionExpanded('quality')"
+              >
+                <span class="inline-block h-5 w-5 transform rounded-full bg-white transition" :class="isSectionExpanded('quality') ? 'translate-x-5' : 'translate-x-1'" />
+              </button>
+              <span class="min-w-[2.5rem] text-xs font-medium">{{ isSectionExpanded('quality') ? t('recipe.edit.sectionOn') : t('recipe.edit.sectionOff') }}</span>
+            </label>
+            <button v-if="isSectionExpanded('quality')" type="button" class="rounded bg-blue-600 px-3 py-2 text-white hover:bg-blue-700" @click="openGlobalQualityCreate">{{ t('recipe.edit.addGlobalCheck') }}</button>
+          </div>
+        </header>
+        <div v-show="isSectionExpanded('quality')" class="grid grid-cols-1 gap-4 p-4 lg:grid-cols-[2fr_1fr]">
+          <div class="overflow-x-auto rounded-lg border border-gray-200">
+            <table class="min-w-full divide-y divide-gray-200 text-sm">
+              <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500">
+                <tr>
+                  <th class="px-3 py-2">{{ t('recipe.edit.code') }}</th>
+                  <th class="px-3 py-2">{{ t('recipe.edit.name') }}</th>
+                  <th class="px-3 py-2">{{ t('recipe.edit.frequency') }}</th>
+                  <th class="px-3 py-2">{{ t('recipe.edit.requiredFlag') }}</th>
+                  <th class="px-3 py-2">{{ t('common.actions') }}</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100">
+                <tr v-for="(row, index) in globalQualityChecks" :key="`${row.check_code}-${index}`">
+                  <td class="px-3 py-2 font-mono text-xs text-gray-700">{{ row.check_code }}</td>
+                  <td class="px-3 py-2">{{ row.check_name || qualityCheckMap.get(row.check_code)?.check_name || t('common.none') }}</td>
+                  <td class="px-3 py-2">{{ row.frequency || t('common.none') }}</td>
+                  <td class="px-3 py-2">{{ row.required ? t('common.yes') : t('common.no') }}</td>
+                  <td class="px-3 py-2 space-x-2">
+                    <button class="rounded border px-2 py-1 text-xs hover:bg-gray-100" @click="openGlobalQualityEdit(index)">{{ t('common.edit') }}</button>
+                    <button class="rounded bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-700" @click="deleteGlobalQualityCheck(index)">{{ t('common.delete') }}</button>
+                  </td>
+                </tr>
+                <tr v-if="globalQualityChecks.length === 0">
+                  <td colspan="5" class="px-3 py-6 text-center text-sm text-gray-500">{{ t('common.noData') }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="rounded-lg border border-gray-200 p-4">
+            <label class="mb-2 block text-sm font-medium text-gray-700">{{ t('recipe.edit.releaseCriteria') }}</label>
+            <textarea v-model="releaseCriteriaText" rows="10" class="w-full rounded border px-3 py-2 font-mono text-xs"></textarea>
+            <div class="mt-3 flex justify-end">
+              <button class="rounded border px-3 py-2 text-sm hover:bg-gray-100" @click="applyReleaseCriteria">{{ t('recipe.edit.applyReleaseCriteria') }}</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section v-if="showDocumentsSection" class="rounded-lg border border-gray-200 bg-white shadow" aria-labelledby="documentsHeading">
+        <header class="flex flex-col gap-3 border-b p-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 id="documentsHeading" class="text-lg font-semibold text-gray-900">{{ t('recipe.schemaSections.documents') }}</h2>
+            <p class="text-sm text-gray-500">{{ t('recipe.edit.documentsStoredIn') }}</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-3">
+            <span v-if="!isSectionExpanded('documents')" class="text-xs text-amber-700">{{ t('recipe.edit.sectionFolded') }}</span>
+            <label class="inline-flex items-center gap-2 text-sm text-gray-600">
+              <span>{{ t('recipe.edit.sectionDisplay') }}</span>
+              <button
+                type="button"
+                role="switch"
+                class="relative inline-flex h-6 w-11 items-center rounded-full transition"
+                :aria-checked="isSectionExpanded('documents')"
+                :title="isSectionExpanded('documents') ? t('recipe.edit.hideSection') : t('recipe.edit.showSection')"
+                :class="isSectionExpanded('documents') ? 'bg-blue-600' : 'bg-gray-300'"
+                @click="toggleSectionExpanded('documents')"
+              >
+                <span class="inline-block h-5 w-5 transform rounded-full bg-white transition" :class="isSectionExpanded('documents') ? 'translate-x-5' : 'translate-x-1'" />
+              </button>
+              <span class="min-w-[2.5rem] text-xs font-medium">{{ isSectionExpanded('documents') ? t('recipe.edit.sectionOn') : t('recipe.edit.sectionOff') }}</span>
+            </label>
+            <button v-if="isSectionExpanded('documents')" type="button" class="rounded bg-blue-600 px-3 py-2 text-white hover:bg-blue-700" @click="openDocumentCreate">{{ t('recipe.edit.addDocument') }}</button>
+          </div>
+        </header>
+        <div v-show="isSectionExpanded('documents')" class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200 text-sm">
+            <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500">
+              <tr>
+                <th class="px-3 py-2">{{ t('recipe.edit.documentCode') }}</th>
+                <th class="px-3 py-2">{{ t('recipe.edit.documentType') }}</th>
+                <th class="px-3 py-2">{{ t('recipe.edit.documentTitle') }}</th>
+                <th class="px-3 py-2">{{ t('recipe.edit.revision') }}</th>
+                <th class="px-3 py-2">{{ t('recipe.edit.requiredFlag') }}</th>
+                <th class="px-3 py-2">{{ t('common.actions') }}</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              <tr v-for="(row, index) in documentRows" :key="`${row.doc_code}-${index}`">
+                <td class="px-3 py-2 font-mono text-xs text-gray-700">{{ row.doc_code }}</td>
+                <td class="px-3 py-2">{{ row.doc_type }}</td>
+                <td class="px-3 py-2">{{ row.title || t('common.none') }}</td>
+                <td class="px-3 py-2">{{ row.revision || t('common.none') }}</td>
+                <td class="px-3 py-2">{{ row.required ? t('common.yes') : t('common.no') }}</td>
+                <td class="px-3 py-2 space-x-2">
+                  <button class="rounded border px-2 py-1 text-xs hover:bg-gray-100" @click="openDocumentEdit(index)">{{ t('common.edit') }}</button>
+                  <button class="rounded bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-700" @click="deleteDocument(index)">{{ t('common.delete') }}</button>
+                </td>
+              </tr>
+              <tr v-if="documentRows.length === 0">
+                <td colspan="6" class="px-3 py-6 text-center text-sm text-gray-500">{{ t('common.noData') }}</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </section>
     </div>
 
-    <!-- Ingredient Modal -->
-    <div v-if="showIngredientModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div class="w-full max-w-2xl bg-white rounded-xl shadow-lg border border-gray-200">
-        <header class="px-4 py-3 border-b">
-          <h3 class="font-semibold text-gray-900">
-            {{ editingIngredient ? t('recipe.edit.editIngredient') : t('recipe.edit.addIngredient') }}
-          </h3>
+    <div v-if="showMaterialModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div class="w-full max-w-3xl rounded-xl border border-gray-200 bg-white shadow-lg">
+        <header class="border-b px-4 py-3">
+          <h3 class="font-semibold text-gray-900">{{ materialEditIndex === null ? t('recipe.edit.addMaterial') : t('recipe.edit.editMaterial') }}</h3>
         </header>
-        <section class="p-4 space-y-4">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <section class="space-y-4 p-4">
+          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.edit.materialColumn') }}<span class="text-red-600">*</span></label>
-              <select v-model="ingredientForm.material_id" class="w-full h-[40px] border rounded px-3 bg-white">
-                <option value="">{{ t('recipe.edit.selectMaterial') }}</option>
-                <option v-for="material in materials" :key="material.id" :value="material.id">
-                  {{ material.code }} — {{ material.name || material.code }}
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.group') }}</label>
+              <select v-model="materialForm.section" class="h-[40px] w-full rounded border bg-white px-3">
+                <option value="required">{{ t('recipe.materialSections.required') }}</option>
+                <option value="optional">{{ t('recipe.materialSections.optional') }}</option>
+              </select>
+            </div>
+            <div>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.materialColumn') }}<span class="text-red-600">*</span></label>
+              <select v-model="materialForm.material_id" class="h-[40px] w-full rounded border bg-white px-3">
+                <option value="">{{ t('recipe.edit.selectMaterialPlaceholder') }}</option>
+                <option v-for="material in materialOptions" :key="material.id" :value="material.id">
+                  {{ material.material_code }} — {{ material.material_name }}
                 </option>
               </select>
-              <p v-if="ingredientErrors.material" class="text-xs text-red-600 mt-1">{{ ingredientErrors.material }}</p>
+              <p v-if="materialErrors.material_id" class="mt-1 text-xs text-red-600">{{ materialErrors.material_id }}</p>
             </div>
             <div>
-              <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.edit.amountColumn') }}</label>
-              <input v-model.trim="ingredientForm.amount" type="number" step="0.01" min="0" class="w-full h-[40px] border rounded px-3" />
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.materialRole') }}<span class="text-red-600">*</span></label>
+              <input v-model.trim="materialForm.material_role" class="h-[40px] w-full rounded border px-3" />
+              <p v-if="materialErrors.material_role" class="mt-1 text-xs text-red-600">{{ materialErrors.material_role }}</p>
             </div>
             <div>
-              <label class="block text-sm text-gray-600 mb-1">{{ t('labels.uom') }}<span class="text-red-600">*</span></label>
-              <select v-model="ingredientForm.uom_id" class="w-full h-[40px] border rounded px-3 bg-white">
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.quantity') }}<span class="text-red-600">*</span></label>
+              <input v-model.trim="materialForm.qty" type="number" min="0" step="0.001" class="h-[40px] w-full rounded border px-3" />
+              <p v-if="materialErrors.qty" class="mt-1 text-xs text-red-600">{{ materialErrors.qty }}</p>
+            </div>
+            <div>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.uomCode') }}<span class="text-red-600">*</span></label>
+              <select v-model="materialForm.uom_code" class="h-[40px] w-full rounded border bg-white px-3">
                 <option value="">{{ t('recipe.edit.selectUom') }}</option>
-                <option v-for="uom in uoms" :key="uom.id" :value="uom.id">
-                  {{ uomLabel(uom) }}
+                <option v-for="uom in uoms" :key="uom.id" :value="uom.code">{{ uom.code }} — {{ uom.name || uom.code }}</option>
+              </select>
+              <p v-if="materialErrors.uom_code" class="mt-1 text-xs text-red-600">{{ materialErrors.uom_code }}</p>
+            </div>
+            <div>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.basis') }}</label>
+              <select v-model="materialForm.basis" class="h-[40px] w-full rounded border bg-white px-3">
+                <option value="per_base">{{ t('recipe.basis.perBase') }}</option>
+                <option value="percent_of_base">{{ t('recipe.basis.percentOfBase') }}</option>
+                <option value="fixed_per_batch">{{ t('recipe.basis.fixedPerBatch') }}</option>
+                <option value="by_formula">{{ t('recipe.basis.byFormula') }}</option>
+              </select>
+            </div>
+            <div class="md:col-span-2">
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.notes') }}</label>
+              <textarea v-model.trim="materialForm.notes" rows="3" class="w-full rounded border px-3 py-2"></textarea>
+            </div>
+          </div>
+        </section>
+        <footer class="flex items-center justify-end gap-2 border-t px-4 py-3">
+          <button class="rounded border px-3 py-2 hover:bg-gray-100" @click="closeMaterialModal">{{ t('common.cancel') }}</button>
+          <button class="rounded bg-blue-600 px-3 py-2 text-white hover:bg-blue-700" @click="saveMaterial">{{ t('common.save') }}</button>
+        </footer>
+      </div>
+    </div>
+
+    <div v-if="showOutputModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div class="w-full max-w-3xl rounded-xl border border-gray-200 bg-white shadow-lg">
+        <header class="border-b px-4 py-3">
+          <h3 class="font-semibold text-gray-900">{{ outputEditIndex === null ? t('recipe.edit.addOutput') : t('recipe.edit.editOutput') }}</h3>
+        </header>
+        <section class="space-y-4 p-4">
+          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.outputCategory') }}</label>
+              <select v-model="outputForm.section" class="h-[40px] w-full rounded border bg-white px-3">
+                <option value="primary">{{ t('recipe.edit.primaryOutputs') }}</option>
+                <option value="co_products">{{ t('recipe.edit.coProductOutputs') }}</option>
+                <option value="waste">{{ t('recipe.edit.wasteOutputs') }}</option>
+              </select>
+            </div>
+            <div>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.outputType') }}</label>
+              <select v-model="outputForm.output_type" class="h-[40px] w-full rounded border bg-white px-3">
+                <option value="primary">{{ t('recipe.edit.outputTypePrimary') }}</option>
+                <option value="intermediate">{{ t('recipe.edit.outputTypeIntermediate') }}</option>
+                <option value="co_product">{{ t('recipe.edit.outputTypeCoProduct') }}</option>
+                <option value="waste">{{ t('recipe.edit.outputTypeWaste') }}</option>
+              </select>
+            </div>
+            <div>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.outputCode') }}<span class="text-red-600">*</span></label>
+              <input v-model.trim="outputForm.output_code" class="h-[40px] w-full rounded border px-3 font-mono text-sm" />
+              <p v-if="outputErrors.output_code" class="mt-1 text-xs text-red-600">{{ outputErrors.output_code }}</p>
+            </div>
+            <div>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.outputName') }}<span class="text-red-600">*</span></label>
+              <input v-model.trim="outputForm.output_name" class="h-[40px] w-full rounded border px-3" />
+              <p v-if="outputErrors.output_name" class="mt-1 text-xs text-red-600">{{ outputErrors.output_name }}</p>
+            </div>
+            <div>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.quantity') }}<span class="text-red-600">*</span></label>
+              <input v-model.trim="outputForm.qty" type="number" min="0" step="0.001" class="h-[40px] w-full rounded border px-3" />
+              <p v-if="outputErrors.qty" class="mt-1 text-xs text-red-600">{{ outputErrors.qty }}</p>
+            </div>
+            <div>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.uomCode') }}<span class="text-red-600">*</span></label>
+              <select v-model="outputForm.uom_code" class="h-[40px] w-full rounded border bg-white px-3">
+                <option value="">{{ t('recipe.edit.selectUom') }}</option>
+                <option v-for="uom in uoms" :key="uom.id" :value="uom.code">{{ uom.code }} — {{ uom.name || uom.code }}</option>
+              </select>
+              <p v-if="outputErrors.uom_code" class="mt-1 text-xs text-red-600">{{ outputErrors.uom_code }}</p>
+            </div>
+            <div>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.basis') }}</label>
+              <select v-model="outputForm.basis" class="h-[40px] w-full rounded border bg-white px-3">
+                <option value="per_base">{{ t('recipe.basis.perBase') }}</option>
+                <option value="fixed_per_batch">{{ t('recipe.edit.outputBasisFixedPerBatch') }}</option>
+                <option value="yield_based">{{ t('recipe.edit.outputBasisYieldBased') }}</option>
+              </select>
+            </div>
+            <div class="md:col-span-2">
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.notes') }}</label>
+              <textarea v-model.trim="outputForm.notes" rows="3" class="w-full rounded border px-3 py-2"></textarea>
+            </div>
+          </div>
+        </section>
+        <footer class="flex items-center justify-end gap-2 border-t px-4 py-3">
+          <button class="rounded border px-3 py-2 hover:bg-gray-100" @click="closeOutputModal">{{ t('common.cancel') }}</button>
+          <button class="rounded bg-blue-600 px-3 py-2 text-white hover:bg-blue-700" @click="saveOutput">{{ t('common.save') }}</button>
+        </footer>
+      </div>
+    </div>
+
+    <div v-if="showEquipmentModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div class="w-full max-w-3xl rounded-xl border border-gray-200 bg-white shadow-lg">
+        <header class="border-b px-4 py-3">
+          <h3 class="font-semibold text-gray-900">{{ equipmentEditIndex === null ? t('recipe.edit.addEquipmentRequirement') : t('recipe.edit.editEquipmentRequirement') }}</h3>
+        </header>
+        <section class="space-y-4 p-4">
+          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.equipmentType') }}<span class="text-red-600">*</span></label>
+              <select v-model="equipmentForm.equipment_type_code" class="h-[40px] w-full rounded border bg-white px-3">
+                <option value="">{{ t('recipe.edit.selectEquipmentType') }}</option>
+                <option v-for="type in equipmentTypes" :key="type.type_id" :value="type.code">{{ type.code }} — {{ type.name }}</option>
+              </select>
+              <p v-if="equipmentErrors.equipment_type_code" class="mt-1 text-xs text-red-600">{{ equipmentErrors.equipment_type_code }}</p>
+            </div>
+            <div>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.equipmentTemplate') }}</label>
+              <select v-model="equipmentForm.equipment_template_code" class="h-[40px] w-full rounded border bg-white px-3">
+                <option value="">{{ t('common.none') }}</option>
+                <option
+                  v-for="template in equipmentTemplates.filter((row) => !equipmentForm.equipment_type_code || (row.equipment_type_id ? equipmentTypeMap.get(row.equipment_type_id)?.code : undefined) === equipmentForm.equipment_type_code)"
+                  :key="template.id"
+                  :value="template.template_code"
+                >
+                  {{ template.template_code }} — {{ template.template_name }}
                 </option>
               </select>
-              <p v-if="ingredientErrors.uom" class="text-xs text-red-600 mt-1">{{ ingredientErrors.uom }}</p>
             </div>
             <div>
-              <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.edit.usageStage') }}</label>
-              <input v-model.trim="ingredientForm.usage_stage" class="w-full h-[40px] border rounded px-3" />
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.quantity') }}<span class="text-red-600">*</span></label>
+              <input v-model.trim="equipmentForm.quantity" type="number" min="1" step="1" class="h-[40px] w-full rounded border px-3" />
+              <p v-if="equipmentErrors.quantity" class="mt-1 text-xs text-red-600">{{ equipmentErrors.quantity }}</p>
             </div>
             <div class="md:col-span-2">
-              <label class="block text-sm text-gray-600 mb-1">{{ t('labels.note') }}</label>
-              <textarea v-model.trim="ingredientForm.notes" rows="3" class="w-full border rounded px-3 py-2"></textarea>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.capabilityRules') }}</label>
+              <textarea v-model="equipmentForm.capability_rules" rows="5" class="w-full rounded border px-3 py-2 font-mono text-xs"></textarea>
+              <p v-if="equipmentErrors.capability_rules" class="mt-1 text-xs text-red-600">{{ equipmentErrors.capability_rules }}</p>
+            </div>
+            <div class="md:col-span-2">
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.notes') }}</label>
+              <textarea v-model.trim="equipmentForm.notes" rows="3" class="w-full rounded border px-3 py-2"></textarea>
             </div>
           </div>
         </section>
-        <footer class="px-4 py-3 border-t flex items-center justify-end gap-2">
-          <button class="px-3 py-2 rounded border hover:bg-gray-100" @click="closeIngredientModal">
-            {{ t('common.cancel') }}
-          </button>
-          <button
-            class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
-            :disabled="ingredientSaving"
-            @click="saveIngredient"
-          >
-            {{ ingredientSaving ? t('common.saving') : t('common.save') }}
-          </button>
+        <footer class="flex items-center justify-end gap-2 border-t px-4 py-3">
+          <button class="rounded border px-3 py-2 hover:bg-gray-100" @click="closeEquipmentModal">{{ t('common.cancel') }}</button>
+          <button class="rounded bg-blue-600 px-3 py-2 text-white hover:bg-blue-700" @click="saveEquipmentRequirement">{{ t('common.save') }}</button>
         </footer>
       </div>
     </div>
 
-    <!-- Process Modal -->
-    <div v-if="showProcessModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div class="w-full max-w-xl bg-white rounded-xl shadow-lg border border-gray-200">
-        <header class="px-4 py-3 border-b">
-          <h3 class="font-semibold text-gray-900">
-            {{ editingProcess ? t('recipe.edit.editProcess') : t('recipe.edit.addProcess') }}
-          </h3>
-        </header>
-        <section class="p-4 space-y-4">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm text-gray-600 mb-1">{{ t('labels.name') }}<span class="text-red-600">*</span></label>
-              <input v-model.trim="processForm.name" class="w-full h-[40px] border rounded px-3" />
-              <p v-if="processErrors.name" class="text-xs text-red-600 mt-1">{{ processErrors.name }}</p>
-            </div>
-            <div>
-              <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.list.version') }}</label>
-              <input v-model.number="processForm.version" type="number" min="1" class="w-full h-[40px] border rounded px-3" />
-            </div>
-            <div class="md:col-span-2 flex items-center gap-2">
-              <input id="processActive" v-model="processForm.is_active" type="checkbox" class="h-4 w-4" />
-              <label for="processActive" class="text-sm text-gray-700">{{ t('recipe.edit.markActive') }}</label>
-            </div>
-            <div class="md:col-span-2">
-              <label class="block text-sm text-gray-600 mb-1">{{ t('labels.note') }}</label>
-              <textarea v-model.trim="processForm.notes" rows="3" class="w-full border rounded px-3 py-2"></textarea>
-            </div>
-          </div>
-        </section>
-        <footer class="px-4 py-3 border-t flex items-center justify-end gap-2">
-          <button class="px-3 py-2 rounded border hover:bg-gray-100" @click="closeProcessModal">
-            {{ t('common.cancel') }}
-          </button>
-          <button
-            class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
-            :disabled="processSaving"
-            @click="saveProcess"
-          >
-            {{ processSaving ? t('common.saving') : t('common.save') }}
-          </button>
-        </footer>
-      </div>
-    </div>
-
-    <!-- Step Modal -->
     <div v-if="showStepModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div class="w-full max-w-3xl bg-white rounded-xl shadow-lg border border-gray-200">
-        <header class="px-4 py-3 border-b">
-          <h3 class="font-semibold text-gray-900">
-            {{ editingStep ? t('recipe.edit.editStep') : t('recipe.edit.addStep') }}
-          </h3>
+      <div class="w-full max-w-5xl rounded-xl border border-gray-200 bg-white shadow-lg">
+        <header class="border-b px-4 py-3">
+          <h3 class="font-semibold text-gray-900">{{ stepEditIndex === null ? t('recipe.edit.addStep') : t('recipe.edit.editStep') }}</h3>
         </header>
-        <section class="p-4 space-y-4">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <section class="space-y-4 p-4">
+          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <label class="block text-sm text-gray-600 mb-1">{{ t('labels.name') }}</label>
-              <div class="text-sm text-gray-700">{{ currentProcess?.name }}</div>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.stepNo') }}<span class="text-red-600">*</span></label>
+              <input v-model.number="stepForm.step_no" type="number" min="1" class="h-[40px] w-full rounded border px-3" />
+              <p v-if="stepErrors.step_no" class="mt-1 text-xs text-red-600">{{ stepErrors.step_no }}</p>
             </div>
             <div>
-              <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.edit.stepNumber') }}<span class="text-red-600">*</span></label>
-              <input v-model.number="stepForm.step_no" type="number" min="1" class="w-full h-[40px] border rounded px-3" />
-              <p v-if="stepErrors.step_no" class="text-xs text-red-600 mt-1">{{ stepErrors.step_no }}</p>
-            </div>
-            <div>
-              <label class="block text-sm text-gray-600 mb-1">{{ t('recipe.edit.stepType') }}<span class="text-red-600">*</span></label>
-              <select v-model="stepForm.step" class="w-full h-[40px] border rounded px-3 bg-white">
-                <option v-for="option in STEP_OPTIONS" :key="option" :value="option">
-                  {{ formatStepType(option) }}
-                </option>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.stepType') }}<span class="text-red-600">*</span></label>
+              <select v-model="stepForm.step_type" class="h-[40px] w-full rounded border bg-white px-3">
+                <option v-for="option in stepTypeOptions" :key="option" :value="option">{{ formatStepType(option) }}</option>
               </select>
+              <p class="mt-1 text-xs text-gray-500">{{ usesSchemaStepOptions ? t('recipe.edit.loadedFromSchema') : t('recipe.edit.usingFallbackOptions') }}</p>
             </div>
-            <div class="md:col-span-2 space-y-2">
-              <label class="block text-sm text-gray-600">{{ t('recipe.edit.targetParams') }}</label>
-              <div class="overflow-x-auto border border-gray-200 rounded-lg">
-                <table class="min-w-full divide-y divide-gray-200 text-sm">
-                  <thead class="bg-gray-50 text-xs uppercase text-gray-500">
-                    <tr>
-                      <th class="px-3 py-2 text-left">{{ t('recipe.edit.targetParamName') }}</th>
-                      <th class="px-3 py-2 text-left">{{ t('recipe.edit.targetParamTarget') }}</th>
-                      <th class="px-3 py-2 text-left">{{ t('labels.uom') }}</th>
-                      <th class="px-3 py-2 text-left">{{ t('common.actions') }}</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-gray-100">
-                    <tr v-for="(row, index) in targetParamRows" :key="row.key" class="bg-white">
-                      <td class="px-3 py-2 align-top">
-                        <input
-                          v-model.trim="row.name"
-                          class="w-full border rounded px-2 py-1 text-sm"
-                          :placeholder="t('recipe.edit.targetParamNamePlaceholder')"
-                        />
-                      </td>
-                      <td class="px-3 py-2 align-top">
-                        <input
-                          v-model.trim="row.target"
-                          class="w-full border rounded px-2 py-1 text-sm"
-                          :placeholder="t('recipe.edit.targetParamTargetPlaceholder')"
-                        />
-                      </td>
-                      <td class="px-3 py-2 align-top">
-                        <select v-model="row.uom_id" class="w-full border rounded px-2 py-1 bg-white text-sm">
-                          <option value="">{{ t('recipe.edit.selectUom') }}</option>
-                          <option v-for="uom in uoms" :key="uom.id" :value="uom.id">
-                            {{ uomLabel(uom) }}
-                          </option>
-                        </select>
-                      </td>
-                      <td class="px-3 py-2 align-top text-right">
-                        <button
-                          type="button"
-                          class="px-2 py-1 text-xs rounded border hover:bg-gray-100"
-                          @click="removeTargetParamRow(index)"
-                        >
-                          {{ t('common.delete') }}
-                        </button>
-                      </td>
-                    </tr>
-                    <tr v-if="targetParamRows.length === 0">
-                      <td colspan="4" class="px-3 py-4 text-center text-sm text-gray-500">
-                        {{ t('common.noData') }}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              <div class="flex justify-end">
-                <button
-                  type="button"
-                  class="px-3 py-1.5 text-sm rounded border border-dashed hover:bg-gray-50"
-                  @click="addTargetParamRow"
-                >
-                  {{ t('recipe.edit.addTargetParam') }}
-                </button>
-              </div>
-              <p v-if="stepErrors.target_params" class="text-xs text-red-600">{{ stepErrors.target_params }}</p>
+            <div>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.stepCode') }}<span class="text-red-600">*</span></label>
+              <input v-model.trim="stepForm.step_code" class="h-[40px] w-full rounded border px-3 font-mono text-sm" />
+              <p v-if="stepErrors.step_code" class="mt-1 text-xs text-red-600">{{ stepErrors.step_code }}</p>
             </div>
-            <div class="md:col-span-2 space-y-2">
-              <label class="block text-sm text-gray-600">{{ t('recipe.edit.qaChecks') }}</label>
-              <div class="overflow-x-auto border border-gray-200 rounded-lg">
-                <table class="min-w-full divide-y divide-gray-200 text-sm">
-                  <thead class="bg-gray-50 text-xs uppercase text-gray-500">
-                    <tr>
-                      <th class="px-3 py-2 text-left">{{ t('recipe.edit.qaCheckDescription') }}</th>
-                      <th class="px-3 py-2 text-left">{{ t('common.actions') }}</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-gray-100">
-                    <tr v-for="(row, index) in qaCheckRows" :key="row.key" class="bg-white">
-                      <td class="px-3 py-2 align-top">
-                        <input
-                          v-model.trim="row.description"
-                          class="w-full border rounded px-2 py-1 text-sm"
-                          :placeholder="t('recipe.edit.qaCheckPlaceholder')"
-                        />
-                      </td>
-                      <td class="px-3 py-2 align-top text-right">
-                        <button
-                          type="button"
-                          class="px-2 py-1 text-xs rounded border hover:bg-gray-100"
-                          @click="removeQaCheckRow(index)"
-                        >
-                          {{ t('common.delete') }}
-                        </button>
-                      </td>
-                    </tr>
-                    <tr v-if="qaCheckRows.length === 0">
-                      <td colspan="2" class="px-3 py-4 text-center text-sm text-gray-500">
-                        {{ t('common.noData') }}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              <div class="flex justify-end">
-                <button
-                  type="button"
-                  class="px-3 py-1.5 text-sm rounded border border-dashed hover:bg-gray-50"
-                  @click="addQaCheckRow"
-                >
-                  {{ t('recipe.edit.addQaCheck') }}
-                </button>
-              </div>
-              <p v-if="stepErrors.qa_checks" class="text-xs text-red-600">{{ stepErrors.qa_checks }}</p>
+            <div>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.stepName') }}<span class="text-red-600">*</span></label>
+              <input v-model.trim="stepForm.step_name" class="h-[40px] w-full rounded border px-3" />
+              <p v-if="stepErrors.step_name" class="mt-1 text-xs text-red-600">{{ stepErrors.step_name }}</p>
+            </div>
+            <div>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.stepTemplateCode') }}</label>
+              <input v-model.trim="stepForm.step_template_code" class="h-[40px] w-full rounded border px-3" />
+            </div>
+            <div>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.durationSec') }}</label>
+              <input v-model.trim="stepForm.duration_sec" type="number" min="0" class="h-[40px] w-full rounded border px-3" />
             </div>
             <div class="md:col-span-2">
-              <label class="block text-sm text-gray-600 mb-1">{{ t('labels.note') }}</label>
-              <textarea v-model.trim="stepForm.notes" rows="3" class="w-full border rounded px-3 py-2"></textarea>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.instructions') }}</label>
+              <textarea v-model.trim="stepForm.instructions" rows="3" class="w-full rounded border px-3 py-2"></textarea>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <div>
+              <div class="mb-2 flex items-center justify-between">
+                <label class="block text-sm text-gray-600">{{ t('recipe.edit.parameters') }}</label>
+                <button class="rounded border border-dashed px-3 py-1 text-sm hover:bg-gray-50" @click.prevent="addParameterRow">{{ t('recipe.edit.addTargetParam') }}</button>
+              </div>
+              <div class="overflow-x-auto rounded border border-gray-200">
+                <table class="min-w-full divide-y divide-gray-200 text-sm">
+                  <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500">
+                    <tr>
+                      <th class="px-3 py-2">{{ t('recipe.edit.code') }}</th>
+                      <th class="px-3 py-2">{{ t('recipe.edit.target') }}</th>
+                      <th class="px-3 py-2">{{ t('recipe.edit.unit') }}</th>
+                      <th class="px-3 py-2">{{ t('common.actions') }}</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-100">
+                    <tr v-for="(row, index) in parameterRows" :key="row.key">
+                      <td class="px-3 py-2"><input v-model.trim="row.parameter_code" class="w-full rounded border px-2 py-1" /></td>
+                      <td class="px-3 py-2"><input v-model.trim="row.target" class="w-full rounded border px-2 py-1" /></td>
+                      <td class="px-3 py-2"><input v-model.trim="row.uom_code" class="w-full rounded border px-2 py-1" /></td>
+                      <td class="px-3 py-2 text-right">
+                        <button class="rounded border px-2 py-1 text-xs hover:bg-gray-100" @click.prevent="removeParameterRow(index)">{{ t('common.delete') }}</button>
+                      </td>
+                    </tr>
+                    <tr v-if="parameterRows.length === 0">
+                      <td colspan="4" class="px-3 py-4 text-center text-sm text-gray-500">{{ t('common.noData') }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div>
+              <div class="mb-2 flex items-center justify-between">
+                <label class="block text-sm text-gray-600">{{ t('recipe.edit.qualityChecks') }}</label>
+                <button class="rounded border border-dashed px-3 py-1 text-sm hover:bg-gray-50" @click.prevent="addQualityRow">{{ t('recipe.edit.addQualityCheck') }}</button>
+              </div>
+              <div class="overflow-x-auto rounded border border-gray-200">
+                <table class="min-w-full divide-y divide-gray-200 text-sm">
+                  <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500">
+                    <tr>
+                      <th class="px-3 py-2">{{ t('recipe.edit.code') }}</th>
+                      <th class="px-3 py-2">{{ t('recipe.edit.frequency') }}</th>
+                      <th class="px-3 py-2">{{ t('common.actions') }}</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-100">
+                    <tr v-for="(row, index) in qualityRows" :key="row.key">
+                      <td class="px-3 py-2"><input v-model.trim="row.check_code" class="w-full rounded border px-2 py-1" /></td>
+                      <td class="px-3 py-2"><input v-model.trim="row.frequency" class="w-full rounded border px-2 py-1" /></td>
+                      <td class="px-3 py-2 text-right">
+                        <button class="rounded border px-2 py-1 text-xs hover:bg-gray-100" @click.prevent="removeQualityRow(index)">{{ t('common.delete') }}</button>
+                      </td>
+                    </tr>
+                    <tr v-if="qualityRows.length === 0">
+                      <td colspan="3" class="px-3 py-4 text-center text-sm text-gray-500">{{ t('common.noData') }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.notes') }}</label>
+            <textarea v-model.trim="stepForm.notes" rows="3" class="w-full rounded border px-3 py-2"></textarea>
+          </div>
+        </section>
+        <footer class="flex items-center justify-end gap-2 border-t px-4 py-3">
+          <button class="rounded border px-3 py-2 hover:bg-gray-100" @click="closeStepModal">{{ t('common.cancel') }}</button>
+          <button class="rounded bg-blue-600 px-3 py-2 text-white hover:bg-blue-700" @click="saveStep">{{ t('common.save') }}</button>
+        </footer>
+      </div>
+    </div>
+
+    <div v-if="showGlobalQualityModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div class="w-full max-w-4xl rounded-xl border border-gray-200 bg-white shadow-lg">
+        <header class="border-b px-4 py-3">
+          <h3 class="font-semibold text-gray-900">{{ globalQualityEditIndex === null ? t('recipe.edit.addGlobalCheck') : t('recipe.edit.editGlobalCheck') }}</h3>
+        </header>
+        <section class="space-y-4 p-4">
+          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.code') }}<span class="text-red-600">*</span></label>
+              <select v-model="globalQualityForm.check_code" class="h-[40px] w-full rounded border bg-white px-3" @change="syncGlobalQualityName">
+                <option value="">{{ t('recipe.edit.selectQualityCheck') }}</option>
+                <option v-for="check in qualityCheckOptions" :key="check.id" :value="check.check_code">{{ check.check_code }} — {{ check.check_name }}</option>
+              </select>
+              <p v-if="globalQualityErrors.check_code" class="mt-1 text-xs text-red-600">{{ globalQualityErrors.check_code }}</p>
+            </div>
+            <div>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.name') }}</label>
+              <input v-model.trim="globalQualityForm.check_name" class="h-[40px] w-full rounded border px-3" />
+            </div>
+            <div>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.samplingPoint') }}</label>
+              <input v-model.trim="globalQualityForm.sampling_point" class="h-[40px] w-full rounded border px-3" />
+            </div>
+            <div>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.frequency') }}</label>
+              <input v-model.trim="globalQualityForm.frequency" class="h-[40px] w-full rounded border px-3" />
+            </div>
+            <div class="flex items-center gap-2">
+              <input id="globalCheckRequired" v-model="globalQualityForm.required" type="checkbox" class="h-4 w-4" />
+              <label for="globalCheckRequired" class="text-sm text-gray-700">{{ t('recipe.edit.requiredFlag') }}</label>
+            </div>
+            <div class="md:col-span-2">
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.acceptanceCriteria') }}</label>
+              <textarea v-model="globalQualityForm.acceptance_criteria" rows="5" class="w-full rounded border px-3 py-2 font-mono text-xs"></textarea>
+              <p v-if="globalQualityErrors.acceptance_criteria" class="mt-1 text-xs text-red-600">{{ globalQualityErrors.acceptance_criteria }}</p>
+            </div>
+            <div class="md:col-span-2">
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.notes') }}</label>
+              <textarea v-model.trim="globalQualityForm.notes" rows="3" class="w-full rounded border px-3 py-2"></textarea>
             </div>
           </div>
         </section>
-        <footer class="px-4 py-3 border-t flex items-center justify-end gap-2">
-          <button class="px-3 py-2 rounded border hover:bg-gray-100" @click="closeStepModal">
-            {{ t('common.cancel') }}
-          </button>
-          <button
-            class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
-            :disabled="stepSaving"
-            @click="saveStep"
-          >
-            {{ stepSaving ? t('common.saving') : t('common.save') }}
-          </button>
+        <footer class="flex items-center justify-end gap-2 border-t px-4 py-3">
+          <button class="rounded border px-3 py-2 hover:bg-gray-100" @click="closeGlobalQualityModal">{{ t('common.cancel') }}</button>
+          <button class="rounded bg-blue-600 px-3 py-2 text-white hover:bg-blue-700" @click="saveGlobalQualityCheck">{{ t('common.save') }}</button>
+        </footer>
+      </div>
+    </div>
+
+    <div v-if="showDocumentModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div class="w-full max-w-4xl rounded-xl border border-gray-200 bg-white shadow-lg">
+        <header class="border-b px-4 py-3">
+          <h3 class="font-semibold text-gray-900">{{ documentEditIndex === null ? t('recipe.edit.addDocument') : t('recipe.edit.editDocument') }}</h3>
+        </header>
+        <section class="space-y-4 p-4">
+          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.documentCode') }}<span class="text-red-600">*</span></label>
+              <input v-model.trim="documentForm.doc_code" class="h-[40px] w-full rounded border px-3 font-mono text-sm" />
+              <p v-if="documentErrors.doc_code" class="mt-1 text-xs text-red-600">{{ documentErrors.doc_code }}</p>
+            </div>
+            <div>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.documentType') }}<span class="text-red-600">*</span></label>
+              <input v-model.trim="documentForm.doc_type" class="h-[40px] w-full rounded border px-3" />
+              <p v-if="documentErrors.doc_type" class="mt-1 text-xs text-red-600">{{ documentErrors.doc_type }}</p>
+            </div>
+            <div>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.documentTitle') }}</label>
+              <input v-model.trim="documentForm.title" class="h-[40px] w-full rounded border px-3" />
+            </div>
+            <div>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.revision') }}</label>
+              <input v-model.trim="documentForm.revision" class="h-[40px] w-full rounded border px-3" />
+            </div>
+            <div class="md:col-span-2">
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.url') }}</label>
+              <input v-model.trim="documentForm.url" class="h-[40px] w-full rounded border px-3" />
+            </div>
+            <div class="flex items-center gap-2">
+              <input id="documentRequired" v-model="documentForm.required" type="checkbox" class="h-4 w-4" />
+              <label for="documentRequired" class="text-sm text-gray-700">{{ t('recipe.edit.requiredFlag') }}</label>
+            </div>
+            <div class="md:col-span-2">
+              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.notes') }}</label>
+              <textarea v-model.trim="documentForm.notes" rows="3" class="w-full rounded border px-3 py-2"></textarea>
+            </div>
+          </div>
+        </section>
+        <footer class="flex items-center justify-end gap-2 border-t px-4 py-3">
+          <button class="rounded border px-3 py-2 hover:bg-gray-100" @click="closeDocumentModal">{{ t('common.cancel') }}</button>
+          <button class="rounded bg-blue-600 px-3 py-2 text-white hover:bg-blue-700" @click="saveDocument">{{ t('common.save') }}</button>
         </footer>
       </div>
     </div>
@@ -582,7 +904,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
@@ -591,44 +913,65 @@ import { supabase } from '@/lib/supabase'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
 
-const STATUSES = ['draft', 'released', 'retired'] as const
-const STEP_OPTIONS = ['mashing', 'lautering', 'boil', 'whirlpool', 'cooling', 'fermentation', 'dry_hop', 'cold_crash', 'transfer', 'packaging', 'other']
-const MATERIAL_CATEGORIES = ['malt', 'hop', 'yeast', 'adjunct', 'water', 'packaging', 'chemical', 'cleaning', 'other'] as const
+const DEFAULT_SCHEMA_KEY = 'recipe_body_schema_v1'
+const RECIPE_STATUSES = ['active', 'inactive'] as const
+const VERSION_STATUSES = ['draft', 'in_review', 'approved', 'obsolete', 'archived'] as const
+const FALLBACK_STEP_TYPES = ['process', 'prep', 'transfer', 'inspection', 'packaging', 'other']
 
-type MaterialCategory = (typeof MATERIAL_CATEGORIES)[number]
+type JsonObject = Record<string, unknown>
+type RecipeStatus = (typeof RECIPE_STATUSES)[number]
+type VersionStatus = (typeof VERSION_STATUSES)[number]
+type MaterialSection = 'required' | 'optional'
+type OutputSection = 'primary' | 'co_products' | 'waste'
 
-const route = useRoute()
-const router = useRouter()
-const { t } = useI18n()
-
-const recipeId = computed(() => route.params.recipeId as string | undefined)
-const pageTitle = computed(() => t('recipe.edit.title'))
-
-interface RecipeDetail {
+interface RecipeHeaderRow {
   id: string
-  code: string
-  name: string
-  style: string | null
-  version: number
-  status: string
-  batch_size_l: number | null
-  target_og: number | null
-  target_fg: number | null
-  target_abv: number | null
-  target_ibu: number | null
-  target_srm: number | null
-  notes: string | null
-  created_at: string | null
-  category: string | null
+  recipe_code: string
+  recipe_name: string
+  recipe_category: string | null
+  industry_type: string | null
+  status: RecipeStatus
+  current_version_id: string | null
 }
 
-type RecipeRowLike = Partial<RecipeDetail> & Record<string, unknown>
-
-interface MaterialRow {
+interface RecipeVersionRow {
   id: string
+  recipe_id: string
+  version_no: number
+  version_label: string | null
+  recipe_body_json: JsonObject
+  resolved_reference_json: JsonObject
+  schema_code: string | null
+  template_code: string | null
+  status: VersionStatus
+  effective_from: string | null
+  effective_to: string | null
+  change_summary: string | null
+  created_at: string | null
+  updated_at: string | null
+}
+
+interface MaterialTypeRow {
+  type_id: string
   code: string
-  name: string | null
-  category: MaterialCategory
+  name: string
+}
+
+interface MaterialSpecRow {
+  id: string
+  material_type_id: string | null
+  spec_code: string
+  spec_name: string
+}
+
+interface MaterialMasterRow {
+  id: string
+  material_code: string
+  material_name: string
+  material_type_id: string | null
+  material_spec_id: string | null
+  base_uom_id: string | null
+  status: RecipeStatus
 }
 
 interface UomRow {
@@ -637,550 +980,1084 @@ interface UomRow {
   name: string | null
 }
 
-interface CategoryRow {
-  id: string
+interface EquipmentTypeRow {
+  type_id: string
   code: string
-  name: string | null
+  name: string
 }
 
-interface IngredientRow {
+interface EquipmentTemplateRow {
   id: string
-  recipe_id: string
-  material_id: string
-  amount: number | null
-  uom_id: string
-  usage_stage: string | null
-  notes: string | null
-  material: { id: string; code: string; name: string | null; category: MaterialCategory | null } | null
-  uom: { id: string; code: string; name: string | null } | null
+  template_code: string
+  template_name: string
+  equipment_type_id: string | null
+  status: RecipeStatus
 }
 
-interface StepRow {
+interface QualityCheckMasterRow {
   id: string
-  process_id: string
+  check_code: string
+  check_name: string
+  status: RecipeStatus
+}
+
+interface RecipeSchemaPayload {
+  def_id: string | null
+  def_key: string
+  scope: string | null
+  schema: JsonObject
+}
+
+interface RecipeMaterialRequirement {
+  material_key: string
+  material_name?: string
+  material_role: string
+  material_type_code?: string
+  material_spec_code?: string
+  material_code?: string
+  qty: number
+  uom_code: string
+  basis?: string
+  is_optional?: boolean
+  notes?: string
+}
+
+interface RecipeOutputSpec {
+  output_code: string
+  output_name: string
+  output_type: string
+  qty: number
+  uom_code: string
+  basis?: string
+  notes?: string
+}
+
+interface RecipeEquipmentRequirement {
+  equipment_type_code: string
+  equipment_template_code?: string
+  quantity?: number
+  capability_rules?: JsonObject
+  notes?: string
+}
+
+interface RecipeParameterTarget {
+  parameter_code: string
+  parameter_name?: string
+  target?: number | string
+  min?: number
+  max?: number
+  setpoint?: number | string
+  uom_code?: string
+  required?: boolean
+  sampling_frequency?: string
+  notes?: string
+}
+
+interface RecipeQualityCheck {
+  check_code: string
+  check_name?: string
+  sampling_point?: string
+  frequency?: string
+  required?: boolean
+  acceptance_criteria?: JsonObject
+  notes?: string
+}
+
+interface RecipeFlowStep {
+  step_code: string
+  step_name: string
   step_no: number
-  step: string
-  target_params: unknown
-  qa_checks: unknown
-  notes: string | null
+  step_type?: string
+  step_template_code?: string
+  instructions?: string
+  duration_sec?: number
+  material_inputs?: JsonObject[]
+  material_outputs?: JsonObject[]
+  equipment_requirements?: JsonObject[]
+  parameters?: RecipeParameterTarget[]
+  quality_checks?: RecipeQualityCheck[]
+  hold_constraints?: JsonObject[]
+  notes?: string
 }
 
-interface ProcessRow {
-  id: string
-  recipe_id: string
-  name: string
-  version: number
-  is_active: boolean
-  notes: string | null
-  steps: StepRow[]
+interface RecipeBody {
+  schema_version: string
+  recipe_info: JsonObject
+  base: JsonObject
+  outputs: {
+    primary: RecipeOutputSpec[]
+    co_products: RecipeOutputSpec[]
+    waste: RecipeOutputSpec[]
+  }
+  materials: {
+    required: RecipeMaterialRequirement[]
+    optional: RecipeMaterialRequirement[]
+  }
+  equipment: {
+    default_requirements: RecipeEquipmentRequirement[]
+  }
+  flow: {
+    steps: RecipeFlowStep[]
+  }
+  quality: {
+    global_checks: RecipeQualityCheck[]
+    release_criteria: JsonObject
+  }
+  documents: RecipeDocumentRef[]
+  [key: string]: unknown
 }
 
-interface TargetParamRow {
+interface RecipeDocumentRef {
+  doc_code: string
+  doc_type: string
+  title?: string
+  revision?: string
+  url?: string
+  required?: boolean
+  notes?: string
+}
+
+interface MaterialRowState {
   key: string
-  name: string
-  target: string
-  uom_id: string
+  section: MaterialSection
+  index: number
+  item: RecipeMaterialRequirement
 }
 
-interface QaCheckRow {
+interface ParameterRowState {
   key: string
-  description: string
-}
-
-interface TargetParamEntry {
-  name: string
+  parameter_code: string
   target: string
-  uom_id: string
+  uom_code: string
 }
 
-type QaCheckEntry = { description: string }
-
-type StepRecord = {
-  id: string
-  process_id: string
-  step_no: number
-  step: string
-  target_params: unknown
-  qa_checks: unknown
-  notes: string | null
+interface QualityRowState {
+  key: string
+  check_code: string
+  frequency: string
 }
 
-type ProcessRecord = {
-  id: string
-  recipe_id: string
-  name: string
-  version: number
-  is_active: boolean
-  notes: string | null
-  mes_recipe_steps?: StepRecord[]
-}
+type RecipeSectionKey = 'materials' | 'outputs' | 'equipment' | 'flow' | 'quality' | 'documents'
 
-const recipe = ref<RecipeDetail | null>(null)
-const loadingRecipe = ref(false)
-const savingRecipe = ref(false)
+const route = useRoute()
+const router = useRouter()
+const { t } = useI18n()
+
+const pageTitle = computed(() => t('recipe.edit.title'))
+const recipeId = computed(() => (typeof route.params.recipeId === 'string' ? route.params.recipeId : ''))
+const routeVersionId = computed(() => (typeof route.params.versionId === 'string' ? route.params.versionId : ''))
+
+const loadingPage = ref(false)
+const saving = ref(false)
 const versioning = ref(false)
-const recipeErrors = reactive<Record<string, string>>({})
-type RecipeFormState = {
-  code: string
-  name: string
-  style: string
-  category: string
-  version: number
-  status: (typeof STATUSES)[number]
-  batch_size_l: string
-  target_og: string
-  target_fg: string
-  target_abv: string
-  target_ibu: string
-  target_srm: string
-  notes: string
-}
+const schemaLoading = ref(false)
+const schemaError = ref('')
+const currentVersionId = ref('')
 
-const recipeForm = reactive<RecipeFormState>({
-  code: '',
-  name: '',
-  style: '',
-  category: '',
-  version: 1,
-  status: STATUSES[0],
-  batch_size_l: '',
-  target_og: '',
-  target_fg: '',
-  target_abv: '',
-  target_ibu: '',
-  target_srm: '',
-  notes: '',
-})
+const recipeHeader = ref<RecipeHeaderRow | null>(null)
+const recipeVersions = ref<RecipeVersionRow[]>([])
+const activeVersion = ref<RecipeVersionRow | null>(null)
+const recipeBody = ref<RecipeBody>(createDefaultRecipeBody(DEFAULT_SCHEMA_KEY, ''))
 
-const materials = ref<MaterialRow[]>([])
+const materialTypes = ref<MaterialTypeRow[]>([])
+const materialSpecs = ref<MaterialSpecRow[]>([])
+const materialOptions = ref<MaterialMasterRow[]>([])
+const equipmentTypes = ref<EquipmentTypeRow[]>([])
+const equipmentTemplates = ref<EquipmentTemplateRow[]>([])
+const qualityCheckOptions = ref<QualityCheckMasterRow[]>([])
 const uoms = ref<UomRow[]>([])
-const categories = ref<CategoryRow[]>([])
-const ingredients = ref<IngredientRow[]>([])
-const materialCategoryFilter = ref<'all' | MaterialCategory>('all')
-const ingredientsLoading = ref(false)
-const ingredientSaving = ref(false)
-const ingredientErrors = reactive<Record<string, string>>({})
-const showIngredientModal = ref(false)
-const editingIngredient = ref(false)
-const ingredientForm = reactive({
-  id: '',
-  material_id: '',
-  uom_id: '',
-  amount: '',
-  usage_stage: '',
-  notes: '',
+
+const schemaMeta = reactive({
+  def_id: '',
+  def_key: DEFAULT_SCHEMA_KEY,
+  scope: '',
+})
+const recipeSchema = ref<JsonObject | null>(null)
+const sectionVisibility = reactive<Record<RecipeSectionKey, boolean>>({
+  materials: true,
+  outputs: true,
+  equipment: true,
+  flow: true,
+  quality: true,
+  documents: true,
 })
 
-const processes = ref<ProcessRow[]>([])
-const processesLoading = ref(false)
-const processSaving = ref(false)
-const processErrors = reactive<Record<string, string>>({})
-const showProcessModal = ref(false)
-const editingProcess = ref(false)
-const processForm = reactive({
+const headerForm = reactive({
+  recipe_code: '',
+  recipe_name: '',
+  recipe_category: '',
+  industry_type: '',
+  status: RECIPE_STATUSES[0] as RecipeStatus,
+})
+
+const versionForm = reactive({
   id: '',
-  name: '',
-  version: 1,
-  is_active: true,
+  version_no: 1,
+  version_label: '',
+  schema_code: DEFAULT_SCHEMA_KEY,
+  status: VERSION_STATUSES[0] as VersionStatus,
+  effective_from: '',
+  effective_to: '',
+  change_summary: '',
+})
+
+const headerErrors = reactive<Record<string, string>>({})
+const versionErrors = reactive<Record<string, string>>({})
+
+const showMaterialModal = ref(false)
+const materialEditIndex = ref<number | null>(null)
+const materialForm = reactive({
+  section: 'required' as MaterialSection,
+  material_id: '',
+  material_role: '',
+  qty: '',
+  uom_code: '',
+  basis: 'per_base',
   notes: '',
 })
+const materialErrors = reactive<Record<string, string>>({})
+
+const showOutputModal = ref(false)
+const outputEditIndex = ref<number | null>(null)
+const outputForm = reactive({
+  section: 'primary' as OutputSection,
+  output_code: '',
+  output_name: '',
+  output_type: 'primary',
+  qty: '',
+  uom_code: '',
+  basis: 'per_base',
+  notes: '',
+})
+const outputErrors = reactive<Record<string, string>>({})
+
+const showEquipmentModal = ref(false)
+const equipmentEditIndex = ref<number | null>(null)
+const equipmentForm = reactive({
+  equipment_type_code: '',
+  equipment_template_code: '',
+  quantity: '1',
+  capability_rules: '{}',
+  notes: '',
+})
+const equipmentErrors = reactive<Record<string, string>>({})
+
+const showGlobalQualityModal = ref(false)
+const globalQualityEditIndex = ref<number | null>(null)
+const globalQualityForm = reactive({
+  check_code: '',
+  check_name: '',
+  sampling_point: '',
+  frequency: '',
+  required: true,
+  acceptance_criteria: '{}',
+  notes: '',
+})
+const globalQualityErrors = reactive<Record<string, string>>({})
+
+const showDocumentModal = ref(false)
+const documentEditIndex = ref<number | null>(null)
+const documentForm = reactive({
+  doc_code: '',
+  doc_type: '',
+  title: '',
+  revision: '',
+  url: '',
+  required: false,
+  notes: '',
+})
+const documentErrors = reactive<Record<string, string>>({})
 
 const showStepModal = ref(false)
-const editingStep = ref(false)
-const stepSaving = ref(false)
-const currentProcess = ref<ProcessRow | null>(null)
-const stepErrors = reactive<Record<string, string>>({})
+const stepEditIndex = ref<number | null>(null)
+const stepSource = ref<RecipeFlowStep | null>(null)
 const stepForm = reactive({
-  id: '',
   step_no: 1,
-  step: STEP_OPTIONS[0],
+  step_code: '',
+  step_name: '',
+  step_type: FALLBACK_STEP_TYPES[0],
+  step_template_code: '',
+  duration_sec: '',
+  instructions: '',
   notes: '',
 })
+const stepErrors = reactive<Record<string, string>>({})
 
-let targetParamRowId = 0
-let qaCheckRowId = 0
+let parameterRowCounter = 0
+let qualityRowCounter = 0
+const releaseCriteriaText = ref('{}')
 
-const targetParamRows = ref<TargetParamRow[]>([])
-const qaCheckRows = ref<QaCheckRow[]>([])
+const parameterRows = ref<ParameterRowState[]>([])
+const qualityRows = ref<QualityRowState[]>([])
 
-const statusLabel = (status: string) => {
-  const key = `recipe.statusMap.${status}`
-  const label = t(key)
-  return label === key ? status : label
+const mesClient = () => supabase.schema('mes')
+
+const versionOptions = computed(() => [...recipeVersions.value].sort((a, b) => b.version_no - a.version_no))
+
+const materialTypeMap = computed(() => {
+  const map = new Map<string, MaterialTypeRow>()
+  for (const row of materialTypes.value) {
+    map.set(row.type_id, row)
+  }
+  return map
+})
+
+const materialSpecMap = computed(() => {
+  const map = new Map<string, MaterialSpecRow>()
+  for (const row of materialSpecs.value) {
+    map.set(row.id, row)
+  }
+  return map
+})
+
+const materialMasterMap = computed(() => {
+  const map = new Map<string, MaterialMasterRow>()
+  for (const row of materialOptions.value) {
+    map.set(row.id, row)
+  }
+  return map
+})
+
+const equipmentTypeMap = computed(() => {
+  const map = new Map<string, EquipmentTypeRow>()
+  for (const row of equipmentTypes.value) {
+    map.set(row.type_id, row)
+  }
+  return map
+})
+
+const qualityCheckMap = computed(() => {
+  const map = new Map<string, QualityCheckMasterRow>()
+  for (const row of qualityCheckOptions.value) {
+    map.set(row.check_code, row)
+  }
+  return map
+})
+
+const requiredMaterials = computed(() => recipeBody.value.materials.required)
+const optionalMaterials = computed(() => recipeBody.value.materials.optional)
+const primaryOutputs = computed(() => recipeBody.value.outputs.primary)
+const coProductOutputs = computed(() => recipeBody.value.outputs.co_products)
+const wasteOutputs = computed(() => recipeBody.value.outputs.waste)
+const equipmentRequirements = computed(() => recipeBody.value.equipment.default_requirements)
+const flowSteps = computed(() => recipeBody.value.flow.steps)
+const globalQualityChecks = computed(() => recipeBody.value.quality.global_checks)
+const documentRows = computed(() => recipeBody.value.documents)
+
+const materialRows = computed(() => {
+  const rows: MaterialRowState[] = []
+  recipeBody.value.materials.required.forEach((item, index) => {
+    rows.push({ key: `required-${index}`, section: 'required', index, item })
+  })
+  recipeBody.value.materials.optional.forEach((item, index) => {
+    rows.push({ key: `optional-${index}`, section: 'optional', index, item })
+  })
+  return rows
+})
+
+const outputSectionRows = computed(() => [
+  { key: 'primary', section: 'primary' as OutputSection, label: t('recipe.edit.primaryOutputs'), rows: primaryOutputs.value },
+  { key: 'co_products', section: 'co_products' as OutputSection, label: t('recipe.edit.coProductOutputs'), rows: coProductOutputs.value },
+  { key: 'waste', section: 'waste' as OutputSection, label: t('recipe.edit.wasteOutputs'), rows: wasteOutputs.value },
+])
+
+const activeSchemaKey = computed(() => versionForm.schema_code.trim() || DEFAULT_SCHEMA_KEY)
+const isDefaultRecipeBodySchema = computed(() => activeSchemaKey.value === DEFAULT_SCHEMA_KEY)
+
+const schemaStepTypes = computed(() => extractSchemaStepTypes(recipeSchema.value))
+const usesSchemaStepOptions = computed(() => schemaStepTypes.value.length > 0)
+const stepTypeOptions = computed(() => {
+  const options = usesSchemaStepOptions.value ? [...schemaStepTypes.value] : [...FALLBACK_STEP_TYPES]
+  if (stepForm.step_type && !options.includes(stepForm.step_type)) {
+    options.unshift(stepForm.step_type)
+  }
+  return options
+})
+
+const showMaterialsSection = computed(() => !recipeSchema.value || schemaHasSection(recipeSchema.value, 'materials'))
+const showOutputsSection = computed(() => isDefaultRecipeBodySchema.value || !recipeSchema.value || schemaHasSection(recipeSchema.value, 'outputs') || primaryOutputs.value.length > 0 || coProductOutputs.value.length > 0 || wasteOutputs.value.length > 0)
+const showEquipmentSection = computed(() => isDefaultRecipeBodySchema.value || !recipeSchema.value || schemaHasSection(recipeSchema.value, 'equipment') || equipmentRequirements.value.length > 0)
+const showFlowSection = computed(() => !recipeSchema.value || schemaHasSection(recipeSchema.value, 'flow'))
+const showQualitySection = computed(() => isDefaultRecipeBodySchema.value || !recipeSchema.value || schemaHasSection(recipeSchema.value, 'quality') || globalQualityChecks.value.length > 0 || Object.keys(recipeBody.value.quality.release_criteria ?? {}).length > 0)
+const showDocumentsSection = computed(() => isDefaultRecipeBodySchema.value || !recipeSchema.value || schemaHasSection(recipeSchema.value, 'documents') || documentRows.value.length > 0)
+const schemaSectionBadges = computed(() => [
+  { key: 'materials', label: formatSchemaSection('materials'), enabled: showMaterialsSection.value },
+  { key: 'flow', label: formatSchemaSection('flow'), enabled: showFlowSection.value },
+  { key: 'outputs', label: formatSchemaSection('outputs'), enabled: showOutputsSection.value },
+  { key: 'equipment', label: formatSchemaSection('equipment'), enabled: showEquipmentSection.value },
+  { key: 'quality', label: formatSchemaSection('quality'), enabled: showQualitySection.value },
+  { key: 'documents', label: formatSchemaSection('documents'), enabled: showDocumentsSection.value },
+])
+
+function isSectionAvailable(section: RecipeSectionKey) {
+  switch (section) {
+    case 'materials':
+      return showMaterialsSection.value
+    case 'outputs':
+      return showOutputsSection.value
+    case 'equipment':
+      return showEquipmentSection.value
+    case 'flow':
+      return showFlowSection.value
+    case 'quality':
+      return showQualitySection.value
+    case 'documents':
+      return showDocumentsSection.value
+  }
 }
 
-const formatStepType = (value: string) => {
-  if (!value) return ''
+function isSectionExpanded(section: RecipeSectionKey) {
+  return isSectionAvailable(section) && sectionVisibility[section]
+}
+
+function toggleSectionExpanded(section: RecipeSectionKey) {
+  if (!isSectionAvailable(section)) return
+  sectionVisibility[section] = !sectionVisibility[section]
+}
+
+function isJsonObject(value: unknown): value is JsonObject {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+}
+
+function deepCloneJson<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T
+}
+
+function createDefaultRecipeBody(schemaCode: string, industryType: string): RecipeBody {
+  return {
+    schema_version: schemaCode === DEFAULT_SCHEMA_KEY ? 'recipe_body_v1' : 'recipe_body_v1',
+    recipe_info: {
+      recipe_type: 'process_manufacturing',
+      industry_type: industryType || '',
+      notes: '',
+    },
+    base: {
+      quantity: 1,
+      uom_code: 'PCS',
+    },
+    outputs: {
+      primary: [],
+      co_products: [],
+      waste: [],
+    },
+    materials: {
+      required: [],
+      optional: [],
+    },
+    equipment: {
+      default_requirements: [],
+    },
+    flow: {
+      steps: [],
+    },
+    quality: {
+      global_checks: [],
+      release_criteria: {},
+    },
+    documents: [],
+  }
+}
+
+function normalizeOutputSpec(value: unknown): RecipeOutputSpec | null {
+  if (!isJsonObject(value)) return null
+  const outputCode = typeof value.output_code === 'string' ? value.output_code : ''
+  const outputName = typeof value.output_name === 'string' ? value.output_name : ''
+  const outputType = typeof value.output_type === 'string' ? value.output_type : ''
+  const qty = typeof value.qty === 'number' ? value.qty : Number(value.qty)
+  const uomCode = typeof value.uom_code === 'string' ? value.uom_code : ''
+  if (!outputCode || !outputName || !outputType || !Number.isFinite(qty) || !uomCode) return null
+  return {
+    output_code: outputCode,
+    output_name: outputName,
+    output_type: outputType,
+    qty,
+    uom_code: uomCode,
+    basis: typeof value.basis === 'string' ? value.basis : undefined,
+    notes: typeof value.notes === 'string' ? value.notes : undefined,
+  }
+}
+
+function normalizeMaterialRequirement(value: unknown): RecipeMaterialRequirement | null {
+  if (!isJsonObject(value)) return null
+  const materialKey = typeof value.material_key === 'string' ? value.material_key : ''
+  const materialRole = typeof value.material_role === 'string' ? value.material_role : ''
+  const qty = typeof value.qty === 'number' ? value.qty : Number(value.qty)
+  const uomCode = typeof value.uom_code === 'string' ? value.uom_code : ''
+  if (!materialKey || !materialRole || !Number.isFinite(qty) || !uomCode) return null
+  return {
+    material_key: materialKey,
+    material_name: typeof value.material_name === 'string' ? value.material_name : undefined,
+    material_role: materialRole,
+    material_type_code: typeof value.material_type_code === 'string' ? value.material_type_code : undefined,
+    material_spec_code: typeof value.material_spec_code === 'string' ? value.material_spec_code : undefined,
+    material_code: typeof value.material_code === 'string' ? value.material_code : undefined,
+    qty,
+    uom_code: uomCode,
+    basis: typeof value.basis === 'string' ? value.basis : undefined,
+    is_optional: typeof value.is_optional === 'boolean' ? value.is_optional : undefined,
+    notes: typeof value.notes === 'string' ? value.notes : undefined,
+  }
+}
+
+function normalizeEquipmentRequirement(value: unknown): RecipeEquipmentRequirement | null {
+  if (!isJsonObject(value)) return null
+  const equipmentTypeCode = typeof value.equipment_type_code === 'string' ? value.equipment_type_code : ''
+  if (!equipmentTypeCode) return null
+  const quantity = typeof value.quantity === 'number' ? value.quantity : Number(value.quantity)
+  return {
+    equipment_type_code: equipmentTypeCode,
+    equipment_template_code: typeof value.equipment_template_code === 'string' ? value.equipment_template_code : undefined,
+    quantity: Number.isFinite(quantity) && quantity > 0 ? Math.trunc(quantity) : undefined,
+    capability_rules: isJsonObject(value.capability_rules) ? deepCloneJson(value.capability_rules) : undefined,
+    notes: typeof value.notes === 'string' ? value.notes : undefined,
+  }
+}
+
+function normalizeParameterTarget(value: unknown): RecipeParameterTarget | null {
+  if (!isJsonObject(value) || typeof value.parameter_code !== 'string' || !value.parameter_code) return null
+  return {
+    parameter_code: value.parameter_code,
+    parameter_name: typeof value.parameter_name === 'string' ? value.parameter_name : undefined,
+    target: typeof value.target === 'number' || typeof value.target === 'string' ? value.target : undefined,
+    min: typeof value.min === 'number' ? value.min : undefined,
+    max: typeof value.max === 'number' ? value.max : undefined,
+    setpoint: typeof value.setpoint === 'number' || typeof value.setpoint === 'string' ? value.setpoint : undefined,
+    uom_code: typeof value.uom_code === 'string' ? value.uom_code : undefined,
+    required: typeof value.required === 'boolean' ? value.required : undefined,
+    sampling_frequency: typeof value.sampling_frequency === 'string' ? value.sampling_frequency : undefined,
+    notes: typeof value.notes === 'string' ? value.notes : undefined,
+  }
+}
+
+function normalizeQualityCheck(value: unknown): RecipeQualityCheck | null {
+  if (!isJsonObject(value) || typeof value.check_code !== 'string' || !value.check_code) return null
+  return {
+    check_code: value.check_code,
+    check_name: typeof value.check_name === 'string' ? value.check_name : undefined,
+    sampling_point: typeof value.sampling_point === 'string' ? value.sampling_point : undefined,
+    frequency: typeof value.frequency === 'string' ? value.frequency : undefined,
+    required: typeof value.required === 'boolean' ? value.required : undefined,
+    acceptance_criteria: isJsonObject(value.acceptance_criteria) ? value.acceptance_criteria : undefined,
+    notes: typeof value.notes === 'string' ? value.notes : undefined,
+  }
+}
+
+function normalizeFlowStep(value: unknown): RecipeFlowStep | null {
+  if (!isJsonObject(value)) return null
+  const stepCode = typeof value.step_code === 'string' ? value.step_code : ''
+  const stepName = typeof value.step_name === 'string' ? value.step_name : ''
+  const stepNo = typeof value.step_no === 'number' ? value.step_no : Number(value.step_no)
+  if (!stepCode || !stepName || !Number.isInteger(stepNo) || stepNo < 1) return null
+
+  return {
+    step_code: stepCode,
+    step_name: stepName,
+    step_no: stepNo,
+    step_type: typeof value.step_type === 'string' ? value.step_type : undefined,
+    step_template_code: typeof value.step_template_code === 'string' ? value.step_template_code : undefined,
+    instructions: typeof value.instructions === 'string' ? value.instructions : undefined,
+    duration_sec: typeof value.duration_sec === 'number' ? value.duration_sec : undefined,
+    material_inputs: Array.isArray(value.material_inputs) ? value.material_inputs.filter(isJsonObject) : [],
+    material_outputs: Array.isArray(value.material_outputs) ? value.material_outputs.filter(isJsonObject) : [],
+    equipment_requirements: Array.isArray(value.equipment_requirements) ? value.equipment_requirements.filter(isJsonObject) : [],
+    parameters: Array.isArray(value.parameters) ? value.parameters.map(normalizeParameterTarget).filter((item): item is RecipeParameterTarget => Boolean(item)) : [],
+    quality_checks: Array.isArray(value.quality_checks) ? value.quality_checks.map(normalizeQualityCheck).filter((item): item is RecipeQualityCheck => Boolean(item)) : [],
+    hold_constraints: Array.isArray(value.hold_constraints) ? value.hold_constraints.filter(isJsonObject) : [],
+    notes: typeof value.notes === 'string' ? value.notes : undefined,
+  }
+}
+
+function normalizeDocumentRef(value: unknown): RecipeDocumentRef | null {
+  if (!isJsonObject(value)) return null
+  const docCode = typeof value.doc_code === 'string' ? value.doc_code : ''
+  const docType = typeof value.doc_type === 'string' ? value.doc_type : ''
+  if (!docCode || !docType) return null
+  return {
+    doc_code: docCode,
+    doc_type: docType,
+    title: typeof value.title === 'string' ? value.title : undefined,
+    revision: typeof value.revision === 'string' ? value.revision : undefined,
+    url: typeof value.url === 'string' ? value.url : undefined,
+    required: typeof value.required === 'boolean' ? value.required : undefined,
+    notes: typeof value.notes === 'string' ? value.notes : undefined,
+  }
+}
+
+function normalizeRecipeBody(raw: unknown, industryType: string, schemaCode: string): RecipeBody {
+  const base = isJsonObject(raw) ? raw : {}
+  const normalized = createDefaultRecipeBody(schemaCode, industryType)
+
+  normalized.schema_version = typeof base.schema_version === 'string' ? base.schema_version : normalized.schema_version
+  normalized.recipe_info = isJsonObject(base.recipe_info) ? deepCloneJson(base.recipe_info) : normalized.recipe_info
+  normalized.base = isJsonObject(base.base) ? deepCloneJson(base.base) : normalized.base
+
+  const outputs = isJsonObject(base.outputs) ? base.outputs : {}
+  const primaryOutputs = Array.isArray(outputs.primary)
+    ? outputs.primary.map(normalizeOutputSpec).filter((item): item is RecipeOutputSpec => Boolean(item))
+    : []
+  const coProductOutputs = Array.isArray(outputs.co_products)
+    ? outputs.co_products.map(normalizeOutputSpec).filter((item): item is RecipeOutputSpec => Boolean(item))
+    : []
+  const wasteOutputs = Array.isArray(outputs.waste)
+    ? outputs.waste.map(normalizeOutputSpec).filter((item): item is RecipeOutputSpec => Boolean(item))
+    : []
+
+  const materials = isJsonObject(base.materials) ? base.materials : {}
+  const required = Array.isArray(materials.required)
+    ? materials.required.map(normalizeMaterialRequirement).filter((item): item is RecipeMaterialRequirement => Boolean(item))
+    : []
+  const optional = Array.isArray(materials.optional)
+    ? materials.optional.map(normalizeMaterialRequirement).filter((item): item is RecipeMaterialRequirement => Boolean(item))
+    : []
+
+  const equipment = isJsonObject(base.equipment) ? base.equipment : {}
+  const defaultEquipmentRequirements = Array.isArray(equipment.default_requirements)
+    ? equipment.default_requirements.map(normalizeEquipmentRequirement).filter((item): item is RecipeEquipmentRequirement => Boolean(item))
+    : []
+
+  const flow = isJsonObject(base.flow) ? base.flow : {}
+  const steps = Array.isArray(flow.steps)
+    ? flow.steps.map(normalizeFlowStep).filter((item): item is RecipeFlowStep => Boolean(item))
+    : []
+
+  const quality = isJsonObject(base.quality) ? base.quality : {}
+  const globalChecks = Array.isArray(quality.global_checks)
+    ? quality.global_checks.map(normalizeQualityCheck).filter((item): item is RecipeQualityCheck => Boolean(item))
+    : []
+  const releaseCriteria = isJsonObject(quality.release_criteria) ? deepCloneJson(quality.release_criteria) : {}
+
+  const documents = Array.isArray(base.documents)
+    ? base.documents.map(normalizeDocumentRef).filter((item): item is RecipeDocumentRef => Boolean(item))
+    : []
+
+  return {
+    ...deepCloneJson(base),
+    schema_version: normalized.schema_version,
+    recipe_info: normalized.recipe_info,
+    base: normalized.base,
+    outputs: {
+      primary: primaryOutputs,
+      co_products: coProductOutputs,
+      waste: wasteOutputs,
+    },
+    materials: {
+      required,
+      optional,
+    },
+    equipment: {
+      default_requirements: defaultEquipmentRequirements,
+    },
+    flow: {
+      steps,
+    },
+    quality: {
+      global_checks: globalChecks,
+      release_criteria: releaseCriteria,
+    },
+    documents,
+  }
+}
+
+function formatLabel(value: string) {
   return value
     .split('_')
+    .filter(Boolean)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ')
 }
 
-function materialCategoryLabel(value: string | null | undefined) {
-  if (!value) return ''
-  const key = `material.categories.${value}`
-  const translated = t(key as any)
-  return translated === key ? value : translated
+function toTranslationKey(value: string) {
+  return value.replace(/_([a-z])/g, (_, char: string) => char.toUpperCase())
 }
 
-const uomLabel = (row: UomRow) => {
-  if (!row) return ''
-  return row.name ? `${row.code} — ${row.name}` : row.code
+function translateEnum(baseKey: string, value: string) {
+  const key = `${baseKey}.${toTranslationKey(value)}`
+  const translated = t(key)
+  return translated === key ? formatLabel(value) : translated
 }
 
-const uomLookup = computed(() => {
-  const map = new Map<string, UomRow>()
-  for (const item of uoms.value) {
-    map.set(item.id, item)
-  }
-  return map
-})
-
-const materialTypeOptions = computed(() => [
-  { value: 'all' as const, label: t('common.all') },
-  ...MATERIAL_CATEGORIES.map((category) => ({ value: category, label: materialCategoryLabel(category) })),
-])
-
-const materialMap = computed(() => {
-  const map = new Map<string, MaterialRow>()
-  for (const item of materials.value) {
-    map.set(item.id, item)
-  }
-  return map
-})
-
-const filteredIngredients = computed(() => {
-  const filter = materialCategoryFilter.value
-  if (filter === 'all') return ingredients.value
-  return ingredients.value.filter((row) => {
-    const category = row.material?.category ?? materialMap.value.get(row.material_id)?.category ?? null
-    return category === filter
-  })
-})
-
-const ingredientCategoryLabel = (row: IngredientRow) => {
-  const category = row.material?.category ?? materialMap.value.get(row.material_id)?.category ?? null
-  return category ? materialCategoryLabel(category) : ''
+function formatRecipeStatus(value: RecipeStatus) {
+  return translateEnum('recipe.statuses', value)
 }
 
-function createTargetParamRow(initial?: Partial<Omit<TargetParamRow, 'key'>>) {
-  return {
-    key: `tp-${++targetParamRowId}`,
-    name: initial?.name ?? '',
-    target: initial?.target ?? '',
-    uom_id: initial?.uom_id ?? '',
-  }
+function formatVersionStatus(value: VersionStatus) {
+  return translateEnum('recipe.versionStatuses', value)
 }
 
-function createQaCheckRow(initial?: Partial<Omit<QaCheckRow, 'key'>>) {
-  return {
-    key: `qa-${++qaCheckRowId}`,
-    description: initial?.description ?? '',
-  }
+function formatMaterialSection(value: MaterialSection) {
+  return translateEnum('recipe.materialSections', value)
 }
 
-targetParamRows.value = [createTargetParamRow()]
-qaCheckRows.value = [createQaCheckRow()]
-
-function extractTargetParamEntries(value: unknown): TargetParamEntry[] {
-  const parsed = parseJsonLike(value)
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return []
-
-  const entries: TargetParamEntry[] = []
-  for (const [name, raw] of Object.entries(parsed as Record<string, unknown>)) {
-    if (!name) continue
-    let target = ''
-    let uom_id = ''
-
-    if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
-      const rawObj = raw as Record<string, unknown>
-      const rawTarget = rawObj.target ?? rawObj.value ?? null
-      target = rawTarget == null ? '' : String(rawTarget)
-      const uomValue = rawObj.uom_id ?? rawObj.uom ?? null
-      if (typeof uomValue === 'string') uom_id = uomValue
-    } else {
-      target = raw == null ? '' : String(raw)
-    }
-
-    entries.push({ name, target, uom_id })
-  }
-  return entries
+function formatBasis(value: string) {
+  return translateEnum('recipe.basis', value)
 }
 
-function extractQaCheckEntries(value: unknown): QaCheckEntry[] {
-  const parsed = parseJsonLike(value)
-  if (Array.isArray(parsed)) {
-    return parsed
-      .map((item) => (item == null ? '' : String(item).trim()))
-      .filter((item): item is string => item.length > 0)
-      .map((description) => ({ description }))
-  }
-  if (typeof parsed === 'string') {
-    const trimmed = parsed.trim()
-    return trimmed ? [{ description: trimmed }] : []
-  }
-  return []
+function formatStepType(value: string) {
+  return translateEnum('recipe.stepTypes', value)
 }
 
-function parseJsonLike(value: unknown) {
-  if (typeof value !== 'string') return value
+function formatSchemaSection(value: string) {
+  return translateEnum('recipe.schemaSections', value)
+}
+
+function parseJsonObjectText(text: string, errorMessage: string): JsonObject {
+  const trimmed = text.trim()
+  if (!trimmed) return {}
   try {
-    return JSON.parse(value)
+    const parsed: unknown = JSON.parse(trimmed)
+    if (!isJsonObject(parsed)) throw new Error(errorMessage)
+    return parsed
   } catch {
-    return null
+    throw new Error(errorMessage)
   }
 }
 
-function hydrateTargetParamRows(value: unknown) {
-  const entries = extractTargetParamEntries(value)
-  return entries.map((entry) => createTargetParamRow(entry))
+function toDateTimeLocal(value: string | null) {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  const pad = (input: number) => String(input).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
 
-function hydrateQaCheckRows(value: unknown) {
-  const entries = extractQaCheckEntries(value)
-  return entries.map((entry) => createQaCheckRow(entry))
+function fromDateTimeLocal(value: string) {
+  if (!value) return null
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? null : date.toISOString()
 }
 
-function normalizeTargetValue(value: string) {
-  const trimmed = value.trim()
-  if (!trimmed) return null
-  const numeric = Number(trimmed)
-  return Number.isNaN(numeric) ? trimmed : numeric
-}
-
-const targetParamSummary = (value: unknown) => {
-  const entries = extractTargetParamEntries(value)
-  return entries.map((entry) => {
-    const uom = entry.uom_id ? uomLookup.value.get(entry.uom_id) : undefined
-    const labelParts: string[] = []
-    if (entry.target) labelParts.push(entry.target)
-    if (uom) labelParts.push(uom.name || uom.code)
-    return {
-      ...entry,
-      display: labelParts.join(' '),
+function resolveSchemaNode(root: JsonObject | null, value: unknown): JsonObject | null {
+  if (isJsonObject(value) && typeof value.$ref === 'string' && value.$ref.startsWith('#/')) {
+    const segments = value.$ref.slice(2).split('/')
+    let current: unknown = root
+    for (const segment of segments) {
+      if (!isJsonObject(current)) return null
+      current = current[segment]
     }
+    return isJsonObject(current) ? current : null
+  }
+  return isJsonObject(value) ? value : null
+}
+
+function schemaHasSection(schema: JsonObject | null, sectionKey: string) {
+  const props = resolveSchemaNode(schema, schema?.properties)
+  return Boolean(resolveSchemaNode(schema, props?.[sectionKey]))
+}
+
+function extractSchemaStepTypes(schema: JsonObject | null) {
+  const props = resolveSchemaNode(schema, schema?.properties)
+  const flowNode = resolveSchemaNode(schema, props?.flow)
+  const flowProps = resolveSchemaNode(schema, flowNode?.properties)
+  const stepsNode = resolveSchemaNode(schema, flowProps?.steps)
+  const stepItems = resolveSchemaNode(schema, stepsNode?.items)
+  const stepProps = resolveSchemaNode(schema, stepItems?.properties)
+  const stepTypeNode = resolveSchemaNode(schema, stepProps?.step_type)
+  const enumValues = Array.isArray(stepTypeNode?.enum)
+    ? stepTypeNode.enum.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+    : []
+  return Array.from(new Set(enumValues))
+}
+
+function resetHeaderErrors() {
+  Object.keys(headerErrors).forEach((key) => delete headerErrors[key])
+  Object.keys(versionErrors).forEach((key) => delete versionErrors[key])
+}
+
+function validateHeaderForms() {
+  resetHeaderErrors()
+  if (!headerForm.recipe_code.trim()) headerErrors.recipe_code = t('recipe.edit.recipeCodeRequired')
+  if (!headerForm.recipe_name.trim()) headerErrors.recipe_name = t('recipe.edit.recipeNameRequired')
+  if (!versionForm.schema_code.trim()) versionErrors.schema_code = t('recipe.edit.schemaCodeRequired')
+  return Object.keys(headerErrors).length === 0 && Object.keys(versionErrors).length === 0
+}
+
+async function loadReferenceData() {
+  const [
+    { data: materialData },
+    { data: materialSpecData },
+    { data: materialTypeData },
+    { data: equipmentTypeData },
+    { data: equipmentTemplateData },
+    { data: qualityCheckData },
+    { data: uomData },
+  ] = await Promise.all([
+    mesClient()
+      .from('mst_material')
+      .select('id, material_code, material_name, material_type_id, material_spec_id, base_uom_id, status')
+      .eq('status', 'active')
+      .order('material_code', { ascending: true }),
+    mesClient()
+      .from('mst_material_spec')
+      .select('id, material_type_id, spec_code, spec_name')
+      .eq('status', 'active')
+      .order('spec_code', { ascending: true }),
+    supabase
+      .from('type_def')
+      .select('type_id, code, name')
+      .eq('domain', 'material_type')
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true }),
+    supabase
+      .from('type_def')
+      .select('type_id, code, name')
+      .eq('domain', 'equipment_type')
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true }),
+    mesClient()
+      .from('mst_equipment_template')
+      .select('id, template_code, template_name, equipment_type_id, status')
+      .eq('status', 'active')
+      .order('template_code', { ascending: true }),
+    mesClient()
+      .from('mst_quality_check')
+      .select('id, check_code, check_name, status')
+      .eq('status', 'active')
+      .order('check_code', { ascending: true }),
+    supabase
+      .from('mst_uom')
+      .select('id, code, name')
+      .order('code', { ascending: true }),
+  ])
+
+  materialOptions.value = (materialData ?? []) as MaterialMasterRow[]
+  materialSpecs.value = (materialSpecData ?? []) as MaterialSpecRow[]
+  materialTypes.value = (materialTypeData ?? []) as MaterialTypeRow[]
+  equipmentTypes.value = (equipmentTypeData ?? []) as EquipmentTypeRow[]
+  equipmentTemplates.value = (equipmentTemplateData ?? []) as EquipmentTemplateRow[]
+  qualityCheckOptions.value = (qualityCheckData ?? []) as QualityCheckMasterRow[]
+  uoms.value = (uomData ?? []) as UomRow[]
+}
+
+async function loadSchema() {
+  schemaLoading.value = true
+  schemaError.value = ''
+
+  try {
+    const { data, error } = await supabase.rpc('recipe_schema_get', {
+      p_def_key: activeSchemaKey.value,
+    })
+    if (error) throw error
+    if (!isJsonObject(data) || !isJsonObject(data.schema) || typeof data.def_key !== 'string') {
+      throw new Error(t('recipe.edit.invalidSchemaPayload'))
+    }
+    const payload = data as unknown as RecipeSchemaPayload
+    recipeSchema.value = payload.schema
+    schemaMeta.def_id = payload.def_id ?? ''
+    schemaMeta.def_key = payload.def_key
+    schemaMeta.scope = payload.scope ?? ''
+  } catch (error: unknown) {
+    recipeSchema.value = null
+    schemaMeta.def_id = ''
+    schemaMeta.def_key = activeSchemaKey.value
+    schemaMeta.scope = ''
+    schemaError.value = error instanceof Error ? error.message : String(error)
+    toast.error(t('recipe.edit.loadSchemaFailed', { message: schemaError.value }))
+  } finally {
+    schemaLoading.value = false
+  }
+}
+
+async function loadRecipeContext() {
+  if (!recipeId.value) {
+    toast.error(t('recipe.edit.missingRecipeId'))
+    void router.push('/recipeList')
+    return
+  }
+
+  loadingPage.value = true
+
+  const { data: headerData, error: headerError } = await mesClient()
+    .from('mst_recipe')
+    .select('id, recipe_code, recipe_name, recipe_category, industry_type, status, current_version_id')
+    .eq('id', recipeId.value)
+    .single()
+
+  if (headerError || !headerData) {
+    loadingPage.value = false
+    toast.error(t('recipe.edit.loadRecipeFailed', { message: headerError?.message ?? '' }))
+    void router.push('/recipeList')
+    return
+  }
+
+  const { data: versionData, error: versionError } = await mesClient()
+    .from('mst_recipe_version')
+    .select('id, recipe_id, version_no, version_label, recipe_body_json, resolved_reference_json, schema_code, template_code, status, effective_from, effective_to, change_summary, created_at, updated_at')
+    .eq('recipe_id', recipeId.value)
+    .order('version_no', { ascending: false })
+
+  loadingPage.value = false
+
+  if (versionError) {
+    toast.error(t('recipe.edit.loadRecipeVersionsFailed', { message: versionError.message }))
+    return
+  }
+
+  recipeHeader.value = headerData as RecipeHeaderRow
+  recipeVersions.value = (versionData ?? []) as RecipeVersionRow[]
+
+  const selectedVersion =
+    recipeVersions.value.find((row) => row.id === routeVersionId.value)
+    ?? recipeVersions.value.find((row) => row.id === recipeHeader.value?.current_version_id)
+    ?? recipeVersions.value[0]
+    ?? null
+
+  if (!selectedVersion) {
+    toast.error(t('recipe.edit.noRecipeVersionFound'))
+    return
+  }
+
+  applyRecipeHeader(recipeHeader.value)
+  applyRecipeVersion(selectedVersion)
+  currentVersionId.value = selectedVersion.id
+  await loadSchema()
+}
+
+function applyRecipeHeader(row: RecipeHeaderRow) {
+  headerForm.recipe_code = row.recipe_code
+  headerForm.recipe_name = row.recipe_name
+  headerForm.recipe_category = row.recipe_category ?? ''
+  headerForm.industry_type = row.industry_type ?? ''
+  headerForm.status = row.status
+}
+
+function applyRecipeVersion(row: RecipeVersionRow) {
+  activeVersion.value = row
+  versionForm.id = row.id
+  versionForm.version_no = row.version_no
+  versionForm.version_label = row.version_label ?? ''
+  versionForm.schema_code = row.schema_code || (typeof route.query.schemaKey === 'string' ? route.query.schemaKey : DEFAULT_SCHEMA_KEY)
+  versionForm.status = row.status
+  versionForm.effective_from = toDateTimeLocal(row.effective_from)
+  versionForm.effective_to = toDateTimeLocal(row.effective_to)
+  versionForm.change_summary = row.change_summary ?? ''
+  recipeBody.value = normalizeRecipeBody(row.recipe_body_json, headerForm.industry_type, versionForm.schema_code)
+  releaseCriteriaText.value = JSON.stringify(recipeBody.value.quality.release_criteria ?? {}, null, 2)
+}
+
+async function handleVersionChange() {
+  if (!currentVersionId.value || !recipeHeader.value) return
+  const version = recipeVersions.value.find((row) => row.id === currentVersionId.value)
+  if (!version) return
+  await router.replace({
+    path: `/recipeEdit/${recipeHeader.value.id}/${version.id}`,
+    query: { schemaKey: version.schema_code || DEFAULT_SCHEMA_KEY },
   })
 }
 
-const qaChecksSummary = (value: unknown) => extractQaCheckEntries(value).map((entry) => entry.description)
-
-const materialLabel = (row: IngredientRow) => {
-  if (row.material?.name) return row.material.name
-  if (row.material?.code) return row.material.code
-  const fallback = materialMap.value.get(row.material_id)
-  if (fallback?.name) return fallback.name
-  if (fallback?.code) return fallback.code
-  return row.material_id
-}
-
-function numberOrNull(value: string) {
-  if (value === null || value === undefined || value === '') return null
-  const num = Number(value)
-  return Number.isNaN(num) ? null : num
-}
-
-function toNullableNumber(value: unknown): number | null {
-  if (value == null || value === '') return null
-  const parsed = typeof value === 'number' ? value : Number(value)
-  return Number.isFinite(parsed) ? parsed : null
-}
-
-function normalizeRecipeDetail(row: RecipeRowLike): RecipeDetail {
-  return {
-    id: String(row.id ?? ''),
-    code: String(row.code ?? ''),
-    name: String(row.name ?? ''),
-    style: row.style == null ? null : String(row.style),
-    version: toNullableNumber(row.version) ?? 1,
-    status: String(row.status ?? STATUSES[0]),
-    batch_size_l: toNullableNumber(row.batch_size_l),
-    target_og: toNullableNumber(row.target_og),
-    target_fg: toNullableNumber(row.target_fg),
-    target_abv: toNullableNumber(row.target_abv),
-    target_ibu: toNullableNumber(row.target_ibu),
-    target_srm: toNullableNumber(row.target_srm),
-    notes: row.notes == null ? null : String(row.notes),
-    created_at: row.created_at == null ? null : String(row.created_at),
-    category: row.category == null ? null : String(row.category),
+function syncRecipeBodyWithHeader() {
+  recipeBody.value.recipe_info = {
+    ...recipeBody.value.recipe_info,
+    industry_type: headerForm.industry_type.trim() || undefined,
   }
 }
 
-function resetRecipeErrors() {
-  Object.keys(recipeErrors).forEach((key) => delete recipeErrors[key])
+function syncReleaseCriteriaFromEditor() {
+  recipeBody.value.quality.release_criteria = parseJsonObjectText(
+    releaseCriteriaText.value,
+    t('recipe.edit.releaseCriteriaInvalid'),
+  )
+}
+
+async function persistRecipe(showToast = true) {
+  if (!recipeHeader.value || !activeVersion.value) return false
+  if (!validateHeaderForms()) return false
+
+  try {
+    syncRecipeBodyWithHeader()
+    syncReleaseCriteriaFromEditor()
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error)
+    toast.error(message)
+    return false
+  }
+  saving.value = true
+
+  try {
+    const { error: headerError } = await mesClient()
+      .from('mst_recipe')
+      .update({
+        recipe_code: headerForm.recipe_code.trim(),
+        recipe_name: headerForm.recipe_name.trim(),
+        recipe_category: headerForm.recipe_category.trim() || null,
+        industry_type: headerForm.industry_type.trim() || null,
+        status: headerForm.status,
+      })
+      .eq('id', recipeHeader.value.id)
+    if (headerError) throw headerError
+
+    const { data: versionRow, error: versionError } = await mesClient()
+      .from('mst_recipe_version')
+      .update({
+        version_label: versionForm.version_label.trim() || null,
+        schema_code: versionForm.schema_code.trim() || DEFAULT_SCHEMA_KEY,
+        status: versionForm.status,
+        effective_from: fromDateTimeLocal(versionForm.effective_from),
+        effective_to: fromDateTimeLocal(versionForm.effective_to),
+        change_summary: versionForm.change_summary.trim() || null,
+        recipe_body_json: recipeBody.value,
+      })
+      .eq('id', activeVersion.value.id)
+      .select('id, recipe_id, version_no, version_label, recipe_body_json, resolved_reference_json, schema_code, template_code, status, effective_from, effective_to, change_summary, created_at, updated_at')
+      .single()
+    if (versionError || !versionRow) throw versionError ?? new Error(t('recipe.edit.saveRecipeVersionFailed'))
+
+    activeVersion.value = versionRow as RecipeVersionRow
+    await loadRecipeContext()
+    if (showToast) toast.success(t('recipe.edit.recipeSaved'))
+    return true
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error)
+    toast.error(t('recipe.edit.saveError', { message }))
+    return false
+  } finally {
+    saving.value = false
+  }
+}
+
+async function saveRecipe() {
+  await persistRecipe(true)
 }
 
 async function versionUp() {
-  if (!recipeId.value || versioning.value) return
-
-  resetRecipeErrors()
-  if (!recipeForm.code) recipeErrors.code = t('errors.required', { field: t('recipe.list.recipeId') })
-  if (!recipeForm.name) recipeErrors.name = t('errors.required', { field: t('recipe.list.name') })
-  if (Object.keys(recipeErrors).length > 0) return
+  if (!recipeHeader.value || !activeVersion.value || versioning.value) return
+  if (!validateHeaderForms()) return
 
   versioning.value = true
-
-  const trimmedCode = recipeForm.code.trim()
-  const trimmedName = recipeForm.name.trim()
-  const trimmedStyle = recipeForm.style.trim()
-
-  const basePayload = {
-    code: trimmedCode,
-    name: trimmedName,
-    style: trimmedStyle || null,
-    version: recipeForm.version || 1,
-    status: recipeForm.status,
-    category: recipeForm.category || null,
-    batch_size_l: numberOrNull(recipeForm.batch_size_l),
-    target_og: numberOrNull(recipeForm.target_og),
-    target_fg: numberOrNull(recipeForm.target_fg),
-    target_abv: numberOrNull(recipeForm.target_abv),
-    target_ibu: numberOrNull(recipeForm.target_ibu),
-    target_srm: numberOrNull(recipeForm.target_srm),
-    notes: recipeForm.notes.trim() || null,
-  }
-
   try {
-    const { error: updateError } = await supabase
-      .from('mes_recipes')
-      .update(basePayload)
-      .eq('id', recipeId.value)
-    if (updateError) throw updateError
+    const saved = await persistRecipe(false)
+    if (!saved) return
 
-    const { data: versionRows, error: versionError } = await supabase
-      .from('mes_recipes')
-      .select('version')
-      .eq('code', trimmedCode)
-      .order('version', { ascending: false })
-      .limit(1)
-    if (versionError) throw versionError
+    const latestVersionNo = recipeVersions.value.reduce((max, row) => Math.max(max, row.version_no), 0)
+    const nextVersionNo = latestVersionNo + 1
 
-    const highestVersion = versionRows?.[0]?.version ?? basePayload.version ?? 0
-    const newVersion = highestVersion + 1
-
-    const newRecipePayload = {
-      ...basePayload,
-      version: newVersion,
-      status: 'draft',
-    }
-
-    const { data: inserted, error: insertError } = await supabase
-      .from('mes_recipes')
-      .insert(newRecipePayload)
-      .select('id, code, name, style, version, status, batch_size_l, target_og, target_fg, target_abv, target_ibu, target_srm, notes, created_at, category')
+    const { data: inserted, error: insertError } = await mesClient()
+      .from('mst_recipe_version')
+      .insert({
+        recipe_id: recipeHeader.value.id,
+        version_no: nextVersionNo,
+        version_label: `v${nextVersionNo}`,
+        recipe_body_json: recipeBody.value,
+        resolved_reference_json: activeVersion.value.resolved_reference_json ?? {},
+        schema_code: versionForm.schema_code.trim() || DEFAULT_SCHEMA_KEY,
+        template_code: activeVersion.value.template_code ?? null,
+        status: 'draft',
+        change_summary: versionForm.change_summary.trim() || null,
+      })
+      .select('id, recipe_id, version_no, version_label, recipe_body_json, resolved_reference_json, schema_code, template_code, status, effective_from, effective_to, change_summary, created_at, updated_at')
       .single()
-    if (insertError || !inserted) throw insertError ?? new Error('Insert failed')
+    if (insertError || !inserted) throw insertError ?? new Error(t('recipe.edit.createNewVersionFailed'))
 
-    const { data: ingredientRows, error: ingredientError } = await supabase
-      .from('mes_ingredients')
-      .select('material_id, amount, uom_id, usage_stage, notes')
-      .eq('recipe_id', recipeId.value)
-    if (ingredientError) throw ingredientError
+    const { error: updateHeaderError } = await mesClient()
+      .from('mst_recipe')
+      .update({ current_version_id: inserted.id })
+      .eq('id', recipeHeader.value.id)
+    if (updateHeaderError) throw updateHeaderError
 
-    if (ingredientRows && ingredientRows.length > 0) {
-      const ingredientPayload = ingredientRows.map((item) => ({
-        recipe_id: inserted.id,
-        material_id: item.material_id,
-        amount: item.amount,
-        uom_id: item.uom_id,
-        usage_stage: item.usage_stage,
-        notes: item.notes,
-      }))
-      const { error: ingredientInsertError } = await supabase
-        .from('mes_ingredients')
-        .insert(ingredientPayload)
-      if (ingredientInsertError) throw ingredientInsertError
-    }
-
-    const { data: processRows, error: processError } = await supabase
-      .from('mes_recipe_processes')
-      .select('id, name, version, is_active, notes, mes_recipe_steps(id, step_no, step, target_params, qa_checks, notes)')
-      .eq('recipe_id', recipeId.value)
-    if (processError) throw processError
-
-    if (processRows && processRows.length > 0) {
-      type StepRecord = {
-        id: string
-        process_id: string
-        step_no: number
-        step: string
-        target_params: unknown
-        qa_checks: unknown
-        notes: string | null
-      }
-
-      type ProcessRecord = {
-        id: string
-        name: string
-        version: number
-        is_active: boolean
-        notes: string | null
-        mes_recipe_steps?: StepRecord[]
-      }
-
-      const parseObject = (value: unknown) => {
-        if (value && typeof value === 'object' && !Array.isArray(value)) return value as Record<string, unknown>
-        if (typeof value === 'string') {
-          try {
-            const parsed = JSON.parse(value)
-            return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
-              ? (parsed as Record<string, unknown>)
-              : {}
-          } catch {
-            return {}
-          }
-        }
-        return {}
-      }
-
-      const parseArray = (value: unknown) => {
-        if (Array.isArray(value)) return value as unknown[]
-        if (typeof value === 'string') {
-          try {
-            const parsed = JSON.parse(value)
-            return Array.isArray(parsed) ? parsed : []
-          } catch {
-            return []
-          }
-        }
-        return []
-      }
-
-      for (const process of processRows as ProcessRecord[]) {
-        const { data: createdProcess, error: processInsertError } = await supabase
-          .from('mes_recipe_processes')
-          .insert({
-            recipe_id: inserted.id,
-            name: process.name,
-            version: process.version,
-            is_active: process.is_active,
-            notes: process.notes,
-          })
-          .select('id')
-          .single()
-        if (processInsertError || !createdProcess) throw processInsertError ?? new Error('Process copy failed')
-
-        const steps = process.mes_recipe_steps ?? []
-        if (steps.length > 0) {
-          const stepPayload = steps.map((step) => ({
-            process_id: createdProcess.id,
-            step_no: step.step_no,
-            step: step.step,
-            target_params: parseObject(step.target_params),
-            qa_checks: parseArray(step.qa_checks),
-            notes: step.notes,
-          }))
-          const { error: stepInsertError } = await supabase
-            .from('mes_recipe_steps')
-            .insert(stepPayload)
-          if (stepInsertError) throw stepInsertError
-        }
-      }
-    }
-
-    await router.replace(`/recipeEdit/${inserted.id}/${inserted.version}`)
-    await loadRecipe()
-    toast.success(t('recipe.edit.versionUpDone', { version: inserted.version }))
+    await router.replace({
+      path: `/recipeEdit/${recipeHeader.value.id}/${inserted.id}`,
+      query: { schemaKey: inserted.schema_code || DEFAULT_SCHEMA_KEY },
+    })
+    toast.success(t('recipe.edit.versionCreated', { version: nextVersionNo }))
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error)
     toast.error(t('recipe.edit.versionUpError', { message }))
@@ -1189,376 +2066,454 @@ async function versionUp() {
   }
 }
 
-async function loadRecipe() {
-  if (!recipeId.value) {
-    toast.error('Missing recipe id')
-    router.push('/recipeList')
+function resetMaterialErrors() {
+  Object.keys(materialErrors).forEach((key) => delete materialErrors[key])
+}
+
+function openMaterialCreate(optional: boolean) {
+  materialEditIndex.value = null
+  materialForm.section = optional ? 'optional' : 'required'
+  materialForm.material_id = ''
+  materialForm.material_role = ''
+  materialForm.qty = ''
+  materialForm.uom_code = ''
+  materialForm.basis = 'per_base'
+  materialForm.notes = ''
+  resetMaterialErrors()
+  showMaterialModal.value = true
+}
+
+function openMaterialEdit(section: MaterialSection, index: number) {
+  const item = recipeBody.value.materials[section][index]
+  if (!item) return
+
+  materialEditIndex.value = index
+  materialForm.section = section
+  materialForm.material_id = findMaterialIdForRequirement(item)
+  materialForm.material_role = item.material_role
+  materialForm.qty = String(item.qty)
+  materialForm.uom_code = item.uom_code
+  materialForm.basis = item.basis || 'per_base'
+  materialForm.notes = item.notes || ''
+  resetMaterialErrors()
+  showMaterialModal.value = true
+}
+
+function closeMaterialModal() {
+  showMaterialModal.value = false
+}
+
+function findMaterialIdForRequirement(item: RecipeMaterialRequirement) {
+  const exact = materialOptions.value.find((row) => row.material_code === item.material_code)
+  if (exact) return exact.id
+  const fallback = materialOptions.value.find((row) => row.material_code === item.material_key)
+  return fallback?.id ?? ''
+}
+
+function validateMaterialForm() {
+  resetMaterialErrors()
+  if (!materialForm.material_id) materialErrors.material_id = t('recipe.edit.materialRequired')
+  if (!materialForm.material_role.trim()) materialErrors.material_role = t('recipe.edit.materialRoleRequired')
+  const qty = Number(materialForm.qty)
+  if (!Number.isFinite(qty) || qty < 0) materialErrors.qty = t('recipe.edit.quantityNonNegative')
+  if (!materialForm.uom_code.trim()) materialErrors.uom_code = t('recipe.edit.uomCodeRequired')
+  return Object.keys(materialErrors).length === 0
+}
+
+function saveMaterial() {
+  if (!validateMaterialForm()) return
+  const material = materialMasterMap.value.get(materialForm.material_id)
+  if (!material) {
+    materialErrors.material_id = t('recipe.edit.selectedMaterialNotFound')
     return
   }
-  loadingRecipe.value = true
-  const { data, error } = await supabase
-    .from('mes_recipes')
-    .select('id, code, name, style, version, status, batch_size_l, target_og, target_fg, target_abv, target_ibu, target_srm, notes, created_at, category')
-    .eq('id', recipeId.value)
-    .single()
-  loadingRecipe.value = false
-  if (error || !data) {
-    toast.error('Failed to load recipe: ' + (error?.message ?? ''))
-    router.push('/recipeList')
-    return
-  }
-  const recipeData = normalizeRecipeDetail(data as RecipeRowLike)
-  recipe.value = recipeData
-  recipeForm.code = recipeData.code
-  recipeForm.name = recipeData.name
-  recipeForm.style = recipeData.style ?? ''
-  recipeForm.category = recipeData.category ?? ''
-  recipeForm.version = recipeData.version
-  recipeForm.status = (
-    STATUSES.includes(recipeData.status as (typeof STATUSES)[number]) ? recipeData.status : STATUSES[0]
-  ) as (typeof STATUSES)[number]
-  recipeForm.batch_size_l = recipeData.batch_size_l != null ? String(recipeData.batch_size_l) : ''
-  recipeForm.target_og = recipeData.target_og != null ? String(recipeData.target_og) : ''
-  recipeForm.target_fg = recipeData.target_fg != null ? String(recipeData.target_fg) : ''
-  recipeForm.target_abv = recipeData.target_abv != null ? String(recipeData.target_abv) : ''
-  recipeForm.target_ibu = recipeData.target_ibu != null ? String(recipeData.target_ibu) : ''
-  recipeForm.target_srm = recipeData.target_srm != null ? String(recipeData.target_srm) : ''
-  recipeForm.notes = recipeData.notes ?? ''
 
-  await Promise.all([loadIngredients(), loadProcesses()])
-}
-
-async function loadMaterials() {
-  const { data, error } = await supabase
-    .from('mst_materials')
-    .select('id, code, name, category')
-    .order('code', { ascending: true })
-  if (error) {
-    console.warn('Load materials failed', error)
-    return
-  }
-  materials.value = data ?? []
-}
-
-async function loadUoms() {
-  const { data, error } = await supabase
-    .from('mst_uom')
-    .select('id, code, name')
-    .order('code', { ascending: true })
-  if (error) {
-    console.warn('Load uom failed', error)
-    return
-  }
-  uoms.value = data ?? []
-}
-
-async function loadCategories() {
-  const { data, error } = await supabase
-    .from('mst_category')
-    .select('id, code, name')
-    .order('name', { ascending: true, nullsFirst: false })
-  if (error) {
-    console.warn('Load categories failed', error)
-    return
-  }
-  categories.value = data ?? []
-}
-
-async function loadIngredients() {
-  if (!recipeId.value) return
-  ingredientsLoading.value = true
-  const { data, error } = await supabase
-    .from('mes_ingredients')
-    .select('id, recipe_id, material_id, amount, uom_id, usage_stage, notes, material:material_id(id, code, name, category), uom:uom_id(id, code, name)')
-    .eq('recipe_id', recipeId.value)
-    .order('usage_stage', { ascending: true, nullsFirst: false })
-    .order('material_id', { ascending: true })
-  ingredientsLoading.value = false
-  if (error) {
-    toast.error('Failed to load ingredients: ' + error.message)
-    return
-  }
-  ingredients.value = (data ?? []).map((row: any) => ({
-    id: row.id,
-    recipe_id: row.recipe_id,
-    material_id: row.material_id,
-    amount: row.amount,
-    uom_id: row.uom_id,
-    usage_stage: row.usage_stage,
-    notes: row.notes,
-    material: Array.isArray(row.material) ? (row.material[0] ?? null) : (row.material ?? null),
-    uom: Array.isArray(row.uom) ? (row.uom[0] ?? null) : (row.uom ?? null),
-  })) as IngredientRow[]
-}
-
-function resetIngredientForm() {
-  ingredientForm.id = ''
-  ingredientForm.material_id = ''
-  ingredientForm.uom_id = ''
-  ingredientForm.amount = ''
-  ingredientForm.usage_stage = ''
-  ingredientForm.notes = ''
-  Object.keys(ingredientErrors).forEach((key) => delete ingredientErrors[key])
-}
-
-function openIngredientCreate() {
-  editingIngredient.value = false
-  resetIngredientForm()
-  showIngredientModal.value = true
-}
-
-function openIngredientEdit(row: IngredientRow) {
-  editingIngredient.value = true
-  resetIngredientForm()
-  ingredientForm.id = row.id
-  ingredientForm.material_id = row.material_id
-  ingredientForm.uom_id = row.uom_id
-  ingredientForm.amount = row.amount != null ? String(row.amount) : ''
-  ingredientForm.usage_stage = row.usage_stage ?? ''
-  ingredientForm.notes = row.notes ?? ''
-  showIngredientModal.value = true
-}
-
-function closeIngredientModal() {
-  showIngredientModal.value = false
-}
-
-function validateIngredient() {
-  Object.keys(ingredientErrors).forEach((key) => delete ingredientErrors[key])
-  if (!ingredientForm.material_id) ingredientErrors.material = t('errors.required', { field: t('recipe.edit.materialColumn') })
-  if (!ingredientForm.uom_id) ingredientErrors.uom = t('errors.required', { field: t('labels.uom') })
-  return Object.keys(ingredientErrors).length === 0
-}
-
-async function saveIngredient() {
-  if (!recipeId.value) return
-  if (!validateIngredient()) return
-
-  ingredientSaving.value = true
-  const payload = {
-    recipe_id: recipeId.value,
-    material_id: ingredientForm.material_id,
-    uom_id: ingredientForm.uom_id,
-    amount: ingredientForm.amount !== '' ? Number(ingredientForm.amount) : null,
-    usage_stage: ingredientForm.usage_stage.trim() || null,
-    notes: ingredientForm.notes.trim() || null,
+  const spec = material.material_spec_id ? materialSpecMap.value.get(material.material_spec_id) : undefined
+  const type = material.material_type_id != null ? materialTypeMap.value.get(material.material_type_id) : undefined
+  const requirement: RecipeMaterialRequirement = {
+    material_key: material.material_code,
+    material_name: material.material_name,
+    material_role: materialForm.material_role.trim(),
+    material_code: material.material_code,
+    material_spec_code: spec?.spec_code,
+    material_type_code: type?.code,
+    qty: Number(materialForm.qty),
+    uom_code: materialForm.uom_code.trim(),
+    basis: materialForm.basis,
+    is_optional: materialForm.section === 'optional',
+    notes: materialForm.notes.trim() || undefined,
   }
 
-  let response
-  if (editingIngredient.value && ingredientForm.id) {
-    response = await supabase
-      .from('mes_ingredients')
-      .update(payload)
-      .eq('id', ingredientForm.id)
-      .select('id')
-      .single()
+  const targetList = recipeBody.value.materials[materialForm.section]
+  if (materialEditIndex.value === null) {
+    targetList.push(requirement)
   } else {
-    response = await supabase
-      .from('mes_ingredients')
-      .insert(payload)
-      .select('id')
-      .single()
+    targetList.splice(materialEditIndex.value, 1, requirement)
   }
 
-  ingredientSaving.value = false
-  if (response.error) {
-    toast.error('Failed to save ingredient: ' + response.error.message)
-    return
+  closeMaterialModal()
+}
+
+function deleteMaterial(section: MaterialSection, index: number) {
+  recipeBody.value.materials[section].splice(index, 1)
+}
+
+function resetOutputErrors() {
+  Object.keys(outputErrors).forEach((key) => delete outputErrors[key])
+}
+
+function openOutputCreate(section: OutputSection) {
+  outputEditIndex.value = null
+  outputForm.section = section
+  outputForm.output_code = ''
+  outputForm.output_name = ''
+  outputForm.output_type = section === 'co_products' ? 'co_product' : section === 'waste' ? 'waste' : 'primary'
+  outputForm.qty = ''
+  outputForm.uom_code = ''
+  outputForm.basis = 'per_base'
+  outputForm.notes = ''
+  resetOutputErrors()
+  showOutputModal.value = true
+}
+
+function openOutputEdit(section: OutputSection, index: number) {
+  const item = recipeBody.value.outputs[section][index]
+  if (!item) return
+  outputEditIndex.value = index
+  outputForm.section = section
+  outputForm.output_code = item.output_code
+  outputForm.output_name = item.output_name
+  outputForm.output_type = item.output_type
+  outputForm.qty = String(item.qty)
+  outputForm.uom_code = item.uom_code
+  outputForm.basis = item.basis || 'per_base'
+  outputForm.notes = item.notes || ''
+  resetOutputErrors()
+  showOutputModal.value = true
+}
+
+function closeOutputModal() {
+  showOutputModal.value = false
+}
+
+function validateOutputForm() {
+  resetOutputErrors()
+  if (!outputForm.output_code.trim()) outputErrors.output_code = t('recipe.edit.outputCodeRequired')
+  if (!outputForm.output_name.trim()) outputErrors.output_name = t('recipe.edit.outputNameRequired')
+  const qty = Number(outputForm.qty)
+  if (!Number.isFinite(qty) || qty < 0) outputErrors.qty = t('recipe.edit.outputQuantityNonNegative')
+  if (!outputForm.uom_code.trim()) outputErrors.uom_code = t('recipe.edit.outputUomRequired')
+  return Object.keys(outputErrors).length === 0
+}
+
+function saveOutput() {
+  if (!validateOutputForm()) return
+  const output: RecipeOutputSpec = {
+    output_code: outputForm.output_code.trim(),
+    output_name: outputForm.output_name.trim(),
+    output_type: outputForm.output_type,
+    qty: Number(outputForm.qty),
+    uom_code: outputForm.uom_code.trim(),
+    basis: outputForm.basis || undefined,
+    notes: outputForm.notes.trim() || undefined,
   }
-
-  closeIngredientModal()
-  await loadIngredients()
-}
-
-async function deleteIngredient(row: IngredientRow) {
-  if (!confirm(t('recipe.edit.deleteIngredientConfirm', { name: materialLabel(row) }))) return
-  const { error } = await supabase.from('mes_ingredients').delete().eq('id', row.id)
-  if (error) {
-    toast.error('Failed to delete ingredient: ' + error.message)
-    return
-  }
-  ingredients.value = ingredients.value.filter((item) => item.id !== row.id)
-}
-
-async function loadProcesses() {
-  if (!recipeId.value) return
-  processesLoading.value = true
-  const { data, error } = await supabase
-    .from('mes_recipe_processes')
-    .select('id, recipe_id, name, version, is_active, notes, mes_recipe_steps(id, process_id, step_no, step, target_params, qa_checks, notes)')
-    .eq('recipe_id', recipeId.value)
-    .order('version', { ascending: false })
-    .order('step_no', { foreignTable: 'mes_recipe_steps', ascending: true })
-  processesLoading.value = false
-  if (error) {
-    toast.error('Failed to load processes: ' + error.message)
-    return
-  }
-
-  const rows = (data ?? []) as ProcessRecord[]
-  processes.value = rows.map((item) => ({
-    id: item.id,
-    recipe_id: item.recipe_id,
-    name: item.name,
-    version: item.version,
-    is_active: item.is_active,
-    notes: item.notes,
-    steps: (item.mes_recipe_steps ?? []).map((step) => ({
-      id: step.id,
-      process_id: step.process_id,
-      step_no: step.step_no,
-      step: step.step,
-      target_params: step.target_params,
-      qa_checks: step.qa_checks,
-      notes: step.notes,
-    })),
-  }))
-}
-
-function resetProcessForm() {
-  processForm.id = ''
-  processForm.name = ''
-  processForm.version = 1
-  processForm.is_active = true
-  processForm.notes = ''
-  Object.keys(processErrors).forEach((key) => delete processErrors[key])
-}
-
-function openProcessCreate() {
-  editingProcess.value = false
-  resetProcessForm()
-  if (processes.value.length > 0) {
-    const maxVersion = Math.max(...processes.value.map((p) => p.version))
-    processForm.version = maxVersion + 1
-  }
-  showProcessModal.value = true
-}
-
-function openProcessEdit(process: ProcessRow) {
-  editingProcess.value = true
-  resetProcessForm()
-  processForm.id = process.id
-  processForm.name = process.name
-  processForm.version = process.version
-  processForm.is_active = process.is_active
-  processForm.notes = process.notes ?? ''
-  showProcessModal.value = true
-}
-
-function closeProcessModal() {
-  showProcessModal.value = false
-}
-
-function validateProcess() {
-  Object.keys(processErrors).forEach((key) => delete processErrors[key])
-  if (!processForm.name) processErrors.name = t('errors.required', { field: t('labels.name') })
-  return Object.keys(processErrors).length === 0
-}
-
-async function saveProcess() {
-  if (!recipeId.value) return
-  if (!validateProcess()) return
-
-  processSaving.value = true
-  const payload = {
-    recipe_id: recipeId.value,
-    name: processForm.name.trim(),
-    version: processForm.version || 1,
-    is_active: processForm.is_active,
-    notes: processForm.notes.trim() || null,
-  }
-
-  let response
-  if (editingProcess.value && processForm.id) {
-    response = await supabase
-      .from('mes_recipe_processes')
-      .update(payload)
-      .eq('id', processForm.id)
-      .select('id')
-      .single()
+  const targetList = recipeBody.value.outputs[outputForm.section]
+  if (outputEditIndex.value === null) {
+    targetList.push(output)
   } else {
-    response = await supabase
-      .from('mes_recipe_processes')
-      .insert(payload)
-      .select('id')
-      .single()
+    targetList.splice(outputEditIndex.value, 1, output)
   }
-
-  processSaving.value = false
-  if (response.error) {
-    toast.error('Failed to save process: ' + response.error.message)
-    return
-  }
-
-  closeProcessModal()
-  await loadProcesses()
+  closeOutputModal()
 }
 
-async function deleteProcess(process: ProcessRow) {
-  if (!confirm(t('recipe.edit.deleteProcessConfirm', { name: process.name, version: process.version }))) return
-  const { error } = await supabase.from('mes_recipe_processes').delete().eq('id', process.id)
-  if (error) {
-    toast.error('Failed to delete process: ' + error.message)
-    return
-  }
-  await loadProcesses()
+function deleteOutput(section: OutputSection, index: number) {
+  recipeBody.value.outputs[section].splice(index, 1)
 }
 
-function resetStepForm() {
-  stepForm.id = ''
-  stepForm.step_no = 1
-  stepForm.step = STEP_OPTIONS[0]
-  stepForm.notes = ''
-  targetParamRows.value = [createTargetParamRow()]
-  qaCheckRows.value = [createQaCheckRow()]
+function resetEquipmentErrors() {
+  Object.keys(equipmentErrors).forEach((key) => delete equipmentErrors[key])
+}
+
+function openEquipmentCreate() {
+  equipmentEditIndex.value = null
+  equipmentForm.equipment_type_code = ''
+  equipmentForm.equipment_template_code = ''
+  equipmentForm.quantity = '1'
+  equipmentForm.capability_rules = '{}'
+  equipmentForm.notes = ''
+  resetEquipmentErrors()
+  showEquipmentModal.value = true
+}
+
+function openEquipmentEdit(index: number) {
+  const item = equipmentRequirements.value[index]
+  if (!item) return
+  equipmentEditIndex.value = index
+  equipmentForm.equipment_type_code = item.equipment_type_code
+  equipmentForm.equipment_template_code = item.equipment_template_code || ''
+  equipmentForm.quantity = String(item.quantity ?? 1)
+  equipmentForm.capability_rules = JSON.stringify(item.capability_rules ?? {}, null, 2)
+  equipmentForm.notes = item.notes || ''
+  resetEquipmentErrors()
+  showEquipmentModal.value = true
+}
+
+function closeEquipmentModal() {
+  showEquipmentModal.value = false
+}
+
+function validateEquipmentForm() {
+  resetEquipmentErrors()
+  if (!equipmentForm.equipment_type_code.trim()) equipmentErrors.equipment_type_code = t('recipe.edit.equipmentTypeRequired')
+  const quantity = Number(equipmentForm.quantity)
+  if (!Number.isInteger(quantity) || quantity < 1) equipmentErrors.quantity = t('recipe.edit.equipmentQuantityMin')
+  try {
+    parseJsonObjectText(equipmentForm.capability_rules, t('recipe.edit.capabilityRulesInvalid'))
+  } catch (error: unknown) {
+    equipmentErrors.capability_rules = error instanceof Error ? error.message : String(error)
+  }
+  return Object.keys(equipmentErrors).length === 0
+}
+
+function saveEquipmentRequirement() {
+  if (!validateEquipmentForm()) return
+  const requirement: RecipeEquipmentRequirement = {
+    equipment_type_code: equipmentForm.equipment_type_code.trim(),
+    equipment_template_code: equipmentForm.equipment_template_code.trim() || undefined,
+    quantity: Number(equipmentForm.quantity),
+    capability_rules: parseJsonObjectText(equipmentForm.capability_rules, t('recipe.edit.capabilityRulesInvalid')),
+    notes: equipmentForm.notes.trim() || undefined,
+  }
+  if (equipmentEditIndex.value === null) {
+    recipeBody.value.equipment.default_requirements.push(requirement)
+  } else {
+    recipeBody.value.equipment.default_requirements.splice(equipmentEditIndex.value, 1, requirement)
+  }
+  closeEquipmentModal()
+}
+
+function deleteEquipmentRequirement(index: number) {
+  recipeBody.value.equipment.default_requirements.splice(index, 1)
+}
+
+function resetGlobalQualityErrors() {
+  Object.keys(globalQualityErrors).forEach((key) => delete globalQualityErrors[key])
+}
+
+function openGlobalQualityCreate() {
+  globalQualityEditIndex.value = null
+  globalQualityForm.check_code = ''
+  globalQualityForm.check_name = ''
+  globalQualityForm.sampling_point = ''
+  globalQualityForm.frequency = ''
+  globalQualityForm.required = true
+  globalQualityForm.acceptance_criteria = '{}'
+  globalQualityForm.notes = ''
+  resetGlobalQualityErrors()
+  showGlobalQualityModal.value = true
+}
+
+function openGlobalQualityEdit(index: number) {
+  const item = globalQualityChecks.value[index]
+  if (!item) return
+  globalQualityEditIndex.value = index
+  globalQualityForm.check_code = item.check_code
+  globalQualityForm.check_name = item.check_name || ''
+  globalQualityForm.sampling_point = item.sampling_point || ''
+  globalQualityForm.frequency = item.frequency || ''
+  globalQualityForm.required = item.required ?? true
+  globalQualityForm.acceptance_criteria = JSON.stringify(item.acceptance_criteria ?? {}, null, 2)
+  globalQualityForm.notes = item.notes || ''
+  resetGlobalQualityErrors()
+  showGlobalQualityModal.value = true
+}
+
+function closeGlobalQualityModal() {
+  showGlobalQualityModal.value = false
+}
+
+function syncGlobalQualityName() {
+  const option = qualityCheckMap.value.get(globalQualityForm.check_code)
+  if (option && !globalQualityForm.check_name.trim()) {
+    globalQualityForm.check_name = option.check_name
+  }
+}
+
+function validateGlobalQualityForm() {
+  resetGlobalQualityErrors()
+  if (!globalQualityForm.check_code.trim()) globalQualityErrors.check_code = t('recipe.edit.qualityCheckCodeRequired')
+  try {
+    parseJsonObjectText(globalQualityForm.acceptance_criteria, t('recipe.edit.acceptanceCriteriaInvalid'))
+  } catch (error: unknown) {
+    globalQualityErrors.acceptance_criteria = error instanceof Error ? error.message : String(error)
+  }
+  return Object.keys(globalQualityErrors).length === 0
+}
+
+function saveGlobalQualityCheck() {
+  if (!validateGlobalQualityForm()) return
+  const check: RecipeQualityCheck = {
+    check_code: globalQualityForm.check_code.trim(),
+    check_name: globalQualityForm.check_name.trim() || undefined,
+    sampling_point: globalQualityForm.sampling_point.trim() || undefined,
+    frequency: globalQualityForm.frequency.trim() || undefined,
+    required: globalQualityForm.required,
+    acceptance_criteria: parseJsonObjectText(globalQualityForm.acceptance_criteria, t('recipe.edit.acceptanceCriteriaInvalid')),
+    notes: globalQualityForm.notes.trim() || undefined,
+  }
+  if (globalQualityEditIndex.value === null) {
+    recipeBody.value.quality.global_checks.push(check)
+  } else {
+    recipeBody.value.quality.global_checks.splice(globalQualityEditIndex.value, 1, check)
+  }
+  closeGlobalQualityModal()
+}
+
+function deleteGlobalQualityCheck(index: number) {
+  recipeBody.value.quality.global_checks.splice(index, 1)
+}
+
+function applyReleaseCriteria() {
+  try {
+    syncReleaseCriteriaFromEditor()
+    toast.success(t('recipe.edit.releaseCriteriaApplied'))
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error)
+    toast.error(message)
+  }
+}
+
+function resetDocumentErrors() {
+  Object.keys(documentErrors).forEach((key) => delete documentErrors[key])
+}
+
+function openDocumentCreate() {
+  documentEditIndex.value = null
+  documentForm.doc_code = ''
+  documentForm.doc_type = ''
+  documentForm.title = ''
+  documentForm.revision = ''
+  documentForm.url = ''
+  documentForm.required = false
+  documentForm.notes = ''
+  resetDocumentErrors()
+  showDocumentModal.value = true
+}
+
+function openDocumentEdit(index: number) {
+  const item = documentRows.value[index]
+  if (!item) return
+  documentEditIndex.value = index
+  documentForm.doc_code = item.doc_code
+  documentForm.doc_type = item.doc_type
+  documentForm.title = item.title || ''
+  documentForm.revision = item.revision || ''
+  documentForm.url = item.url || ''
+  documentForm.required = item.required ?? false
+  documentForm.notes = item.notes || ''
+  resetDocumentErrors()
+  showDocumentModal.value = true
+}
+
+function closeDocumentModal() {
+  showDocumentModal.value = false
+}
+
+function validateDocumentForm() {
+  resetDocumentErrors()
+  if (!documentForm.doc_code.trim()) documentErrors.doc_code = t('recipe.edit.documentCodeRequired')
+  if (!documentForm.doc_type.trim()) documentErrors.doc_type = t('recipe.edit.documentTypeRequired')
+  return Object.keys(documentErrors).length === 0
+}
+
+function saveDocument() {
+  if (!validateDocumentForm()) return
+  const documentRef: RecipeDocumentRef = {
+    doc_code: documentForm.doc_code.trim(),
+    doc_type: documentForm.doc_type.trim(),
+    title: documentForm.title.trim() || undefined,
+    revision: documentForm.revision.trim() || undefined,
+    url: documentForm.url.trim() || undefined,
+    required: documentForm.required,
+    notes: documentForm.notes.trim() || undefined,
+  }
+  if (documentEditIndex.value === null) {
+    recipeBody.value.documents.push(documentRef)
+  } else {
+    recipeBody.value.documents.splice(documentEditIndex.value, 1, documentRef)
+  }
+  closeDocumentModal()
+}
+
+function deleteDocument(index: number) {
+  recipeBody.value.documents.splice(index, 1)
+}
+
+function createParameterRow(initial?: Partial<ParameterRowState>) {
+  return {
+    key: `param-${++parameterRowCounter}`,
+    parameter_code: initial?.parameter_code ?? '',
+    target: initial?.target ?? '',
+    uom_code: initial?.uom_code ?? '',
+  }
+}
+
+function createQualityRow(initial?: Partial<QualityRowState>) {
+  return {
+    key: `qc-${++qualityRowCounter}`,
+    check_code: initial?.check_code ?? '',
+    frequency: initial?.frequency ?? '',
+  }
+}
+
+function resetStepErrors() {
   Object.keys(stepErrors).forEach((key) => delete stepErrors[key])
 }
 
-function addTargetParamRow() {
-  targetParamRows.value.push(createTargetParamRow())
+function resetStepForm() {
+  stepEditIndex.value = null
+  stepSource.value = null
+  stepForm.step_no = flowSteps.value.length > 0 ? Math.max(...flowSteps.value.map((item) => item.step_no)) + 10 : 10
+  stepForm.step_code = ''
+  stepForm.step_name = ''
+  stepForm.step_type = stepTypeOptions.value[0] ?? FALLBACK_STEP_TYPES[0]
+  stepForm.step_template_code = ''
+  stepForm.duration_sec = ''
+  stepForm.instructions = ''
+  stepForm.notes = ''
+  parameterRows.value = []
+  qualityRows.value = []
+  resetStepErrors()
 }
 
-function removeTargetParamRow(index: number) {
-  if (index < 0 || index >= targetParamRows.value.length) return
-  targetParamRows.value.splice(index, 1)
-  if (targetParamRows.value.length === 0) {
-    targetParamRows.value.push(createTargetParamRow())
-  }
-}
-
-function addQaCheckRow() {
-  qaCheckRows.value.push(createQaCheckRow())
-}
-
-function removeQaCheckRow(index: number) {
-  if (index < 0 || index >= qaCheckRows.value.length) return
-  qaCheckRows.value.splice(index, 1)
-  if (qaCheckRows.value.length === 0) {
-    qaCheckRows.value.push(createQaCheckRow())
-  }
-}
-
-function openStepCreate(process: ProcessRow) {
-  currentProcess.value = process
-  editingStep.value = false
+function openStepCreate() {
   resetStepForm()
-  const maxNo = process.steps.length > 0 ? Math.max(...process.steps.map((s) => s.step_no)) : 0
-  stepForm.step_no = maxNo + 1
   showStepModal.value = true
 }
 
-function openStepEdit(process: ProcessRow, step: StepRow) {
-  currentProcess.value = process
-  editingStep.value = true
+function openStepEdit(index: number) {
+  const step = flowSteps.value[index]
+  if (!step) return
   resetStepForm()
-  stepForm.id = step.id
+  stepEditIndex.value = index
+  stepSource.value = deepCloneJson(step)
   stepForm.step_no = step.step_no
-  stepForm.step = STEP_OPTIONS.includes(step.step) ? step.step : STEP_OPTIONS[0]
-  stepForm.notes = step.notes ?? ''
-  const hydratedParams = hydrateTargetParamRows(step.target_params)
-  targetParamRows.value = hydratedParams.length > 0 ? hydratedParams : [createTargetParamRow()]
-  const hydratedQa = hydrateQaCheckRows(step.qa_checks)
-  qaCheckRows.value = hydratedQa.length > 0 ? hydratedQa : [createQaCheckRow()]
+  stepForm.step_code = step.step_code
+  stepForm.step_name = step.step_name
+  stepForm.step_type = step.step_type || stepTypeOptions.value[0] || FALLBACK_STEP_TYPES[0]
+  stepForm.step_template_code = step.step_template_code || ''
+  stepForm.duration_sec = step.duration_sec != null ? String(step.duration_sec) : ''
+  stepForm.instructions = step.instructions || ''
+  stepForm.notes = step.notes || ''
+  parameterRows.value = (step.parameters ?? []).map((row) => createParameterRow({
+    parameter_code: row.parameter_code,
+    target: row.target == null ? '' : String(row.target),
+    uom_code: row.uom_code || '',
+  }))
+  qualityRows.value = (step.quality_checks ?? []).map((row) => createQualityRow({
+    check_code: row.check_code,
+    frequency: row.frequency || '',
+  }))
   showStepModal.value = true
 }
 
@@ -1566,143 +2521,98 @@ function closeStepModal() {
   showStepModal.value = false
 }
 
-async function saveRecipeInfo() {
-  if (!recipeId.value) return
-  resetRecipeErrors()
-  if (!recipeForm.code) recipeErrors.code = t('errors.required', { field: t('recipe.list.recipeId') })
-  if (!recipeForm.name) recipeErrors.name = t('errors.required', { field: t('recipe.list.name') })
-  if (Object.keys(recipeErrors).length > 0) return
-
-  const payload = {
-    code: recipeForm.code.trim(),
-    name: recipeForm.name.trim(),
-    style: recipeForm.style.trim() || null,
-    version: recipeForm.version || 1,
-    status: recipeForm.status,
-    category: recipeForm.category || null,
-    batch_size_l: numberOrNull(recipeForm.batch_size_l),
-    target_og: numberOrNull(recipeForm.target_og),
-    target_fg: numberOrNull(recipeForm.target_fg),
-    target_abv: numberOrNull(recipeForm.target_abv),
-    target_ibu: numberOrNull(recipeForm.target_ibu),
-    target_srm: numberOrNull(recipeForm.target_srm),
-    notes: recipeForm.notes.trim() || null,
-  }
-
-  savingRecipe.value = true
-  const { data, error } = await supabase
-    .from('mes_recipes')
-    .update(payload)
-    .eq('id', recipeId.value)
-    .select('id, code, name, style, version, status, batch_size_l, target_og, target_fg, target_abv, target_ibu, target_srm, notes, created_at, category')
-    .single()
-  savingRecipe.value = false
-  if (error || !data) {
-    toast.error('Failed to save recipe: ' + (error?.message ?? ''))
-    return
-  }
-  const recipeData = normalizeRecipeDetail(data as RecipeRowLike)
-  recipe.value = recipeData
-  recipeForm.category = recipeData.category ?? ''
-  toast.success(t('recipe.edit.recipeSaved'))
+function addParameterRow() {
+  parameterRows.value.push(createParameterRow())
 }
 
-async function saveStep() {
-  if (!currentProcess.value) return
-  Object.keys(stepErrors).forEach((key) => delete stepErrors[key])
-  if (!stepForm.step_no || stepForm.step_no < 1) {
-    stepErrors.step_no = t('errors.mustBeInteger', { field: t('recipe.edit.stepNumber') })
-    return
-  }
+function removeParameterRow(index: number) {
+  parameterRows.value.splice(index, 1)
+}
 
-  const normalizedTargetRows = targetParamRows.value
+function addQualityRow() {
+  qualityRows.value.push(createQualityRow())
+}
+
+function removeQualityRow(index: number) {
+  qualityRows.value.splice(index, 1)
+}
+
+function validateStepForm() {
+  resetStepErrors()
+  if (!Number.isInteger(stepForm.step_no) || stepForm.step_no < 1) stepErrors.step_no = t('recipe.edit.stepNumberPositive')
+  if (!stepForm.step_code.trim()) stepErrors.step_code = t('recipe.edit.stepCodeRequired')
+  if (!stepForm.step_name.trim()) stepErrors.step_name = t('recipe.edit.stepNameRequired')
+  return Object.keys(stepErrors).length === 0
+}
+
+function saveStep() {
+  if (!validateStepForm()) return
+
+  const parameters = parameterRows.value
     .map((row) => ({
-      name: row.name.trim(),
+      parameter_code: row.parameter_code.trim(),
       target: row.target.trim(),
-      uom_id: row.uom_id,
+      uom_code: row.uom_code.trim(),
     }))
-    .filter((row) => row.name || row.target || row.uom_id)
+    .filter((row) => row.parameter_code)
+    .map((row): RecipeParameterTarget => ({
+      parameter_code: row.parameter_code,
+      target: row.target === '' ? undefined : (Number.isNaN(Number(row.target)) ? row.target : Number(row.target)),
+      uom_code: row.uom_code || undefined,
+    }))
 
-  if (normalizedTargetRows.some((row) => !row.name)) {
-    stepErrors.target_params = t('recipe.edit.targetParamNameRequired')
-    return
-  }
+  const qualityChecks = qualityRows.value
+    .map((row) => ({
+      check_code: row.check_code.trim(),
+      frequency: row.frequency.trim(),
+    }))
+    .filter((row) => row.check_code)
+    .map((row): RecipeQualityCheck => ({
+      check_code: row.check_code,
+      frequency: row.frequency || undefined,
+    }))
 
-  const seen = new Set<string>()
-  for (const row of normalizedTargetRows) {
-    const key = row.name.toLowerCase()
-    if (seen.has(key)) {
-      stepErrors.target_params = t('recipe.edit.targetParamDuplicate')
-      return
-    }
-    seen.add(key)
-  }
-
-  const targetParams: Record<string, unknown> = {}
-  for (const row of normalizedTargetRows) {
-    const value = normalizeTargetValue(row.target)
-    if (!row.uom_id && value !== null) {
-      targetParams[row.name] = value
-    } else {
-      const entry: Record<string, unknown> = {}
-      if (value !== null) entry.target = value
-      if (row.uom_id) entry.uom_id = row.uom_id
-      targetParams[row.name] = entry
-    }
-  }
-
-  const qaChecks = qaCheckRows.value
-    .map((row) => row.description.trim())
-    .filter((value) => value.length > 0)
-
-  stepSaving.value = true
-  const payload = {
-    process_id: currentProcess.value.id,
+  const step: RecipeFlowStep = {
+    step_code: stepForm.step_code.trim(),
+    step_name: stepForm.step_name.trim(),
     step_no: stepForm.step_no,
-    step: stepForm.step,
-    target_params: Object.keys(targetParams).length > 0 ? targetParams : {},
-    qa_checks: qaChecks,
-    notes: stepForm.notes.trim() || null,
+    step_type: stepForm.step_type,
+    step_template_code: stepForm.step_template_code.trim() || undefined,
+    instructions: stepForm.instructions.trim() || undefined,
+    duration_sec: stepForm.duration_sec.trim() ? Number(stepForm.duration_sec) : undefined,
+    parameters,
+    quality_checks: qualityChecks,
+    notes: stepForm.notes.trim() || undefined,
+    material_inputs: stepSource.value?.material_inputs ?? [],
+    material_outputs: stepSource.value?.material_outputs ?? [],
+    equipment_requirements: stepSource.value?.equipment_requirements ?? [],
+    hold_constraints: stepSource.value?.hold_constraints ?? [],
   }
 
-  let response
-  if (editingStep.value && stepForm.id) {
-    response = await supabase
-      .from('mes_recipe_steps')
-      .update(payload)
-      .eq('id', stepForm.id)
-      .select('id')
-      .single()
+  if (stepEditIndex.value === null) {
+    recipeBody.value.flow.steps.push(step)
   } else {
-    response = await supabase
-      .from('mes_recipe_steps')
-      .insert(payload)
-      .select('id')
-      .single()
+    recipeBody.value.flow.steps.splice(stepEditIndex.value, 1, step)
   }
 
-  stepSaving.value = false
-  if (response.error) {
-    toast.error('Failed to save step: ' + response.error.message)
-    return
-  }
-
+  recipeBody.value.flow.steps.sort((a, b) => a.step_no - b.step_no)
   closeStepModal()
-  await loadProcesses()
 }
 
-async function deleteStep(process: ProcessRow, step: StepRow) {
-  if (!confirm(t('recipe.edit.deleteStepConfirm', { step: formatStepType(step.step), number: step.step_no }))) return
-  const { error } = await supabase.from('mes_recipe_steps').delete().eq('id', step.id)
-  if (error) {
-    toast.error('Failed to delete step: ' + error.message)
-    return
-  }
-  await loadProcesses()
+function deleteStep(index: number) {
+  recipeBody.value.flow.steps.splice(index, 1)
 }
 
 onMounted(async () => {
-  await Promise.all([loadMaterials(), loadUoms(), loadCategories()])
-  await loadRecipe()
+  await loadReferenceData()
+  await loadRecipeContext()
 })
+
+watch(
+  () => [route.params.recipeId, route.params.versionId, route.query.schemaKey],
+  async (next, previous) => {
+    if (JSON.stringify(next) === JSON.stringify(previous)) return
+    await loadRecipeContext()
+  },
+)
 </script>

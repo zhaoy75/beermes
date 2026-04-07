@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS entity_attr (
   value_json  jsonb NULL,
 
   -- Reference to type_def (for data_type='ref')
-  value_ref_type_id bigint NULL,
+  value_ref_type_id uuid NULL,
 
   -- Optional UOM override
   uom_id uuid NULL,

@@ -862,3 +862,22 @@ I want add a development mode
 - Feature under develop like recipe menu and material master can be viewed
 - Some section in gui can also be switch on/off by this mode
 
+I want to create a grand design of recipe. I have following requirement. Please give me some advice on the design of recipe based on the requirement.
+- the recipe design can be applied to various kind of industry
+- recipe should include recipe version control, recipe change history, recipe approval process and recipe execution log
+- recipe body need to be stored in xml or json, please compare it 
+- what is relation between recipe and equipment, should we have a equipment template in recipe or just link the equipment in recipe execution stage
+- what is relation between recipe and material, show we link to a material type instead of specific material in recipe design stage
+
+
+
+・run ddl.sql to create tables
+・alter table mes_batches to drop  process_version column
+  exec create_batch_from_recipe.sql
+  exec mes_recipe_craft_beer_sample.sql
+  exec /function/68_public.recipe_schema_get.sql
+  exec DB/ddl/type_def_uuid_migration.sql
+add registry_def data for recipe schema and step template
+add type_def data for materail type and equipment type
+add attr_def data for recipe attribute and step attribute
+add attr_set and attr_set_rule for recipe and step attribute set

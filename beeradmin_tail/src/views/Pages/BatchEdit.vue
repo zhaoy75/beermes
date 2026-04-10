@@ -79,6 +79,25 @@
           </div>
         </form>
 
+        <div class="mt-4 flex flex-col gap-1 text-sm md:flex-row md:items-center md:gap-3">
+          <span class="text-gray-500">{{ t('batch.edit.releasedRecipeTitle') }}</span>
+          <template v-if="hasReleasedRecipe">
+            <button
+              v-if="canOpenReleasedRecipe"
+              type="button"
+              class="text-left font-medium text-blue-700 underline-offset-2 hover:underline"
+              @click="openReleasedRecipe"
+            >
+              {{ releasedRecipeLinkText }}
+            </button>
+            <span v-else class="font-medium text-gray-800">{{ releasedRecipeLinkText }}</span>
+            <span v-if="releasedRecipeVersionSummaryText !== '—'" class="text-gray-500">
+              {{ releasedRecipeVersionSummaryText }}
+            </span>
+          </template>
+          <span v-else class="text-gray-500">{{ t('batch.edit.releasedRecipeEmpty') }}</span>
+        </div>
+
         <hr class="my-5 border-gray-200" />
 
         <div class="space-y-3">
@@ -123,58 +142,76 @@
             </div>
           </div>
         </div>
+      </section>
 
-        <hr class="my-5 border-gray-200" />
-
-        <div v-if="relationLoading" class="text-sm text-gray-500">{{ t('common.loading') }}</div>
-        <div v-else-if="batchRelations.length > 0">
-          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
-            <div>
-              <h3 class="text-base font-semibold text-gray-800">{{ t('batch.relation.title') }}</h3>
-              <p class="text-xs text-gray-500">{{ t('batch.relation.subtitle') }}</p>
-            </div>
-            <div class="flex items-center gap-2">
-              <button class="px-3 py-2 rounded border hover:bg-gray-50" type="button" :disabled="relationLoading" @click="openRelationDialog()">
-                {{ t('batch.relation.actions.add') }}
-              </button>
-            </div>
+      <section class="bg-white rounded-xl shadow border border-gray-200 px-4 py-5">
+        <header class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+          <div>
+            <h2 class="text-lg font-semibold text-gray-800">{{ t('batch.edit.stepExecutionTitle') }}</h2>
+            <p class="text-xs text-gray-500">{{ t('batch.edit.stepExecutionSubtitle') }}</p>
           </div>
+          <div v-if="!executionLoading" class="flex flex-wrap gap-2 text-xs text-gray-600">
+            <span class="rounded-full bg-gray-100 px-2 py-1">
+              {{ t('batch.edit.executionBatchStatus') }}: {{ statusLabel(batchForm.status || batch?.status || '') }}
+            </span>
+            <span class="rounded-full bg-gray-100 px-2 py-1">
+              {{ t('batch.edit.executionProgress') }}: {{ executionCompletedSteps }} / {{ executionTotalSteps }}
+            </span>
+            <span class="rounded-full bg-gray-100 px-2 py-1">
+              {{ t('batch.edit.executionCurrentStep') }}: {{ executionCurrentStepText }}
+            </span>
+            <span class="rounded-full bg-gray-100 px-2 py-1">
+              {{ t('batch.edit.executionOpenDeviations') }}: {{ executionOpenDeviationCount }}
+            </span>
+          </div>
+        </header>
 
-          <div class="overflow-x-auto border border-gray-200 rounded-lg">
+        <div v-if="executionLoading" class="text-sm text-gray-500">{{ t('common.loading') }}</div>
+        <div v-else-if="executionError" class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
+          {{ executionError }}
+        </div>
+        <div v-else class="overflow-x-auto border border-gray-200 rounded-lg">
           <table class="min-w-full text-sm divide-y divide-gray-200">
             <thead class="bg-gray-50 text-gray-600 uppercase text-xs">
               <tr>
-                <th class="px-3 py-2 text-left">{{ t('batch.relation.columns.type') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('batch.relation.columns.src') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('batch.relation.columns.dst') }}</th>
-                <th class="px-3 py-2 text-right">{{ t('batch.relation.columns.quantity') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('batch.relation.columns.uom') }}</th>
-                <th class="px-3 py-2 text-right">{{ t('batch.relation.columns.ratio') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('batch.relation.columns.effectiveAt') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('batch.edit.stepNo') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('batch.edit.stepCode') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('batch.edit.stepName') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('batch.edit.stepStatus') }}</th>
+                <th class="px-3 py-2 text-right">{{ t('batch.edit.stepDuration') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('batch.edit.stepStartedAt') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('batch.edit.stepEndedAt') }}</th>
+                <th class="px-3 py-2 text-right">{{ t('batch.edit.stepPlannedMaterials') }}</th>
+                <th class="px-3 py-2 text-right">{{ t('batch.edit.stepQualityChecks') }}</th>
+                <th class="px-3 py-2 text-right">{{ t('batch.edit.stepEquipmentAssignments') }}</th>
                 <th class="px-3 py-2 text-left">{{ t('common.actions') }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
-              <tr v-for="relation in batchRelations" :key="relation.id" class="hover:bg-gray-50">
-                <td class="px-3 py-2 text-gray-700">{{ relationTypeLabel(relation.relation_type) }}</td>
-                <td class="px-3 py-2 text-gray-700">{{ batchLabel(relation.src_batch_id) }}</td>
-                <td class="px-3 py-2 text-gray-700">{{ batchLabel(relation.dst_batch_id) }}</td>
-                <td class="px-3 py-2 text-right text-gray-700">{{ formatNumber(relation.quantity) }}</td>
-                <td class="px-3 py-2 text-gray-700">{{ uomLabel(relation.uom_id) }}</td>
-                <td class="px-3 py-2 text-right text-gray-700">{{ formatNumber(relation.ratio) }}</td>
-                <td class="px-3 py-2 text-gray-600">{{ formatDateTime(relation.effective_at) }}</td>
-                <td class="px-3 py-2 space-x-2">
-                  <button class="px-2 py-1 text-xs rounded border hover:bg-gray-100" type="button" @click="openRelationDialog(relation)">
-                    {{ t('batch.relation.actions.edit') }}
-                  </button>
-                  <button class="px-2 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700" type="button" @click="deleteRelation(relation)">
-                    {{ t('batch.relation.actions.delete') }}
+              <tr v-for="step in executionSteps" :key="step.id" class="hover:bg-gray-50 cursor-pointer" @click="openStepDetail(step)">
+                <td class="px-3 py-2 text-gray-700">{{ step.step_no }}</td>
+                <td class="px-3 py-2 text-gray-700">{{ step.step_code }}</td>
+                <td class="px-3 py-2 text-gray-800 font-medium">{{ step.step_name }}</td>
+                <td class="px-3 py-2">
+                  <span :class="stepStatusClass(step.status)">{{ stepStatusLabel(step.status) }}</span>
+                </td>
+                <td class="px-3 py-2 text-right text-gray-700">{{ formatDurationSeconds(step.planned_duration_sec) }}</td>
+                <td class="px-3 py-2 text-gray-600">{{ formatDateTime(step.started_at) }}</td>
+                <td class="px-3 py-2 text-gray-600">{{ formatDateTime(step.ended_at) }}</td>
+                <td class="px-3 py-2 text-right text-gray-700">{{ step.planned_material_count }}</td>
+                <td class="px-3 py-2 text-right text-gray-700">{{ step.quality_check_count }}</td>
+                <td class="px-3 py-2 text-right text-gray-700">{{ step.equipment_assignment_count }}</td>
+                <td class="px-3 py-2">
+                  <button class="px-2 py-1 text-xs rounded border hover:bg-gray-100" type="button" @click.stop="openStepDetail(step)">
+                    {{ t('batch.edit.viewStep') }}
                   </button>
                 </td>
               </tr>
+              <tr v-if="executionSteps.length === 0">
+                <td class="px-3 py-6 text-center text-gray-500" colspan="11">{{ t('batch.edit.executionEmpty') }}</td>
+              </tr>
             </tbody>
           </table>
-          </div>
         </div>
       </section>
 
@@ -258,6 +295,58 @@
               </tr>
               <tr v-if="packingEvents.length === 0">
                 <td class="px-3 py-6 text-center text-gray-500" colspan="14">{{ t('batch.packaging.noData') }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="bg-white rounded-xl shadow border border-gray-200 px-4 py-5">
+        <header class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+          <div>
+            <h2 class="text-lg font-semibold text-gray-800">{{ t('batch.relation.title') }}</h2>
+            <p class="text-xs text-gray-500">{{ t('batch.relation.subtitle') }}</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button class="px-3 py-2 rounded border hover:bg-gray-50" type="button" :disabled="relationLoading" @click="openRelationDialog()">
+              {{ t('batch.relation.actions.add') }}
+            </button>
+          </div>
+        </header>
+
+        <div v-if="relationLoading" class="text-sm text-gray-500">{{ t('common.loading') }}</div>
+        <div v-else-if="batchRelations.length === 0" class="text-sm text-gray-500">{{ t('common.noData') }}</div>
+        <div v-else class="overflow-x-auto border border-gray-200 rounded-lg">
+          <table class="min-w-full text-sm divide-y divide-gray-200">
+            <thead class="bg-gray-50 text-gray-600 uppercase text-xs">
+              <tr>
+                <th class="px-3 py-2 text-left">{{ t('batch.relation.columns.type') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('batch.relation.columns.src') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('batch.relation.columns.dst') }}</th>
+                <th class="px-3 py-2 text-right">{{ t('batch.relation.columns.quantity') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('batch.relation.columns.uom') }}</th>
+                <th class="px-3 py-2 text-right">{{ t('batch.relation.columns.ratio') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('batch.relation.columns.effectiveAt') }}</th>
+                <th class="px-3 py-2 text-left">{{ t('common.actions') }}</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              <tr v-for="relation in batchRelations" :key="relation.id" class="hover:bg-gray-50">
+                <td class="px-3 py-2 text-gray-700">{{ relationTypeLabel(relation.relation_type) }}</td>
+                <td class="px-3 py-2 text-gray-700">{{ batchLabel(relation.src_batch_id) }}</td>
+                <td class="px-3 py-2 text-gray-700">{{ batchLabel(relation.dst_batch_id) }}</td>
+                <td class="px-3 py-2 text-right text-gray-700">{{ formatNumber(relation.quantity) }}</td>
+                <td class="px-3 py-2 text-gray-700">{{ uomLabel(relation.uom_id) }}</td>
+                <td class="px-3 py-2 text-right text-gray-700">{{ formatNumber(relation.ratio) }}</td>
+                <td class="px-3 py-2 text-gray-600">{{ formatDateTime(relation.effective_at) }}</td>
+                <td class="px-3 py-2 space-x-2">
+                  <button class="px-2 py-1 text-xs rounded border hover:bg-gray-100" type="button" @click="openRelationDialog(relation)">
+                    {{ t('batch.relation.actions.edit') }}
+                  </button>
+                  <button class="px-2 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700" type="button" @click="deleteRelation(relation)">
+                    {{ t('batch.relation.actions.delete') }}
+                  </button>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -389,6 +478,7 @@
 </template>
 
 <script setup lang="ts">
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
@@ -417,6 +507,7 @@ import { formatVolume } from '@/lib/volumeFormat'
 const route = useRoute()
 const router = useRouter()
 const { t, locale } = useI18n()
+const mesClient = () => supabase.schema('mes')
 
 const batchId = computed(() => route.params.batchId as string | undefined)
 const pageTitle = computed(() => t('batch.edit.title'))
@@ -640,6 +731,101 @@ const relationDialog = reactive({
   } as RelationFormState,
 })
 
+type BatchExecutionStepRow = {
+  id: string
+  step_no: number
+  step_code: string
+  step_name: string
+  step_template_code: string | null
+  planned_duration_sec: number | null
+  status: string
+  planned_params: Record<string, any>
+  quality_checks_json: any[]
+  snapshot_json: Record<string, any>
+  started_at: string | null
+  ended_at: string | null
+  notes: string | null
+  planned_material_count: number
+  quality_check_count: number
+  equipment_assignment_count: number
+  actual_material_count: number
+  deviation_count: number
+}
+
+type BatchDeviationRow = {
+  id: string
+  deviation_code: string | null
+  summary: string
+  severity: string
+  status: string
+  opened_at: string
+  closed_at: string | null
+  detail_json: Record<string, any>
+  batch_step_id: string | null
+}
+
+const executionSteps = ref<BatchExecutionStepRow[]>([])
+const executionDeviations = ref<BatchDeviationRow[]>([])
+const executionLoading = ref(false)
+const executionError = ref('')
+
+const releasedRecipeReference = computed(() => asRecord(batch.value?.released_reference_json))
+const releasedRecipeBody = computed(() => asRecord(batch.value?.recipe_json))
+const hasReleasedRecipe = computed(() => {
+  return Boolean(
+    batch.value?.mes_recipe_id ||
+    batch.value?.recipe_version_id ||
+    releasedRecipeReference.value ||
+    releasedRecipeBody.value,
+  )
+})
+const canOpenReleasedRecipe = computed(() => Boolean(batch.value?.mes_recipe_id && batch.value?.recipe_version_id))
+
+const releasedRecipeLinkText = computed(() => {
+  const recipeName = safeText(releasedRecipeReference.value?.recipe_name) || safeText(batch.value?.product_name)
+  const recipeCode = safeText(releasedRecipeReference.value?.recipe_code)
+  if (recipeName && recipeCode) return `${recipeName} (${recipeCode})`
+  if (recipeName) return recipeName
+  if (recipeCode) return recipeCode
+  return '—'
+})
+
+const releasedRecipeVersionNoText = computed(() => {
+  const versionNo = releasedRecipeReference.value?.version_no
+  if (versionNo === null || versionNo === undefined || versionNo === '') return '—'
+  return String(versionNo)
+})
+
+const releasedRecipeVersionLabelText = computed(() => {
+  return safeText(releasedRecipeReference.value?.version_label) || '—'
+})
+
+const releasedRecipeVersionSummaryText = computed(() => {
+  const parts: string[] = []
+  if (releasedRecipeVersionNoText.value !== '—') parts.push(`v${releasedRecipeVersionNoText.value}`)
+  if (releasedRecipeVersionLabelText.value !== '—') parts.push(releasedRecipeVersionLabelText.value)
+  return parts.join(' / ') || '—'
+})
+
+const executionTotalSteps = computed(() => executionSteps.value.length)
+const executionCompletedSteps = computed(() =>
+  executionSteps.value.filter((step) => step.status === 'completed').length,
+)
+const executionOpenDeviationCount = computed(() =>
+  executionDeviations.value.filter((row) => row.status === 'open').length,
+)
+const currentExecutionStep = computed(() => {
+  const ordered = executionSteps.value.slice().sort((a, b) => a.step_no - b.step_no)
+  return ordered.find((step) => step.status === 'in_progress')
+    || ordered.find((step) => step.status === 'ready')
+    || ordered.find((step) => step.status === 'open')
+    || null
+})
+const executionCurrentStepText = computed(() => {
+  if (!currentExecutionStep.value) return t('batch.edit.executionNoCurrentStep')
+  return `${currentExecutionStep.value.step_no}. ${currentExecutionStep.value.step_name}`
+})
+
 function resolveUomCode(value: string | null | undefined) {
   if (!value) return null
   const byId = volumeUoms.value.find((row) => row.id === value)
@@ -763,6 +949,13 @@ function attrLabel(field: AttrField) {
   return label || field.name || field.code
 }
 
+function statusLabel(status: string | null | undefined) {
+  const value = safeText(status)
+  if (!value) return '—'
+  const match = batchStatusOptions.value.find((option) => option.value === value)
+  return match?.label ?? humanizeToken(value)
+}
+
 async function ensureTenant() {
   if (tenantId.value) return tenantId.value
   const { data, error } = await supabase.auth.getUser()
@@ -801,7 +994,7 @@ async function fetchBatch() {
       batchForm.actual_start = toInputDate(header.actual_start)
       batchForm.actual_end = toInputDate(header.actual_end)
       batchForm.related_batch_id = resolveMetaString(header.meta, 'related_batch_id') ?? ''
-      recipeCategoryId.value = await loadRecipeCategory(header.recipe_id ?? null)
+      recipeCategoryId.value = await loadRecipeCategory(header.recipe_id ?? null, header.mes_recipe_id ?? null)
       batchRelations.value = (Array.isArray(detail?.relations) ? detail.relations : []).map((row: any) => ({
         id: row.id,
         src_batch_id: row.src_batch_id,
@@ -812,13 +1005,18 @@ async function fetchBatch() {
         ratio: row.ratio != null ? Number(row.ratio) : null,
         effective_at: row.effective_at ?? null,
       }))
-      await loadPackingEvents()
-      await loadBatchAttributes(header.id)
+      await Promise.all([
+        loadPackingEvents(),
+        loadBatchAttributes(header.id),
+        loadBatchExecution(header.id),
+      ])
     } else {
       attrFields.value = []
       recipeCategoryId.value = null
       packingEvents.value = []
       batchRelations.value = []
+      executionSteps.value = []
+      executionDeviations.value = []
     }
   } catch (err) {
     console.error(err)
@@ -1165,19 +1363,30 @@ async function loadBeerCategories() {
   }
 }
 
-async function loadRecipeCategory(recipeId: string | null | undefined) {
-  if (!recipeId) return null
+async function loadRecipeCategory(recipeId: string | null | undefined, mesRecipeId?: string | null | undefined) {
   try {
     const tenant = await ensureTenant()
-    const { data, error } = await supabase
-      .from('mes_recipes')
-      .select('category')
-      .eq('tenant_id', tenant)
-      .eq('id', recipeId)
-      .maybeSingle()
-    if (error) throw error
-    if (!data?.category) return null
-    return String(data.category)
+    if (mesRecipeId) {
+      const { data, error } = await mesClient()
+        .from('mst_recipe')
+        .select('recipe_category')
+        .eq('tenant_id', tenant)
+        .eq('id', mesRecipeId)
+        .maybeSingle()
+      if (error) throw error
+      if (data?.recipe_category) return String(data.recipe_category)
+    }
+    if (recipeId) {
+      const { data, error } = await supabase
+        .from('mes_recipes')
+        .select('category')
+        .eq('tenant_id', tenant)
+        .eq('id', recipeId)
+        .maybeSingle()
+      if (error) throw error
+      if (data?.category) return String(data.category)
+    }
+    return null
   } catch (err) {
     console.error(err)
     return null
@@ -1248,6 +1457,90 @@ async function loadBatchRelations() {
     batchRelations.value = []
   } finally {
     relationLoading.value = false
+  }
+}
+
+async function loadBatchExecution(batchUuid: string) {
+  try {
+    executionLoading.value = true
+    executionError.value = ''
+    const mes = mesClient()
+    const [stepResult, plannedResult, actualResult, equipmentResult, deviationResult] = await Promise.all([
+      mes
+        .from('batch_step')
+        .select('id, step_no, step_code, step_name, step_template_code, planned_duration_sec, status, planned_params, quality_checks_json, snapshot_json, started_at, ended_at, notes')
+        .eq('batch_id', batchUuid)
+        .order('step_no', { ascending: true }),
+      mes
+        .from('batch_material_plan')
+        .select('id, batch_step_id')
+        .eq('batch_id', batchUuid),
+      mes
+        .from('batch_material_actual')
+        .select('id, batch_step_id')
+        .eq('batch_id', batchUuid),
+      mes
+        .from('batch_equipment_assignment')
+        .select('id, batch_step_id')
+        .eq('batch_id', batchUuid),
+      mes
+        .from('batch_deviation')
+        .select('id, batch_step_id, deviation_code, summary, severity, status, opened_at, closed_at, detail_json')
+        .eq('batch_id', batchUuid),
+    ])
+
+    if (stepResult.error) throw stepResult.error
+    if (plannedResult.error) throw plannedResult.error
+    if (actualResult.error) throw actualResult.error
+    if (equipmentResult.error) throw equipmentResult.error
+    if (deviationResult.error) throw deviationResult.error
+
+    const plannedCountMap = countRowsByStepId(plannedResult.data ?? [])
+    const actualCountMap = countRowsByStepId(actualResult.data ?? [])
+    const equipmentCountMap = countRowsByStepId(equipmentResult.data ?? [])
+    const deviationCountMap = countRowsByStepId(deviationResult.data ?? [])
+
+    executionDeviations.value = (deviationResult.data ?? []).map((row: any) => ({
+      id: row.id,
+      batch_step_id: row.batch_step_id ?? null,
+      deviation_code: row.deviation_code ?? null,
+      summary: String(row.summary ?? ''),
+      severity: String(row.severity ?? 'minor'),
+      status: String(row.status ?? 'open'),
+      opened_at: String(row.opened_at ?? ''),
+      closed_at: row.closed_at ?? null,
+      detail_json: asRecord(row.detail_json) ?? {},
+    }))
+
+    executionSteps.value = (stepResult.data ?? []).map((row: any) => ({
+      id: row.id,
+      step_no: Number(row.step_no ?? 0),
+      step_code: String(row.step_code ?? ''),
+      step_name: String(row.step_name ?? ''),
+      step_template_code: row.step_template_code ?? null,
+      planned_duration_sec: row.planned_duration_sec != null ? Number(row.planned_duration_sec) : null,
+      status: String(row.status ?? 'open'),
+      planned_params: asRecord(row.planned_params) ?? {},
+      quality_checks_json: asArray(row.quality_checks_json),
+      snapshot_json: asRecord(row.snapshot_json) ?? {},
+      started_at: row.started_at ?? null,
+      ended_at: row.ended_at ?? null,
+      notes: row.notes ?? null,
+      planned_material_count: plannedCountMap.get(row.id) ?? 0,
+      quality_check_count: asArray(row.quality_checks_json).length,
+      equipment_assignment_count: equipmentCountMap.get(row.id) ?? 0,
+      actual_material_count: actualCountMap.get(row.id) ?? 0,
+      deviation_count: deviationCountMap.get(row.id) ?? 0,
+    }))
+  } catch (err) {
+    console.error(err)
+    executionSteps.value = []
+    executionDeviations.value = []
+    executionError.value = extractErrorMessage(err)
+      ? `${t('batch.edit.executionLoadFailed')} (${extractErrorMessage(err)})`
+      : t('batch.edit.executionLoadFailed')
+  } finally {
+    executionLoading.value = false
   }
 }
 
@@ -1636,6 +1929,25 @@ function openPackingDialog() {
   void goToPackingPage()
 }
 
+async function openReleasedRecipe() {
+  if (!batch.value?.mes_recipe_id || !batch.value?.recipe_version_id) return
+  await router.push({
+    path: `/recipeEdit/${batch.value.mes_recipe_id}/${batch.value.recipe_version_id}`,
+  })
+}
+
+async function openStepDetail(step: BatchExecutionStepRow) {
+  if (!batchId.value) return
+  await router.push({
+    name: 'batchStepExecution',
+    params: {
+      batchId: batchId.value,
+      stepId: step.id,
+    },
+    query: { from: 'edit' },
+  })
+}
+
 function validateRelationForm(form: RelationFormState) {
   const errors: Record<string, string> = {}
   if (!form.relation_type) errors.relation_type = t('batch.relation.errors.typeRequired')
@@ -1897,6 +2209,90 @@ function formatDateTime(value: string | null | undefined) {
 function formatNumber(value: number | null | undefined) {
   if (value == null || Number.isNaN(value)) return '—'
   return Number(value).toLocaleString(undefined, { maximumFractionDigits: 6 })
+}
+
+function asRecord(value: unknown) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  return value as Record<string, any>
+}
+
+function asArray(value: unknown) {
+  return Array.isArray(value) ? value : []
+}
+
+function safeText(value: unknown) {
+  if (typeof value !== 'string') return ''
+  const trimmed = value.trim()
+  return trimmed.length ? trimmed : ''
+}
+
+function countRowsByStepId(rows: Array<{ batch_step_id?: string | null }>) {
+  const map = new Map<string, number>()
+  rows.forEach((row) => {
+    const stepId = typeof row.batch_step_id === 'string' ? row.batch_step_id : null
+    if (!stepId) return
+    map.set(stepId, (map.get(stepId) ?? 0) + 1)
+  })
+  return map
+}
+
+function humanizeToken(value: string | null | undefined) {
+  const normalized = safeText(value)
+  if (!normalized) return '—'
+  return normalized
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase())
+}
+
+function formatDurationSeconds(value: number | null | undefined) {
+  if (value == null || Number.isNaN(Number(value))) return '—'
+  const total = Math.max(0, Math.trunc(Number(value)))
+  const hours = Math.floor(total / 3600)
+  const minutes = Math.floor((total % 3600) / 60)
+  const seconds = total % 60
+  if (hours > 0) return `${hours}h ${minutes}m`
+  if (minutes > 0) return `${minutes}m ${seconds}s`
+  return `${seconds}s`
+}
+
+function stepStatusLabel(status: string | null | undefined) {
+  switch (status) {
+    case 'open':
+      return t('batch.edit.stepStatusOptions.open')
+    case 'ready':
+      return t('batch.edit.stepStatusOptions.ready')
+    case 'in_progress':
+      return t('batch.edit.stepStatusOptions.inProgress')
+    case 'hold':
+      return t('batch.edit.stepStatusOptions.hold')
+    case 'completed':
+      return t('batch.edit.stepStatusOptions.completed')
+    case 'skipped':
+      return t('batch.edit.stepStatusOptions.skipped')
+    case 'cancelled':
+      return t('batch.edit.stepStatusOptions.cancelled')
+    default:
+      return humanizeToken(status)
+  }
+}
+
+function stepStatusClass(status: string | null | undefined) {
+  switch (status) {
+    case 'completed':
+      return 'inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700'
+    case 'in_progress':
+      return 'inline-flex rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700'
+    case 'ready':
+      return 'inline-flex rounded-full bg-cyan-100 px-2 py-0.5 text-xs font-medium text-cyan-700'
+    case 'hold':
+      return 'inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700'
+    case 'cancelled':
+      return 'inline-flex rounded-full bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-700'
+    case 'skipped':
+      return 'inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700'
+    default:
+      return 'inline-flex rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700'
+  }
 }
 
 function showPackingNotice(message: string) {

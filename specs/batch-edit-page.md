@@ -7,6 +7,7 @@
   - released recipe visibility
   - execution progress visibility
   - step execution tracking
+- Keep current actual-yield and filling operations stable while the page structure evolves.
 
 ## Route / Entry Point
 - Primary route: `/batches/:id`
@@ -19,7 +20,14 @@
 - Edit the batch header and batch attributes.
 - Show which recipe/version was released to the batch.
 - Show the current execution state of the batch and its steps.
-- Provide access to step-level detail, filling/packing, lot DAG, and batch relations.
+- Provide access to step-level execution input, filling/packing, lot DAG, and batch relations.
+
+## Compatibility Strategy
+- This page must be migrated in-place, not rewritten in a way that breaks current operations.
+- `actual_yield` entry is an operationally stable feature and must remain usable throughout the redesign.
+- `filling / packing` is also operationally stable and must remain usable throughout the redesign.
+- New design work should be layered above or around these stable operations.
+- If a design decision conflicts with current `actual_yield` or `filling` behavior, preserve operation first and defer the visual redesign.
 
 ## Users
 - Tenant User
@@ -27,12 +35,23 @@
 
 ## Page Layout
 - Section 1: Batch Header
-- Section 2: Released Recipe Info
-- Section 3: Execution Summary
-- Section 4: Step Execution Table
-- Section 5: Secondary Operations
+- Section 2: Step Execution Table
+- Section 3: Secondary Operations
   - filling / packing summary
   - batch relation
+
+## Phased Layout Rule
+- Phase 1:
+  - keep current editable batch header
+  - add released recipe info inside the header section
+  - add compact execution summary inside the step execution section
+  - keep current filling and relation sections working
+- Phase 2:
+  - add step execution table as the main operational table
+  - move filling and relation lower on the page
+- Phase 3:
+  - move step inspection to a dedicated step execution page and keep `BatchEdit` compact
+- The redesign must not require disabling actual-yield or filling operations in any phase.
 
 ## Section 1: Batch Header
 
@@ -50,57 +69,49 @@
 - actual start
 - actual end
 - dynamic batch attributes from `entity_attr`
+- released recipe link text
+- released recipe version summary
 
 ### Rules
 - batch code is readonly after create
 - dynamic batch attributes follow `attr_def` validation rules
 - save should block when dynamic attribute validation fails
-
-## Section 2: Released Recipe Info
-
-### Purpose
-- Show the exact released recipe context used by this batch.
-
-### Fields
-- recipe code
-- recipe name
-- recipe version no
-- recipe version label
-- recipe version id
-- recipe release timestamp
-- recipe description
-- base quantity
-- base UOM
-- output summary
-
-### Data Source
-- primary:
-  - `public.mes_batches.released_reference_json`
-  - `public.mes_batches.recipe_json`
-  - `public.mes_batches.mes_recipe_id`
-  - `public.mes_batches.recipe_version_id`
-- if no recipe is attached:
-  - show an explicit `No Base Recipe` state
-
-### Rules
-- this section is read-only on batch page
+- `actual_yield` dialog remains part of this section
+- `actual_yield` save flow must keep:
+  - volume UOM selection from `mst_uom`
+  - manufacturing-site validation
+  - `product_produce` call
+  - `batch_save` update
+- released recipe information in the header is read-only
+- released recipe display should be a simple inline row, not a separate bordered block
 - changing released recipe is not supported on batch edit
-- if a batch has no recipe, this section remains visible but uses empty-state UI
+- if a batch has no recipe, show an explicit `No Base Recipe` state in the inline row
+- when both `mes_recipe_id` and `recipe_version_id` are available, the recipe link should navigate to `/recipeEdit/:recipeId/:versionId`
+- the link text should use recipe name first and include recipe code when available
+- the version summary should use released version no / label when available
+- do not show recipe version id, release timestamp, description, base quantity, or output summary
+- recipe display must prefer:
+  - `released_reference_json`
+  - `mes_recipe_id`
+  - `recipe_version_id`
+- legacy `recipe_id -> public.mes_recipes` fallback should be treated as compatibility only, not as the primary source
 
-## Section 3: Execution Summary
+## Section 2: Step Execution Table
 
 ### Purpose
-- Show overall execution status without forcing users to scan every step.
+- Make step execution the main operational table on the page.
+- Include a compact execution summary in the header area of this section.
 
-### Required Cards
+### Compact Summary
 - batch status
-- total steps
-- completed steps
+- progress
+  - `completed_steps / total_steps`
 - current step
-- hold step count
 - open deviation count
 
-### Derived Data
+### Summary Rules
+- do not render a dedicated execution summary section or large summary cards
+- summary should use small inline items or chips in the section header area
 - total steps from `mes.batch_step`
 - completed steps where status = `completed`
 - current step priority:
@@ -109,16 +120,9 @@
   - `open`
   - else none
 - open deviation count from `mes.batch_deviation`
-
-### Recommended Display
-- top summary cards
-- one progress bar:
-  - `completed_steps / total_steps`
-
-## Section 4: Step Execution Table
-
-### Purpose
-- Make step execution the main operational table on the page.
+- if no `mes.batch_step` data exists yet, the section still renders and shows zero/empty values
+- step state machine execution is not triggered on `BatchEdit`
+- `BatchEdit` only reflects step status changes persisted by `BatchStepExecution` or other server-side processes
 
 ### Required Columns
 - `step_no`
@@ -139,51 +143,74 @@
   - `mes.batch_material_plan`
   - `mes.batch_equipment_assignment`
 
+### Compatibility Rule
+- if step-release data is absent for an older batch, show an empty-state message instead of failing the whole page
+- the page must still allow:
+  - batch header save
+  - actual-yield save
+  - filling / packing navigation
+  - relation editing
+- batch page must not auto-start the next step on its own
+
 ### Actions
-- view detail
-- optionally update status
-- optionally open step execution subview later
+- open dedicated step execution page
 
 ### Row Detail
 - recommended interaction:
-  - click row to open a right-side drawer
+  - click row to move to the dedicated step execution page
+  - row-level detail button should do the same navigation
+  - `BatchEdit` should not host step execution input forms directly
 
-## Step Detail Drawer
+## Step Detail Navigation
 
-### Purpose
-- Show full execution context for one released step.
+### Route
+- `/batches/:batchId/step/:stepId`
 
-### Blocks
-- step header
-- planned parameters
-- actual parameters
-- quality checks
-- planned materials
-- actual material consumption
-- equipment assignments
-- execution log
-- deviations
+### Rules
+- batch edit page should not render a right-side step detail drawer
+- step execution should be opened as a dedicated page
+- the dedicated page should provide a back action to the batch edit page
+- step detail navigation must not affect:
+  - batch header save
+  - actual-yield flow
+  - filling / packing flow
+  - batch relation flow
 
-### Sources
-- step:
-  - `mes.batch_step`
-- planned materials:
-  - `mes.batch_material_plan`
-- actual materials:
-  - `mes.batch_material_actual`
-- equipment:
-  - `mes.batch_equipment_assignment`
-- logs:
-  - `mes.batch_execution_log`
-- deviations:
-  - `mes.batch_deviation`
+### Ownership Boundary
+- `BatchEdit` owns:
+  - batch header editing
+  - actual yield
+  - filling / packing
+  - lot DAG entry
+  - batch relation
+- `BatchStepExecution` owns:
+  - step status and timestamps
+  - step actual parameters
+  - step actual material records
+  - step equipment assignment records
+  - step QA input
+  - step deviations and execution logs
 
-## Section 5: Secondary Operations
+## Section 3: Secondary Operations
 
 ### Filling / Packing
 - keep filling summary and packing navigation
 - keep `Lot DAG` button
 - this section remains after the step execution table
+- this section is operationally stable and must not be redesigned in a way that changes current calculations
+- the current filling summary behavior stays valid:
+  - total product volume
+  - processed volume
+  - remaining volume
+- current filling history table remains read-only except for allowed deletion
+- current packing page remains the edit surface
+- current calculation source remains shared filling logic from the packing implementation
+
+### Actual Yield
+- keep the actual-yield dialog button in the batch header area
+- do not move actual-yield entry into step execution
+- do not convert actual-yield entry into a generic inventory edit form
+- actual-yield remains a batch-level manufacturing result operation
 
 ### Batch Relation
 - keep relation list and relation dialog
@@ -230,17 +257,27 @@
 - released recipe info must be treated as immutable snapshot display
 - execution progress must come from `mes.batch_step`, not legacy `public.mes_batch_steps`
 - relation and filling remain secondary operational sections
+- secondary does not mean removable:
+  - actual-yield remains required
+  - filling / packing remains required
+- batch redesign must not break `product_produce` or `product_filling` entry points
 
 ## Recommended Visual Design
 - top:
-  - batch header
-  - released recipe info side by side on wide screens
+  - batch header with inline released recipe link row
 - middle:
-  - execution summary cards
+  - compact execution summary inside the step table header
   - step table
 - bottom:
   - filling / packing
   - relations
+
+## Stability Constraints
+- Do not remove the current actual-yield button during redesign.
+- Do not replace the filling history table with the execution step table.
+- Do not derive filling history from `mes.batch_step`; keep reading operational filling records from inventory movement sources.
+- Do not require a released recipe for actual-yield or filling operations to work.
+- If released recipe information is missing, show empty-state UI and keep operations enabled.
 
 ## Open Decisions
 

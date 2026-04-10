@@ -69,6 +69,15 @@ export const tenantRoutes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/batches/:batchId/step/:stepId',
+    name: 'batchStepExecution',
+    component: () => import('@/views/Pages/BatchStepExecution.vue'),
+    meta: {
+      title: 'Batch Step Execution Detail',
+      requiresAuth: true,
+    },
+  },
+  {
     path: '/batches/:batchId/packing',
     name: 'batchPacking',
     component: () => import('@/views/Pages/BatchPacking.vue'),

@@ -1,6 +1,7 @@
 ## Purpose
 - Enter and update batch actual results and additional industry attributes (stored in `entity_attr_set`)
 - Manage batch relation and navigate to filling / packing workflow
+- Show released recipe information and batch execution status without breaking current operational flows
 
 
 ## Entry Points
@@ -15,11 +16,11 @@
 - Title: バッチ実績入力
 
 ### Body: 
-- There are 5 sections
+- There are 4 sections
   1. basic information
-  2. material information (not needed in this phase)
-  3. step edit (not needed in this phase)
-  4. filling 
+  2. step execution
+  3. filling
+  4. batch relation
 
 
   
@@ -59,8 +60,28 @@
         if any batch attribute is invalid, batch save must be blocked and the field error must be shown inline
 
     a horizontal line 
-      batch relation list 
-      #if there is no related record with current batch, hide related batch section       
+      released recipe information
+        read-only
+        use `mes_batches.released_reference_json`, `mes_batches.recipe_json`, `mes_batches.mes_recipe_id`, `mes_batches.recipe_version_id`
+        place this as a simple inline row inside basic information section, not as a block or dedicated page section
+        show only current recipe link and version summary
+        if `mes_recipe_id` and `recipe_version_id` exist, clicking the link should move to `/recipeEdit/:recipeId/:versionId`
+        do not show recipe description, base quantity, output summary, or recipe version id
+        if no recipe is attached, show explicit empty state
+
+    a horizontal line
+      step execution section header should contain compact execution summary
+        batch status
+        progress
+        current step
+        open deviation count
+      do not show a dedicated large execution summary block
+      source should be `mes.batch_step` and related execution tables
+      state machine is not executed on this page
+      when a step is completed or skipped on 工程実行 page, this page only reflects the updated step statuses
+
+    compatibility note
+      actual_yield dialog and save flow must remain unchanged while the new sections are added
   　 
 ### batch relation list 
     purpose: manage lineage between batches (mes_batch_relation)
@@ -100,6 +121,11 @@
 ### material information section (not shown no needed in this phase)
     
 ### step edit section (not shown no needed in this phase)
+    this is replaced by read-only execution status / step execution visibility
+    batch page does not edit recipe steps
+    batch page shows released execution-side steps
+    step detail should not open in a drawer
+    clicking a step row or 詳細 button should move to dedicated page `/batches/:batchId/step/:stepId`
 
 ### filling section
     a summary of move and filling information
@@ -121,6 +147,8 @@
     destination site id should be retrieved from destination site id input by user
     use returned source_lot_id as from_lot_id in product_filling payload
     if not found, show error: product_produce must be executed first
+    this section must continue to work even when batch has no base recipe
+    this section must not be replaced by step execution UI
 
 ## Action
     - add a button to input actual yield, when the button is click, show actual yield, uom (select from mst_uom by volume), and site.
@@ -128,6 +156,7 @@
     - if existing batch meta has non-manufacturing site id, do not auto-select it in the dialog.
     - when actual yield is saved, update the total product volume in filling section and call stored function `product_produce`.
     - if a non-`BREWERY_MANUFACTUR` site is submitted, show validation error and do not save.
+    - redesign of batch page must keep this actual_yield operation intact
 
 ## Business Rules
   - Batch actual yield entry is for manufacturing result entry.
@@ -140,6 +169,8 @@
 - batch basic information stored in mes_batches
 - other attribute stored in entity_attr
 - batch relation stored in mes_batch_relation
+- released recipe snapshot stored in `mes_batches.recipe_json` and `mes_batches.released_reference_json`
+- execution status stored in `mes.batch_step` and related execution tables
 
 ## other
 - this page should be multilanguage (english and japanese)

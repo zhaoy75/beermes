@@ -27,6 +27,10 @@
 - edit context summary
 
 ### Section 1: Main Information
+- compact desktop layout:
+  - scalar fields are arranged in a denser multi-column grid
+  - `instructions` and `notes` sit side by side on wide screens
+  - mobile keeps the fields stacked
 - `step_no`
 - `step_type`
 - `step_code`

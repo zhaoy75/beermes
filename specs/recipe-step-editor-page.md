@@ -25,6 +25,10 @@
 ### 1. Main Information
 - source:
   - scalar fields in `flow.steps[]`
+- layout:
+  - use a compact multi-column form layout on desktop screens
+  - keep the section stacked on narrow screens
+  - place long-text fields in a tighter arrangement than the scalar fields
 - main fields:
   - `step_no`
   - `step_code`

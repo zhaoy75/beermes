@@ -78,43 +78,43 @@
             <h3 class="text-sm font-semibold text-gray-900">{{ t('recipe.itemEditor.sectionMainInformation') }}</h3>
             <p class="mt-1 text-xs text-gray-500">{{ t('recipe.itemEditor.stepPageHint') }}</p>
           </div>
-          <div class="grid grid-cols-1 gap-4 p-4 md:grid-cols-2">
-            <div>
+          <div class="grid grid-cols-1 gap-3 p-3 md:grid-cols-4 xl:grid-cols-6">
+            <div class="md:col-span-1">
               <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.stepNo') }}<span class="text-red-600">*</span></label>
               <input v-model.number="stepForm.step_no" type="number" min="1" class="h-[40px] w-full rounded border px-3" />
               <p v-if="stepErrors.step_no" class="mt-1 text-xs text-red-600">{{ stepErrors.step_no }}</p>
             </div>
-            <div>
+            <div class="md:col-span-1">
               <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.stepType') }}<span class="text-red-600">*</span></label>
               <select v-model="stepForm.step_type" class="h-[40px] w-full rounded border bg-white px-3">
                 <option v-for="option in stepTypeOptions" :key="option" :value="option">{{ formatStepType(option) }}</option>
               </select>
               <p class="mt-1 text-xs text-gray-500">{{ usesSchemaStepOptions ? t('recipe.edit.loadedFromSchema') : t('recipe.edit.usingFallbackOptions') }}</p>
             </div>
-            <div>
+            <div class="md:col-span-2 xl:col-span-2">
               <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.stepCode') }}<span class="text-red-600">*</span></label>
               <input v-model.trim="stepForm.step_code" class="h-[40px] w-full rounded border px-3 font-mono text-sm" />
               <p v-if="stepErrors.step_code" class="mt-1 text-xs text-red-600">{{ stepErrors.step_code }}</p>
             </div>
-            <div>
+            <div class="md:col-span-4 xl:col-span-2">
               <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.stepName') }}<span class="text-red-600">*</span></label>
               <input v-model.trim="stepForm.step_name" class="h-[40px] w-full rounded border px-3" />
               <p v-if="stepErrors.step_name" class="mt-1 text-xs text-red-600">{{ stepErrors.step_name }}</p>
             </div>
-            <div>
+            <div class="md:col-span-2 xl:col-span-2">
               <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.stepTemplateCode') }}</label>
               <input v-model.trim="stepForm.step_template_code" class="h-[40px] w-full rounded border px-3" />
             </div>
-            <div>
+            <div class="md:col-span-2 xl:col-span-1">
               <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.durationSec') }}</label>
               <input v-model.trim="stepForm.duration_sec" type="number" min="0" class="h-[40px] w-full rounded border px-3" />
               <p v-if="stepErrors.duration_sec" class="mt-1 text-xs text-red-600">{{ stepErrors.duration_sec }}</p>
             </div>
-            <div class="md:col-span-2">
+            <div class="md:col-span-2 xl:col-span-3">
               <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.instructions') }}</label>
-              <textarea v-model.trim="stepForm.instructions" rows="4" class="w-full rounded border px-3 py-2"></textarea>
+              <textarea v-model.trim="stepForm.instructions" rows="3" class="w-full rounded border px-3 py-2"></textarea>
             </div>
-            <div class="md:col-span-2">
+            <div class="md:col-span-2 xl:col-span-3">
               <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.notes') }}</label>
               <textarea v-model.trim="stepForm.notes" rows="3" class="w-full rounded border px-3 py-2"></textarea>
             </div>

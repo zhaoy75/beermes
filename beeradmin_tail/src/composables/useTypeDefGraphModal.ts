@@ -6,6 +6,8 @@ export type TypeDefGraphSelection = {
   code: string
   name: string
   isActive: boolean
+  defaultUomCode?: string | null
+  defaultUomId?: string | null
 }
 
 export type TypeDefGraphOpenOptions = {

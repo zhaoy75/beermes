@@ -153,13 +153,21 @@
                     <tr v-for="(row, index) in inputMaterialRows" :key="row.key">
                       <td class="px-3 py-2">
                         <input
+                          :ref="(el) => setInputMaterialKeyInputRef(row.key, el)"
                           v-model.trim="row.material_key"
                           class="w-full rounded border px-2 py-1 font-mono text-xs"
                           @focus="handleMaterialKeyFocus(row)"
                         />
                       </td>
                       <td class="px-3 py-2"><input v-model.trim="row.qty" class="w-full rounded border px-2 py-1" /></td>
-                      <td class="px-3 py-2"><input v-model.trim="row.uom_code" class="w-full rounded border px-2 py-1" /></td>
+                      <td class="px-3 py-2">
+                        <select v-model="row.uom_code" class="w-full rounded border bg-white px-2 py-1">
+                          <option value="">{{ t('common.none') }}</option>
+                          <option v-for="option in uomOptionsForCode(row.uom_code)" :key="option.code" :value="option.code">
+                            {{ formatUomOptionLabel(option) }}
+                          </option>
+                        </select>
+                      </td>
                       <td class="px-3 py-2">
                         <select v-model="row.basis" class="w-full rounded border bg-white px-2 py-1">
                           <option value="">{{ t('common.none') }}</option>
@@ -221,7 +229,14 @@
                         </select>
                       </td>
                       <td class="px-3 py-2"><input v-model.trim="row.qty" class="w-full rounded border px-2 py-1" /></td>
-                      <td class="px-3 py-2"><input v-model.trim="row.uom_code" class="w-full rounded border px-2 py-1" /></td>
+                      <td class="px-3 py-2">
+                        <select v-model="row.uom_code" class="w-full rounded border bg-white px-2 py-1">
+                          <option value="">{{ t('common.none') }}</option>
+                          <option v-for="option in uomOptionsForCode(row.uom_code)" :key="option.code" :value="option.code">
+                            {{ formatUomOptionLabel(option) }}
+                          </option>
+                        </select>
+                      </td>
                       <td class="px-3 py-2"><input v-model.trim="row.notes" class="w-full rounded border px-2 py-1" /></td>
                       <td class="px-3 py-2 text-right">
                         <button class="rounded border px-2 py-1 text-xs hover:bg-gray-100" type="button" @click.prevent="removeOutputMaterialRow(index)">
@@ -321,7 +336,14 @@
                   <td class="px-3 py-2"><input v-model.trim="row.min" class="w-full rounded border px-2 py-1" /></td>
                   <td class="px-3 py-2"><input v-model.trim="row.max" class="w-full rounded border px-2 py-1" /></td>
                   <td class="px-3 py-2"><input v-model.trim="row.setpoint" class="w-full rounded border px-2 py-1" /></td>
-                  <td class="px-3 py-2"><input v-model.trim="row.uom_code" class="w-full rounded border px-2 py-1" /></td>
+                  <td class="px-3 py-2">
+                    <select v-model="row.uom_code" class="w-full rounded border bg-white px-2 py-1">
+                      <option value="">{{ t('common.none') }}</option>
+                      <option v-for="option in uomOptionsForCode(row.uom_code)" :key="option.code" :value="option.code">
+                        {{ formatUomOptionLabel(option) }}
+                      </option>
+                    </select>
+                  </td>
                   <td class="px-3 py-2 text-center"><input v-model="row.required" type="checkbox" class="h-4 w-4" /></td>
                   <td class="px-3 py-2"><input v-model.trim="row.sampling_frequency" class="w-full rounded border px-2 py-1" /></td>
                   <td class="px-3 py-2"><input v-model.trim="row.notes" class="w-full rounded border px-2 py-1" /></td>
@@ -407,7 +429,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
@@ -445,6 +467,12 @@ interface RecipeSchemaPayload {
   def_key: string
   scope: string | null
   schema: JsonObject
+}
+
+interface UomRow {
+  id: string
+  code: string
+  name: string
 }
 
 interface RecipeStepMaterialInput {
@@ -599,6 +627,7 @@ const recipeHeader = ref<RecipeHeaderRow | null>(null)
 const activeVersion = ref<RecipeVersionRow | null>(null)
 const recipeBody = ref<RecipeBody>(createDefaultRecipeBody(DEFAULT_SCHEMA_KEY, ''))
 const recipeSchema = ref<JsonObject | null>(null)
+const uoms = ref<UomRow[]>([])
 const loadingPage = ref(false)
 const saving = ref(false)
 const loadError = ref('')
@@ -628,6 +657,7 @@ const outputMaterialRows = ref<OutputMaterialRowState[]>([])
 const equipmentRows = ref<EquipmentRowState[]>([])
 const parameterRows = ref<ParameterRowState[]>([])
 const qualityRows = ref<QualityRowState[]>([])
+const inputMaterialKeyInputRefs = new Map<string, HTMLInputElement>()
 
 const recipeId = computed(() => (typeof route.params.recipeId === 'string' ? route.params.recipeId : ''))
 const versionId = computed(() => (typeof route.params.versionId === 'string' ? route.params.versionId : ''))
@@ -669,8 +699,19 @@ function handleMaterialKeyFocus(row: InputMaterialRowState) {
     restoreFocusOnClose: false,
     onSelect: (selectedType: TypeDefGraphSelection) => {
       row.material_key = selectedType.code
+      if (selectedType.defaultUomCode) {
+        row.uom_code = selectedType.defaultUomCode
+      }
     },
   })
+}
+
+function setInputMaterialKeyInputRef(key: string, element: unknown) {
+  if (element instanceof HTMLInputElement) {
+    inputMaterialKeyInputRefs.set(key, element)
+    return
+  }
+  inputMaterialKeyInputRefs.delete(key)
 }
 
 function isJsonObject(value: unknown): value is JsonObject {
@@ -932,6 +973,24 @@ function formatOutputType(value: string) {
   return translated === key ? formatLabel(value) : translated
 }
 
+function formatUomOptionLabel(row: Pick<UomRow, 'code' | 'name'> | null) {
+  if (!row) return ''
+  return row.name ? `${row.code} - ${row.name}` : row.code
+}
+
+function uomOptionsForCode(currentCode: string) {
+  const normalized = currentCode.trim()
+  const options = [...uoms.value]
+  if (normalized && !options.some((row) => row.code === normalized)) {
+    options.unshift({
+      id: `custom:${normalized}`,
+      code: normalized,
+      name: normalized,
+    })
+  }
+  return options
+}
+
 function resolveSchemaNode(root: JsonObject | null, value: unknown): JsonObject | null {
   if (isJsonObject(value) && typeof value.$ref === 'string' && value.$ref.startsWith('#/')) {
     const segments = value.$ref.slice(2).split('/')
@@ -965,8 +1024,8 @@ function createInputMaterialRow(initial?: Partial<InputMaterialRowState>): Input
     material_key: initial?.material_key ?? '',
     qty: initial?.qty ?? '',
     uom_code: initial?.uom_code ?? '',
-    basis: initial?.basis ?? '',
-    consumption_mode: initial?.consumption_mode ?? '',
+    basis: initial?.basis ?? 'per_base',
+    consumption_mode: initial?.consumption_mode ?? 'estimate',
     notes: initial?.notes ?? '',
   }
 }
@@ -1023,6 +1082,16 @@ function createQualityRow(initial?: Partial<QualityRowState>): QualityRowState {
   }
 }
 
+async function loadReferenceData() {
+  const { data, error } = await supabase
+    .from('mst_uom')
+    .select('id, code, name')
+    .order('code', { ascending: true })
+
+  if (error) throw error
+  uoms.value = (data ?? []) as UomRow[]
+}
+
 function resetStepErrors() {
   Object.keys(stepErrors).forEach((key) => delete stepErrors[key])
 }
@@ -1042,6 +1111,7 @@ function resetStepForm() {
   equipmentRows.value = []
   parameterRows.value = []
   qualityRows.value = []
+  inputMaterialKeyInputRefs.clear()
   resetStepErrors()
 }
 
@@ -1107,8 +1177,11 @@ function initializeStepEditor() {
   }))
 }
 
-function addInputMaterialRow() {
-  inputMaterialRows.value.push(createInputMaterialRow())
+async function addInputMaterialRow() {
+  const row = createInputMaterialRow()
+  inputMaterialRows.value.push(row)
+  await nextTick()
+  inputMaterialKeyInputRefs.get(row.key)?.focus()
 }
 
 function removeInputMaterialRow(index: number) {
@@ -1405,7 +1478,10 @@ async function initializePage() {
   loadError.value = ''
 
   try {
-    await loadRecipeContext()
+    await Promise.all([
+      loadRecipeContext(),
+      loadReferenceData(),
+    ])
     await loadSchema()
     initializeStepEditor()
   } catch (error: unknown) {

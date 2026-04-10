@@ -42,6 +42,10 @@
 - output material editor:
   - `flow.steps[].material_outputs`
 - this section edits step-level material consumption and step-level material/output results
+- UI design
+ - when add button is pressed, input focus will get to material_type_key then modal dialog of 種別ブラウザ will popup 
+ - after user choose the material_type_key. default uom will be retrieved from type_def table meta info.
+
 
 ### Section 3: Equipments
 - array editor for:

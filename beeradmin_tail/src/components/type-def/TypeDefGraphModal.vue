@@ -156,6 +156,7 @@ type TypeRow = {
   code: string
   name: string
   name_i18n: NameI18n
+  meta: Record<string, unknown> | null
   parent_type_id: string | null
   sort_order: number | null
   is_active: boolean
@@ -402,12 +403,15 @@ function rowButtonClass(row: TypeRow, columnIndex: number) {
 }
 
 function selectTypeRow(row: TypeRow) {
+  const defaultUom = isJsonObject(row.meta?.default_uom) ? row.meta.default_uom : null
   emit('select', {
     typeId: row.type_id,
     domain: row.domain,
     code: row.code,
     name: displayTypeName(row),
     isActive: row.is_active,
+    defaultUomCode: typeof defaultUom?.uom_code === 'string' ? defaultUom.uom_code.trim() || null : null,
+    defaultUomId: typeof defaultUom?.uom_id === 'string' ? defaultUom.uom_id.trim() || null : null,
   })
 }
 
@@ -514,7 +518,7 @@ async function loadTypes() {
     const industry = await ensureIndustry()
     const { data, error } = await supabase
       .from('type_def')
-      .select('type_id, domain, code, name, name_i18n, parent_type_id, sort_order, is_active')
+      .select('type_id, domain, code, name, name_i18n, meta, parent_type_id, sort_order, is_active')
       .eq('domain', selectedDomain.value)
       .eq('industry_id', industry)
       .order('sort_order', { ascending: true })
@@ -524,6 +528,7 @@ async function loadTypes() {
 
     typeRows.value = (data ?? []).map((row) => ({
       ...(row as TypeRow),
+      meta: isJsonObject(row.meta) ? row.meta : null,
       name_i18n: isJsonObject(row.name_i18n) ? (row.name_i18n as NameI18n) : null,
     }))
     ensureDefaultSelection()

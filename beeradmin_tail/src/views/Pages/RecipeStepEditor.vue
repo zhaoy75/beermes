@@ -220,7 +220,14 @@
                   </thead>
                   <tbody class="divide-y divide-gray-100">
                     <tr v-for="(row, index) in outputMaterialRows" :key="row.key">
-                      <td class="px-3 py-2"><input v-model.trim="row.output_material_type" class="w-full rounded border px-2 py-1 font-mono text-xs" /></td>
+                      <td class="px-3 py-2">
+                        <input
+                          :ref="(el) => setOutputMaterialTypeInputRef(row.key, el)"
+                          v-model.trim="row.output_material_type"
+                          class="w-full rounded border px-2 py-1 font-mono text-xs"
+                          @focus="handleOutputMaterialTypeFocus(row)"
+                        />
+                      </td>
                       <td class="px-3 py-2"><input v-model.trim="row.output_name" class="w-full rounded border px-2 py-1" /></td>
                       <td class="px-3 py-2">
                         <select v-model="row.output_type" class="w-full rounded border bg-white px-2 py-1">
@@ -658,6 +665,7 @@ const equipmentRows = ref<EquipmentRowState[]>([])
 const parameterRows = ref<ParameterRowState[]>([])
 const qualityRows = ref<QualityRowState[]>([])
 const inputMaterialTypeInputRefs = new Map<string, HTMLInputElement>()
+const outputMaterialTypeInputRefs = new Map<string, HTMLInputElement>()
 
 const recipeId = computed(() => (typeof route.params.recipeId === 'string' ? route.params.recipeId : ''))
 const versionId = computed(() => (typeof route.params.versionId === 'string' ? route.params.versionId : ''))
@@ -712,6 +720,28 @@ function setInputMaterialTypeInputRef(key: string, element: unknown) {
     return
   }
   inputMaterialTypeInputRefs.delete(key)
+}
+
+function handleOutputMaterialTypeFocus(row: OutputMaterialRowState) {
+  openTypeDefGraph({
+    preferredDomain: 'material_type',
+    restoreFocusOnClose: false,
+    onSelect: (selectedType: TypeDefGraphSelection) => {
+      row.output_material_type = selectedType.code
+      row.output_name = selectedType.name
+      if (selectedType.defaultUomCode) {
+        row.uom_code = selectedType.defaultUomCode
+      }
+    },
+  })
+}
+
+function setOutputMaterialTypeInputRef(key: string, element: unknown) {
+  if (element instanceof HTMLInputElement) {
+    outputMaterialTypeInputRefs.set(key, element)
+    return
+  }
+  outputMaterialTypeInputRefs.delete(key)
 }
 
 function isJsonObject(value: unknown): value is JsonObject {
@@ -1112,6 +1142,7 @@ function resetStepForm() {
   parameterRows.value = []
   qualityRows.value = []
   inputMaterialTypeInputRefs.clear()
+  outputMaterialTypeInputRefs.clear()
   resetStepErrors()
 }
 
@@ -1188,8 +1219,11 @@ function removeInputMaterialRow(index: number) {
   inputMaterialRows.value.splice(index, 1)
 }
 
-function addOutputMaterialRow() {
-  outputMaterialRows.value.push(createOutputMaterialRow())
+async function addOutputMaterialRow() {
+  const row = createOutputMaterialRow()
+  outputMaterialRows.value.push(row)
+  await nextTick()
+  outputMaterialTypeInputRefs.get(row.key)?.focus()
 }
 
 function removeOutputMaterialRow(index: number) {

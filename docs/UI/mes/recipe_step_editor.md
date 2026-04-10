@@ -46,16 +46,20 @@
 - output material editor:
   - `flow.steps[].material_outputs`
 - this section edits step-level material consumption and step-level material/output results
-- UI design
- - when add button is pressed, input focus will get to `material_type` then modal dialog of 種別ブラウザ will popup
- - after user chooses `material_type`, default uom will be retrieved from `type_def.meta.default_uom`
-
+- UI flow
+  - material_inputs
+    - when add button is pressed, input focus will get to `material_type` then modal dialog of 種別ブラウザ will popup
+    - after user chooses `material_type`, default uom will be retrieved from `type_def.meta.default_uom`
+  - material_outputs
+    - when add button is pressed, input focus will get to `output _material_type` then modal dialog of 種別ブラウザ will popup
+    - after user chooses `material_type`, default uom will be retrieved from `type_def.meta.default_uom`
 
 ### Section 3: Equipments
 - array editor for:
   - `flow.steps[].equipment_requirements`
 - this section stays step-level only
 - it does not reintroduce top-level `recipe_body_json.equipment`
+- UI 
 
 ### Section 4: Parameters
 - array editor for:

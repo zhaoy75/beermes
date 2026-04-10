@@ -43,6 +43,12 @@
 - sources:
   - `flow.steps[].material_inputs`
   - `flow.steps[].material_outputs`
+- interaction:
+  - adding a new input-material row focuses `material_type` and opens the shared type browser
+  - adding a new output-material row focuses `output_material_type` and opens the shared type browser
+  - selecting a type from the browser copies `type_def.code` into the focused field
+  - selecting an output-material type from the browser also copies the selected `type_def` display name into `output_name`
+  - when `type_def.meta.default_uom` exists, its UOM is copied into the focused row
 - input-material editable fields:
   - `material_type`
   - `qty`

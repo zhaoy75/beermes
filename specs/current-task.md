@@ -1,18 +1,18 @@
 # Current Task Spec
 
 ## Goal
-- Make the `RecipeStepEditor.vue` main-information layout more compact so the core step fields fit in a denser, faster-to-scan arrangement.
+- Align `RecipeStepEditor.vue` Section 2 with the updated UI doc so output-material rows use the same type-browser flow as input-material rows, and `output_name` is auto-filled from the selected `type_def` name.
 
 ## Scope
-- Update the active task spec for this UI layout change.
-- Update the dedicated step-editor spec and UI doc to describe the compact main-information arrangement.
-- Update only the main-information section layout in `RecipeStepEditor.vue`.
+- Update the active task spec for this behavior change.
+- Update the dedicated step-editor spec to describe the output-material browser flow and `output_name` autofill behavior.
+- Update only Section 2 behavior in `RecipeStepEditor.vue`.
 
 ## Non-Goals
 - Do not change the recipe JSON model.
-- Do not change materials, equipments, parameters, or QA sections.
+- Do not change equipments, parameters, or QA sections.
 - Do not change validation rules or save behavior.
-- Do not redesign the page header or route summary cards in this task.
+- Do not redesign unrelated page layout in this task.
 
 ## Affected Files
 - [current-task.md](/Users/zhao/dev/other/beer/specs/current-task.md)
@@ -24,16 +24,19 @@
 - No data model or API changes.
 
 ## Planned File Changes
-- Replace the active task spec with this compact-layout task.
-- Update the step-editor spec/doc to state that Section 1 uses a denser multi-column form layout.
-- Reduce spacing in the main-information block and place scalar fields into more columns.
-- Place `instructions` and `notes` side by side on wide screens while keeping them stacked on narrow screens.
+- Replace the active task spec with this output-material browser task.
+- Update the step-editor spec/doc so Section 2 documents separate `material_inputs` and `material_outputs` browser behavior.
+- Add refs/focus handlers for `output_material_type` inputs.
+- Open the shared type browser when a new output-material row is added and its type field gains focus.
+- Copy the selected type code into `output_material_type`.
+- Copy the selected type display name into `output_name`.
+- Copy `type_def.meta.default_uom` into the output row when present.
 
 ## Final Decisions
-- Section 1 of `RecipeStepEditor.vue` now uses a denser desktop grid instead of the previous loose two-column form.
-- `step_no`, `step_type`, `step_code`, `step_name`, `step_template_code`, and `duration_sec` are arranged in a compact multi-column layout.
-- `instructions` and `notes` now sit side by side on wider screens and remain stacked on narrow screens.
-- The change is layout-only; no step data fields, validation rules, or save behavior changed.
+- Output-material type selection now also fills `output_name` from the selected `type_def` display name.
+- `output_material_type` continues to receive the selected `type_def.code`.
+- When the selected type carries `type_def.meta.default_uom`, the output row `uom_code` is still filled from that default.
+- The change is limited to `RecipeStepEditor.vue` Section 2 behavior; no recipe JSON shape or save mapping changed.
 
 ## Validation Plan
 - Run:

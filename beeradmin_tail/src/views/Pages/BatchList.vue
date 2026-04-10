@@ -155,6 +155,7 @@
 </template>
 
 <script setup lang="ts">
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { computed, reactive, ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
@@ -196,6 +197,14 @@ interface BatchRow extends RawBatchRow {
   label: string
 }
 
+type RecipeOption = {
+  id: string
+  name: string
+  code: string
+  versionNo: number | null
+  versionStatus: string | null
+}
+
 type SortKey = 'label' | 'status' | 'planned_start' | 'planned_end'
 
 type SearchState = {
@@ -229,7 +238,7 @@ const baseColumns: ColumnDef[] = [
 const batches = ref<BatchRow[]>([])
 const loading = ref(false)
 const tenantId = ref<string | null>(null)
-const recipes = ref<Array<{ id: string, name: string, code: string, version: number }>>([])
+const recipes = ref<RecipeOption[]>([])
 const isAdmin = ref(false)
 
 const search = reactive<SearchState>({
@@ -257,6 +266,7 @@ const attrRefOptions = ref<Record<string, Array<{ value: string | number, label:
 const attrRefLabelMaps = ref<Record<string, Map<string, string>>>({})
 
 const attrSearchFields = computed(() => attrFields.value)
+const mesClient = () => supabase.schema('mes')
 
 const columns = computed<ColumnDef[]>(() => {
   const dynamic = attrSearchFields.value.map((field) => ({
@@ -441,15 +451,47 @@ async function fetchBatches() {
 async function fetchRecipes() {
   try {
     const tenant = await ensureTenant()
-    const { data, error } = await supabase
-      .from('mes_recipes')
-      .select('id, name, code, version')
+    const { data, error } = await mesClient()
+      .from('mst_recipe')
+      .select('id, recipe_name, recipe_code, current_version_id, status')
       .eq('tenant_id', tenant)
-      .order('name')
+      .eq('status', 'active')
+      .order('recipe_name')
     if (error) throw error
-    recipes.value = data ?? []
+
+    const recipeRows = (data ?? []).filter((row: any) => row.current_version_id)
+    const versionIds = recipeRows
+      .map((row: any) => String(row.current_version_id ?? '').trim())
+      .filter(Boolean)
+
+    const versionMap = new Map<string, { version_no: number | null, status: string | null }>()
+    if (versionIds.length > 0) {
+      const { data: versionRows, error: versionError } = await mesClient()
+        .from('mst_recipe_version')
+        .select('id, version_no, status')
+        .in('id', versionIds)
+      if (versionError) throw versionError
+      for (const row of versionRows ?? []) {
+        versionMap.set(String((row as any).id), {
+          version_no: typeof (row as any).version_no === 'number' ? (row as any).version_no : Number((row as any).version_no ?? 0),
+          status: ((row as any).status as string | null) ?? null,
+        })
+      }
+    }
+
+    recipes.value = recipeRows.map((row: any) => {
+      const version = versionMap.get(String(row.current_version_id))
+      return {
+        id: String(row.id),
+        name: String(row.recipe_name ?? row.recipe_code ?? row.id),
+        code: String(row.recipe_code ?? ''),
+        versionNo: version?.version_no ?? null,
+        versionStatus: version?.status ?? null,
+      }
+    })
   } catch (err) {
     console.error(err)
+    recipes.value = []
   }
 }
 
@@ -807,11 +849,6 @@ function isRestrictedStatus(status: string | null | undefined) {
 
 function goEdit(batch: BatchRow) {
   router.push({ path: `/batches/${batch.id}` })
-}
-
-function openSummary(batch: BatchRow) {
-  summaryState.value = batch
-  showSummary.value = true
 }
 
 function confirmDelete(batch: BatchRow) {

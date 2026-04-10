@@ -11,6 +11,15 @@
 
       <form class="p-4 space-y-4" @submit.prevent="submitForm">
         <div>
+          <label class="block text-sm text-gray-600 mb-1" for="recipeId">{{ t('batch.create.recipe') }}</label>
+          <select id="recipeId" v-model="form.recipeId" class="w-full h-[40px] border rounded px-3 bg-white">
+            <option value="">{{ t('batch.create.recipePlaceholder') }}</option>
+            <option v-for="recipe in recipes" :key="recipe.id" :value="recipe.id">
+              {{ recipeLabel(recipe) }}
+            </option>
+          </select>
+        </div>
+        <div>
           <label class="block text-sm text-gray-600 mb-1" for="batchCode">{{ t('batch.create.batchCode') }}</label>
           <input id="batchCode" v-model.trim="form.batchCode" type="text" class="w-full h-[40px] border rounded px-3" :placeholder="t('batch.create.batchCodePlaceholder')" />
         </div>
@@ -60,7 +69,8 @@ type RecipeOption = {
   id: string
   name: string
   code: string
-  version: number
+  versionNo: number | null
+  versionStatus: string | null
 }
 
 const props = defineProps<{ open: boolean, recipes: RecipeOption[], loading: boolean }>()
@@ -84,16 +94,6 @@ const form = reactive(blank())
 watch(() => props.open, (val) => {
   if (val) {
     Object.assign(form, blank())
-    if (!form.recipeId && props.recipes.length > 0) {
-      form.recipeId = props.recipes[0].id
-    }
-  }
-})
-
-watch(() => props.recipes, (list) => {
-  if (!props.open) return
-  if (!form.recipeId && list.length > 0) {
-    form.recipeId = list[0].id
   }
 })
 
@@ -114,5 +114,10 @@ function openDatePicker(event: Event) {
   if (typeof target.showPicker === 'function') {
     target.showPicker()
   }
+}
+
+function recipeLabel(recipe: RecipeOption) {
+  const versionText = recipe.versionNo == null ? '' : ` / v${recipe.versionNo}`
+  return `${recipe.name} (${recipe.code})${versionText}`
 }
 </script>

@@ -1,43 +1,62 @@
 # Current Task Spec
 
 ## Goal
-- Fix the `relation "public.mst_quality_check" does not exist` error by aligning recipe-editor quality-check loading with the actual `mes.mst_quality_check` table.
+- Create concrete page specs for the current MES batch pages:
+  - batch list
+  - batch edit
+- Clarify how each page should present both released recipe information and batch execution status.
 
 ## Scope
-- Update the active task spec for this bug fix.
-- Update `RecipeEdit.vue` so quality-check master loading uses the correct schema.
+- Replace the active task spec with this documentation task.
+- Create a dedicated batch list page spec.
+- Create a dedicated batch edit page spec.
+- Document recommended UI structure, data sources, key fields, actions, and execution-status presentation for both pages.
+- Record any remaining design decisions that are still open.
 
 ## Non-Goals
-- Do not change the recipe JSON model.
-- Do not change step-editor behavior in this task.
-- Do not change quality-check save mapping or UI layout.
-- Do not modify database schema or DDL.
+- Do not change Vue source in this task.
+- Do not change SQL or schema in this task.
+- Do not rewrite existing UI docs unless needed for direct cross-reference later.
 
 ## Affected Files
 - [current-task.md](/Users/zhao/dev/other/beer/specs/current-task.md)
-- [RecipeEdit.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/RecipeEdit.vue)
+- [batch-list-page.md](/Users/zhao/dev/other/beer/specs/batch-list-page.md)
+- [batch-edit-page.md](/Users/zhao/dev/other/beer/specs/batch-edit-page.md)
 
 ## Data Model / API Changes
-- No data model or API changes.
+- No data model changes.
+- No API changes.
+- Specs will reference existing execution-side sources:
+  - `public.mes_batches`
+  - `mes.batch_step`
+  - `mes.batch_material_plan`
+  - `mes.batch_material_actual`
+  - `mes.batch_equipment_assignment`
+  - `mes.batch_execution_log`
+  - `mes.batch_deviation`
+  - `mes.mst_recipe`
+  - `mes.mst_recipe_version`
 
 ## Planned File Changes
-- Replace the active task spec with this quality-check schema fix.
-- Change the quality-check master query in `RecipeEdit.vue` from the default/public schema to `mes`.
+- Replace the current task spec with this spec-writing task.
+- Add `specs/batch-list-page.md`.
+- Add `specs/batch-edit-page.md`.
 
 ## Final Decisions
-- `RecipeEdit.vue` now loads quality-check master data from `mes.mst_quality_check`, matching the actual table defined in the MES schema.
-- The previous failure was caused by querying the default/public schema for `mst_quality_check`.
-- No recipe JSON, save behavior, or step-editor behavior changed in this fix.
+- Added a dedicated batch list page spec focused on search, optional recipe-based batch creation, released recipe visibility, and execution progress columns.
+- Added a dedicated batch edit page spec focused on batch header editing, released recipe snapshot visibility, execution summary, step execution table, and secondary operations.
+- Recorded concrete recommended layouts and data-source mappings for both pages.
+- Captured open design decisions explicitly instead of leaving them implicit in prose.
 
 ## Validation Plan
 - Run:
-  - `npx eslint src/views/Pages/RecipeEdit.vue --no-fix`
+  - `rg -n "Batch List Page|Batch Edit Page|Open Decisions" specs -g '*.md'`
   - `npm run type-check` in `beeradmin_tail`
   - `npm run test` in `beeradmin_tail`
   - `npx eslint . --no-fix` in `beeradmin_tail`
 
 ## Validation Results
-- `npx eslint src/views/Pages/RecipeEdit.vue --no-fix`: passed
+- `rg -n "Batch List Page|Batch Edit Page|Open Decisions" specs -g '*.md'`: passed
 - `npm run type-check` in `beeradmin_tail`: passed
 - `npm run test` in `beeradmin_tail`: failed because `beeradmin_tail/package.json` has no `test` script
-- `npx eslint . --no-fix` in `beeradmin_tail`: failed on the existing repo-wide ESLint backlog outside this task
+- `npx eslint . --no-fix` in `beeradmin_tail`: failed on the existing repo-wide ESLint backlog outside this documentation task

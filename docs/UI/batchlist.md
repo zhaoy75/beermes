@@ -40,8 +40,8 @@
 
 ### Batch Add Dialog
     Modal dialog to let user input 
+      レシピ (optional)
       バッチ名 (should not to be blank)
-      レシピ名 (does not need shown in these phase)
       開始日  with calendar picker
       終了日  with calendar picker
     A cancel and confirm button 
@@ -52,6 +52,9 @@
 
 - Add
   A Batch Add dialog will shown to let user input related field.
+  recipe selection is optional and should read from `mes.mst_recipe`
+  when selected, current released version should be derived from `mes.mst_recipe.current_version_id`
+  when not selected, batch header only is created
   after user fill the form and click confirm button, call create_batch_from_recipe
 
 - Edit
@@ -69,6 +72,12 @@
 
 ## Data Handling
 - batch basic information stored in mes_batches
+- selected recipe source:
+  - `mes.mst_recipe`
+  - `mes.mst_recipe_version`
+- batch release function expands `mes.mst_recipe_version.recipe_body_json` into:
+  - `mes.batch_step`
+  - `mes.batch_material_plan`
 - other attribute stored in entity_attr
 
 ## other

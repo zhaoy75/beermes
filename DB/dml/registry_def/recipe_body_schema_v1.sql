@@ -195,9 +195,9 @@ VALUES (
     "outputSpec": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["output_code", "output_name", "output_type", "qty", "uom_code"],
+      "required": ["output_material_type", "output_name", "output_type", "qty", "uom_code"],
       "properties": {
-        "output_code": {
+        "output_material_type": {
           "$ref": "#/$defs/code"
         },
         "output_name": {
@@ -227,9 +227,9 @@ VALUES (
     "materialRequirement": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["material_key", "material_role", "qty", "uom_code"],
+      "required": ["material_type", "material_role", "qty", "uom_code"],
       "properties": {
-        "material_key": {
+        "material_type": {
           "$ref": "#/$defs/code"
         },
         "material_name": {
@@ -379,9 +379,9 @@ VALUES (
     "stepMaterialInput": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["material_key", "qty", "uom_code"],
+      "required": ["material_type", "qty", "uom_code"],
       "properties": {
-        "material_key": {
+        "material_type": {
           "$ref": "#/$defs/code"
         },
         "qty": {
@@ -407,9 +407,9 @@ VALUES (
     "stepMaterialOutput": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["output_code", "output_name", "output_type", "qty", "uom_code"],
+      "required": ["output_material_type", "output_name", "output_type", "qty", "uom_code"],
       "properties": {
-        "output_code": {
+        "output_material_type": {
           "$ref": "#/$defs/code"
         },
         "output_name": {

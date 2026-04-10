@@ -17,7 +17,7 @@
   "outputs": {
     "primary": [
       {
-        "output_code": "BEER_LAGER_330",
+        "output_material_type": "BEER_LAGER_330",
         "output_name": "Lager Beer 330mL",
         "output_type": "primary",
         "qty": 3000,
@@ -27,7 +27,7 @@
     ],
     "co_products": [
       {
-        "output_code": "SPENT_GRAIN",
+        "output_material_type": "SPENT_GRAIN",
         "output_name": "Spent Grain",
         "output_type": "co_product",
         "qty": 120,
@@ -39,7 +39,7 @@
   "materials": {
     "required": [
       {
-        "material_key": "WATER_BREW",
+        "material_type": "WATER_BREW",
         "material_name": "Brewing Water",
         "material_role": "process_water",
         "material_type_code": "WATER",
@@ -49,7 +49,7 @@
         "basis": "per_base"
       },
       {
-        "material_key": "MALT_BASE",
+        "material_type": "MALT_BASE",
         "material_name": "Pale Malt",
         "material_role": "main_substrate",
         "material_type_code": "MALT",
@@ -59,7 +59,7 @@
         "basis": "per_base"
       },
       {
-        "material_key": "HOPS_BITTER",
+        "material_type": "HOPS_BITTER",
         "material_name": "Saaz Hops",
         "material_role": "flavor",
         "material_type_code": "HOPS",
@@ -69,7 +69,7 @@
         "basis": "per_base"
       },
       {
-        "material_key": "YEAST_MAIN",
+        "material_type": "YEAST_MAIN",
         "material_name": "Lager Yeast",
         "material_role": "culture",
         "material_type_code": "YEAST",
@@ -79,7 +79,7 @@
         "basis": "per_base"
       },
       {
-        "material_key": "BOTTLE_330",
+        "material_type": "BOTTLE_330",
         "material_name": "330mL Bottle",
         "material_role": "packaging_primary",
         "material_type_code": "PACKAGING",
@@ -89,7 +89,7 @@
         "basis": "per_base"
       },
       {
-        "material_key": "CAP_330",
+        "material_type": "CAP_330",
         "material_name": "Bottle Cap",
         "material_role": "packaging_component",
         "material_type_code": "PACKAGING",
@@ -99,7 +99,7 @@
         "basis": "per_base"
       },
       {
-        "material_key": "LABEL_STD",
+        "material_type": "LABEL_STD",
         "material_name": "Standard Label",
         "material_role": "packaging_component",
         "material_type_code": "PACKAGING",
@@ -122,14 +122,14 @@
         "duration_sec": 5400,
         "material_inputs": [
           {
-            "material_key": "WATER_BREW",
+            "material_type": "WATER_BREW",
             "qty": 800,
             "uom_code": "L",
             "basis": "per_base",
             "consumption_mode": "estimate"
           },
           {
-            "material_key": "MALT_BASE",
+            "material_type": "MALT_BASE",
             "qty": 180,
             "uom_code": "KG",
             "basis": "per_base",
@@ -138,7 +138,7 @@
         ],
         "material_outputs": [
           {
-            "output_code": "SWEET_WORT",
+            "output_material_type": "SWEET_WORT",
             "output_name": "Sweet Wort",
             "output_type": "intermediate",
             "qty": 760,
@@ -187,7 +187,7 @@
         "duration_sec": 4500,
         "material_inputs": [
           {
-            "material_key": "HOPS_BITTER",
+            "material_type": "HOPS_BITTER",
             "qty": 2.5,
             "uom_code": "KG",
             "basis": "per_base",
@@ -196,7 +196,7 @@
         ],
         "material_outputs": [
           {
-            "output_code": "HOT_WORT",
+            "output_material_type": "HOT_WORT",
             "output_name": "Hot Wort",
             "output_type": "intermediate",
             "qty": 730,
@@ -229,7 +229,7 @@
         "duration_sec": 604800,
         "material_inputs": [
           {
-            "material_key": "YEAST_MAIN",
+            "material_type": "YEAST_MAIN",
             "qty": 5,
             "uom_code": "KG",
             "basis": "per_base",
@@ -238,7 +238,7 @@
         ],
         "material_outputs": [
           {
-            "output_code": "GREEN_BEER",
+            "output_material_type": "GREEN_BEER",
             "output_name": "Green Beer",
             "output_type": "intermediate",
             "qty": 690,
@@ -287,21 +287,21 @@
         "duration_sec": 14400,
         "material_inputs": [
           {
-            "material_key": "BOTTLE_330",
+            "material_type": "BOTTLE_330",
             "qty": 3000,
             "uom_code": "PCS",
             "basis": "per_base",
             "consumption_mode": "backflush"
           },
           {
-            "material_key": "CAP_330",
+            "material_type": "CAP_330",
             "qty": 3000,
             "uom_code": "PCS",
             "basis": "per_base",
             "consumption_mode": "backflush"
           },
           {
-            "material_key": "LABEL_STD",
+            "material_type": "LABEL_STD",
             "qty": 3000,
             "uom_code": "PCS",
             "basis": "per_base",
@@ -310,7 +310,7 @@
         ],
         "material_outputs": [
           {
-            "output_code": "BEER_LAGER_330",
+            "output_material_type": "BEER_LAGER_330",
             "output_name": "Lager Beer 330mL",
             "output_type": "primary",
             "qty": 3000,

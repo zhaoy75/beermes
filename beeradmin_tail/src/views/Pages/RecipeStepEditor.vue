@@ -153,10 +153,10 @@
                     <tr v-for="(row, index) in inputMaterialRows" :key="row.key">
                       <td class="px-3 py-2">
                         <input
-                          :ref="(el) => setInputMaterialKeyInputRef(row.key, el)"
-                          v-model.trim="row.material_key"
+                          :ref="(el) => setInputMaterialTypeInputRef(row.key, el)"
+                          v-model.trim="row.material_type"
                           class="w-full rounded border px-2 py-1 font-mono text-xs"
-                          @focus="handleMaterialKeyFocus(row)"
+                          @focus="handleMaterialTypeFocus(row)"
                         />
                       </td>
                       <td class="px-3 py-2"><input v-model.trim="row.qty" class="w-full rounded border px-2 py-1" /></td>
@@ -220,7 +220,7 @@
                   </thead>
                   <tbody class="divide-y divide-gray-100">
                     <tr v-for="(row, index) in outputMaterialRows" :key="row.key">
-                      <td class="px-3 py-2"><input v-model.trim="row.output_code" class="w-full rounded border px-2 py-1 font-mono text-xs" /></td>
+                      <td class="px-3 py-2"><input v-model.trim="row.output_material_type" class="w-full rounded border px-2 py-1 font-mono text-xs" /></td>
                       <td class="px-3 py-2"><input v-model.trim="row.output_name" class="w-full rounded border px-2 py-1" /></td>
                       <td class="px-3 py-2">
                         <select v-model="row.output_type" class="w-full rounded border bg-white px-2 py-1">
@@ -476,7 +476,7 @@ interface UomRow {
 }
 
 interface RecipeStepMaterialInput {
-  material_key: string
+  material_type: string
   qty: number
   uom_code: string
   basis?: string
@@ -485,7 +485,7 @@ interface RecipeStepMaterialInput {
 }
 
 interface RecipeStepMaterialOutput {
-  output_code: string
+  output_material_type: string
   output_name: string
   output_type: string
   qty: number
@@ -567,7 +567,7 @@ interface RecipeBody {
 
 interface InputMaterialRowState {
   key: string
-  material_key: string
+  material_type: string
   qty: string
   uom_code: string
   basis: string
@@ -577,7 +577,7 @@ interface InputMaterialRowState {
 
 interface OutputMaterialRowState {
   key: string
-  output_code: string
+  output_material_type: string
   output_name: string
   output_type: string
   qty: string
@@ -657,7 +657,7 @@ const outputMaterialRows = ref<OutputMaterialRowState[]>([])
 const equipmentRows = ref<EquipmentRowState[]>([])
 const parameterRows = ref<ParameterRowState[]>([])
 const qualityRows = ref<QualityRowState[]>([])
-const inputMaterialKeyInputRefs = new Map<string, HTMLInputElement>()
+const inputMaterialTypeInputRefs = new Map<string, HTMLInputElement>()
 
 const recipeId = computed(() => (typeof route.params.recipeId === 'string' ? route.params.recipeId : ''))
 const versionId = computed(() => (typeof route.params.versionId === 'string' ? route.params.versionId : ''))
@@ -693,12 +693,12 @@ const jsonObjectPlaceholder = computed(() => '{"key":"value"}')
 
 const mesClient = () => supabase.schema('mes')
 
-function handleMaterialKeyFocus(row: InputMaterialRowState) {
+function handleMaterialTypeFocus(row: InputMaterialRowState) {
   openTypeDefGraph({
     preferredDomain: 'material_type',
     restoreFocusOnClose: false,
     onSelect: (selectedType: TypeDefGraphSelection) => {
-      row.material_key = selectedType.code
+      row.material_type = selectedType.code
       if (selectedType.defaultUomCode) {
         row.uom_code = selectedType.defaultUomCode
       }
@@ -706,12 +706,12 @@ function handleMaterialKeyFocus(row: InputMaterialRowState) {
   })
 }
 
-function setInputMaterialKeyInputRef(key: string, element: unknown) {
+function setInputMaterialTypeInputRef(key: string, element: unknown) {
   if (element instanceof HTMLInputElement) {
-    inputMaterialKeyInputRefs.set(key, element)
+    inputMaterialTypeInputRefs.set(key, element)
     return
   }
-  inputMaterialKeyInputRefs.delete(key)
+  inputMaterialTypeInputRefs.delete(key)
 }
 
 function isJsonObject(value: unknown): value is JsonObject {
@@ -781,12 +781,12 @@ function parseJsonObjectText(raw: string, errorMessage: string) {
 
 function normalizeStepMaterialInput(value: unknown): RecipeStepMaterialInput | null {
   if (!isJsonObject(value)) return null
-  const materialKey = asTrimmedString(value.material_key)
+  const materialType = asTrimmedString(value.material_type) || asTrimmedString(value.material_key)
   const qty = asNumber(value.qty)
   const uomCode = asTrimmedString(value.uom_code)
-  if (!materialKey || qty === null || qty < 0 || !uomCode) return null
+  if (!materialType || qty === null || qty < 0 || !uomCode) return null
   return {
-    material_key: materialKey,
+    material_type: materialType,
     qty,
     uom_code: uomCode,
     basis: asTrimmedString(value.basis) || undefined,
@@ -797,14 +797,14 @@ function normalizeStepMaterialInput(value: unknown): RecipeStepMaterialInput | n
 
 function normalizeStepMaterialOutput(value: unknown): RecipeStepMaterialOutput | null {
   if (!isJsonObject(value)) return null
-  const outputCode = asTrimmedString(value.output_code)
+  const outputMaterialType = asTrimmedString(value.output_material_type) || asTrimmedString(value.output_code)
   const outputName = asTrimmedString(value.output_name)
   const outputType = asTrimmedString(value.output_type)
   const qty = asNumber(value.qty)
   const uomCode = asTrimmedString(value.uom_code)
-  if (!outputCode || !outputName || !outputType || qty === null || qty < 0 || !uomCode) return null
+  if (!outputMaterialType || !outputName || !outputType || qty === null || qty < 0 || !uomCode) return null
   return {
-    output_code: outputCode,
+    output_material_type: outputMaterialType,
     output_name: outputName,
     output_type: outputType,
     qty,
@@ -1021,7 +1021,7 @@ function extractSchemaStepTypes(schema: JsonObject | null) {
 function createInputMaterialRow(initial?: Partial<InputMaterialRowState>): InputMaterialRowState {
   return {
     key: `in-${++inputMaterialRowCounter}`,
-    material_key: initial?.material_key ?? '',
+    material_type: initial?.material_type ?? '',
     qty: initial?.qty ?? '',
     uom_code: initial?.uom_code ?? '',
     basis: initial?.basis ?? 'per_base',
@@ -1033,7 +1033,7 @@ function createInputMaterialRow(initial?: Partial<InputMaterialRowState>): Input
 function createOutputMaterialRow(initial?: Partial<OutputMaterialRowState>): OutputMaterialRowState {
   return {
     key: `out-${++outputMaterialRowCounter}`,
-    output_code: initial?.output_code ?? '',
+    output_material_type: initial?.output_material_type ?? '',
     output_name: initial?.output_name ?? '',
     output_type: initial?.output_type ?? '',
     qty: initial?.qty ?? '',
@@ -1111,7 +1111,7 @@ function resetStepForm() {
   equipmentRows.value = []
   parameterRows.value = []
   qualityRows.value = []
-  inputMaterialKeyInputRefs.clear()
+  inputMaterialTypeInputRefs.clear()
   resetStepErrors()
 }
 
@@ -1132,7 +1132,7 @@ function initializeStepEditor() {
   stepForm.instructions = step.instructions || ''
   stepForm.notes = step.notes || ''
   inputMaterialRows.value = (step.material_inputs ?? []).map((row) => createInputMaterialRow({
-    material_key: row.material_key,
+    material_type: row.material_type,
     qty: String(row.qty),
     uom_code: row.uom_code,
     basis: row.basis || '',
@@ -1140,7 +1140,7 @@ function initializeStepEditor() {
     notes: row.notes || '',
   }))
   outputMaterialRows.value = (step.material_outputs ?? []).map((row) => createOutputMaterialRow({
-    output_code: row.output_code,
+    output_material_type: row.output_material_type,
     output_name: row.output_name,
     output_type: row.output_type,
     qty: String(row.qty),
@@ -1181,7 +1181,7 @@ async function addInputMaterialRow() {
   const row = createInputMaterialRow()
   inputMaterialRows.value.push(row)
   await nextTick()
-  inputMaterialKeyInputRefs.get(row.key)?.focus()
+  inputMaterialTypeInputRefs.get(row.key)?.focus()
 }
 
 function removeInputMaterialRow(index: number) {
@@ -1243,15 +1243,15 @@ function validateStepForm() {
 
 function buildMaterialInputs() {
   const rows = inputMaterialRows.value.filter((row) => (
-    row.material_key.trim() || row.qty.trim() || row.uom_code.trim() || row.basis || row.consumption_mode || row.notes.trim()
+    row.material_type.trim() || row.qty.trim() || row.uom_code.trim() || row.basis || row.consumption_mode || row.notes.trim()
   ))
   const parsed: RecipeStepMaterialInput[] = []
 
   for (const row of rows) {
-    const materialKey = row.material_key.trim()
+    const materialType = row.material_type.trim()
     const qty = parseOptionalNumber(row.qty)
     const uomCode = row.uom_code.trim()
-    if (!materialKey) {
+    if (!materialType) {
       stepErrors.material_inputs = t('recipe.itemEditor.inputMaterialRequired')
       return null
     }
@@ -1264,7 +1264,7 @@ function buildMaterialInputs() {
       return null
     }
     parsed.push({
-      material_key: materialKey,
+      material_type: materialType,
       qty,
       uom_code: uomCode,
       basis: row.basis || undefined,
@@ -1278,16 +1278,16 @@ function buildMaterialInputs() {
 
 function buildMaterialOutputs() {
   const rows = outputMaterialRows.value.filter((row) => (
-    row.output_code.trim() || row.output_name.trim() || row.output_type || row.qty.trim() || row.uom_code.trim() || row.notes.trim()
+    row.output_material_type.trim() || row.output_name.trim() || row.output_type || row.qty.trim() || row.uom_code.trim() || row.notes.trim()
   ))
   const parsed: RecipeStepMaterialOutput[] = []
 
   for (const row of rows) {
-    const outputCode = row.output_code.trim()
+    const outputMaterialType = row.output_material_type.trim()
     const outputName = row.output_name.trim()
     const qty = parseOptionalNumber(row.qty)
     const uomCode = row.uom_code.trim()
-    if (!outputCode) {
+    if (!outputMaterialType) {
       stepErrors.material_outputs = t('recipe.edit.outputCodeRequired')
       return null
     }
@@ -1308,7 +1308,7 @@ function buildMaterialOutputs() {
       return null
     }
     parsed.push({
-      output_code: outputCode,
+      output_material_type: outputMaterialType,
       output_name: outputName,
       output_type: row.output_type,
       qty,

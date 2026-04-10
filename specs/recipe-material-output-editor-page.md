@@ -101,7 +101,7 @@
 - When editing an existing material row, save falls back to the stored material identity if no active `mst_material` row can be resolved.
 - The page does not show a persistent warning message when using that stored material fallback.
 - The selected material is preserved when the type tree selection changes; users must explicitly choose a different material to replace it.
-- For new material rows, a master-material selection is optional; the page writes a fallback `material_key` based on recipe-entered data.
+- For new material rows, a master-material selection is optional; the page writes a fallback `material_type` based on recipe-entered data.
 - Output mode uses a dedicated page form rather than a modal.
 
 ## Validation Results

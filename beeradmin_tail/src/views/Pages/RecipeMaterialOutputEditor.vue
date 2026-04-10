@@ -295,8 +295,8 @@
           </div>
           <div>
             <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.outputCode') }}<span class="text-red-600">*</span></label>
-            <input v-model.trim="outputForm.output_code" class="h-[40px] w-full rounded border px-3 font-mono text-sm" />
-            <p v-if="outputErrors.output_code" class="mt-1 text-xs text-red-600">{{ outputErrors.output_code }}</p>
+            <input v-model.trim="outputForm.output_material_type" class="h-[40px] w-full rounded border px-3 font-mono text-sm" />
+            <p v-if="outputErrors.output_material_type" class="mt-1 text-xs text-red-600">{{ outputErrors.output_material_type }}</p>
           </div>
           <div>
             <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.outputName') }}<span class="text-red-600">*</span></label>
@@ -400,7 +400,7 @@ interface UomRow {
 }
 
 interface RecipeMaterialRequirement {
-  material_key: string
+  material_type: string
   material_name?: string
   material_role: string
   material_type_code?: string
@@ -414,7 +414,7 @@ interface RecipeMaterialRequirement {
 }
 
 interface RecipeOutputSpec {
-  output_code: string
+  output_material_type: string
   output_name: string
   output_type: string
   qty: number
@@ -549,7 +549,7 @@ const outputOriginalSection = ref<OutputSection | null>(null)
 const outputEditIndex = ref<number | null>(null)
 const outputForm = reactive({
   section: 'primary' as OutputSection,
-  output_code: '',
+  output_material_type: '',
   output_name: '',
   output_type: 'primary',
   qty: '',
@@ -694,8 +694,8 @@ const displayedMaterialOption = computed(() => {
 
   if (materialOriginalRequirement.value) {
     return {
-      material_name: materialOriginalRequirement.value.material_name || materialOriginalRequirement.value.material_code || materialOriginalRequirement.value.material_key,
-      material_code: materialOriginalRequirement.value.material_code || materialOriginalRequirement.value.material_key,
+      material_name: materialOriginalRequirement.value.material_name || materialOriginalRequirement.value.material_code || materialOriginalRequirement.value.material_type,
+      material_code: materialOriginalRequirement.value.material_code || materialOriginalRequirement.value.material_type,
     }
   }
 
@@ -762,14 +762,18 @@ function createDefaultRecipeBody(schemaCode: string, industryType: string): Reci
 
 function normalizeOutputSpec(value: unknown): RecipeOutputSpec | null {
   if (!isJsonObject(value)) return null
-  const outputCode = typeof value.output_code === 'string' ? value.output_code : ''
+  const outputMaterialType = typeof value.output_material_type === 'string'
+    ? value.output_material_type
+    : typeof value.output_code === 'string'
+      ? value.output_code
+      : ''
   const outputName = typeof value.output_name === 'string' ? value.output_name : ''
   const outputType = typeof value.output_type === 'string' ? value.output_type : ''
   const qty = typeof value.qty === 'number' ? value.qty : Number(value.qty)
   const uomCode = typeof value.uom_code === 'string' ? value.uom_code : ''
-  if (!outputCode || !outputName || !outputType || !Number.isFinite(qty) || !uomCode) return null
+  if (!outputMaterialType || !outputName || !outputType || !Number.isFinite(qty) || !uomCode) return null
   return {
-    output_code: outputCode,
+    output_material_type: outputMaterialType,
     output_name: outputName,
     output_type: outputType,
     qty,
@@ -781,13 +785,17 @@ function normalizeOutputSpec(value: unknown): RecipeOutputSpec | null {
 
 function normalizeMaterialRequirement(value: unknown): RecipeMaterialRequirement | null {
   if (!isJsonObject(value)) return null
-  const materialKey = typeof value.material_key === 'string' ? value.material_key : ''
+  const materialType = typeof value.material_type === 'string'
+    ? value.material_type
+    : typeof value.material_key === 'string'
+      ? value.material_key
+      : ''
   const materialRole = typeof value.material_role === 'string' ? value.material_role : ''
   const qty = typeof value.qty === 'number' ? value.qty : Number(value.qty)
   const uomCode = typeof value.uom_code === 'string' ? value.uom_code : ''
-  if (!materialKey || !materialRole || !Number.isFinite(qty) || !uomCode) return null
+  if (!materialType || !materialRole || !Number.isFinite(qty) || !uomCode) return null
   return {
-    material_key: materialKey,
+    material_type: materialType,
     material_name: typeof value.material_name === 'string' ? value.material_name : undefined,
     material_role: materialRole,
     material_type_code: typeof value.material_type_code === 'string' ? value.material_type_code : undefined,
@@ -941,7 +949,7 @@ function resetOutputErrors() {
 function findMaterialIdForRequirement(item: RecipeMaterialRequirement) {
   const exact = materialOptions.value.find((row) => row.material_code === item.material_code)
   if (exact) return exact.id
-  const fallback = materialOptions.value.find((row) => row.material_code === item.material_key)
+  const fallback = materialOptions.value.find((row) => row.material_code === item.material_type)
   return fallback?.id ?? ''
 }
 
@@ -994,7 +1002,7 @@ function initializeOutputEditor() {
   outputOriginalSection.value = null
   outputEditIndex.value = routeIndex.value
   outputForm.section = routeSection.value === 'co_products' || routeSection.value === 'waste' ? routeSection.value : 'primary'
-  outputForm.output_code = ''
+  outputForm.output_material_type = ''
   outputForm.output_name = ''
   outputForm.output_type = outputForm.section === 'co_products' ? 'co_product' : outputForm.section === 'waste' ? 'waste' : 'primary'
   outputForm.qty = ''
@@ -1009,7 +1017,7 @@ function initializeOutputEditor() {
   if (!item) throw new Error(t('recipe.itemEditor.targetNotFound'))
 
   outputOriginalSection.value = section
-  outputForm.output_code = item.output_code
+  outputForm.output_material_type = item.output_material_type
   outputForm.output_name = item.output_name
   outputForm.output_type = item.output_type
   outputForm.qty = String(item.qty)
@@ -1250,7 +1258,7 @@ function buildFallbackMaterialIdentity() {
   const materialKey = typeCode ? `${typeCode}:${role}` : role
 
   return {
-    material_key: materialKey,
+    material_type: materialKey,
     material_name: role || undefined,
     material_code: undefined as string | undefined,
     material_type_code: typeCode || undefined,
@@ -1269,7 +1277,7 @@ function validateMaterialForm() {
 
 function validateOutputForm() {
   resetOutputErrors()
-  if (!outputForm.output_code.trim()) outputErrors.output_code = t('recipe.edit.outputCodeRequired')
+  if (!outputForm.output_material_type.trim()) outputErrors.output_material_type = t('recipe.edit.outputCodeRequired')
   if (!outputForm.output_name.trim()) outputErrors.output_name = t('recipe.edit.outputNameRequired')
   const qty = Number(outputForm.qty)
   if (!Number.isFinite(qty) || qty < 0) outputErrors.qty = t('recipe.edit.outputQuantityNonNegative')
@@ -1297,7 +1305,7 @@ async function saveEditor() {
     const type = material?.material_type_id ? materialTypeMap.value.get(material.material_type_id) : undefined
     const fallbackIdentity = !material && !originalMaterial ? buildFallbackMaterialIdentity() : null
     const requirement: RecipeMaterialRequirement = {
-      material_key: material?.material_code || originalMaterial?.material_key || fallbackIdentity?.material_key || '',
+      material_type: material?.material_code || originalMaterial?.material_type || fallbackIdentity?.material_type || '',
       material_name: material?.material_name || originalMaterial?.material_name || fallbackIdentity?.material_name,
       material_role: materialForm.material_role.trim(),
       material_code: material?.material_code || originalMaterial?.material_code || fallbackIdentity?.material_code,
@@ -1322,7 +1330,7 @@ async function saveEditor() {
   } else {
     if (!validateOutputForm()) return
     const output: RecipeOutputSpec = {
-      output_code: outputForm.output_code.trim(),
+      output_material_type: outputForm.output_material_type.trim(),
       output_name: outputForm.output_name.trim(),
       output_type: outputForm.output_type,
       qty: Number(outputForm.qty),

@@ -179,8 +179,8 @@
               <tr v-for="row in materialRows" :key="row.key" class="hover:bg-gray-50">
                 <td class="px-3 py-2">{{ formatMaterialSection(row.section) }}</td>
                 <td class="px-3 py-2">
-                  <div class="font-medium text-gray-900">{{ row.item.material_name || row.item.material_code || row.item.material_key }}</div>
-                  <div class="font-mono text-xs text-gray-500">{{ row.item.material_code || row.item.material_key }}</div>
+                  <div class="font-medium text-gray-900">{{ row.item.material_name || row.item.material_code || row.item.material_type }}</div>
+                  <div class="font-mono text-xs text-gray-500">{{ row.item.material_code || row.item.material_type }}</div>
                 </td>
                 <td class="px-3 py-2">{{ row.item.material_role }}</td>
                 <td class="px-3 py-2">{{ row.item.qty ?? t('common.none') }}</td>
@@ -457,8 +457,8 @@
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
-                  <tr v-for="(row, index) in group.rows" :key="`${group.key}-${row.output_code}-${index}`">
-                    <td class="px-3 py-2 font-mono text-xs text-gray-700">{{ row.output_code }}</td>
+                  <tr v-for="(row, index) in group.rows" :key="`${group.key}-${row.output_material_type}-${index}`">
+                    <td class="px-3 py-2 font-mono text-xs text-gray-700">{{ row.output_material_type }}</td>
                     <td class="px-3 py-2">{{ row.output_name }}</td>
                     <td class="px-3 py-2">{{ row.qty }}</td>
                     <td class="px-3 py-2">{{ row.uom_code }}</td>
@@ -689,8 +689,8 @@
             </div>
             <div>
               <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.outputCode') }}<span class="text-red-600">*</span></label>
-              <input v-model.trim="outputForm.output_code" class="h-[40px] w-full rounded border px-3 font-mono text-sm" />
-              <p v-if="outputErrors.output_code" class="mt-1 text-xs text-red-600">{{ outputErrors.output_code }}</p>
+              <input v-model.trim="outputForm.output_material_type" class="h-[40px] w-full rounded border px-3 font-mono text-sm" />
+              <p v-if="outputErrors.output_material_type" class="mt-1 text-xs text-red-600">{{ outputErrors.output_material_type }}</p>
             </div>
             <div>
               <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.outputName') }}<span class="text-red-600">*</span></label>
@@ -918,7 +918,7 @@ interface RecipeSchemaPayload {
 }
 
 interface RecipeMaterialRequirement {
-  material_key: string
+  material_type: string
   material_name?: string
   material_role: string
   material_type_code?: string
@@ -1005,7 +1005,7 @@ interface MaterialTreeEntry {
 }
 
 interface RecipeOutputSpec {
-  output_code: string
+  output_material_type: string
   output_name: string
   output_type: string
   qty: number
@@ -1180,7 +1180,7 @@ const showOutputModal = ref(false)
 const outputEditIndex = ref<number | null>(null)
 const outputForm = reactive({
   section: 'primary' as OutputSection,
-  output_code: '',
+  output_material_type: '',
   output_name: '',
   output_type: 'primary',
   qty: '',
@@ -1447,14 +1447,18 @@ function createDefaultRecipeBody(schemaCode: string, industryType: string): Reci
 
 function normalizeOutputSpec(value: unknown): RecipeOutputSpec | null {
   if (!isJsonObject(value)) return null
-  const outputCode = typeof value.output_code === 'string' ? value.output_code : ''
+  const outputMaterialType = typeof value.output_material_type === 'string'
+    ? value.output_material_type
+    : typeof value.output_code === 'string'
+      ? value.output_code
+      : ''
   const outputName = typeof value.output_name === 'string' ? value.output_name : ''
   const outputType = typeof value.output_type === 'string' ? value.output_type : ''
   const qty = typeof value.qty === 'number' ? value.qty : Number(value.qty)
   const uomCode = typeof value.uom_code === 'string' ? value.uom_code : ''
-  if (!outputCode || !outputName || !outputType || !Number.isFinite(qty) || !uomCode) return null
+  if (!outputMaterialType || !outputName || !outputType || !Number.isFinite(qty) || !uomCode) return null
   return {
-    output_code: outputCode,
+    output_material_type: outputMaterialType,
     output_name: outputName,
     output_type: outputType,
     qty,
@@ -1466,13 +1470,17 @@ function normalizeOutputSpec(value: unknown): RecipeOutputSpec | null {
 
 function normalizeMaterialRequirement(value: unknown): RecipeMaterialRequirement | null {
   if (!isJsonObject(value)) return null
-  const materialKey = typeof value.material_key === 'string' ? value.material_key : ''
+  const materialType = typeof value.material_type === 'string'
+    ? value.material_type
+    : typeof value.material_key === 'string'
+      ? value.material_key
+      : ''
   const materialRole = typeof value.material_role === 'string' ? value.material_role : ''
   const qty = typeof value.qty === 'number' ? value.qty : Number(value.qty)
   const uomCode = typeof value.uom_code === 'string' ? value.uom_code : ''
-  if (!materialKey || !materialRole || !Number.isFinite(qty) || !uomCode) return null
+  if (!materialType || !materialRole || !Number.isFinite(qty) || !uomCode) return null
   return {
-    material_key: materialKey,
+    material_type: materialType,
     material_name: typeof value.material_name === 'string' ? value.material_name : undefined,
     material_role: materialRole,
     material_type_code: typeof value.material_type_code === 'string' ? value.material_type_code : undefined,
@@ -2307,7 +2315,7 @@ function saveMaterial() {
   const type = material.material_type_id != null ? materialTypeMap.value.get(material.material_type_id) : undefined
   const attrValues = buildMaterialAttrValues()
   const requirement: RecipeMaterialRequirement = {
-    material_key: material.material_code,
+    material_type: material.material_code,
     material_name: material.material_name,
     material_role: materialForm.material_role.trim(),
     material_code: material.material_code,
@@ -2375,7 +2383,7 @@ function closeOutputModal() {
 
 function validateOutputForm() {
   resetOutputErrors()
-  if (!outputForm.output_code.trim()) outputErrors.output_code = t('recipe.edit.outputCodeRequired')
+  if (!outputForm.output_material_type.trim()) outputErrors.output_material_type = t('recipe.edit.outputCodeRequired')
   if (!outputForm.output_name.trim()) outputErrors.output_name = t('recipe.edit.outputNameRequired')
   const qty = Number(outputForm.qty)
   if (!Number.isFinite(qty) || qty < 0) outputErrors.qty = t('recipe.edit.outputQuantityNonNegative')
@@ -2386,7 +2394,7 @@ function validateOutputForm() {
 function saveOutput() {
   if (!validateOutputForm()) return
   const output: RecipeOutputSpec = {
-    output_code: outputForm.output_code.trim(),
+    output_material_type: outputForm.output_material_type.trim(),
     output_name: outputForm.output_name.trim(),
     output_type: outputForm.output_type,
     qty: Number(outputForm.qty),

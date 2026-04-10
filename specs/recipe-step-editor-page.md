@@ -40,14 +40,14 @@
   - `flow.steps[].material_inputs`
   - `flow.steps[].material_outputs`
 - input-material editable fields:
-  - `material_key`
+  - `material_type`
   - `qty`
   - `uom_code`
   - `basis`
   - `consumption_mode`
   - `notes`
 - output-material editable fields:
-  - `output_code`
+  - `output_material_type`
   - `output_name`
   - `output_type`
   - `qty`

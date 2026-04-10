@@ -43,8 +43,8 @@
   - `flow.steps[].material_outputs`
 - this section edits step-level material consumption and step-level material/output results
 - UI design
- - when add button is pressed, input focus will get to material_type_key then modal dialog of 種別ブラウザ will popup 
- - after user choose the material_type_key. default uom will be retrieved from type_def table meta info.
+ - when add button is pressed, input focus will get to `material_type` then modal dialog of 種別ブラウザ will popup
+ - after user chooses `material_type`, default uom will be retrieved from `type_def.meta.default_uom`
 
 
 ### Section 3: Equipments
@@ -104,3 +104,6 @@
   - equipments
   - parameters
   - QA
+- current recipe field names on this page are:
+  - `flow.steps[].material_inputs[].material_type`
+  - `flow.steps[].material_outputs[].output_material_type`

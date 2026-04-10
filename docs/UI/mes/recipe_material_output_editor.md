@@ -80,7 +80,7 @@
 - dynamic values are stored in:
   - `attr_values`
 - empty attribute inputs do not block save on this page
-- if no master material is selected, the page writes a fallback `material_key` from recipe-entered data so the row can still be saved
+- if no master material is selected, the page writes a fallback `material_type` from recipe-entered data so the row can still be saved
 
 ## Output JSON Handling
 - target arrays:

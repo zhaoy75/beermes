@@ -279,19 +279,22 @@
                   <th class="px-3 py-2">{{ t('recipe.itemEditor.equipmentTypeCode') }}</th>
                   <th class="px-3 py-2">{{ t('recipe.itemEditor.equipmentTemplateCode') }}</th>
                   <th class="px-3 py-2">{{ t('recipe.edit.quantity') }}</th>
-                  <th class="px-3 py-2">{{ t('recipe.itemEditor.capabilityRules') }}</th>
                   <th class="px-3 py-2">{{ t('recipe.edit.notes') }}</th>
                   <th class="px-3 py-2">{{ t('common.actions') }}</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-100">
                 <tr v-for="(row, index) in equipmentRows" :key="row.key" class="align-top">
-                  <td class="px-3 py-2"><input v-model.trim="row.equipment_type_code" class="w-full rounded border px-2 py-1 font-mono text-xs" /></td>
+                  <td class="px-3 py-2">
+                    <input
+                      :ref="(el) => setEquipmentTypeInputRef(row.key, el)"
+                      v-model.trim="row.equipment_type_code"
+                      class="w-full rounded border px-2 py-1 font-mono text-xs"
+                      @focus="handleEquipmentTypeFocus(row)"
+                    />
+                  </td>
                   <td class="px-3 py-2"><input v-model.trim="row.equipment_template_code" class="w-full rounded border px-2 py-1 font-mono text-xs" /></td>
                   <td class="px-3 py-2"><input v-model.trim="row.quantity" class="w-full rounded border px-2 py-1" /></td>
-                  <td class="px-3 py-2">
-                    <textarea v-model.trim="row.capability_rules" rows="3" class="w-full rounded border px-2 py-1 font-mono text-xs" :placeholder="jsonObjectPlaceholder"></textarea>
-                  </td>
                   <td class="px-3 py-2"><input v-model.trim="row.notes" class="w-full rounded border px-2 py-1" /></td>
                   <td class="px-3 py-2 text-right">
                     <button class="rounded border px-2 py-1 text-xs hover:bg-gray-100" type="button" @click.prevent="removeEquipmentRow(index)">
@@ -300,7 +303,7 @@
                   </td>
                 </tr>
                 <tr v-if="equipmentRows.length === 0">
-                  <td colspan="6" class="px-3 py-4 text-center text-sm text-gray-500">{{ t('recipe.itemEditor.noEquipment') }}</td>
+                  <td colspan="5" class="px-3 py-4 text-center text-sm text-gray-500">{{ t('recipe.itemEditor.noEquipment') }}</td>
                 </tr>
               </tbody>
             </table>
@@ -666,6 +669,7 @@ const parameterRows = ref<ParameterRowState[]>([])
 const qualityRows = ref<QualityRowState[]>([])
 const inputMaterialTypeInputRefs = new Map<string, HTMLInputElement>()
 const outputMaterialTypeInputRefs = new Map<string, HTMLInputElement>()
+const equipmentTypeInputRefs = new Map<string, HTMLInputElement>()
 
 const recipeId = computed(() => (typeof route.params.recipeId === 'string' ? route.params.recipeId : ''))
 const versionId = computed(() => (typeof route.params.versionId === 'string' ? route.params.versionId : ''))
@@ -742,6 +746,24 @@ function setOutputMaterialTypeInputRef(key: string, element: unknown) {
     return
   }
   outputMaterialTypeInputRefs.delete(key)
+}
+
+function handleEquipmentTypeFocus(row: EquipmentRowState) {
+  openTypeDefGraph({
+    preferredDomain: 'equipment_type',
+    restoreFocusOnClose: false,
+    onSelect: (selectedType: TypeDefGraphSelection) => {
+      row.equipment_type_code = selectedType.code
+    },
+  })
+}
+
+function setEquipmentTypeInputRef(key: string, element: unknown) {
+  if (element instanceof HTMLInputElement) {
+    equipmentTypeInputRefs.set(key, element)
+    return
+  }
+  equipmentTypeInputRefs.delete(key)
 }
 
 function isJsonObject(value: unknown): value is JsonObject {
@@ -1143,6 +1165,7 @@ function resetStepForm() {
   qualityRows.value = []
   inputMaterialTypeInputRefs.clear()
   outputMaterialTypeInputRefs.clear()
+  equipmentTypeInputRefs.clear()
   resetStepErrors()
 }
 
@@ -1230,8 +1253,11 @@ function removeOutputMaterialRow(index: number) {
   outputMaterialRows.value.splice(index, 1)
 }
 
-function addEquipmentRow() {
-  equipmentRows.value.push(createEquipmentRow())
+async function addEquipmentRow() {
+  const row = createEquipmentRow()
+  equipmentRows.value.push(row)
+  await nextTick()
+  equipmentTypeInputRefs.get(row.key)?.focus()
 }
 
 function removeEquipmentRow(index: number) {

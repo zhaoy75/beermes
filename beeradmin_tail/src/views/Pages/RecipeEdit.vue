@@ -1771,7 +1771,7 @@ async function loadReferenceData() {
       .eq('domain', 'material_type')
       .eq('is_active', true)
       .order('sort_order', { ascending: true }),
-    supabase
+    mesClient()
       .from('mst_quality_check')
       .select('id, check_code, check_name, status')
       .eq('status', 'active')

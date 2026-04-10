@@ -67,11 +67,15 @@
 ### 3. Equipments
 - source:
   - `flow.steps[].equipment_requirements`
+- interaction:
+  - adding a new equipment row focuses `equipment_type_code` and opens the shared type browser
+  - the browser opens with the equipment-type domain selected
+  - selecting a type from the browser copies `type_def.code` into `equipment_type_code`
+  - `capability_rules` is preserved in saved data when already present, but is not edited in the current page UI
 - editable fields:
   - `equipment_type_code`
   - `equipment_template_code`
   - `quantity`
-  - `capability_rules`
   - `notes`
 
 ### 4. Parameters

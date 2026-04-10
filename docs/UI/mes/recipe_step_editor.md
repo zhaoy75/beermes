@@ -60,6 +60,10 @@
 - this section stays step-level only
 - it does not reintroduce top-level `recipe_body_json.equipment`
 - UI 
+  - equipments input
+    - when add button is pressed, input focus will get to `o設備種別コード` then modal dialog of 種別ブラウザ will popup. default domain will be equipment.
+    - after user chooses `type`, return to original type
+- 能力条件 (JSON) is not need at this time
 
 ### Section 4: Parameters
 - array editor for:

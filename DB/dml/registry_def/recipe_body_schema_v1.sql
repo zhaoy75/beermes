@@ -1,3 +1,5 @@
+delete from public.registry_def where def_key = 'recipe_body_v1' and kind = 'recipe_schema';
+
 INSERT INTO public.registry_def (
   kind,
   def_key,
@@ -121,18 +123,6 @@ VALUES (
         }
       }
     },
-    "equipment": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "default_requirements": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/equipmentRequirement"
-          }
-        }
-      }
-    },
     "flow": {
       "type": "object",
       "additionalProperties": false,
@@ -252,9 +242,6 @@ VALUES (
         "material_type_code": {
           "$ref": "#/$defs/code"
         },
-        "material_spec_code": {
-          "$ref": "#/$defs/code"
-        },
         "material_code": {
           "$ref": "#/$defs/code"
         },
@@ -272,6 +259,10 @@ VALUES (
         "is_optional": {
           "type": "boolean"
         },
+        "attr_values": {
+          "type": "object",
+          "additionalProperties": true
+        },
         "allowed_substitutions": {
           "type": "array",
           "items": {
@@ -285,9 +276,6 @@ VALUES (
       "allOf": [
         {
           "anyOf": [
-            {
-              "required": ["material_spec_code"]
-            },
             {
               "required": ["material_type_code"]
             },

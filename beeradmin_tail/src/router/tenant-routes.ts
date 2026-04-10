@@ -21,6 +21,26 @@ export const tenantRoutes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/recipeEdit/:recipeId/:versionId/item/:kind/:section/:index?',
+    name: 'recipeItemEditor',
+    component: () => import('@/views/Pages/RecipeMaterialOutputEditor.vue'),
+    meta: {
+      title: 'Recipe Item Editor',
+      requiresAuth: true,
+      requiresDevelopmentMode: true,
+    },
+  },
+  {
+    path: '/recipeEdit/:recipeId/:versionId/step/:index?',
+    name: 'recipeStepEditor',
+    component: () => import('@/views/Pages/RecipeStepEditor.vue'),
+    meta: {
+      title: 'Recipe Step Editor',
+      requiresAuth: true,
+      requiresDevelopmentMode: true,
+    },
+  },
+  {
     path: '/recipeList',
     name: 'レシピ管理',
     component: () => import('@/views/Pages/RecipeList.vue'),
@@ -130,21 +150,13 @@ export const tenantRoutes: RouteRecordRaw[] = [
     },
   },
   {
-    path: '/materialClassMaster',
-    name: 'materialClassMaster',
-    component: () => import('@/views/Pages/MaterialClassMaster.vue'),
+    path: '/TypeMaster',
+    name: 'TypeMaster',
+    component: () => import('@/views/Pages/TypeMaster.vue'),
     meta: {
-      title: 'Material Class Master',
+      title: 'Type Management',
       requiresAuth: true,
-    },
-  },
-  {
-    path: '/materialTypeMaster',
-    name: 'materialTypeMaster',
-    component: () => import('@/views/Pages/MaterialTypeMaster.vue'),
-    meta: {
-      title: 'Material Type Master',
-      requiresAuth: true,
+      requiresDevelopmentMode: true,
     },
   },
   {

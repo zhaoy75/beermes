@@ -262,7 +262,7 @@ import { supabase } from '@/lib/supabase'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
 
-const DEFAULT_SCHEMA_KEY = 'recipe_body_schema_v1'
+const DEFAULT_SCHEMA_KEY = 'recipe_body_v1'
 const VERSION_STATUSES = ['draft', 'in_review', 'approved', 'obsolete', 'archived'] as const
 
 type JsonObject = Record<string, unknown>

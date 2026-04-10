@@ -14,7 +14,6 @@
   - can edit recipe version metadata
   - can edit outputs in recipe-body JSON
   - can edit materials in recipe-body JSON
-  - can edit default equipment requirements in recipe-body JSON
   - can edit flow steps in recipe-body JSON
   - can edit global quality checks and release criteria in recipe-body JSON
   - can edit document references in recipe-body JSON
@@ -44,24 +43,20 @@
   - maintain `recipe_body_json.outputs.co_products`
   - maintain `recipe_body_json.outputs.waste`
 
-### Section 4: Equipment
-- Purpose:
-  - maintain `recipe_body_json.equipment.default_requirements`
-
-### Section 5: Flow Steps
+### Section 4: Flow Steps
 - Purpose:
   - maintain `recipe_body_json.flow.steps`
 
-### Section 6: Quality
+### Section 5: Quality
 - Purpose:
   - maintain `recipe_body_json.quality.global_checks`
   - maintain `recipe_body_json.quality.release_criteria`
 
-### Section 7: Documents
+### Section 6: Documents
 - Purpose:
   - maintain `recipe_body_json.documents`
 
-### Section 8: Schema Summary
+### Section 7: Schema Summary
 - Purpose:
   - show schema key, scope, and visible top-level sections
 
@@ -70,7 +65,6 @@
 - Supported sections:
   - `Materials`
   - `Outputs`
-  - `Equipment`
   - `Flow Steps`
   - `Quality`
   - `Documents`
@@ -82,13 +76,11 @@
   - the section body expands again
 - Sections unsupported by the loaded schema remain unavailable and do not render.
 
-### Modal Dialog
-- `Material Edit`
-- `Output Edit`
-- `Equipment Requirement Edit`
-- `Step Edit`
+### Dialog / Dedicated Page
 - `Global Quality Check Edit`
 - `Document Edit`
+- dedicated page:
+  - `RecipeStepEditor`
 
 ## Field Definitions
 ### Recipe Header Fields
@@ -137,8 +129,11 @@
   - `recipe_body_json.materials.optional`
 - Lookup source for selection:
   - `mes.mst_material`
-  - `mes.mst_material_spec`
   - `public.type_def` domain `material_type`
+  - `public.entity_attr_set`
+  - `public.attr_set`
+  - `public.attr_set_rule`
+  - `public.attr_def`
   - `public.mst_uom`
 - Main fields per row:
   - material
@@ -147,6 +142,14 @@
   - UOM code
   - basis
   - notes
+  - attr-values summary
+- Add/edit behavior:
+  - add and edit actions open the dedicated recipe item editor page
+  - the detail editor is no longer embedded in `RecipeEdit.vue`
+
+### Material / Output Editor Page
+- Detailed material and output editing is handled by:
+  - [recipe_material_output_editor.md](/Users/zhao/dev/other/beer/docs/UI/mes/recipe_material_output_editor.md)
 
 ### Outputs Grid
 - Source:
@@ -161,19 +164,8 @@
   - UOM code
   - basis
   - notes
-
-### Equipment Grid
-- Source:
-  - `recipe_body_json.equipment.default_requirements`
-- Lookup source for selection:
-  - `public.type_def` domain `equipment_type`
-  - `mes.mst_equipment_template`
-- Main fields per row:
-  - equipment type code
-  - equipment template code
-  - quantity
-  - capability-rules JSON
-  - notes
+- Add/edit behavior:
+  - add and edit actions open the dedicated recipe item editor page
 
 ### Flow Steps Grid
 - Source:
@@ -186,24 +178,12 @@
   - `duration_sec`
   - parameter count
   - quality-check count
+- Add/edit behavior:
+  - add and edit actions open the dedicated step editor page
 
-### Step Edit Dialog
-- editable fields:
-  - `step_no`
-  - `step_code`
-  - `step_name`
-  - `step_type`
-  - `step_template_code`
-  - `duration_sec`
-  - `instructions`
-  - `notes`
-  - parameters array
-  - quality-check array
-- preserved fields:
-  - material inputs
-  - material outputs
-  - equipment requirements
-  - hold constraints
+### Step Editor Page
+- Detailed flow-step editing is handled by:
+  - [recipe_step_editor.md](/Users/zhao/dev/other/beer/docs/UI/mes/recipe_step_editor.md)
 
 ### Quality Grid
 - Source:
@@ -254,6 +234,7 @@
 - Update `mes.mst_recipe`.
 - Update the selected `mes.mst_recipe_version`.
 - Persist the current `recipe_body_json`.
+  - material rows may include `attr_values` for selected type-specific attributes
 
 ### Version Up
 - Save current data first.
@@ -270,9 +251,6 @@
 
 ### Add Output / Edit Output / Delete Output
 - Edit top-level recipe outputs directly inside body JSON.
-
-### Add Equipment Requirement / Edit Equipment Requirement / Delete Equipment Requirement
-- Edit top-level default equipment requirements directly inside body JSON.
 
 ### Add Step / Edit Step / Delete Step
 - Edit recipe flow steps directly inside body JSON.
@@ -311,8 +289,11 @@
   - `public.recipe_schema_get(p_def_key)`
 - Material lookup:
   - `mes.mst_material`
-  - `mes.mst_material_spec`
   - `public.type_def`
+  - `public.entity_attr_set`
+  - `public.attr_set`
+  - `public.attr_set_rule`
+  - `public.attr_def`
   - `public.mst_uom`
 
 ## JSON Handling
@@ -326,8 +307,6 @@
   - array of co-product output objects
 - `recipe_body_json.outputs.waste`
   - array of waste output objects
-- `recipe_body_json.equipment.default_requirements`
-  - array of default equipment requirement objects
 - `recipe_body_json.flow.steps`
   - array of flow-step objects
 - `recipe_body_json.quality.global_checks`
@@ -343,4 +322,6 @@
 
 ## Notes
 - This page is already aligned to the `mes` schema model rather than the deleted legacy recipe tables.
-- Top-level schema sections `outputs`, `equipment`, `quality`, and `documents` now have editable UI sections in addition to schema badges.
+- Top-level schema sections `outputs`, `quality`, and `documents` now have editable UI sections in addition to schema badges.
+- Detailed flow-step editing is documented separately in:
+  - [recipe_step_editor.md](/Users/zhao/dev/other/beer/docs/UI/mes/recipe_step_editor.md)

@@ -670,63 +670,32 @@
       "adminOnlySystem": "Only admins can edit system scope records."
     }
   },
-  "materialClass": {
-    "title": "Material Class Master",
-    "subtitle": "Maintain material class definitions used in production workflows.",
-    "newTitle": "New Material Class",
-    "editTitle": "Edit Material Class",
-    "deleteTitle": "Delete Material Class",
-    "deleteConfirm": "Delete material class {name}? This cannot be undone.",
-    "filters": {
-      "category": "Category"
-    },
-    "table": {
-      "name": "Name",
-      "label": "Label",
-      "category": "Category",
-      "alcoholTaxRequired": "Alcohol tax required",
-      "manufacturingRequired": "Manufacturing application required",
-      "movingControlRequired": "Moving control required",
-      "shipmentControlRequired": "Shipment control required",
-      "description": "Description",
-      "createdAt": "Created"
-    },
-    "form": {
-      "name": "Name",
-      "label": "Label",
-      "category": "Category",
-      "alcoholTaxRequired": "Alcohol tax required",
-      "manufacturingRequired": "Manufacturing application required",
-      "movingControlRequired": "Moving control required",
-      "shipmentControlRequired": "Shipment control required",
-      "description": "Description"
-    },
-    "errors": {
-      "nameRequired": "Name is required.",
-      "labelRequired": "Label is required.",
-      "categoryRequired": "Category is required.",
-      "flagInvalid": "Flag must be true or false.",
-      "adminOnlySystem": "Only admins can edit system scope records."
-    }
-  },
   "materialType": {
-    "title": "Material Type Master",
-    "subtitle": "Maintain the material type tree and attribute assignments.",
-    "treeTitle": "Material type tree",
+    "title": "Type Management",
+    "subtitle": "Maintain the type tree and attribute set assignments by domain.",
+    "domainLabel": "Domain",
+    "domainHint": "Select a domain to load the current tree and attribute set assignments.",
+    "addDomain": "Add domain",
+    "addDomainTitle": "Add Domain",
+    "treeTitle": "Type tree",
     "attributeTitle": "Attributes",
     "attributeSetCount": "{count} attribute sets assigned",
-    "selectedLabel": "Selected material type",
-    "noSelection": "Select a material type",
-    "selectPrompt": "Select a material type from the tree to see its attributes.",
+    "selectedLabel": "Selected type",
+    "noSelection": "Select a type",
+    "selectPrompt": "Select a type from the tree to see its attributes.",
     "addChild": "Add child type",
-    "manageAttributes": "Manage attributes",
-    "manageAttributesSubtitle": "Assign attribute sets for the selected material type.",
+    "manageAttributes": "Attribute Set Management",
+    "manageAttributesSubtitle": "Assign attribute sets for the selected type.",
     "attrEmpty": "No attributes assigned.",
     "attrSetEmpty": "No attribute sets available.",
-    "newTitle": "New Material Type",
-    "editTitle": "Edit Material Type",
-    "deleteTitle": "Delete Material Type",
-    "deleteConfirm": "Delete material type {name}? This cannot be undone.",
+    "newTitle": "New Type",
+    "editTitle": "Edit Type",
+    "deleteTitle": "Delete Type",
+    "deleteConfirm": "Delete type {name}? This cannot be undone.",
+    "domains": {
+      "materialType": "material",
+      "equipmentType": "equipment"
+    },
     "table": {
       "attrSet": "Attribute set",
       "code": "Code",
@@ -739,15 +708,22 @@
     },
     "form": {
       "code": "Code",
-      "name": "Name",
+      "nameJa": "Japanese name",
+      "nameEn": "English name",
       "parent": "Parent type",
       "noParent": "No parent",
       "sortOrder": "Sort order",
-      "active": "Active"
+      "active": "Active",
+      "domainCode": "Domain code",
+      "rootCode": "Root code"
     },
     "errors": {
       "codeRequired": "Code is required.",
-      "nameRequired": "Name is required.",
+      "nameJaRequired": "Japanese name is required.",
+      "nameEnRequired": "English name is required.",
+      "domainRequired": "Domain code is required.",
+      "rootCodeRequired": "Root code is required.",
+      "domainExists": "The domain already exists.",
       "adminOnlySystem": "Only admins can edit system scope records."
     }
   },
@@ -842,6 +818,9 @@
       "title": "Attribute sets",
       "subtitle": "Right click for actions."
     },
+    "filters": {
+      "domain": "Domain"
+    },
     "rules": {
       "title": "Attribute rules",
       "dialogTitle": "Edit attribute rules",
@@ -931,27 +910,53 @@
     }
   },
   "material": {
-    "title": "Material Master Maintenance",
-    "subtitle": "Manage raw-material records backing brewing operations",
+    "title": "Raw Material Master",
+    "subtitle": "Maintain raw material records used by recipe and manufacturing workflows.",
+    "treeTitle": "Material Types",
+    "treeHint": "Selecting a type filters the list and sets the default create context.",
+    "listTitle": "Materials",
+    "detailTitle": "Material Details",
+    "detailHint": "Select a material type and create a new material, or pick an existing row to edit.",
     "newTitle": "New Material",
     "editTitle": "Edit Material",
     "deleteTitle": "Delete Material",
     "deleteConfirm": "Delete material {code}? This cannot be undone.",
-    "searchPlaceholder": "Search materials…",
-    "categoryPlaceholder": "Select a category",
-    "uomPlaceholder": "Select a unit of measure",
-    "activeLabel": "Material is active",
-    "invalidCategory": "Unknown category",
-    "categories": {
-      "malt": "Malt",
-      "hop": "Hop",
-      "yeast": "Yeast",
-      "adjunct": "Adjunct",
-      "water": "Water",
-      "packaging": "Packaging",
-      "chemical": "Chemical",
-      "cleaning": "Cleaning",
-      "other": "Other"
+    "searchPlaceholder": "Search by code or name",
+    "typeSearchPlaceholder": "Search material types",
+    "selectedType": "Selected type",
+    "formTypeHint": "To change the form type, pick another type in the tree and apply it here.",
+    "formCreateHint": "Create a new material under the selected type.",
+    "formEditHint": "Update the core raw-material master fields.",
+    "fields": {
+      "code": "Material code",
+      "name": "Material name",
+      "type": "Material type",
+      "uom": "Base UOM",
+      "status": "Status"
+    },
+    "placeholders": {
+      "code": "Example: MAT_HOPS_SAAZ",
+      "name": "Example: Saaz Hops",
+      "uom": "Select a unit of measure",
+      "status": "Select a status"
+    },
+    "actions": {
+      "newMaterial": "New Material",
+      "createHere": "Create Here",
+      "createFirst": "Create First Material",
+      "useSelectedType": "Use Selected Type"
+    },
+    "empty": {
+      "typeTree": "No material types are available.",
+      "noTypeSelected": "Select a material type first.",
+      "noMaterials": "No materials are registered under this type yet.",
+      "noSearchResults": "No materials match the current search."
+    },
+    "errors": {
+      "loadFailed": "Failed to load raw materials: {message}",
+      "saveFailed": "Failed to save the material: {message}",
+      "deleteFailed": "Failed to delete the material: {message}",
+      "codeUnique": "That material code already exists."
     }
   },
   "tank": {
@@ -2044,6 +2049,60 @@
       "closeHint": "Press Esc to close"
     }
   },
+  "typeDefGraphModal": {
+    "title": "Type Browser",
+    "subtitle": "Read-only type definition column browser opened with Ctrl/Cmd + T.",
+    "graphTitle": "type_def graph",
+    "browserTitle": "type_def column browser",
+    "pathTitle": "Selected path",
+    "resultsTitle": "Search results",
+    "detailsTitle": "Selected type",
+    "empty": "No types are available for the selected domain.",
+    "emptySearch": "No types match the current search.",
+    "emptySelection": "Select a type to view its details.",
+    "fields": {
+      "domain": "Domain",
+      "domainHint": "Switch the `type_def.domain` dropdown to reload the browser.",
+      "search": "Search",
+      "searchPlaceholder": "Search by code or name",
+      "searchHint": "Select a search result to move the browser to that branch."
+    },
+    "summary": {
+      "nodes": "{count} nodes",
+      "roots": "{count} roots",
+      "depth": "Depth {count}",
+      "matches": "{count} matches"
+    },
+    "shortcuts": {
+      "closeHint": "Press Esc to close"
+    },
+    "legend": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "node": {
+      "scope": "Scope",
+      "sortOrder": "Sort order",
+      "children": "Children"
+    },
+    "columns": {
+      "root": "Roots"
+    },
+    "details": {
+      "code": "Code",
+      "parent": "Parent",
+      "children": "Children",
+      "sortOrder": "Sort order",
+      "domain": "Domain"
+    },
+    "actions": {
+      "clearSearch": "Clear search"
+    },
+    "errors": {
+      "loadFailed": "Failed to load the type browser: {message}",
+      "industryMissing": "No active industry was found."
+    }
+  },
   "systemAdmin": {
     "nav": {
       "group": "System Scope",
@@ -2205,8 +2264,8 @@
       "systemMaintenance": "System Maintenance",
       "alcoholTypeMaster": "Alcohol Type Master",
       "alcoholTaxMaster": "Alcohol Tax Master",
-      "materialClassMaster": "Material Class Master",
-      "materialTypeMaster": "Material Type Master",
+      "TypeMaster": "Type Management",
+      "materialTypeMaster": "Type Management",
       "systemRelated": "System related",
       "attrDefMaster": "Attribute Definition Master",
       "attrSetMaster": "Attribute Set Master",
@@ -2691,6 +2750,11 @@
       "fixedPerBatch": "Fixed Per Batch",
       "byFormula": "By Formula"
     },
+    "consumptionModes": {
+      "exact": "Exact",
+      "estimate": "Estimate",
+      "backflush": "Backflush"
+    },
     "stepTypes": {
       "process": "Process",
       "prep": "Prep",
@@ -2823,15 +2887,18 @@
       "ingredientsSubtitle": "Maintain the materials used by this recipe.",
       "materialsStoredIn": "These rows are stored inside `recipe_body_json.materials`.",
       "outputsStoredIn": "These rows are stored inside `recipe_body_json.outputs`.",
-      "equipmentStoredIn": "These rows are stored inside `recipe_body_json.equipment.default_requirements`.",
       "qualityStoredIn": "These rows are stored inside `recipe_body_json.quality`.",
       "documentsStoredIn": "These rows are stored inside `recipe_body_json.documents`.",
       "addMaterial": "Add Material",
       "editMaterial": "Edit Material",
+      "materialInlineEditorHint": "Choose the material source on the left, then edit the recipe-specific inputs on the right.",
+      "materialSourceTitle": "Material source",
+      "materialSourceListTitle": "Material list",
+      "materialEditorTitle": "Material editor",
+      "materialEditorSubtitle": "Edit the selected material as a recipe requirement.",
+      "selectMaterialSourcePrompt": "Select a material from the source list on the left.",
       "addOutput": "Add Output",
       "editOutput": "Edit Output",
-      "addEquipmentRequirement": "Add Equipment Requirement",
-      "editEquipmentRequirement": "Edit Equipment Requirement",
       "addGlobalCheck": "Add Global Check",
       "editGlobalCheck": "Edit Global Check",
       "addDocument": "Add Document",
@@ -2848,9 +2915,6 @@
       "quantity": "Quantity",
       "uomCode": "UOM Code",
       "basis": "Basis",
-      "equipmentType": "Equipment Type",
-      "equipmentTemplate": "Equipment Template",
-      "capabilityRules": "Capability Rules (JSON)",
       "outputCode": "Output Code",
       "outputName": "Output Name",
       "outputType": "Output Type",
@@ -2863,9 +2927,22 @@
       "outputBasisYieldBased": "Yield Based",
       "usageStage": "Usage Stage",
       "materialTypeFilter": "Material type",
+      "materialTypeTreeTitle": "Material type tree",
+      "materialTypeTreeHint": "Select a material type from the `RAW_MATERIAL` subtree.",
+      "materialTypeTreeEmpty": "No material types are available.",
+      "selectMaterialTypePrompt": "Select a material type from the left tree.",
+      "materialAttributeTitle": "Type attributes",
+      "materialAttributeSubtitle": "Fields are generated from the attribute sets assigned to the selected material type.",
+      "materialAttributeEmpty": "No additional attributes are assigned to this material type.",
+      "materialAttributeDefaultSection": "Additional attributes",
+      "materialAttributeMin": "{field} must be greater than or equal to {min}.",
+      "materialAttributeMax": "{field} must be less than or equal to {max}.",
+      "materialAttributePattern": "{field} has an invalid format.",
+      "materialAttributeAllowedValues": "{field} must use one of the allowed values.",
+      "materialAttributeJson": "{field} must be valid JSON.",
+      "materialAttributeReference": "{field} has an invalid reference value.",
       "selectMaterial": "Select a material",
       "selectUom": "Select UOM",
-      "selectEquipmentType": "Select equipment type",
       "ingredientsEmpty": "No ingredients yet.",
       "ingredientsFilteredEmpty": "No ingredients match the selected material type.",
       "processTitle": "Recipe Steps",
@@ -2952,9 +3029,6 @@
       "materialRoleRequired": "Material role is required.",
       "quantityNonNegative": "Quantity must be zero or greater.",
       "uomCodeRequired": "UOM code is required.",
-      "equipmentTypeRequired": "Equipment type is required.",
-      "equipmentQuantityMin": "Equipment quantity must be 1 or greater.",
-      "capabilityRulesInvalid": "Capability rules must be a valid JSON object.",
       "qualityCheckCodeRequired": "Quality check code is required.",
       "acceptanceCriteriaInvalid": "Acceptance criteria must be a valid JSON object.",
       "releaseCriteriaInvalid": "Release criteria must be a valid JSON object.",
@@ -3001,6 +3075,71 @@
         "COND": "Conditioning",
         "PACKAGE": "Packaging"
       }
+    },
+    "itemEditor": {
+      "back": "Back to recipe",
+      "saveAndReturn": "Save and return",
+      "recipeSummary": "Recipe summary",
+      "routeContext": "Edit context",
+      "editorMode": "Editor mode",
+      "modeMaterial": "Raw material",
+      "modeOutput": "Output",
+      "modeStep": "Flow step",
+      "modeCreate": "Create",
+      "modeEdit": "Edit",
+      "materialCreateTitle": "Add Raw Material",
+      "materialEditTitle": "Edit Raw Material",
+      "outputCreateTitle": "Add Output",
+      "outputEditTitle": "Edit Output",
+      "stepCreateTitle": "Add Flow Step",
+      "stepEditTitle": "Edit Flow Step",
+      "outputPageTitle": "Output editor",
+      "materialPageHint": "Select the raw material source on the left and edit recipe-specific fields on the right.",
+      "outputPageHint": "Edit one recipe output on a dedicated page instead of a modal.",
+      "stepPageHint": "Edit one flow step on a dedicated page instead of a modal.",
+      "sectionMainInformation": "Main information",
+      "sectionMaterials": "Input and output materials",
+      "sectionEquipments": "Equipments",
+      "sectionParameters": "Parameters",
+      "sectionQa": "QA",
+      "stepMaterialsHint": "Edit the materials consumed and the outputs produced by this flow step.",
+      "stepEquipmentHint": "Edit the equipment requirements attached to this flow step.",
+      "stepParametersHint": "Edit the parameter targets attached to this flow step.",
+      "stepQualityHint": "Edit the quality checks attached to this flow step.",
+      "inputMaterialsTitle": "Input materials",
+      "outputMaterialsTitle": "Output materials",
+      "addInputMaterial": "Add input material",
+      "addOutputMaterial": "Add output material",
+      "addEquipment": "Add equipment",
+      "noInputMaterials": "No input materials.",
+      "noOutputMaterials": "No output materials.",
+      "noEquipment": "No equipment requirements.",
+      "materialKey": "Material key",
+      "consumptionMode": "Consumption mode",
+      "equipmentTypeCode": "Equipment type code",
+      "equipmentTemplateCode": "Equipment template code",
+      "capabilityRules": "Capability rules (JSON)",
+      "minValue": "Min",
+      "maxValue": "Max",
+      "setpoint": "Setpoint",
+      "samplingFrequency": "Sampling frequency",
+      "jsonObjectInvalid": "Enter a valid JSON object.",
+      "inputMaterialRequired": "Input material key is required.",
+      "outputTypeRequired": "Output type is required.",
+      "equipmentTypeRequired": "Equipment type code is required.",
+      "equipmentQuantityPositive": "Equipment quantity must be 1 or greater.",
+      "parameterCodeRequired": "Parameter code is required.",
+      "parameterNumberInvalid": "Parameter numeric fields are invalid.",
+      "durationNonNegative": "Duration must be zero or greater.",
+      "invalidTitle": "Recipe item editor",
+      "invalidRoute": "The editor route is invalid.",
+      "targetNotFound": "The requested recipe item was not found.",
+      "loadFailed": "Failed to load the recipe item editor.",
+      "saveFailed": "Failed to save the recipe item.",
+      "saveFailedWithMessage": "Failed to save the recipe item. {message}",
+      "materialSaved": "Raw material saved.",
+      "outputSaved": "Output saved.",
+      "stepSaved": "Flow step saved."
     }
   }
 }

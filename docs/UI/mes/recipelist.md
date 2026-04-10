@@ -87,7 +87,7 @@
 - `Schema`
   - from `mes.mst_recipe_version.schema_code`
   - fallback:
-    - `recipe_body_schema_v1`
+    - `recipe_body_v1`
 - `Updated`
   - from recipe-version `updated_at`
   - fallback to recipe-header update time

@@ -670,63 +670,32 @@
       "adminOnlySystem": "システムスコープは管理者のみ編集できます。"
     }
   },
-  "materialClass": {
-    "title": "原材料区分管理",
-    "subtitle": "原材料区分の定義を管理します。",
-    "newTitle": "原材料区分の追加",
-    "editTitle": "原材料区分の編集",
-    "deleteTitle": "原材料区分の削除",
-    "deleteConfirm": "原材料区分 {name} を削除しますか？この操作は元に戻せません。",
-    "filters": {
-      "category": "カテゴリ"
-    },
-    "table": {
-      "name": "名称",
-      "label": "表示名",
-      "category": "カテゴリ",
-      "alcoholTaxRequired": "酒税率管理",
-      "manufacturingRequired": "製造申請",
-      "movingControlRequired": "移出管理",
-      "shipmentControlRequired": "出荷管理",
-      "description": "説明",
-      "createdAt": "作成日時"
-    },
-    "form": {
-      "name": "名称",
-      "label": "表示名",
-      "category": "カテゴリ",
-      "alcoholTaxRequired": "酒税率管理",
-      "manufacturingRequired": "製造申請",
-      "movingControlRequired": "移出管理",
-      "shipmentControlRequired": "出荷管理",
-      "description": "説明"
-    },
-    "errors": {
-      "nameRequired": "名称は必須です。",
-      "labelRequired": "表示名は必須です。",
-      "categoryRequired": "カテゴリは必須です。",
-      "flagInvalid": "フラグは true/false を指定してください。",
-      "adminOnlySystem": "システムスコープは管理者のみ編集できます。"
-    }
-  },
   "materialType": {
-    "title": "原材料種別管理",
-    "subtitle": "原材料種別ツリーと属性割り当てを管理します。",
-    "treeTitle": "原材料種別ツリー",
+    "title": "種別管理",
+    "subtitle": "ドメイン別の種別ツリーと属性セット割り当てを管理します。",
+    "domainLabel": "ドメイン",
+    "domainHint": "ドメインを選択すると、そのドメインの現在の内容を表示します。",
+    "addDomain": "ドメイン追加",
+    "addDomainTitle": "ドメイン追加",
+    "treeTitle": "種別ツリー",
     "attributeTitle": "属性一覧",
     "attributeSetCount": "割り当て済み属性セット {count} 件",
-    "selectedLabel": "選択中の原材料種別",
-    "noSelection": "原材料種別を選択してください",
-    "selectPrompt": "左のツリーから原材料種別を選択してください。",
+    "selectedLabel": "選択中の種別",
+    "noSelection": "種別を選択してください",
+    "selectPrompt": "左のツリーから種別を選択してください。",
     "addChild": "子種別を追加",
-    "manageAttributes": "属性を管理",
-    "manageAttributesSubtitle": "選択した原材料種別に属性セットを割り当てます。",
+    "manageAttributes": "属性セット管理",
+    "manageAttributesSubtitle": "選択した種別に属性セットを割り当てます。",
     "attrEmpty": "属性が割り当てられていません。",
     "attrSetEmpty": "利用可能な属性セットがありません。",
-    "newTitle": "原材料種別の追加",
-    "editTitle": "原材料種別の編集",
-    "deleteTitle": "原材料種別の削除",
-    "deleteConfirm": "原材料種別 {name} を削除しますか？この操作は元に戻せません。",
+    "newTitle": "種別の追加",
+    "editTitle": "種別の編集",
+    "deleteTitle": "種別の削除",
+    "deleteConfirm": "種別 {name} を削除しますか？この操作は元に戻せません。",
+    "domains": {
+      "materialType": "material",
+      "equipmentType": "equipment"
+    },
     "table": {
       "attrSet": "属性セット",
       "code": "コード",
@@ -739,15 +708,22 @@
     },
     "form": {
       "code": "コード",
-      "name": "名称",
+      "nameJa": "日本語名",
+      "nameEn": "English Name",
       "parent": "親種別",
       "noParent": "親なし",
       "sortOrder": "並び順",
-      "active": "有効"
+      "active": "有効",
+      "domainCode": "ドメインコード",
+      "rootCode": "ルートコード"
     },
     "errors": {
       "codeRequired": "コードは必須です。",
-      "nameRequired": "名称は必須です。",
+      "nameJaRequired": "日本語名は必須です。",
+      "nameEnRequired": "English Name は必須です。",
+      "domainRequired": "ドメインコードは必須です。",
+      "rootCodeRequired": "ルートコードは必須です。",
+      "domainExists": "そのドメインは既に存在します。",
       "adminOnlySystem": "システムスコープは管理者のみ編集できます。"
     }
   },
@@ -842,6 +818,9 @@
       "title": "属性セット一覧",
       "subtitle": "右クリックで操作できます。"
     },
+    "filters": {
+      "domain": "ドメイン"
+    },
     "rules": {
       "title": "属性ルール",
       "dialogTitle": "属性ルール編集",
@@ -931,27 +910,53 @@
     }
   },
   "material": {
-    "title": "原材料マスタ",
-    "subtitle": "醸造で使用する原材料を管理します",
-    "newTitle": "原材料の追加",
+    "title": "原材料登録",
+    "subtitle": "レシピと製造で使用する原材料マスタを管理します。",
+    "treeTitle": "原材料種別",
+    "treeHint": "種別を選ぶと中央の原材料一覧と新規作成の対象が切り替わります。",
+    "listTitle": "原材料一覧",
+    "detailTitle": "原材料詳細",
+    "detailHint": "左の種別を選択して新規作成するか、一覧から原材料を選んで編集してください。",
+    "newTitle": "原材料の新規登録",
     "editTitle": "原材料の編集",
     "deleteTitle": "原材料の削除",
     "deleteConfirm": "原材料 {code} を削除しますか？ この操作は元に戻せません。",
-    "searchPlaceholder": "材料名で検索…",
-    "categoryPlaceholder": "カテゴリを選択",
-    "uomPlaceholder": "単位を選択",
-    "activeLabel": "この原材料を有効にする",
-    "invalidCategory": "未定義のカテゴリです",
-    "categories": {
-      "malt": "モルト",
-      "hop": "ホップ",
-      "yeast": "酵母",
-      "adjunct": "副原料",
-      "water": "水",
-      "packaging": "資材",
-      "chemical": "薬品",
-      "cleaning": "洗浄剤",
-      "other": "その他"
+    "searchPlaceholder": "コード / 名称で検索",
+    "typeSearchPlaceholder": "種別を検索",
+    "selectedType": "選択中の種別",
+    "formTypeHint": "種別を変える場合は左で選択してから「選択中の種別を使う」を押してください。",
+    "formCreateHint": "選択中の種別配下に新しい原材料を登録します。",
+    "formEditHint": "原材料マスタの基本情報を更新します。",
+    "fields": {
+      "code": "原材料コード",
+      "name": "原材料名",
+      "type": "原材料種別",
+      "uom": "基本単位",
+      "status": "ステータス"
+    },
+    "placeholders": {
+      "code": "例: MAT_HOPS_SAAZ",
+      "name": "例: Saaz Hops",
+      "uom": "単位を選択",
+      "status": "ステータスを選択"
+    },
+    "actions": {
+      "newMaterial": "新規原材料",
+      "createHere": "この種別で追加",
+      "createFirst": "最初の原材料を追加",
+      "useSelectedType": "選択中の種別を使う"
+    },
+    "empty": {
+      "typeTree": "表示できる原材料種別がありません。",
+      "noTypeSelected": "まず原材料種別を選択してください。",
+      "noMaterials": "この種別に原材料はまだ登録されていません。",
+      "noSearchResults": "検索条件に一致する原材料がありません。"
+    },
+    "errors": {
+      "loadFailed": "原材料マスタの読込に失敗しました: {message}",
+      "saveFailed": "原材料の保存に失敗しました: {message}",
+      "deleteFailed": "原材料の削除に失敗しました: {message}",
+      "codeUnique": "同じ原材料コードは既に存在します。"
     }
   },
   "tank": {
@@ -2036,6 +2041,60 @@
       "closeHint": "Esc で閉じる"
     }
   },
+  "typeDefGraphModal": {
+    "title": "種別ブラウザ",
+    "subtitle": "Ctrl/Cmd + T で開く種別定義の読み取り専用カラムブラウザです。",
+    "graphTitle": "type_def グラフ",
+    "browserTitle": "type_def カラムブラウザ",
+    "pathTitle": "選択パス",
+    "resultsTitle": "検索結果",
+    "detailsTitle": "選択中の種別",
+    "empty": "選択中のドメインに表示できる種別はありません。",
+    "emptySearch": "検索条件に一致する種別はありません。",
+    "emptySelection": "種別を選択すると詳細を表示します。",
+    "fields": {
+      "domain": "ドメイン",
+      "domainHint": "ドロップダウンで `type_def.domain` を切り替えると一覧を再読込します。",
+      "search": "検索",
+      "searchPlaceholder": "コードまたは名称で検索",
+      "searchHint": "検索結果を選ぶと該当ノードの親子パスへ移動します。"
+    },
+    "summary": {
+      "nodes": "ノード {count} 件",
+      "roots": "ルート {count} 件",
+      "depth": "深さ {count}",
+      "matches": "一致 {count} 件"
+    },
+    "shortcuts": {
+      "closeHint": "Esc で閉じる"
+    },
+    "legend": {
+      "active": "有効",
+      "inactive": "無効"
+    },
+    "node": {
+      "scope": "スコープ",
+      "sortOrder": "並び順",
+      "children": "子件数"
+    },
+    "columns": {
+      "root": "ルート"
+    },
+    "details": {
+      "code": "コード",
+      "parent": "親種別",
+      "children": "子件数",
+      "sortOrder": "並び順",
+      "domain": "ドメイン"
+    },
+    "actions": {
+      "clearSearch": "検索をクリア"
+    },
+    "errors": {
+      "loadFailed": "種別ブラウザの読込に失敗しました: {message}",
+      "industryMissing": "有効な業界が見つかりません。"
+    }
+  },
   "systemAdmin": {
     "nav": {
       "group": "システムスコープ",
@@ -2197,8 +2256,8 @@
       "systemMaintenance": "システム管理",
       "alcoholTypeMaster": "酒類種別管理",
       "alcoholTaxMaster": "酒税率管理",
-      "materialClassMaster": "原材料区分管理",
-      "materialTypeMaster": "原材料種別管理",
+      "TypeMaster": "種別管理",
+      "materialTypeMaster": "種別管理",
       "systemRelated": "システム関連",
       "attrDefMaster": "属性定義管理",
       "attrSetMaster": "属性セット管理",
@@ -2683,6 +2742,11 @@
       "fixedPerBatch": "バッチ固定",
       "byFormula": "計算式"
     },
+    "consumptionModes": {
+      "exact": "実績",
+      "estimate": "予定",
+      "backflush": "後引落"
+    },
     "stepTypes": {
       "process": "工程",
       "prep": "準備",
@@ -2815,15 +2879,18 @@
       "ingredientsSubtitle": "このレシピで使用する原材料を管理します。",
       "materialsStoredIn": "これらの行は `recipe_body_json.materials` に保存されます。",
       "outputsStoredIn": "これらの行は `recipe_body_json.outputs` に保存されます。",
-      "equipmentStoredIn": "これらの行は `recipe_body_json.equipment.default_requirements` に保存されます。",
       "qualityStoredIn": "これらの行は `recipe_body_json.quality` に保存されます。",
       "documentsStoredIn": "これらの行は `recipe_body_json.documents` に保存されます。",
       "addMaterial": "原材料を追加",
       "editMaterial": "原材料を編集",
+      "materialInlineEditorHint": "左で原材料ソースを選び、右でレシピ用の入力内容を編集します。",
+      "materialSourceTitle": "原材料ソース",
+      "materialSourceListTitle": "原材料一覧",
+      "materialEditorTitle": "原材料編集",
+      "materialEditorSubtitle": "選択した原材料をレシピ投入条件として編集します。",
+      "selectMaterialSourcePrompt": "左の原材料一覧から原材料を選択してください。",
       "addOutput": "出力を追加",
       "editOutput": "出力を編集",
-      "addEquipmentRequirement": "設備要件を追加",
-      "editEquipmentRequirement": "設備要件を編集",
       "addGlobalCheck": "全体品質チェックを追加",
       "editGlobalCheck": "全体品質チェックを編集",
       "addDocument": "文書を追加",
@@ -2840,9 +2907,6 @@
       "quantity": "数量",
       "uomCode": "単位コード",
       "basis": "基準",
-      "equipmentType": "設備タイプ",
-      "equipmentTemplate": "設備テンプレート",
-      "capabilityRules": "能力条件 (JSON)",
       "outputCode": "出力コード",
       "outputName": "出力名",
       "outputType": "出力タイプ",
@@ -2855,9 +2919,22 @@
       "outputBasisYieldBased": "歩留まり基準",
       "usageStage": "使用工程",
       "materialTypeFilter": "原材料種別",
+      "materialTypeTreeTitle": "原材料種別ツリー",
+      "materialTypeTreeHint": "`RAW_MATERIAL` 配下から原材料種別を選択します。",
+      "materialTypeTreeEmpty": "表示可能な原材料種別がありません。",
+      "selectMaterialTypePrompt": "左の原材料種別を選択してください。",
+      "materialAttributeTitle": "種別属性",
+      "materialAttributeSubtitle": "選択中の原材料種別に割り当てられた属性セットから入力項目を生成します。",
+      "materialAttributeEmpty": "この原材料種別に追加属性はありません。",
+      "materialAttributeDefaultSection": "追加属性",
+      "materialAttributeMin": "{field} は {min} 以上で入力してください。",
+      "materialAttributeMax": "{field} は {max} 以下で入力してください。",
+      "materialAttributePattern": "{field} の形式が正しくありません。",
+      "materialAttributeAllowedValues": "{field} は許可された値から選択してください。",
+      "materialAttributeJson": "{field} は正しいJSONで入力してください。",
+      "materialAttributeReference": "{field} の参照値が不正です。",
       "selectMaterial": "原材料を選択",
       "selectUom": "単位を選択",
-      "selectEquipmentType": "設備タイプを選択",
       "ingredientsEmpty": "原材料が登録されていません。",
       "ingredientsFilteredEmpty": "選択した種別の原材料はありません。",
       "processTitle": "レシピステップ",
@@ -2944,9 +3021,6 @@
       "materialRoleRequired": "原材料ロールは必須です。",
       "quantityNonNegative": "数量は 0 以上で入力してください。",
       "uomCodeRequired": "単位コードは必須です。",
-      "equipmentTypeRequired": "設備タイプは必須です。",
-      "equipmentQuantityMin": "設備数量は 1 以上で入力してください。",
-      "capabilityRulesInvalid": "能力条件は正しい JSON オブジェクトで入力してください。",
       "qualityCheckCodeRequired": "品質チェックコードは必須です。",
       "acceptanceCriteriaInvalid": "合格基準は正しい JSON オブジェクトで入力してください。",
       "releaseCriteriaInvalid": "リリース基準は正しい JSON オブジェクトで入力してください。",
@@ -2993,6 +3067,71 @@
         "COND": "熟成",
         "PACKAGE": "充填"
       }
+    },
+    "itemEditor": {
+      "back": "レシピへ戻る",
+      "saveAndReturn": "保存して戻る",
+      "recipeSummary": "レシピ概要",
+      "routeContext": "編集コンテキスト",
+      "editorMode": "編集対象",
+      "modeMaterial": "原材料",
+      "modeOutput": "出力",
+      "modeStep": "工程ステップ",
+      "modeCreate": "追加",
+      "modeEdit": "編集",
+      "materialCreateTitle": "原材料を追加",
+      "materialEditTitle": "原材料を編集",
+      "outputCreateTitle": "出力を追加",
+      "outputEditTitle": "出力を編集",
+      "stepCreateTitle": "工程ステップを追加",
+      "stepEditTitle": "工程ステップを編集",
+      "outputPageTitle": "出力編集",
+      "materialPageHint": "左で原材料ソースを選び、右でレシピ用の入力内容を編集します。",
+      "outputPageHint": "出力は modal ではなく専用 page で編集します。",
+      "stepPageHint": "工程ステップは専用 page で編集します。",
+      "sectionMainInformation": "メイン情報",
+      "sectionMaterials": "入出力原材料",
+      "sectionEquipments": "設備",
+      "sectionParameters": "パラメータ",
+      "sectionQa": "QA",
+      "stepMaterialsHint": "この工程ステップで消費する原材料と出力される中間品・製品を編集します。",
+      "stepEquipmentHint": "この工程ステップで必要な設備要件を編集します。",
+      "stepParametersHint": "このページでは工程ステップに紐づくパラメータを編集します。",
+      "stepQualityHint": "このページでは工程ステップに紐づく品質チェックを編集します。",
+      "inputMaterialsTitle": "入力原材料",
+      "outputMaterialsTitle": "出力原材料",
+      "addInputMaterial": "入力原材料を追加",
+      "addOutputMaterial": "出力原材料を追加",
+      "addEquipment": "設備を追加",
+      "noInputMaterials": "入力原材料はありません。",
+      "noOutputMaterials": "出力原材料はありません。",
+      "noEquipment": "設備要件はありません。",
+      "materialKey": "原材料キー",
+      "consumptionMode": "消費モード",
+      "equipmentTypeCode": "設備種別コード",
+      "equipmentTemplateCode": "設備テンプレートコード",
+      "capabilityRules": "能力条件 (JSON)",
+      "minValue": "最小値",
+      "maxValue": "最大値",
+      "setpoint": "設定値",
+      "samplingFrequency": "サンプリング頻度",
+      "jsonObjectInvalid": "JSON オブジェクト形式で入力してください。",
+      "inputMaterialRequired": "入力原材料キーは必須です。",
+      "outputTypeRequired": "出力タイプは必須です。",
+      "equipmentTypeRequired": "設備種別コードは必須です。",
+      "equipmentQuantityPositive": "設備数量は 1 以上で入力してください。",
+      "parameterCodeRequired": "パラメータコードは必須です。",
+      "parameterNumberInvalid": "パラメータの数値項目が不正です。",
+      "durationNonNegative": "所要時間は 0 以上で入力してください。",
+      "invalidTitle": "レシピ項目編集",
+      "invalidRoute": "編集 route が不正です。",
+      "targetNotFound": "対象のレシピ項目が見つかりません。",
+      "loadFailed": "レシピ項目編集ページの読み込みに失敗しました。",
+      "saveFailed": "レシピ項目の保存に失敗しました。",
+      "saveFailedWithMessage": "レシピ項目の保存に失敗しました。{message}",
+      "materialSaved": "原材料を保存しました。",
+      "outputSaved": "出力を保存しました。",
+      "stepSaved": "工程ステップを保存しました。"
     }
   }
 }

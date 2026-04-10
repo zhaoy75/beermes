@@ -68,7 +68,7 @@ Recipe JSON should mainly reference reusable master data by business code.
 Typical references in design JSON:
 - `step_template_code`
 - `material_type_code`
-- `material_spec_code`
+- `material_code`
 - `equipment_type_code`
 - `equipment_template_code`
 - `parameter_code`
@@ -93,7 +93,7 @@ This design should distinguish three stages clearly:
 
 1. Design time
 - Define what should happen.
-- Reference material type/spec and equipment capability/template.
+- Reference material type/code and equipment capability/template.
 
 2. Planning / scheduling time
 - Decide what can be used for a specific planned run.
@@ -335,7 +335,6 @@ Suggested fields:
 - `material_code`
 - `material_name`
 - `material_type_id` (`public.type_def.type_id`, domain=`material_type`)
-- `material_spec_id`
 - `base_uom_id`
 - `material_category`
 - `is_batch_managed`
@@ -384,26 +383,16 @@ Important rules:
 - tenant ownership should be enforced by composite foreign key
 - domain correctness should be enforced so `material_type_id` only points to `domain='material_type'` and `equipment_type_id` only points to `domain='equipment_type'`
 
-#### 4.3.4 `mst_material_spec`
+#### 4.3.4 Recipe JSON material references
 
-More precise than material type.
+Use a combination of:
+- `material_type_code` for class-level design intent
+- `material_code` when a recipe should point to an approved tenant material master row
 
-Suggested fields:
-- `id`
-- `tenant_id`
-- `material_type_id` (`public.type_def.type_id`, domain=`material_type`)
-- `spec_code`
-- `spec_name`
-- `status`
-
-Examples:
-- `PALE_MALT`
-- `CITRA_HOP`
-- `FOOD_GRADE_SUGAR_A`
-- `500ML_AMBER_BOTTLE`
-
-Why it is needed:
-- recipe design often needs a controlled specification, not a specific stock item
+Recommended rule:
+- keep `material_type_code` as the broad compatibility reference
+- add `material_code` whenever the recipe is intended to bind to a maintained material master
+- avoid introducing a separate material-spec master layer unless there is a concrete business need for it
 
 #### 4.3.5 `mst_equipment`
 
@@ -513,7 +502,7 @@ Examples of dimension:
 
 Recommended use cases:
 1. schema definition
-- `recipe_body_schema_v1`
+- `recipe_body_v1`
 - `recipe_body_schema_beer_v1`
 
 2. starter template / UI template
@@ -576,7 +565,7 @@ Practical repository rule for this project:
 
 At recipe design time, prefer:
 - `material_type_code`
-- `material_spec_code`
+- optional approved `material_code`
 - optional approved material list
 
 Avoid at design time:
@@ -682,7 +671,7 @@ The recipe JSON should not contain:
       {
         "material_role": "main_substrate",
         "material_type_code": "MALT",
-        "material_spec_code": "PALE_MALT",
+        "material_code": "MAT_MALT_PALE",
         "qty": 180,
         "uom_code": "KG"
       }
@@ -754,8 +743,8 @@ Risk 1: mixing recipe identity and version
 Risk 2: code references without snapshot traceability
 - Fix: use business codes in design JSON, but snapshot resolved identities on approval and release
 
-Risk 3: missing material specification layer
-- Fix: add `mst_material_spec`
+Risk 3: ambiguous material identity in recipe JSON
+- Fix: use `material_type_code` plus `material_code` where the recipe should bind to an approved material master
 
 Risk 4: missing equipment requirement layer
 - Fix: add `mst_equipment_template`
@@ -790,7 +779,6 @@ Risk 9: `regist_def` becoming an overloaded catch-all table
 
 ### 9.2 Add immediately
 - `mst_recipe_version`
-- `mst_material_spec`
 - `mst_equipment_template`
 
 ### 9.3 Strongly recommended next
@@ -806,7 +794,6 @@ Most important design rule:
 - all versioned recipe JSON belongs in `mst_recipe_version`
 
 Most important additions:
-- `mst_material_spec`
 - `mst_equipment_template`
 - explicit execution-side snapshot model
 
@@ -824,7 +811,7 @@ Best practical architecture:
 Recommended next outputs:
 1. PostgreSQL / Supabase DDL for the recommended core tables
 2. recipe JSON Schema aligned to this document
-3. sample beer recipe JSON using `step_template_code`, `material_spec_code`, and `equipment_template_code`
+3. sample beer recipe JSON using `step_template_code`, `material_type_code`, `material_code`, and `equipment_template_code`
 4. execution-side DDL that reuses `public.mes_batches`, introduces a new released-step model, and adds equipment/material/log traceability tables
 5. RLS policy template for Supabase multi-tenant design
 

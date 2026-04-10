@@ -21,6 +21,24 @@
         </div>
       </header>
 
+      <section class="mb-4 border border-gray-200 rounded-xl shadow-sm p-4">
+        <div class="flex flex-col gap-2 md:flex-row md:items-center md:gap-4">
+          <label class="text-sm font-medium text-gray-700" for="attr-set-domain-filter">
+            {{ t('attrSet.filters.domain') }}
+          </label>
+          <select
+            id="attr-set-domain-filter"
+            v-model="selectedDomain"
+            class="h-[40px] min-w-[220px] rounded border border-gray-300 bg-white px-3 text-sm"
+          >
+            <option :value="ALL_DOMAINS">{{ t('common.all') }}</option>
+            <option v-for="domain in domainOptions" :key="domain" :value="domain">
+              {{ domain }}
+            </option>
+          </select>
+        </div>
+      </section>
+
       <section class="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4">
         <aside class="border border-gray-200 rounded-xl shadow-sm p-3 h-[calc(100vh-200px)] overflow-y-auto">
           <div class="mb-3">
@@ -104,7 +122,7 @@
             </div>
             <div class="p-3 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
               <div
-                v-for="set in attrSets"
+                v-for="set in filteredAttrSets"
                 :key="set.attr_set_id"
                 class="border rounded-lg p-3 cursor-pointer hover:border-blue-300"
                 :class="set.attr_set_id === selectedSetId ? 'border-blue-500 bg-blue-50/40' : 'border-gray-200'"
@@ -184,7 +202,7 @@
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
-                  <tr v-for="rule in sortedRulesForSelected" :key="rule.attr_id">
+                  <tr v-for="rule in sortedRulesForSelected" :key="rule.attr_id" class="hover:bg-gray-50">
                     <td class="px-3 py-2 font-mono text-xs text-gray-700">{{ rule.code }}</td>
                     <td class="px-3 py-2">
                       <div>{{ rule.name }}</div>
@@ -205,9 +223,27 @@
                       <input v-model.trim="rule.default_value" class="h-[32px] border rounded px-2 text-xs w-full" />
                     </td>
                     <td class="px-3 py-2">
-                      <button class="text-xs text-red-600 hover:underline" @click="removeRule(rule.attr_id)">
-                        {{ t('common.delete') }}
-                      </button>
+                      <div class="flex items-center gap-2">
+                        <button
+                          class="inline-flex h-7 w-7 items-center justify-center rounded border border-gray-300 text-xs hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                          :disabled="!canMoveRuleUp(rule.attr_id)"
+                          title="Move up"
+                          @click="moveRuleUp(rule.attr_id)"
+                        >
+                          ↑
+                        </button>
+                        <button
+                          class="inline-flex h-7 w-7 items-center justify-center rounded border border-gray-300 text-xs hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                          :disabled="!canMoveRuleDown(rule.attr_id)"
+                          title="Move down"
+                          @click="moveRuleDown(rule.attr_id)"
+                        >
+                          ↓
+                        </button>
+                        <button class="text-xs text-red-600 hover:underline" @click="removeRule(rule.attr_id)">
+                          {{ t('common.delete') }}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 </tbody>
@@ -226,6 +262,9 @@
           class="absolute bg-white border border-gray-200 rounded shadow-lg text-sm"
           :style="{ top: `${contextMenu.y}px`, left: `${contextMenu.x}px` }"
         >
+          <button class="block w-full text-left px-3 py-2 hover:bg-gray-50" @click="contextMenuEdit">
+            {{ t('common.edit') }}
+          </button>
           <button class="block w-full text-left px-3 py-2 hover:bg-gray-50" @click="contextMenuPreview">
             {{ t('attrSet.actions.preview') }}
           </button>
@@ -438,7 +477,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { supabase } from '@/lib/supabase'
 import SystemAdminLayout from '@/layouts/SystemAdminLayout.vue'
@@ -488,6 +527,41 @@ type AttrRuleRow = {
   is_active: boolean
 }
 
+type AttrSetRuleQueryRow = {
+  attr_id: number
+  required: boolean | null
+  sort_order: number | null
+  is_active: boolean | null
+  meta: Record<string, unknown> | null
+  attr_def:
+    | {
+        attr_id: number
+        code: string
+        name: string
+        name_i18n: Record<string, string> | null
+        data_type: string
+        allowed_values: unknown | null
+      }
+    | {
+        attr_id: number
+        code: string
+        name: string
+        name_i18n: Record<string, string> | null
+        data_type: string
+        allowed_values: unknown | null
+      }[]
+    | null
+}
+
+type AttrDefJoinedRow = {
+  attr_id: number
+  code: string
+  name: string
+  name_i18n: Record<string, string> | null
+  data_type: string
+  allowed_values: unknown | null
+}
+
 type RuleSortKey = 'code' | 'name' | 'required' | 'editable' | 'visible' | 'defaultValue' | 'sortOrder'
 
 type IndustryRow = {
@@ -500,6 +574,7 @@ const { t } = useI18n()
 const auth = useAuthStore()
 const pageTitle = computed(() => t('attrSet.title'))
 const SYSTEM_TENANT_ID = '00000000-0000-0000-0000-000000000000'
+const ALL_DOMAINS = '__all__'
 
 const loading = ref(false)
 const saving = ref(false)
@@ -515,6 +590,7 @@ const showPreview = ref(false)
 const tenantId = ref<string | null>(null)
 const isAdmin = ref(false)
 const industries = ref<IndustryRow[]>([])
+const selectedDomain = ref(ALL_DOMAINS)
 
 const setForm = reactive({
   code: '',
@@ -539,10 +615,30 @@ const contextMenu = reactive({
   target: null as AttrSetRow | null,
 })
 
+const domainOptions = computed(() => {
+  const domains = new Set<string>()
+  attrDefs.value.forEach((row) => {
+    if (row.domain) domains.add(row.domain)
+  })
+  attrSets.value.forEach((row) => {
+    if (row.domain) domains.add(row.domain)
+  })
+  return Array.from(domains).sort((a, b) => a.localeCompare(b))
+})
+
+const filteredAttrSets = computed(() => {
+  if (selectedDomain.value === ALL_DOMAINS) return attrSets.value
+  return attrSets.value.filter((row) => row.domain === selectedDomain.value)
+})
+
 const availableAttrDefs = computed(() => {
   const currentSet = selectedSet.value
-  if (!currentSet) return attrDefs.value
-  return attrDefs.value.filter((item) => item.tenant_id === currentSet.tenant_id)
+  const sameTenantItems = currentSet
+    ? attrDefs.value.filter((item) => item.tenant_id === currentSet.tenant_id)
+    : attrDefs.value
+
+  if (selectedDomain.value === ALL_DOMAINS) return sameTenantItems
+  return sameTenantItems.filter((item) => item.domain === selectedDomain.value)
 })
 
 const paletteGroups = computed(() => {
@@ -574,6 +670,8 @@ const {
   sortedRows: sortedRulesForSelected,
   setSort: setRuleSort,
   sortIcon: ruleSortIcon,
+  sortKey: ruleSortKey,
+  sortDirection: ruleSortDirection,
 } = useTableSort<AttrRuleRow, RuleSortKey>(
   rulesForSelected,
   {
@@ -620,7 +718,7 @@ function dataTypeLabel(value: string) {
 function displayNameI18n(row: { name_i18n: Record<string, string> | null }) {
   if (!row.name_i18n) return ''
   const entries = Object.entries(row.name_i18n)
-    .filter(([_, value]) => value)
+    .filter((entry) => entry[1])
     .map(([key, value]) => `${key}:${value}`)
   return entries.length ? entries.join(' · ') : ''
 }
@@ -680,10 +778,7 @@ async function fetchAttrSets() {
     .order('code', { ascending: true })
   if (error) throw error
   attrSets.value = (data ?? []) as AttrSetRow[]
-  if (attrSets.value.length && !selectedSetId.value) {
-    selectedSetId.value = attrSets.value[0].attr_set_id
-    await fetchRulesForSet(selectedSetId.value)
-  }
+  await syncSelectedSetWithFilter()
 }
 
 async function fetchRulesForSet(attrSetId: number) {
@@ -694,16 +789,18 @@ async function fetchRulesForSet(attrSetId: number) {
     .order('sort_order', { ascending: true })
   if (error) throw error
 
-  const mapped = (data ?? []).map((row: any, index: number) => {
-    const attr = row.attr_def || {}
-    const meta = (row.meta || {}) as Record<string, any>
+  const mapped = ((data ?? []) as unknown as AttrSetRuleQueryRow[]).map((row, index) => {
+    const attr = Array.isArray(row.attr_def)
+      ? (row.attr_def[0] ?? null)
+      : ((row.attr_def ?? null) as AttrDefJoinedRow | null)
+    const meta = row.meta || {}
     return {
-      attr_id: attr.attr_id,
-      code: attr.code,
-      name: attr.name,
-      name_i18n: attr.name_i18n || null,
-      data_type: attr.data_type,
-      allowed_values: attr.allowed_values ?? null,
+      attr_id: attr?.attr_id ?? row.attr_id,
+      code: attr?.code ?? '',
+      name: attr?.name ?? '',
+      name_i18n: attr?.name_i18n ?? null,
+      data_type: attr?.data_type ?? '',
+      allowed_values: attr?.allowed_values ?? null,
       required: Boolean(row.required),
       editable: meta.editable !== undefined ? Boolean(meta.editable) : true,
       visible: meta.visible !== undefined ? Boolean(meta.visible) : true,
@@ -739,7 +836,7 @@ function resetSetForm() {
   setForm.code = ''
   setForm.name = ''
   setForm.name_i18n = ''
-  setForm.domain = ''
+  setForm.domain = selectedDomain.value === ALL_DOMAINS ? '' : selectedDomain.value
   setForm.industry_id = null
   setForm.is_active = true
   resetSetErrors()
@@ -748,6 +845,18 @@ function resetSetForm() {
 function openCreateSet() {
   editingSet.value = false
   resetSetForm()
+  showSetModal.value = true
+}
+
+function openEditSet(set: AttrSetRow) {
+  editingSet.value = true
+  resetSetForm()
+  setForm.code = set.code
+  setForm.name = set.name
+  setForm.name_i18n = set.name_i18n ? JSON.stringify(set.name_i18n, null, 2) : ''
+  setForm.domain = set.domain
+  setForm.industry_id = set.industry_id
+  setForm.is_active = set.is_active
   showSetModal.value = true
 }
 
@@ -760,6 +869,19 @@ async function selectSet(attrSetId: number) {
       toast.error(err instanceof Error ? err.message : String(err))
     }
   }
+}
+
+async function syncSelectedSetWithFilter() {
+  const visibleSets = filteredAttrSets.value
+  const currentSelectedVisible = visibleSets.some((row) => row.attr_set_id === selectedSetId.value)
+  if (currentSelectedVisible) return
+
+  if (!visibleSets.length) {
+    selectedSetId.value = null
+    return
+  }
+
+  await selectSet(visibleSets[0].attr_set_id)
 }
 
 function openContextMenu(event: MouseEvent, set: AttrSetRow) {
@@ -778,6 +900,19 @@ async function contextMenuPreview() {
   if (contextMenu.target) {
     await selectSet(contextMenu.target.attr_set_id)
     openPreview()
+  }
+  closeContextMenu()
+}
+
+async function contextMenuEdit() {
+  if (contextMenu.target) {
+    if (!canEdit(contextMenu.target)) {
+      toast.error(t('attrSet.errors.adminOnlySystem'))
+      closeContextMenu()
+      return
+    }
+    await selectSet(contextMenu.target.attr_set_id)
+    openEditSet(contextMenu.target)
   }
   closeContextMenu()
 }
@@ -824,7 +959,7 @@ function parseJsonInput(value: string) {
   if (!value.trim()) return null
   try {
     return JSON.parse(value)
-  } catch (err) {
+  } catch {
     return undefined
   }
 }
@@ -972,8 +1107,48 @@ function removeRule(attrId: number) {
   if (!selectedSetId.value) return
   rules.value = {
     ...rules.value,
-    [selectedSetId.value]: rulesForSelected.value.filter((rule) => rule.attr_id !== attrId),
+    [selectedSetId.value]: normalizeRuleOrder(rulesForSelected.value.filter((rule) => rule.attr_id !== attrId)),
   }
+}
+
+function normalizeRuleOrder(list: AttrRuleRow[]) {
+  return list.map((rule, index) => ({
+    ...rule,
+    sort_order: index,
+  }))
+}
+
+function canMoveRuleUp(attrId: number) {
+  return rulesForSelected.value.findIndex((rule) => rule.attr_id === attrId) > 0
+}
+
+function canMoveRuleDown(attrId: number) {
+  const index = rulesForSelected.value.findIndex((rule) => rule.attr_id === attrId)
+  return index >= 0 && index < rulesForSelected.value.length - 1
+}
+
+function moveRule(attrId: number, direction: -1 | 1) {
+  if (!selectedSetId.value) return
+  const current = [...rulesForSelected.value]
+  const index = current.findIndex((rule) => rule.attr_id === attrId)
+  const nextIndex = index + direction
+  if (index < 0 || nextIndex < 0 || nextIndex >= current.length) return
+  const [movedRule] = current.splice(index, 1)
+  current.splice(nextIndex, 0, movedRule)
+  rules.value = {
+    ...rules.value,
+    [selectedSetId.value]: normalizeRuleOrder(current),
+  }
+  ruleSortKey.value = 'sortOrder'
+  ruleSortDirection.value = 'asc'
+}
+
+function moveRuleUp(attrId: number) {
+  moveRule(attrId, -1)
+}
+
+function moveRuleDown(attrId: number) {
+  moveRule(attrId, 1)
 }
 
 function onAttrDragStart(event: DragEvent, attr: AttrDefRow) {
@@ -1009,7 +1184,7 @@ function onAttrDrop(event: DragEvent) {
 
   rules.value = {
     ...rules.value,
-    [selectedSetId.value]: [...rulesForSelected.value, newRule],
+    [selectedSetId.value]: normalizeRuleOrder([...rulesForSelected.value, newRule]),
   }
 }
 
@@ -1025,6 +1200,13 @@ async function refreshAll() {
     loading.value = false
   }
 }
+
+watch(selectedDomain, () => {
+  syncSelectedSetWithFilter().catch((err) => {
+    console.error(err)
+    toast.error(err instanceof Error ? err.message : String(err))
+  })
+})
 
 onMounted(() => {
   refreshAll().catch((err) => console.error(err))

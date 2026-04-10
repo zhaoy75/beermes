@@ -21,12 +21,20 @@
       @close="closeInventorySearch"
       @select="handleInventorySearchSelect"
     />
+
+    <TypeDefGraphModal
+      v-if="isTypeDefGraphOpen"
+      ref="typeDefGraphModalRef"
+      @close="closeTypeDefGraph"
+      @select="handleTypeDefGraphSelect"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import InventorySearchModal from '@/components/inventory/InventorySearchModal.vue'
+import TypeDefGraphModal from '@/components/type-def/TypeDefGraphModal.vue'
 import {
   closeInventorySearch as closeInventorySearchState,
   openInventorySearch as openInventorySearchState,
@@ -34,6 +42,12 @@ import {
   useInventorySearchModal,
   type InventorySearchSelection,
 } from '@/composables/useInventorySearchModal'
+import {
+  closeTypeDefGraph as closeTypeDefGraphState,
+  openTypeDefGraph as openTypeDefGraphState,
+  useTypeDefGraphModal,
+  type TypeDefGraphSelection,
+} from '@/composables/useTypeDefGraphModal'
 import { useSidebar } from '@/composables/useSidebar'
 import AppSidebar from './AppSidebar.vue'
 import AppHeader from './AppHeader.vue'
@@ -43,10 +57,16 @@ type InventorySearchModalExposed = {
   focusFirstField: () => Promise<void> | void
 }
 
+type TypeDefGraphModalExposed = {
+  focusFirstField: () => Promise<void> | void
+}
+
 const { isExpanded, isHovered } = useSidebar()
 
 const { isInventorySearchOpen, inventorySearchOptions } = useInventorySearchModal()
+const { isTypeDefGraphOpen, typeDefGraphOptions } = useTypeDefGraphModal()
 const inventorySearchModalRef = ref<InventorySearchModalExposed | null>(null)
+const typeDefGraphModalRef = ref<TypeDefGraphModalExposed | null>(null)
 const previouslyFocusedElement = ref<HTMLElement | null>(null)
 
 async function focusInventorySearch() {
@@ -54,13 +74,29 @@ async function focusInventorySearch() {
   await inventorySearchModalRef.value?.focusFirstField?.()
 }
 
+async function focusTypeDefGraph() {
+  await nextTick()
+  await typeDefGraphModalRef.value?.focusFirstField?.()
+}
+
 async function openInventorySearch() {
+  if (isTypeDefGraphOpen.value) return
   if (!isInventorySearchOpen.value) {
     previouslyFocusedElement.value =
       document.activeElement instanceof HTMLElement ? document.activeElement : null
     openInventorySearchState(resolveInventorySearchOpenOptions())
   }
   await focusInventorySearch()
+}
+
+async function openTypeDefGraph() {
+  if (isInventorySearchOpen.value) return
+  if (!isTypeDefGraphOpen.value) {
+    previouslyFocusedElement.value =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null
+    openTypeDefGraphState()
+  }
+  await focusTypeDefGraph()
 }
 
 async function closeInventorySearch(focusOverride?: (() => void) | null) {
@@ -75,6 +111,20 @@ async function closeInventorySearch(focusOverride?: (() => void) | null) {
   if (previous && previous.isConnected) previous.focus()
 }
 
+async function closeTypeDefGraph(focusOverride?: (() => void) | null) {
+  const shouldRestoreFocus = typeDefGraphOptions.value.restoreFocusOnClose !== false
+  closeTypeDefGraphState()
+  const previous = previouslyFocusedElement.value
+  previouslyFocusedElement.value = null
+  await nextTick()
+  if (!shouldRestoreFocus) return
+  if (focusOverride) {
+    focusOverride()
+    return
+  }
+  if (previous && previous.isConnected) previous.focus()
+}
+
 async function handleInventorySearchSelect(row: InventorySearchSelection) {
   const onSelect = inventorySearchOptions.value.onSelect
   const afterSelectFocus = inventorySearchOptions.value.afterSelectFocus
@@ -82,17 +132,40 @@ async function handleInventorySearchSelect(row: InventorySearchSelection) {
   await closeInventorySearch(afterSelectFocus ? () => afterSelectFocus(row) : null)
 }
 
+async function handleTypeDefGraphSelect(row: TypeDefGraphSelection) {
+  const onSelect = typeDefGraphOptions.value.onSelect
+  onSelect?.(row)
+  await closeTypeDefGraph()
+}
+
 function handleGlobalKeydown(event: KeyboardEvent) {
   if (event.defaultPrevented) return
-  const isShortcut =
+  const isInventoryShortcut =
     event.key.toLowerCase() === 'i' &&
     (event.ctrlKey || event.metaKey) &&
     !event.altKey &&
     !event.shiftKey
+  const isTypeDefShortcut =
+    event.key.toLowerCase() === 't' &&
+    (event.ctrlKey || event.metaKey) &&
+    !event.altKey &&
+    !event.shiftKey
 
-  if (isShortcut) {
+  if (isInventoryShortcut) {
     event.preventDefault()
     openInventorySearch().catch?.(() => undefined)
+    return
+  }
+
+  if (isTypeDefShortcut) {
+    event.preventDefault()
+    openTypeDefGraph().catch?.(() => undefined)
+    return
+  }
+
+  if (event.key === 'Escape' && isTypeDefGraphOpen.value) {
+    event.preventDefault()
+    closeTypeDefGraph().catch?.(() => undefined)
     return
   }
 

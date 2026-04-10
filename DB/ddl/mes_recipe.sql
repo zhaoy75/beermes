@@ -94,31 +94,12 @@ CREATE TABLE IF NOT EXISTS mes.mst_recipe (
   CONSTRAINT mst_recipe_uq_tenant_code UNIQUE (tenant_id, recipe_code)
 );
 
-CREATE TABLE IF NOT EXISTS mes.mst_material_spec (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL DEFAULT app_current_tenant_id(),
-  material_type_id uuid NOT NULL,
-  spec_code text NOT NULL,
-  spec_name text NOT NULL,
-  status mes.master_status NOT NULL DEFAULT 'active',
-  created_at timestamptz NOT NULL DEFAULT now(),
-  created_by uuid NULL,
-  updated_at timestamptz NOT NULL DEFAULT now(),
-  updated_by uuid NULL,
-  CONSTRAINT mst_material_spec_uq_tenant_code UNIQUE (tenant_id, spec_code),
-  CONSTRAINT mst_material_spec_material_type_fk
-    FOREIGN KEY (tenant_id, material_type_id)
-    REFERENCES public.type_def(tenant_id, type_id)
-    ON DELETE RESTRICT
-);
-
 CREATE TABLE IF NOT EXISTS mes.mst_material (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id uuid NOT NULL DEFAULT app_current_tenant_id(),
   material_code text NOT NULL,
   material_name text NOT NULL,
   material_type_id uuid NULL,
-  material_spec_id uuid NULL REFERENCES mes.mst_material_spec(id) ON DELETE SET NULL,
   base_uom_id uuid NULL REFERENCES public.mst_uom(id),
   material_category text NULL,
   is_batch_managed boolean NOT NULL DEFAULT false,
@@ -392,7 +373,6 @@ CREATE TABLE IF NOT EXISTS mes.batch_material_plan (
   batch_step_id uuid NULL REFERENCES mes.batch_step(id) ON DELETE CASCADE,
   material_role text NULL,
   material_type_id uuid NULL,
-  material_spec_id uuid NULL REFERENCES mes.mst_material_spec(id) ON DELETE SET NULL,
   planned_qty numeric NOT NULL,
   uom_id uuid NOT NULL REFERENCES public.mst_uom(id),
   requirement_json jsonb NOT NULL DEFAULT '{}'::jsonb,
@@ -627,11 +607,8 @@ CREATE INDEX IF NOT EXISTS idx_recipe_change_history_tenant_version_changed_at
 CREATE INDEX IF NOT EXISTS idx_mst_step_template_tenant_type
   ON mes.mst_step_template (tenant_id, step_type, industry_type, status);
 
-CREATE INDEX IF NOT EXISTS idx_mst_material_spec_tenant_type
-  ON mes.mst_material_spec (tenant_id, material_type_id, status);
-
-CREATE INDEX IF NOT EXISTS idx_mst_material_tenant_type_spec
-  ON mes.mst_material (tenant_id, material_type_id, material_spec_id, status);
+CREATE INDEX IF NOT EXISTS idx_mst_material_tenant_type
+  ON mes.mst_material (tenant_id, material_type_id, status);
 
 CREATE INDEX IF NOT EXISTS idx_mst_equipment_template_tenant_type
   ON mes.mst_equipment_template (tenant_id, equipment_type_id, status);
@@ -677,18 +654,6 @@ CREATE TRIGGER trg_mst_recipe_version_updated_at
 BEFORE UPDATE ON mes.mst_recipe_version
 FOR EACH ROW
 EXECUTE FUNCTION mes.trg_set_updated_at();
-
-DROP TRIGGER IF EXISTS trg_mst_material_spec_updated_at ON mes.mst_material_spec;
-CREATE TRIGGER trg_mst_material_spec_updated_at
-BEFORE UPDATE ON mes.mst_material_spec
-FOR EACH ROW
-EXECUTE FUNCTION mes.trg_set_updated_at();
-
-DROP TRIGGER IF EXISTS trg_mst_material_spec_assert_material_type_domain ON mes.mst_material_spec;
-CREATE TRIGGER trg_mst_material_spec_assert_material_type_domain
-BEFORE INSERT OR UPDATE OF tenant_id, material_type_id ON mes.mst_material_spec
-FOR EACH ROW
-EXECUTE FUNCTION mes.trg_assert_type_def_domain('material_type_id', 'material_type');
 
 DROP TRIGGER IF EXISTS trg_mst_material_updated_at ON mes.mst_material;
 CREATE TRIGGER trg_mst_material_updated_at
@@ -840,7 +805,6 @@ DECLARE
   tbls text[] := ARRAY[
     'mst_recipe',
     'mst_recipe_version',
-    'mst_material_spec',
     'mst_material',
     'mst_equipment_template',
     'mst_parameter_def',

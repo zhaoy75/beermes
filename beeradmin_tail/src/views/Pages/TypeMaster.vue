@@ -10,7 +10,7 @@
         <div class="flex flex-wrap items-center gap-2">
           <button
             class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
-            :disabled="loadingTypes"
+            :disabled="loadingTypes || sortingTypes"
             @click="refreshAll"
           >
             {{ t('common.refresh') }}
@@ -18,10 +18,43 @@
         </div>
       </header>
 
-      <section class="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-4">
+      <section class="mb-4 border border-gray-200 rounded-xl shadow-sm p-4">
+        <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <div class="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-3 items-end">
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">{{ t('materialType.domainLabel') }}</label>
+              <select
+                v-model="selectedDomain"
+                class="w-full h-[40px] border rounded px-3 bg-white"
+                :disabled="loadingTypes || sortingTypes"
+                @change="handleDomainChange"
+              >
+                <option v-for="domain in availableDomains" :key="domain.value" :value="domain.value">
+                  {{ domain.label }}
+                </option>
+              </select>
+            </div>
+            <div class="text-sm text-gray-500">
+              {{ t('materialType.domainHint') }}
+            </div>
+          </div>
+          <button
+            class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
+            :disabled="savingDomain"
+            @click="openAddDomain"
+          >
+            {{ t('materialType.addDomain') }}
+          </button>
+        </div>
+      </section>
+
+      <section class="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4">
         <aside class="border border-gray-200 rounded-xl shadow-sm p-3">
           <div class="flex items-center justify-between mb-3">
-            <h2 class="text-sm font-semibold text-gray-700">{{ t('materialType.treeTitle') }}</h2>
+            <div>
+              <h2 class="text-sm font-semibold text-gray-700">{{ t('materialType.treeTitle') }}</h2>
+              <p class="text-xs text-gray-500 mt-1">{{ selectedDomainLabel }}</p>
+            </div>
             <button
               class="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-50"
               @click="toggleExpandAll"
@@ -38,9 +71,19 @@
             <li v-for="entry in visibleTree" :key="entry.node.row.type_id">
               <div
                 class="flex items-center gap-2 rounded px-2 py-1 text-sm cursor-pointer hover:bg-gray-50"
-                :class="entry.node.row.type_id === selectedTypeId ? 'bg-blue-50 text-blue-700' : 'text-gray-700'"
+                :class="{
+                  'bg-blue-50 text-blue-700': entry.node.row.type_id === selectedTypeId,
+                  'text-gray-700': entry.node.row.type_id !== selectedTypeId,
+                  'ring-2 ring-blue-300': dragOverTypeId === entry.node.row.type_id && canDropOn(entry.node.row.type_id),
+                  'opacity-60': draggedTypeId === entry.node.row.type_id,
+                }"
                 :style="{ paddingLeft: `${entry.depth * 14}px` }"
+                :draggable="canDragRow(entry.node.row)"
                 @click="selectType(entry.node.row.type_id)"
+                @dragstart="handleDragStart(entry.node.row.type_id)"
+                @dragover.prevent="handleDragOver(entry.node.row.type_id)"
+                @drop.prevent="handleDrop(entry.node.row.type_id)"
+                @dragend="clearDragState"
               >
                 <button
                   v-if="entry.node.children.length > 0"
@@ -52,7 +95,7 @@
                 </button>
                 <span v-else class="w-3 inline-block" />
                 <span class="truncate">
-                  {{ entry.node.row.name || entry.node.row.code }}
+                  {{ displayTypeName(entry.node.row) }}
                 </span>
               </div>
             </li>
@@ -65,7 +108,7 @@
               <div>
                 <p class="text-xs text-gray-500">{{ t('materialType.selectedLabel') }}</p>
                 <h2 class="text-lg font-semibold">
-                  {{ selectedType?.name || t('materialType.noSelection') }}
+                  {{ selectedType ? displayTypeName(selectedType) : t('materialType.noSelection') }}
                 </h2>
                 <p v-if="selectedType" class="text-xs text-gray-500 font-mono">
                   {{ selectedType.code }}
@@ -121,7 +164,7 @@
               </button>
             </div>
 
-            <div class="px-4 py-3 border-b bg-gray-50" v-if="assignedAttrSets.length">
+            <div v-if="assignedAttrSets.length" class="px-4 py-3 border-b bg-gray-50">
               <div class="flex flex-wrap gap-2">
                 <span
                   v-for="set in assignedAttrSets"
@@ -221,17 +264,24 @@
               <input v-model.trim="typeForm.code" class="w-full h-[40px] border rounded px-3 font-mono text-sm" />
               <p v-if="typeErrors.code" class="mt-1 text-xs text-red-600">{{ typeErrors.code }}</p>
             </div>
-            <div>
-              <label class="block text-sm text-gray-600 mb-1">{{ t('materialType.form.name') }}<span class="text-red-600">*</span></label>
-              <input v-model.trim="typeForm.name" class="w-full h-[40px] border rounded px-3" />
-              <p v-if="typeErrors.name" class="mt-1 text-xs text-red-600">{{ typeErrors.name }}</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm text-gray-600 mb-1">{{ t('materialType.form.nameJa') }}<span class="text-red-600">*</span></label>
+                <input v-model.trim="typeForm.name_ja" class="w-full h-[40px] border rounded px-3" />
+                <p v-if="typeErrors.name_ja" class="mt-1 text-xs text-red-600">{{ typeErrors.name_ja }}</p>
+              </div>
+              <div>
+                <label class="block text-sm text-gray-600 mb-1">{{ t('materialType.form.nameEn') }}<span class="text-red-600">*</span></label>
+                <input v-model.trim="typeForm.name_en" class="w-full h-[40px] border rounded px-3" />
+                <p v-if="typeErrors.name_en" class="mt-1 text-xs text-red-600">{{ typeErrors.name_en }}</p>
+              </div>
             </div>
             <div>
               <label class="block text-sm text-gray-600 mb-1">{{ t('materialType.form.parent') }}</label>
               <select v-model="typeForm.parent_type_id" class="w-full h-[40px] border rounded px-3 bg-white">
                 <option :value="null">{{ t('materialType.form.noParent') }}</option>
                 <option v-for="option in parentOptions" :key="option.type_id" :value="option.type_id">
-                  {{ option.name || option.code }}
+                  {{ displayTypeName(option) }}
                 </option>
               </select>
             </div>
@@ -265,7 +315,7 @@
             <h3 class="font-semibold">{{ t('materialType.deleteTitle') }}</h3>
           </div>
           <div class="p-4 text-sm">
-            {{ t('materialType.deleteConfirm', { name: selectedType?.name || selectedType?.code || '' }) }}
+            {{ t('materialType.deleteConfirm', { name: selectedType ? displayTypeName(selectedType) : '' }) }}
           </div>
           <div class="px-4 py-3 border-t flex items-center justify-end gap-2">
             <button class="px-3 py-2 rounded border hover:bg-gray-50" @click="showDelete = false">{{ t('common.cancel') }}</button>
@@ -314,6 +364,48 @@
           </div>
         </div>
       </div>
+
+      <div v-if="showDomainModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div class="w-full max-w-xl bg-white rounded-xl shadow-lg border">
+          <div class="px-4 py-3 border-b">
+            <h3 class="font-semibold">{{ t('materialType.addDomainTitle') }}</h3>
+          </div>
+          <div class="p-4 space-y-4">
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">{{ t('materialType.form.domainCode') }}<span class="text-red-600">*</span></label>
+              <input v-model.trim="domainForm.domain" class="w-full h-[40px] border rounded px-3 font-mono text-sm" />
+              <p v-if="domainErrors.domain" class="mt-1 text-xs text-red-600">{{ domainErrors.domain }}</p>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">{{ t('materialType.form.rootCode') }}<span class="text-red-600">*</span></label>
+              <input v-model.trim="domainForm.root_code" class="w-full h-[40px] border rounded px-3 font-mono text-sm" />
+              <p v-if="domainErrors.root_code" class="mt-1 text-xs text-red-600">{{ domainErrors.root_code }}</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm text-gray-600 mb-1">{{ t('materialType.form.nameJa') }}<span class="text-red-600">*</span></label>
+                <input v-model.trim="domainForm.name_ja" class="w-full h-[40px] border rounded px-3" />
+                <p v-if="domainErrors.name_ja" class="mt-1 text-xs text-red-600">{{ domainErrors.name_ja }}</p>
+              </div>
+              <div>
+                <label class="block text-sm text-gray-600 mb-1">{{ t('materialType.form.nameEn') }}<span class="text-red-600">*</span></label>
+                <input v-model.trim="domainForm.name_en" class="w-full h-[40px] border rounded px-3" />
+                <p v-if="domainErrors.name_en" class="mt-1 text-xs text-red-600">{{ domainErrors.name_en }}</p>
+              </div>
+            </div>
+          </div>
+          <div class="px-4 py-3 border-t flex items-center justify-end gap-2">
+            <button class="px-3 py-2 rounded border hover:bg-gray-50" @click="closeDomainModal">{{ t('common.cancel') }}</button>
+            <button
+              class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+              :disabled="savingDomain"
+              @click="saveDomain"
+            >
+              {{ savingDomain ? t('common.saving') : t('common.save') }}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   </AdminLayout>
 </template>
@@ -328,10 +420,14 @@ import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
 import { useTableSort } from '@/composables/useTableSort'
 
+type NameI18n = Record<string, string> | null
+
 type TypeRow = {
   type_id: string
+  domain: string
   code: string
   name: string
+  name_i18n: NameI18n
   parent_type_id: string | null
   sort_order: number | null
   is_active: boolean
@@ -391,18 +487,23 @@ type AttrRuleRow = {
   attr_def: AttrDefRow | AttrDefRow[] | null
 }
 
-const TYPE_DOMAIN = 'material_type'
-const ENTITY_TYPE = 'material_type'
-const ATTR_DOMAINS = ['material', 'material_type']
-const ROOT_TYPE_CODE = 'material'
-const ROOT_TYPE_NAME = 'Material'
+type DomainOption = {
+  value: string
+  label: string
+}
+
+const BUILTIN_DOMAINS = ['material_type', 'equipment_type'] as const
 const INDUSTRY_CODE = 'CRAFT_BEER'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const pageTitle = computed(() => t('materialType.title'))
+
+const selectedDomain = ref<string>('material_type')
+const domainOptions = ref<DomainOption[]>([])
 
 const typeRows = ref<TypeRow[]>([])
 const loadingTypes = ref(false)
+const sortingTypes = ref(false)
 const selectedTypeId = ref<string | null>(null)
 const expanded = ref<Set<string>>(new Set())
 const expandedAll = ref(true)
@@ -411,10 +512,13 @@ const showTypeModal = ref(false)
 const editingType = ref(false)
 const savingType = ref(false)
 const showDelete = ref(false)
+const showDomainModal = ref(false)
+const savingDomain = ref(false)
 
 const typeForm = reactive({
   code: '',
-  name: '',
+  name_ja: '',
+  name_en: '',
   parent_type_id: null as string | null,
   sort_order: 0,
   is_active: true,
@@ -422,7 +526,22 @@ const typeForm = reactive({
 
 const typeErrors = reactive({
   code: '',
-  name: '',
+  name_ja: '',
+  name_en: '',
+})
+
+const domainForm = reactive({
+  domain: '',
+  root_code: '',
+  name_ja: '',
+  name_en: '',
+})
+
+const domainErrors = reactive({
+  domain: '',
+  root_code: '',
+  name_ja: '',
+  name_en: '',
 })
 
 const attrSets = ref<AttrSetRow[]>([])
@@ -438,9 +557,20 @@ const isAdmin = ref(false)
 const ensuringRoot = ref(false)
 const industryId = ref<string | null>(null)
 
+const draggedTypeId = ref<string | null>(null)
+const dragOverTypeId = ref<string | null>(null)
+
 const selectedType = computed(() => {
   if (selectedTypeId.value == null) return null
   return typeRows.value.find((row) => row.type_id === selectedTypeId.value) ?? null
+})
+
+const selectedDomainLabel = computed(() => formatDomainLabel(selectedDomain.value))
+
+const availableDomains = computed(() => {
+  const labels = new Map<string, DomainOption>()
+  for (const option of domainOptions.value) labels.set(option.value, option)
+  return Array.from(labels.values()).sort((a, b) => a.label.localeCompare(b.label))
 })
 
 const parentOptions = computed(() => {
@@ -466,9 +596,7 @@ const visibleTree = computed(() => {
 
 const attrSetLookup = computed(() => {
   const map = new Map<number, AttrSetRow>()
-  for (const set of attrSets.value) {
-    map.set(set.attr_set_id, set)
-  }
+  for (const set of attrSets.value) map.set(set.attr_set_id, set)
   return map
 })
 
@@ -479,22 +607,23 @@ const assignedAttrSets = computed(() => {
 })
 
 const attributeRows = computed<AttributeDisplayRow[]>(() => {
-  const rows = attrRules.value.map((rule) => {
-    const attr = Array.isArray(rule.attr_def) ? (rule.attr_def[0] ?? null) : rule.attr_def
-    const set = attrSetLookup.value.get(rule.attr_set_id)
-    return {
-      key: `${rule.attr_set_id}-${rule.attr_id}`,
-      attrSetLabel: set ? `${set.name} (${set.code})` : String(rule.attr_set_id),
-      code: attr?.code ?? '',
-      name: attr?.name ?? '',
-      dataType: attr?.data_type ?? '',
-      required: rule.required,
-      uiSection: rule.ui_section,
-      uiWidget: rule.ui_widget,
-      active: rule.is_active && (attr?.is_active ?? true),
-    }
-  })
-  return rows.sort((a, b) => a.attrSetLabel.localeCompare(b.attrSetLabel) || a.code.localeCompare(b.code))
+  return attrRules.value
+    .map((rule) => {
+      const attr = Array.isArray(rule.attr_def) ? (rule.attr_def[0] ?? null) : rule.attr_def
+      const set = attrSetLookup.value.get(rule.attr_set_id)
+      return {
+        key: `${rule.attr_set_id}-${rule.attr_id}`,
+        attrSetLabel: set ? `${set.name} (${set.code})` : String(rule.attr_set_id),
+        code: attr?.code ?? '',
+        name: attr?.name ?? '',
+        dataType: attr?.data_type ?? '',
+        required: rule.required,
+        uiSection: rule.ui_section,
+        uiWidget: rule.ui_widget,
+        active: rule.is_active && (attr?.is_active ?? true),
+      }
+    })
+    .sort((a, b) => a.attrSetLabel.localeCompare(b.attrSetLabel) || a.code.localeCompare(b.code))
 })
 
 const {
@@ -516,19 +645,75 @@ const {
   'attrSetLabel',
 )
 
+function canonicalName(nameJa: string, nameEn: string) {
+  return nameJa.trim() || nameEn.trim()
+}
+
+function buildNameI18n(nameJa: string, nameEn: string) {
+  return {
+    ja: nameJa.trim(),
+    en: nameEn.trim(),
+  }
+}
+
+function formatDomainLabel(domain: string) {
+  if (domain === 'material_type') return t('materialType.domains.materialType')
+  if (domain === 'equipment_type') return t('materialType.domains.equipmentType')
+  return domain
+}
+
+function displayTypeName(row: Pick<TypeRow, 'name' | 'code' | 'name_i18n'> | null) {
+  if (!row) return ''
+  const isJa = locale.value.startsWith('ja')
+  const ja = row.name_i18n?.ja?.trim()
+  const en = row.name_i18n?.en?.trim()
+  if (isJa) return ja || row.name || en || row.code
+  return en || row.name || ja || row.code
+}
+
+function getDefaultDomainRoot(domain: string) {
+  if (domain === 'material_type') {
+    return {
+      code: 'material',
+      nameJa: '原材料',
+      nameEn: 'Material',
+    }
+  }
+  if (domain === 'equipment_type') {
+    return {
+      code: 'equipment',
+      nameJa: '設備',
+      nameEn: 'Equipment',
+    }
+  }
+  const base = domain.endsWith('_type') ? domain.slice(0, -5) : domain
+  const code = base || 'root'
+  const label = code.replace(/_/g, ' ')
+  const nameEn = label.replace(/\b\w/g, (char) => char.toUpperCase())
+  return {
+    code,
+    nameJa: nameEn,
+    nameEn,
+  }
+}
+
+function resolveAttrSetDomains(domain: string) {
+  if (domain === 'material_type') return ['material']
+  if (domain === 'equipment_type') return ['equipment']
+  if (domain.endsWith('_type')) {
+    return [domain, domain.slice(0, -5)].filter((value, index, list) => value && list.indexOf(value) === index)
+  }
+  return [domain]
+}
+
 function buildTree(rows: TypeRow[]) {
   const map = new Map<string, TreeNode>()
-  for (const row of rows) {
-    map.set(row.type_id, { row, children: [] })
-  }
+  for (const row of rows) map.set(row.type_id, { row, children: [] })
   const roots: TreeNode[] = []
   for (const node of map.values()) {
     const parentId = node.row.parent_type_id
-    if (parentId && map.has(parentId)) {
-      map.get(parentId)?.children.push(node)
-    } else {
-      roots.push(node)
-    }
+    if (parentId && map.has(parentId)) map.get(parentId)?.children.push(node)
+    else roots.push(node)
   }
   const sortNodes = (nodes: TreeNode[]) => {
     nodes.sort((a, b) => {
@@ -572,12 +757,14 @@ function selectType(typeId: string) {
 
 function resetTypeForm() {
   typeForm.code = ''
-  typeForm.name = ''
+  typeForm.name_ja = ''
+  typeForm.name_en = ''
   typeForm.parent_type_id = null
   typeForm.sort_order = 0
   typeForm.is_active = true
   typeErrors.code = ''
-  typeErrors.name = ''
+  typeErrors.name_ja = ''
+  typeErrors.name_en = ''
 }
 
 function openCreateChild() {
@@ -593,7 +780,8 @@ function openEdit() {
   resetTypeForm()
   editingType.value = true
   typeForm.code = selectedType.value.code
-  typeForm.name = selectedType.value.name
+  typeForm.name_ja = selectedType.value.name_i18n?.ja ?? selectedType.value.name
+  typeForm.name_en = selectedType.value.name_i18n?.en ?? selectedType.value.name
   typeForm.parent_type_id = selectedType.value.parent_type_id
   typeForm.sort_order = selectedType.value.sort_order ?? 0
   typeForm.is_active = selectedType.value.is_active
@@ -606,15 +794,53 @@ function closeTypeModal() {
 
 function validateTypeForm() {
   typeErrors.code = ''
-  typeErrors.name = ''
+  typeErrors.name_ja = ''
+  typeErrors.name_en = ''
   if (!typeForm.code.trim()) typeErrors.code = t('materialType.errors.codeRequired')
-  if (!typeForm.name.trim()) typeErrors.name = t('materialType.errors.nameRequired')
-  return !typeErrors.code && !typeErrors.name
+  if (!typeForm.name_ja.trim()) typeErrors.name_ja = t('materialType.errors.nameJaRequired')
+  if (!typeForm.name_en.trim()) typeErrors.name_en = t('materialType.errors.nameEnRequired')
+  return !typeErrors.code && !typeErrors.name_ja && !typeErrors.name_en
 }
 
 function confirmDelete() {
   if (!selectedType.value) return
   showDelete.value = true
+}
+
+function resetDomainForm() {
+  const defaults = getDefaultDomainRoot(selectedDomain.value)
+  domainForm.domain = ''
+  domainForm.root_code = defaults.code
+  domainForm.name_ja = defaults.nameJa
+  domainForm.name_en = defaults.nameEn
+  domainErrors.domain = ''
+  domainErrors.root_code = ''
+  domainErrors.name_ja = ''
+  domainErrors.name_en = ''
+}
+
+function openAddDomain() {
+  resetDomainForm()
+  showDomainModal.value = true
+}
+
+function closeDomainModal() {
+  showDomainModal.value = false
+}
+
+function validateDomainForm() {
+  domainErrors.domain = ''
+  domainErrors.root_code = ''
+  domainErrors.name_ja = ''
+  domainErrors.name_en = ''
+  if (!domainForm.domain.trim()) domainErrors.domain = t('materialType.errors.domainRequired')
+  if (!domainForm.root_code.trim()) domainErrors.root_code = t('materialType.errors.rootCodeRequired')
+  if (!domainForm.name_ja.trim()) domainErrors.name_ja = t('materialType.errors.nameJaRequired')
+  if (!domainForm.name_en.trim()) domainErrors.name_en = t('materialType.errors.nameEnRequired')
+  if (availableDomains.value.some((entry) => entry.value === domainForm.domain.trim())) {
+    domainErrors.domain = t('materialType.errors.domainExists')
+  }
+  return !domainErrors.domain && !domainErrors.root_code && !domainErrors.name_ja && !domainErrors.name_en
 }
 
 async function ensureTenant() {
@@ -633,6 +859,83 @@ async function ensureTenant() {
 function canEdit(row: TypeRow) {
   if (row.scope === 'system') return isAdmin.value
   return true
+}
+
+function siblingRows(parentTypeId: string | null) {
+  return typeRows.value
+    .filter((row) => (row.parent_type_id ?? null) === (parentTypeId ?? null))
+    .slice()
+    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.code.localeCompare(b.code))
+}
+
+function canDragRow(row: TypeRow) {
+  if (!canEdit(row)) return false
+  return siblingRows(row.parent_type_id).every((item) => canEdit(item))
+}
+
+function canDropOn(targetTypeId: string) {
+  if (!draggedTypeId.value || draggedTypeId.value === targetTypeId) return false
+  const dragged = typeRows.value.find((row) => row.type_id === draggedTypeId.value)
+  const target = typeRows.value.find((row) => row.type_id === targetTypeId)
+  if (!dragged || !target) return false
+  if (!canDragRow(dragged) || !canDragRow(target)) return false
+  return (dragged.parent_type_id ?? null) === (target.parent_type_id ?? null)
+}
+
+function handleDragStart(typeId: string) {
+  const row = typeRows.value.find((entry) => entry.type_id === typeId)
+  if (!row || !canDragRow(row)) return
+  draggedTypeId.value = typeId
+}
+
+function handleDragOver(typeId: string) {
+  dragOverTypeId.value = canDropOn(typeId) ? typeId : null
+}
+
+function clearDragState() {
+  draggedTypeId.value = null
+  dragOverTypeId.value = null
+}
+
+async function handleDrop(targetTypeId: string) {
+  try {
+    if (!canDropOn(targetTypeId) || !draggedTypeId.value) return
+    sortingTypes.value = true
+    const tenant = await ensureTenant()
+    const dragged = typeRows.value.find((row) => row.type_id === draggedTypeId.value)
+    const target = typeRows.value.find((row) => row.type_id === targetTypeId)
+    if (!dragged || !target) return
+    const siblings = siblingRows(target.parent_type_id)
+    const draggedIndex = siblings.findIndex((row) => row.type_id === dragged.type_id)
+    const targetIndex = siblings.findIndex((row) => row.type_id === target.type_id)
+    if (draggedIndex < 0 || targetIndex < 0) return
+    const reordered = siblings.slice()
+    const [removed] = reordered.splice(draggedIndex, 1)
+    reordered.splice(targetIndex, 0, removed)
+    const changed = reordered
+      .map((row, index) => ({ row, sortOrder: (index + 1) * 10 }))
+      .filter(({ row, sortOrder }) => (row.sort_order ?? 0) !== sortOrder)
+    if (changed.length === 0) return
+    const results = await Promise.all(
+      changed.map(({ row, sortOrder }) =>
+        supabase
+          .from('type_def')
+          .update({ sort_order: sortOrder })
+          .eq('tenant_id', tenant)
+          .eq('type_id', row.type_id),
+      ),
+    )
+    const failed = results.find((result) => result.error)
+    if (failed?.error) throw failed.error
+    toast.success(t('common.saved'))
+    await fetchTypes()
+  } catch (err) {
+    console.error(err)
+    toast.error(err instanceof Error ? err.message : String(err))
+  } finally {
+    sortingTypes.value = false
+    clearDragState()
+  }
 }
 
 async function ensureIndustry() {
@@ -660,27 +963,53 @@ async function ensureIndustry() {
   return industryId.value
 }
 
+async function fetchDomains() {
+  try {
+    const industry = await ensureIndustry()
+    const { data, error } = await supabase
+      .from('type_def')
+      .select('domain')
+      .eq('industry_id', industry)
+      .order('domain', { ascending: true })
+    if (error) throw error
+    const values = new Set<string>(BUILTIN_DOMAINS)
+    for (const row of data ?? []) {
+      if (typeof row.domain === 'string' && row.domain.trim()) values.add(row.domain)
+    }
+    if (selectedDomain.value.trim()) values.add(selectedDomain.value.trim())
+    domainOptions.value = Array.from(values).map((value) => ({
+      value,
+      label: formatDomainLabel(value),
+    }))
+  } catch (err) {
+    console.error(err)
+    toast.error(err instanceof Error ? err.message : String(err))
+    domainOptions.value = Array.from(BUILTIN_DOMAINS).map((value) => ({ value, label: formatDomainLabel(value) }))
+  }
+}
+
 async function fetchTypes() {
   try {
     loadingTypes.value = true
     const industry = await ensureIndustry()
     const { data, error } = await supabase
       .from('type_def')
-      .select('type_id, code, name, parent_type_id, sort_order, is_active, created_at, scope, owner_id')
-      .eq('domain', TYPE_DOMAIN)
+      .select('type_id, domain, code, name, name_i18n, parent_type_id, sort_order, is_active, created_at, scope, owner_id')
+      .eq('domain', selectedDomain.value)
       .eq('industry_id', industry)
       .order('sort_order', { ascending: true })
       .order('code', { ascending: true })
     if (error) throw error
     const rows = (data ?? []) as TypeRow[]
-    if (rows.length === 0 && !ensuringRoot.value) {
+    if (rows.length === 0 && !ensuringRoot.value && BUILTIN_DOMAINS.includes(selectedDomain.value as (typeof BUILTIN_DOMAINS)[number])) {
       ensuringRoot.value = true
       try {
-        await createRootType()
+        await createRootType(selectedDomain.value)
         const { data: refreshed, error: refreshError } = await supabase
           .from('type_def')
-          .select('type_id, code, name, parent_type_id, sort_order, is_active, created_at, scope, owner_id')
-          .eq('domain', TYPE_DOMAIN)
+          .select('type_id, domain, code, name, name_i18n, parent_type_id, sort_order, is_active, created_at, scope, owner_id')
+          .eq('domain', selectedDomain.value)
+          .eq('industry_id', industry)
           .order('sort_order', { ascending: true })
           .order('code', { ascending: true })
         if (refreshError) throw refreshError
@@ -705,15 +1034,17 @@ async function fetchTypes() {
   }
 }
 
-async function createRootType() {
+async function createRootType(domain: string) {
   const tenant = await ensureTenant()
   const industry = await ensureIndustry()
+  const defaults = getDefaultDomainRoot(domain)
   const payload = {
     tenant_id: tenant,
-    domain: TYPE_DOMAIN,
+    domain,
     industry_id: industry,
-    code: ROOT_TYPE_CODE,
-    name: ROOT_TYPE_NAME,
+    code: defaults.code,
+    name: canonicalName(defaults.nameJa, defaults.nameEn),
+    name_i18n: buildNameI18n(defaults.nameJa, defaults.nameEn),
     parent_type_id: null,
     sort_order: 0,
     is_active: true,
@@ -727,10 +1058,11 @@ async function createRootType() {
 async function fetchAttrSets() {
   try {
     const industry = await ensureIndustry()
+    const attrDomains = resolveAttrSetDomains(selectedDomain.value)
     const { data, error } = await supabase
       .from('attr_set')
       .select('attr_set_id, code, name, domain, scope, owner_id, is_active, sort_order')
-      .in('domain', ATTR_DOMAINS)
+      .in('domain', attrDomains)
       .eq('industry_id', industry)
       .eq('is_active', true)
       .order('sort_order', { ascending: true })
@@ -755,7 +1087,7 @@ async function loadAttributes() {
     const { data: assignmentData, error: assignmentError } = await supabase
       .from('entity_attr_set')
       .select('attr_set_id')
-      .eq('entity_type', ENTITY_TYPE)
+      .eq('entity_type', selectedDomain.value)
       .eq('entity_id', selectedType.value.type_id)
       .eq('is_active', true)
     if (assignmentError) throw assignmentError
@@ -790,6 +1122,8 @@ async function saveType() {
     if (!selectedType.value && editingType.value) return
     savingType.value = true
     const tenant = await ensureTenant()
+    const name = canonicalName(typeForm.name_ja, typeForm.name_en)
+    const nameI18n = buildNameI18n(typeForm.name_ja, typeForm.name_en)
     if (editingType.value && selectedType.value) {
       if (!canEdit(selectedType.value)) {
         throw new Error(t('materialType.errors.adminOnlySystem'))
@@ -798,7 +1132,8 @@ async function saveType() {
         .from('type_def')
         .update({
           code: typeForm.code.trim(),
-          name: typeForm.name.trim(),
+          name,
+          name_i18n: nameI18n,
           parent_type_id: typeForm.parent_type_id,
           sort_order: typeForm.sort_order ?? 0,
           is_active: typeForm.is_active,
@@ -810,10 +1145,11 @@ async function saveType() {
       const industry = await ensureIndustry()
       const payload = {
         tenant_id: tenant,
-        domain: TYPE_DOMAIN,
+        domain: selectedDomain.value,
         industry_id: industry,
         code: typeForm.code.trim(),
-        name: typeForm.name.trim(),
+        name,
+        name_i18n: nameI18n,
         parent_type_id: typeForm.parent_type_id,
         sort_order: typeForm.sort_order ?? 0,
         is_active: typeForm.is_active,
@@ -831,6 +1167,41 @@ async function saveType() {
     toast.error(err instanceof Error ? err.message : String(err))
   } finally {
     savingType.value = false
+  }
+}
+
+async function saveDomain() {
+  try {
+    if (!validateDomainForm()) return
+    savingDomain.value = true
+    const tenant = await ensureTenant()
+    const industry = await ensureIndustry()
+    const domain = domainForm.domain.trim()
+    const payload = {
+      tenant_id: tenant,
+      domain,
+      industry_id: industry,
+      code: domainForm.root_code.trim(),
+      name: canonicalName(domainForm.name_ja, domainForm.name_en),
+      name_i18n: buildNameI18n(domainForm.name_ja, domainForm.name_en),
+      parent_type_id: null,
+      sort_order: 0,
+      is_active: true,
+      scope: 'tenant',
+      owner_id: tenant,
+    }
+    const { error } = await supabase.from('type_def').insert(payload)
+    if (error) throw error
+    selectedDomain.value = domain
+    showDomainModal.value = false
+    await fetchDomains()
+    await refreshCurrentDomain()
+    toast.success(t('common.saved'))
+  } catch (err) {
+    console.error(err)
+    toast.error(err instanceof Error ? err.message : String(err))
+  } finally {
+    savingDomain.value = false
   }
 }
 
@@ -884,7 +1255,7 @@ async function saveAttrSets() {
     if (toAdd.length > 0) {
       const insertRows = toAdd.map((id) => ({
         tenant_id: tenant,
-        entity_type: ENTITY_TYPE,
+        entity_type: selectedDomain.value,
         entity_id: selectedType.value?.type_id ?? null,
         attr_set_id: id,
         is_active: true,
@@ -897,7 +1268,7 @@ async function saveAttrSets() {
       const { error } = await supabase
         .from('entity_attr_set')
         .delete()
-        .eq('entity_type', ENTITY_TYPE)
+        .eq('entity_type', selectedDomain.value)
         .eq('entity_id', selectedType.value.type_id)
         .in('attr_set_id', toRemove)
       if (error) throw error
@@ -914,7 +1285,21 @@ async function saveAttrSets() {
   }
 }
 
+async function refreshCurrentDomain() {
+  selectedTypeId.value = null
+  assignedAttrSetIds.value = []
+  attrRules.value = []
+  await fetchTypes()
+  await fetchAttrSets()
+  await loadAttributes()
+}
+
+async function handleDomainChange() {
+  await refreshCurrentDomain()
+}
+
 async function refreshAll() {
+  await fetchDomains()
   await fetchTypes()
   await fetchAttrSets()
   await loadAttributes()

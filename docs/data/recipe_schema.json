@@ -106,18 +106,6 @@
         }
       }
     },
-    "equipment": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "default_requirements": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/equipmentRequirement"
-          }
-        }
-      }
-    },
     "flow": {
       "type": "object",
       "additionalProperties": false,
@@ -237,9 +225,6 @@
         "material_type_code": {
           "$ref": "#/$defs/code"
         },
-        "material_spec_code": {
-          "$ref": "#/$defs/code"
-        },
         "material_code": {
           "$ref": "#/$defs/code"
         },
@@ -257,6 +242,10 @@
         "is_optional": {
           "type": "boolean"
         },
+        "attr_values": {
+          "type": "object",
+          "additionalProperties": true
+        },
         "allowed_substitutions": {
           "type": "array",
           "items": {
@@ -270,9 +259,6 @@
       "allOf": [
         {
           "anyOf": [
-            {
-              "required": ["material_spec_code"]
-            },
             {
               "required": ["material_type_code"]
             },

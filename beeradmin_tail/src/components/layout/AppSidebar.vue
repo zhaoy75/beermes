@@ -191,6 +191,7 @@
                                 subItem.path
                               ),
                             },
+                            subItem.textClass,
                           ]"
                         >
                           {{ subItem.name }}
@@ -257,6 +258,7 @@
                                         child.path
                                       ),
                                     },
+                                    child.textClass,
                                   ]"
                                 >
                                   {{ child.name }}
@@ -302,7 +304,8 @@ const { t } = useI18n()
 const auth = useAuthStore()
 const canSeeUsers = ref(false)
 const canSeeSystemAdmin = computed(() => auth.isSystemAdmin)
-const canSeeDevelopmentFeatures = DEVELOPMENT_MODE_ENABLED
+const canSeeDevelopmentFeatures = computed(() => DEVELOPMENT_MODE_ENABLED || auth.isSystemAdmin)
+const developmentMenuTextClass = 'text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300'
 
 type MenuItem = {
   name: string
@@ -311,6 +314,7 @@ type MenuItem = {
   icon?: Component
   new?: boolean
   pro?: boolean
+  textClass?: string
 }
 
 type MenuGroup = {
@@ -386,7 +390,7 @@ const menuGroups = computed<MenuGroup[]>(() => [
         icon: CalenderIcon,
         name: t('sidebar.items.production'),
         subItems: [
-          ...(canSeeDevelopmentFeatures ? [{ name: t('sidebar.items.recipeList'), path: "/recipeList", pro: false }] : []),
+          ...(canSeeDevelopmentFeatures.value ? [{ name: t('sidebar.items.recipeList'), path: "/recipeList", pro: false, textClass: developmentMenuTextClass }] : []),
           { name: t('sidebar.items.batchList'), path: "/batches", pro: false },
           { name: t('sidebar.items.fillingReport'), path: "/fillingReport", pro: false },
           // { name: t('sidebar.items.waste'), path: "/waste", pro: false },
@@ -433,7 +437,7 @@ const menuGroups = computed<MenuGroup[]>(() => [
         icon: CalenderIcon,
         name: t('sidebar.items.masterMaintenance'),
         subItems: [
-          ...(canSeeDevelopmentFeatures ? [{ name: t('sidebar.items.materialMaster'), path: "/MaterialMaster", pro: false }] : []),
+          ...(canSeeDevelopmentFeatures.value ? [{ name: t('sidebar.items.materialMaster'), path: "/MaterialMaster", pro: false, textClass: developmentMenuTextClass }] : []),
           { name: t('sidebar.items.siteMaster'), path: "/siteMaster", pro: false },
           { name: t('sidebar.items.equipmentMaster'), path: "/equipmentMaster", pro: false },
           { name: t('sidebar.items.packageMaster'), path: "/packageMaster", pro: false },
@@ -446,8 +450,7 @@ const menuGroups = computed<MenuGroup[]>(() => [
         subItems: [
           { name: t('sidebar.items.alcoholTypeMaster'), path: "/alcoholTypeMaster", pro: false },
           { name: t('sidebar.items.alcoholTaxMaster'), path: "/alcoholTaxMaster", pro: false },
-          { name: t('sidebar.items.materialClassMaster'), path: "/materialClassMaster", pro: false },
-          { name: t('sidebar.items.materialTypeMaster'), path: "/materialTypeMaster", pro: false },
+          ...(canSeeDevelopmentFeatures.value ? [{ name: t('sidebar.items.TypeMaster'), path: "/TypeMaster", pro: false, textClass: developmentMenuTextClass }] : []),
           { name: t('sidebar.items.siteTypeMaster'), path: "/siteTypeMaster", pro: false },
           { name: t('sidebar.items.uomMaster'), path: "/uomMaster", pro: false },
           { name: t('sidebar.items.taxReportProfile'), path: "/taxReportProfile", pro: false },

@@ -880,4 +880,13 @@ I want to create a grand design of recipe. I have following requirement. Please 
 add registry_def data for recipe schema and step template
 add type_def data for materail type and equipment type
 add attr_def data for recipe attribute and step attribute
-add attr_set and attr_set_rule for recipe and step attribute set
+
+
+can you give me some 
+
+
+
+I want to rewrite the 原材料登録 page, first clean the page. following is the basic requirement for the page, please give me some advice on the design and implementation of the page.
+- the page should be used to maintain raw material information
+- since user need to choose a material type when they create a raw material, i want to incrase usability 
+

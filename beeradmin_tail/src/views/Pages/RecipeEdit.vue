@@ -180,7 +180,7 @@
                 <td class="px-3 py-2">{{ formatMaterialSection(row.section) }}</td>
                 <td class="px-3 py-2">
                   <div class="font-medium text-gray-900">{{ row.item.material_name || row.item.material_code || row.item.material_key }}</div>
-                  <div class="font-mono text-xs text-gray-500">{{ row.item.material_code || row.item.material_spec_code || row.item.material_key }}</div>
+                  <div class="font-mono text-xs text-gray-500">{{ row.item.material_code || row.item.material_key }}</div>
                 </td>
                 <td class="px-3 py-2">{{ row.item.material_role }}</td>
                 <td class="px-3 py-2">{{ row.item.qty ?? t('common.none') }}</td>
@@ -196,6 +196,221 @@
               </tr>
             </tbody>
           </table>
+        </div>
+        <div v-if="isSectionExpanded('materials') && showMaterialEditor" class="border-t p-4">
+          <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h3 class="text-base font-semibold text-gray-900">{{ materialEditIndex === null ? t('recipe.edit.addMaterial') : t('recipe.edit.editMaterial') }}</h3>
+              <p class="text-sm text-gray-500">{{ t('recipe.edit.materialInlineEditorHint') }}</p>
+            </div>
+            <button class="rounded border px-3 py-2 hover:bg-gray-100" @click="closeMaterialEditor">{{ t('common.cancel') }}</button>
+          </div>
+
+          <section class="grid grid-cols-1 gap-4 lg:grid-cols-[320px_1fr]">
+            <aside class="space-y-4">
+              <div class="rounded-lg border border-gray-200 bg-gray-50">
+                <div class="border-b px-4 py-3">
+                  <h4 class="text-sm font-semibold text-gray-900">{{ t('recipe.edit.materialSourceTitle') }}</h4>
+                  <p class="mt-1 text-xs text-gray-500">{{ t('recipe.edit.materialTypeTreeHint') }}</p>
+                </div>
+                <div class="max-h-[300px] overflow-y-auto p-2">
+                  <div v-if="materialTypeTreeEntries.length === 0" class="px-2 py-4 text-sm text-gray-500">
+                    {{ t('recipe.edit.materialTypeTreeEmpty') }}
+                  </div>
+                  <ul v-else class="space-y-1">
+                    <li v-for="entry in materialTypeTreeEntries" :key="entry.node.row.type_id">
+                      <button
+                        type="button"
+                        class="flex w-full items-center rounded px-2 py-2 text-left text-sm hover:bg-white"
+                        :class="selectedMaterialTypeId === entry.node.row.type_id ? 'bg-white text-blue-700 ring-1 ring-blue-200' : 'text-gray-700'"
+                        :style="{ paddingLeft: `${12 + entry.depth * 16}px` }"
+                        @click="selectMaterialType(entry.node.row.type_id)"
+                      >
+                        <span class="truncate">{{ displayMaterialTypeName(entry.node.row) }}</span>
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              <div class="rounded-lg border border-gray-200">
+                <div class="border-b px-4 py-3">
+                  <h4 class="text-sm font-semibold text-gray-900">{{ t('recipe.edit.materialSourceListTitle') }}</h4>
+                  <p class="mt-1 text-xs text-gray-500">
+                    {{ selectedMaterialType ? displayMaterialTypeName(selectedMaterialType) : t('recipe.edit.selectMaterialTypePrompt') }}
+                  </p>
+                </div>
+                <div class="max-h-[320px] overflow-y-auto p-2">
+                  <div v-if="filteredMaterialOptions.length === 0" class="px-2 py-4 text-sm text-gray-500">
+                    {{ t('recipe.edit.ingredientsFilteredEmpty') }}
+                  </div>
+                  <ul v-else class="space-y-1">
+                    <li v-for="material in filteredMaterialOptions" :key="material.id">
+                      <button
+                        type="button"
+                        class="w-full rounded border px-3 py-2 text-left hover:bg-gray-50"
+                        :class="materialForm.material_id === material.id ? 'border-blue-300 bg-blue-50 text-blue-700' : 'border-transparent text-gray-800'"
+                        @click="materialForm.material_id = material.id"
+                      >
+                        <div class="font-medium">{{ material.material_name }}</div>
+                        <div class="font-mono text-xs text-gray-500">{{ material.material_code }}</div>
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </aside>
+
+            <div class="space-y-4">
+              <div class="rounded-lg border border-gray-200">
+                <div class="border-b px-4 py-3">
+                  <h4 class="text-sm font-semibold text-gray-900">{{ t('recipe.edit.materialEditorTitle') }}</h4>
+                  <p class="mt-1 text-xs text-gray-500">{{ t('recipe.edit.materialEditorSubtitle') }}</p>
+                </div>
+                <div class="grid grid-cols-1 gap-4 p-4 md:grid-cols-2">
+                  <div class="md:col-span-2 rounded-lg border border-dashed border-gray-300 bg-gray-50 px-3 py-3">
+                    <div class="text-xs text-gray-500">{{ t('recipe.edit.materialColumn') }}</div>
+                    <div v-if="selectedMaterialOption" class="mt-1">
+                      <div class="font-medium text-gray-900">{{ selectedMaterialOption.material_name }}</div>
+                      <div class="font-mono text-xs text-gray-500">{{ selectedMaterialOption.material_code }}</div>
+                    </div>
+                    <div v-else class="mt-1 text-sm text-gray-500">{{ t('recipe.edit.selectMaterialSourcePrompt') }}</div>
+                    <p v-if="materialErrors.material_id" class="mt-2 text-xs text-red-600">{{ materialErrors.material_id }}</p>
+                  </div>
+
+                  <div>
+                    <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.group') }}</label>
+                    <select v-model="materialForm.section" class="h-[40px] w-full rounded border bg-white px-3">
+                      <option value="required">{{ t('recipe.materialSections.required') }}</option>
+                      <option value="optional">{{ t('recipe.materialSections.optional') }}</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.materialTypeFilter') }}</label>
+                    <div class="flex h-[40px] items-center rounded border bg-gray-50 px-3 text-sm text-gray-700">
+                      {{ selectedMaterialType ? displayMaterialTypeName(selectedMaterialType) : t('recipe.edit.selectMaterialTypePrompt') }}
+                    </div>
+                  </div>
+                  <div>
+                    <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.materialRole') }}<span class="text-red-600">*</span></label>
+                    <input v-model.trim="materialForm.material_role" class="h-[40px] w-full rounded border px-3" />
+                    <p v-if="materialErrors.material_role" class="mt-1 text-xs text-red-600">{{ materialErrors.material_role }}</p>
+                  </div>
+                  <div>
+                    <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.quantity') }}<span class="text-red-600">*</span></label>
+                    <input v-model.trim="materialForm.qty" type="number" min="0" step="0.001" class="h-[40px] w-full rounded border px-3" />
+                    <p v-if="materialErrors.qty" class="mt-1 text-xs text-red-600">{{ materialErrors.qty }}</p>
+                  </div>
+                  <div>
+                    <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.uomCode') }}<span class="text-red-600">*</span></label>
+                    <select v-model="materialForm.uom_code" class="h-[40px] w-full rounded border bg-white px-3">
+                      <option value="">{{ t('recipe.edit.selectUom') }}</option>
+                      <option v-for="uom in uoms" :key="uom.id" :value="uom.code">{{ uom.code }} — {{ uom.name || uom.code }}</option>
+                    </select>
+                    <p v-if="materialErrors.uom_code" class="mt-1 text-xs text-red-600">{{ materialErrors.uom_code }}</p>
+                  </div>
+                  <div>
+                    <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.basis') }}</label>
+                    <select v-model="materialForm.basis" class="h-[40px] w-full rounded border bg-white px-3">
+                      <option value="per_base">{{ t('recipe.basis.perBase') }}</option>
+                      <option value="percent_of_base">{{ t('recipe.basis.percentOfBase') }}</option>
+                      <option value="fixed_per_batch">{{ t('recipe.basis.fixedPerBatch') }}</option>
+                      <option value="by_formula">{{ t('recipe.basis.byFormula') }}</option>
+                    </select>
+                  </div>
+                  <div class="md:col-span-2">
+                    <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.notes') }}</label>
+                    <textarea v-model.trim="materialForm.notes" rows="3" class="w-full rounded border px-3 py-2"></textarea>
+                  </div>
+                </div>
+              </div>
+
+              <div class="rounded-lg border border-gray-200">
+                <div class="border-b px-4 py-3">
+                  <h4 class="text-sm font-semibold text-gray-900">{{ t('recipe.edit.materialAttributeTitle') }}</h4>
+                  <p class="mt-1 text-xs text-gray-500">{{ t('recipe.edit.materialAttributeSubtitle') }}</p>
+                </div>
+                <div v-if="materialAttrLoading" class="px-4 py-6 text-sm text-gray-500">{{ t('common.loading') }}</div>
+                <div v-else-if="!selectedMaterialType" class="px-4 py-6 text-sm text-gray-500">{{ t('recipe.edit.selectMaterialTypePrompt') }}</div>
+                <div v-else-if="materialAttrFields.length === 0" class="px-4 py-6 text-sm text-gray-500">{{ t('recipe.edit.materialAttributeEmpty') }}</div>
+                <div v-else class="space-y-4 p-4">
+                  <section v-for="group in materialAttrSections" :key="group.section" class="space-y-3">
+                    <div>
+                      <h5 class="text-sm font-medium text-gray-900">{{ group.section }}</h5>
+                    </div>
+                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                      <div v-for="field in group.fields" :key="field.code" :class="field.data_type === 'json' ? 'md:col-span-2' : ''">
+                        <label class="mb-1 block text-sm text-gray-600">
+                          {{ materialAttrLabel(field) }}
+                          <span v-if="field.required" class="text-red-600">*</span>
+                          <span v-if="field.uom_code" class="ml-1 text-xs text-gray-400">({{ field.uom_code }})</span>
+                        </label>
+
+                        <input
+                          v-if="materialAttrInputKind(field) === 'text'"
+                          :value="materialAttrTextValue(field)"
+                          class="h-[40px] w-full rounded border px-3"
+                          @input="updateMaterialAttrText(field, $event)"
+                        />
+
+                        <input
+                          v-else-if="materialAttrInputKind(field) === 'number'"
+                          :value="materialAttrTextValue(field)"
+                          type="number"
+                          :min="field.num_min ?? undefined"
+                          :max="field.num_max ?? undefined"
+                          step="any"
+                          class="h-[40px] w-full rounded border px-3"
+                          @input="updateMaterialAttrText(field, $event)"
+                        />
+
+                        <select
+                          v-else-if="materialAttrInputKind(field) === 'select'"
+                          :value="materialAttrTextValue(field)"
+                          class="h-[40px] w-full rounded border bg-white px-3"
+                          @change="updateMaterialAttrText(field, $event)"
+                        >
+                          <option value="">{{ t('common.select') }}</option>
+                          <option v-for="option in materialAttrAllowedOptions(field)" :key="option.value" :value="option.value">
+                            {{ option.label }}
+                          </option>
+                        </select>
+
+                        <label v-else-if="materialAttrInputKind(field) === 'boolean'" class="inline-flex h-[40px] items-center gap-2">
+                          <input :checked="Boolean(field.value)" type="checkbox" class="h-4 w-4" @change="updateMaterialAttrBoolean(field, $event)" />
+                          <span class="text-sm text-gray-700">{{ t('common.yes') }}</span>
+                        </label>
+
+                        <textarea
+                          v-else-if="materialAttrInputKind(field) === 'json'"
+                          :value="materialAttrTextValue(field)"
+                          rows="4"
+                          class="w-full rounded border px-3 py-2 font-mono text-xs"
+                          @input="updateMaterialAttrText(field, $event)"
+                        />
+
+                        <input
+                          v-else
+                          :value="materialAttrTextValue(field)"
+                          class="h-[40px] w-full rounded border px-3"
+                          @input="updateMaterialAttrText(field, $event)"
+                        />
+
+                        <p v-if="field.help_text" class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>
+                        <p v-else-if="field.description" class="mt-1 text-xs text-gray-500">{{ field.description }}</p>
+                        <p v-if="field.error" class="mt-1 text-xs text-red-600">{{ field.error }}</p>
+                      </div>
+                    </div>
+                  </section>
+                </div>
+              </div>
+
+              <div class="flex items-center justify-end gap-2">
+                <button class="rounded border px-3 py-2 hover:bg-gray-100" @click="closeMaterialEditor">{{ t('common.cancel') }}</button>
+                <button class="rounded bg-blue-600 px-3 py-2 text-white hover:bg-blue-700" @click="saveMaterial">{{ t('common.save') }}</button>
+              </div>
+            </div>
+          </section>
         </div>
       </section>
 
@@ -259,62 +474,6 @@
               </table>
             </div>
           </div>
-        </div>
-      </section>
-
-      <section v-if="showEquipmentSection" class="rounded-lg border border-gray-200 bg-white shadow" aria-labelledby="equipmentHeading">
-        <header class="flex flex-col gap-3 border-b p-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h2 id="equipmentHeading" class="text-lg font-semibold text-gray-900">{{ t('recipe.schemaSections.equipment') }}</h2>
-            <p class="text-sm text-gray-500">{{ t('recipe.edit.equipmentStoredIn') }}</p>
-          </div>
-          <div class="flex flex-wrap items-center gap-3">
-            <span v-if="!isSectionExpanded('equipment')" class="text-xs text-amber-700">{{ t('recipe.edit.sectionFolded') }}</span>
-            <label class="inline-flex items-center gap-2 text-sm text-gray-600">
-              <span>{{ t('recipe.edit.sectionDisplay') }}</span>
-              <button
-                type="button"
-                role="switch"
-                class="relative inline-flex h-6 w-11 items-center rounded-full transition"
-                :aria-checked="isSectionExpanded('equipment')"
-                :title="isSectionExpanded('equipment') ? t('recipe.edit.hideSection') : t('recipe.edit.showSection')"
-                :class="isSectionExpanded('equipment') ? 'bg-blue-600' : 'bg-gray-300'"
-                @click="toggleSectionExpanded('equipment')"
-              >
-                <span class="inline-block h-5 w-5 transform rounded-full bg-white transition" :class="isSectionExpanded('equipment') ? 'translate-x-5' : 'translate-x-1'" />
-              </button>
-              <span class="min-w-[2.5rem] text-xs font-medium">{{ isSectionExpanded('equipment') ? t('recipe.edit.sectionOn') : t('recipe.edit.sectionOff') }}</span>
-            </label>
-            <button v-if="isSectionExpanded('equipment')" type="button" class="rounded bg-blue-600 px-3 py-2 text-white hover:bg-blue-700" @click="openEquipmentCreate">{{ t('recipe.edit.addEquipmentRequirement') }}</button>
-          </div>
-        </header>
-        <div v-show="isSectionExpanded('equipment')" class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-gray-200 text-sm">
-            <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500">
-              <tr>
-                <th class="px-3 py-2">{{ t('recipe.edit.equipmentType') }}</th>
-                <th class="px-3 py-2">{{ t('recipe.edit.equipmentTemplate') }}</th>
-                <th class="px-3 py-2">{{ t('recipe.edit.quantity') }}</th>
-                <th class="px-3 py-2">{{ t('recipe.edit.notes') }}</th>
-                <th class="px-3 py-2">{{ t('common.actions') }}</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-100">
-              <tr v-for="(row, index) in equipmentRequirements" :key="`${row.equipment_type_code}-${index}`">
-                <td class="px-3 py-2">{{ row.equipment_type_code }}</td>
-                <td class="px-3 py-2">{{ row.equipment_template_code || t('common.none') }}</td>
-                <td class="px-3 py-2">{{ row.quantity ?? 1 }}</td>
-                <td class="px-3 py-2">{{ row.notes || t('common.none') }}</td>
-                <td class="px-3 py-2 space-x-2">
-                  <button class="rounded border px-2 py-1 text-xs hover:bg-gray-100" @click="openEquipmentEdit(index)">{{ t('common.edit') }}</button>
-                  <button class="rounded bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-700" @click="deleteEquipmentRequirement(index)">{{ t('common.delete') }}</button>
-                </td>
-              </tr>
-              <tr v-if="equipmentRequirements.length === 0">
-                <td colspan="5" class="px-3 py-6 text-center text-sm text-gray-500">{{ t('common.noData') }}</td>
-              </tr>
-            </tbody>
-          </table>
         </div>
       </section>
 
@@ -504,70 +663,6 @@
       </section>
     </div>
 
-    <div v-if="showMaterialModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div class="w-full max-w-3xl rounded-xl border border-gray-200 bg-white shadow-lg">
-        <header class="border-b px-4 py-3">
-          <h3 class="font-semibold text-gray-900">{{ materialEditIndex === null ? t('recipe.edit.addMaterial') : t('recipe.edit.editMaterial') }}</h3>
-        </header>
-        <section class="space-y-4 p-4">
-          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div>
-              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.group') }}</label>
-              <select v-model="materialForm.section" class="h-[40px] w-full rounded border bg-white px-3">
-                <option value="required">{{ t('recipe.materialSections.required') }}</option>
-                <option value="optional">{{ t('recipe.materialSections.optional') }}</option>
-              </select>
-            </div>
-            <div>
-              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.materialColumn') }}<span class="text-red-600">*</span></label>
-              <select v-model="materialForm.material_id" class="h-[40px] w-full rounded border bg-white px-3">
-                <option value="">{{ t('recipe.edit.selectMaterialPlaceholder') }}</option>
-                <option v-for="material in materialOptions" :key="material.id" :value="material.id">
-                  {{ material.material_code }} — {{ material.material_name }}
-                </option>
-              </select>
-              <p v-if="materialErrors.material_id" class="mt-1 text-xs text-red-600">{{ materialErrors.material_id }}</p>
-            </div>
-            <div>
-              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.materialRole') }}<span class="text-red-600">*</span></label>
-              <input v-model.trim="materialForm.material_role" class="h-[40px] w-full rounded border px-3" />
-              <p v-if="materialErrors.material_role" class="mt-1 text-xs text-red-600">{{ materialErrors.material_role }}</p>
-            </div>
-            <div>
-              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.quantity') }}<span class="text-red-600">*</span></label>
-              <input v-model.trim="materialForm.qty" type="number" min="0" step="0.001" class="h-[40px] w-full rounded border px-3" />
-              <p v-if="materialErrors.qty" class="mt-1 text-xs text-red-600">{{ materialErrors.qty }}</p>
-            </div>
-            <div>
-              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.uomCode') }}<span class="text-red-600">*</span></label>
-              <select v-model="materialForm.uom_code" class="h-[40px] w-full rounded border bg-white px-3">
-                <option value="">{{ t('recipe.edit.selectUom') }}</option>
-                <option v-for="uom in uoms" :key="uom.id" :value="uom.code">{{ uom.code }} — {{ uom.name || uom.code }}</option>
-              </select>
-              <p v-if="materialErrors.uom_code" class="mt-1 text-xs text-red-600">{{ materialErrors.uom_code }}</p>
-            </div>
-            <div>
-              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.basis') }}</label>
-              <select v-model="materialForm.basis" class="h-[40px] w-full rounded border bg-white px-3">
-                <option value="per_base">{{ t('recipe.basis.perBase') }}</option>
-                <option value="percent_of_base">{{ t('recipe.basis.percentOfBase') }}</option>
-                <option value="fixed_per_batch">{{ t('recipe.basis.fixedPerBatch') }}</option>
-                <option value="by_formula">{{ t('recipe.basis.byFormula') }}</option>
-              </select>
-            </div>
-            <div class="md:col-span-2">
-              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.notes') }}</label>
-              <textarea v-model.trim="materialForm.notes" rows="3" class="w-full rounded border px-3 py-2"></textarea>
-            </div>
-          </div>
-        </section>
-        <footer class="flex items-center justify-end gap-2 border-t px-4 py-3">
-          <button class="rounded border px-3 py-2 hover:bg-gray-100" @click="closeMaterialModal">{{ t('common.cancel') }}</button>
-          <button class="rounded bg-blue-600 px-3 py-2 text-white hover:bg-blue-700" @click="saveMaterial">{{ t('common.save') }}</button>
-        </footer>
-      </div>
-    </div>
-
     <div v-if="showOutputModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div class="w-full max-w-3xl rounded-xl border border-gray-200 bg-white shadow-lg">
         <header class="border-b px-4 py-3">
@@ -632,176 +727,6 @@
         <footer class="flex items-center justify-end gap-2 border-t px-4 py-3">
           <button class="rounded border px-3 py-2 hover:bg-gray-100" @click="closeOutputModal">{{ t('common.cancel') }}</button>
           <button class="rounded bg-blue-600 px-3 py-2 text-white hover:bg-blue-700" @click="saveOutput">{{ t('common.save') }}</button>
-        </footer>
-      </div>
-    </div>
-
-    <div v-if="showEquipmentModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div class="w-full max-w-3xl rounded-xl border border-gray-200 bg-white shadow-lg">
-        <header class="border-b px-4 py-3">
-          <h3 class="font-semibold text-gray-900">{{ equipmentEditIndex === null ? t('recipe.edit.addEquipmentRequirement') : t('recipe.edit.editEquipmentRequirement') }}</h3>
-        </header>
-        <section class="space-y-4 p-4">
-          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div>
-              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.equipmentType') }}<span class="text-red-600">*</span></label>
-              <select v-model="equipmentForm.equipment_type_code" class="h-[40px] w-full rounded border bg-white px-3">
-                <option value="">{{ t('recipe.edit.selectEquipmentType') }}</option>
-                <option v-for="type in equipmentTypes" :key="type.type_id" :value="type.code">{{ type.code }} — {{ type.name }}</option>
-              </select>
-              <p v-if="equipmentErrors.equipment_type_code" class="mt-1 text-xs text-red-600">{{ equipmentErrors.equipment_type_code }}</p>
-            </div>
-            <div>
-              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.equipmentTemplate') }}</label>
-              <select v-model="equipmentForm.equipment_template_code" class="h-[40px] w-full rounded border bg-white px-3">
-                <option value="">{{ t('common.none') }}</option>
-                <option
-                  v-for="template in equipmentTemplates.filter((row) => !equipmentForm.equipment_type_code || (row.equipment_type_id ? equipmentTypeMap.get(row.equipment_type_id)?.code : undefined) === equipmentForm.equipment_type_code)"
-                  :key="template.id"
-                  :value="template.template_code"
-                >
-                  {{ template.template_code }} — {{ template.template_name }}
-                </option>
-              </select>
-            </div>
-            <div>
-              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.quantity') }}<span class="text-red-600">*</span></label>
-              <input v-model.trim="equipmentForm.quantity" type="number" min="1" step="1" class="h-[40px] w-full rounded border px-3" />
-              <p v-if="equipmentErrors.quantity" class="mt-1 text-xs text-red-600">{{ equipmentErrors.quantity }}</p>
-            </div>
-            <div class="md:col-span-2">
-              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.capabilityRules') }}</label>
-              <textarea v-model="equipmentForm.capability_rules" rows="5" class="w-full rounded border px-3 py-2 font-mono text-xs"></textarea>
-              <p v-if="equipmentErrors.capability_rules" class="mt-1 text-xs text-red-600">{{ equipmentErrors.capability_rules }}</p>
-            </div>
-            <div class="md:col-span-2">
-              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.notes') }}</label>
-              <textarea v-model.trim="equipmentForm.notes" rows="3" class="w-full rounded border px-3 py-2"></textarea>
-            </div>
-          </div>
-        </section>
-        <footer class="flex items-center justify-end gap-2 border-t px-4 py-3">
-          <button class="rounded border px-3 py-2 hover:bg-gray-100" @click="closeEquipmentModal">{{ t('common.cancel') }}</button>
-          <button class="rounded bg-blue-600 px-3 py-2 text-white hover:bg-blue-700" @click="saveEquipmentRequirement">{{ t('common.save') }}</button>
-        </footer>
-      </div>
-    </div>
-
-    <div v-if="showStepModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div class="w-full max-w-5xl rounded-xl border border-gray-200 bg-white shadow-lg">
-        <header class="border-b px-4 py-3">
-          <h3 class="font-semibold text-gray-900">{{ stepEditIndex === null ? t('recipe.edit.addStep') : t('recipe.edit.editStep') }}</h3>
-        </header>
-        <section class="space-y-4 p-4">
-          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div>
-              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.stepNo') }}<span class="text-red-600">*</span></label>
-              <input v-model.number="stepForm.step_no" type="number" min="1" class="h-[40px] w-full rounded border px-3" />
-              <p v-if="stepErrors.step_no" class="mt-1 text-xs text-red-600">{{ stepErrors.step_no }}</p>
-            </div>
-            <div>
-              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.stepType') }}<span class="text-red-600">*</span></label>
-              <select v-model="stepForm.step_type" class="h-[40px] w-full rounded border bg-white px-3">
-                <option v-for="option in stepTypeOptions" :key="option" :value="option">{{ formatStepType(option) }}</option>
-              </select>
-              <p class="mt-1 text-xs text-gray-500">{{ usesSchemaStepOptions ? t('recipe.edit.loadedFromSchema') : t('recipe.edit.usingFallbackOptions') }}</p>
-            </div>
-            <div>
-              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.stepCode') }}<span class="text-red-600">*</span></label>
-              <input v-model.trim="stepForm.step_code" class="h-[40px] w-full rounded border px-3 font-mono text-sm" />
-              <p v-if="stepErrors.step_code" class="mt-1 text-xs text-red-600">{{ stepErrors.step_code }}</p>
-            </div>
-            <div>
-              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.stepName') }}<span class="text-red-600">*</span></label>
-              <input v-model.trim="stepForm.step_name" class="h-[40px] w-full rounded border px-3" />
-              <p v-if="stepErrors.step_name" class="mt-1 text-xs text-red-600">{{ stepErrors.step_name }}</p>
-            </div>
-            <div>
-              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.stepTemplateCode') }}</label>
-              <input v-model.trim="stepForm.step_template_code" class="h-[40px] w-full rounded border px-3" />
-            </div>
-            <div>
-              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.durationSec') }}</label>
-              <input v-model.trim="stepForm.duration_sec" type="number" min="0" class="h-[40px] w-full rounded border px-3" />
-            </div>
-            <div class="md:col-span-2">
-              <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.instructions') }}</label>
-              <textarea v-model.trim="stepForm.instructions" rows="3" class="w-full rounded border px-3 py-2"></textarea>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <div>
-              <div class="mb-2 flex items-center justify-between">
-                <label class="block text-sm text-gray-600">{{ t('recipe.edit.parameters') }}</label>
-                <button class="rounded border border-dashed px-3 py-1 text-sm hover:bg-gray-50" @click.prevent="addParameterRow">{{ t('recipe.edit.addTargetParam') }}</button>
-              </div>
-              <div class="overflow-x-auto rounded border border-gray-200">
-                <table class="min-w-full divide-y divide-gray-200 text-sm">
-                  <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500">
-                    <tr>
-                      <th class="px-3 py-2">{{ t('recipe.edit.code') }}</th>
-                      <th class="px-3 py-2">{{ t('recipe.edit.target') }}</th>
-                      <th class="px-3 py-2">{{ t('recipe.edit.unit') }}</th>
-                      <th class="px-3 py-2">{{ t('common.actions') }}</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-gray-100">
-                    <tr v-for="(row, index) in parameterRows" :key="row.key">
-                      <td class="px-3 py-2"><input v-model.trim="row.parameter_code" class="w-full rounded border px-2 py-1" /></td>
-                      <td class="px-3 py-2"><input v-model.trim="row.target" class="w-full rounded border px-2 py-1" /></td>
-                      <td class="px-3 py-2"><input v-model.trim="row.uom_code" class="w-full rounded border px-2 py-1" /></td>
-                      <td class="px-3 py-2 text-right">
-                        <button class="rounded border px-2 py-1 text-xs hover:bg-gray-100" @click.prevent="removeParameterRow(index)">{{ t('common.delete') }}</button>
-                      </td>
-                    </tr>
-                    <tr v-if="parameterRows.length === 0">
-                      <td colspan="4" class="px-3 py-4 text-center text-sm text-gray-500">{{ t('common.noData') }}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <div>
-              <div class="mb-2 flex items-center justify-between">
-                <label class="block text-sm text-gray-600">{{ t('recipe.edit.qualityChecks') }}</label>
-                <button class="rounded border border-dashed px-3 py-1 text-sm hover:bg-gray-50" @click.prevent="addQualityRow">{{ t('recipe.edit.addQualityCheck') }}</button>
-              </div>
-              <div class="overflow-x-auto rounded border border-gray-200">
-                <table class="min-w-full divide-y divide-gray-200 text-sm">
-                  <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500">
-                    <tr>
-                      <th class="px-3 py-2">{{ t('recipe.edit.code') }}</th>
-                      <th class="px-3 py-2">{{ t('recipe.edit.frequency') }}</th>
-                      <th class="px-3 py-2">{{ t('common.actions') }}</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-gray-100">
-                    <tr v-for="(row, index) in qualityRows" :key="row.key">
-                      <td class="px-3 py-2"><input v-model.trim="row.check_code" class="w-full rounded border px-2 py-1" /></td>
-                      <td class="px-3 py-2"><input v-model.trim="row.frequency" class="w-full rounded border px-2 py-1" /></td>
-                      <td class="px-3 py-2 text-right">
-                        <button class="rounded border px-2 py-1 text-xs hover:bg-gray-100" @click.prevent="removeQualityRow(index)">{{ t('common.delete') }}</button>
-                      </td>
-                    </tr>
-                    <tr v-if="qualityRows.length === 0">
-                      <td colspan="3" class="px-3 py-4 text-center text-sm text-gray-500">{{ t('common.noData') }}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.notes') }}</label>
-            <textarea v-model.trim="stepForm.notes" rows="3" class="w-full rounded border px-3 py-2"></textarea>
-          </div>
-        </section>
-        <footer class="flex items-center justify-end gap-2 border-t px-4 py-3">
-          <button class="rounded border px-3 py-2 hover:bg-gray-100" @click="closeStepModal">{{ t('common.cancel') }}</button>
-          <button class="rounded bg-blue-600 px-3 py-2 text-white hover:bg-blue-700" @click="saveStep">{{ t('common.save') }}</button>
         </footer>
       </div>
     </div>
@@ -910,13 +835,13 @@ import { useI18n } from 'vue-i18n'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { supabase } from '@/lib/supabase'
+import { normalizeBatchAttrDataType, validateBatchAttrField } from '@/lib/batchAttrValidation'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
 
-const DEFAULT_SCHEMA_KEY = 'recipe_body_schema_v1'
+const DEFAULT_SCHEMA_KEY = 'recipe_body_v1'
 const RECIPE_STATUSES = ['active', 'inactive'] as const
 const VERSION_STATUSES = ['draft', 'in_review', 'approved', 'obsolete', 'archived'] as const
-const FALLBACK_STEP_TYPES = ['process', 'prep', 'transfer', 'inspection', 'packaging', 'other']
 
 type JsonObject = Record<string, unknown>
 type RecipeStatus = (typeof RECIPE_STATUSES)[number]
@@ -955,13 +880,12 @@ interface MaterialTypeRow {
   type_id: string
   code: string
   name: string
-}
-
-interface MaterialSpecRow {
-  id: string
-  material_type_id: string | null
-  spec_code: string
-  spec_name: string
+  name_i18n?: {
+    ja?: string
+    en?: string
+  } | null
+  parent_type_id: string | null
+  sort_order: number | null
 }
 
 interface MaterialMasterRow {
@@ -969,7 +893,6 @@ interface MaterialMasterRow {
   material_code: string
   material_name: string
   material_type_id: string | null
-  material_spec_id: string | null
   base_uom_id: string | null
   status: RecipeStatus
 }
@@ -978,20 +901,6 @@ interface UomRow {
   id: string
   code: string
   name: string | null
-}
-
-interface EquipmentTypeRow {
-  type_id: string
-  code: string
-  name: string
-}
-
-interface EquipmentTemplateRow {
-  id: string
-  template_code: string
-  template_name: string
-  equipment_type_id: string | null
-  status: RecipeStatus
 }
 
 interface QualityCheckMasterRow {
@@ -1013,13 +922,86 @@ interface RecipeMaterialRequirement {
   material_name?: string
   material_role: string
   material_type_code?: string
-  material_spec_code?: string
   material_code?: string
   qty: number
   uom_code: string
   basis?: string
   is_optional?: boolean
+  attr_values?: JsonObject
   notes?: string
+}
+
+interface AttrSetAssignmentRow {
+  attr_set_id: number
+}
+
+interface MaterialAttrDefRow {
+  attr_id: number
+  code: string
+  name: string
+  name_i18n?: {
+    ja?: string
+    en?: string
+  } | null
+  data_type: string
+  description?: string | null
+  is_active?: boolean
+  required?: boolean
+  uom_id?: string | null
+  num_min?: number | null
+  num_max?: number | null
+  text_regex?: string | null
+  allowed_values?: unknown | null
+  ref_kind?: string | null
+  ref_domain?: string | null
+}
+
+interface MaterialAttrRuleRow {
+  attr_set_id: number
+  attr_id: number
+  required: boolean
+  sort_order: number
+  is_active: boolean
+  ui_section?: string | null
+  ui_widget?: string | null
+  help_text?: string | null
+  attr_def: MaterialAttrDefRow | MaterialAttrDefRow[] | null
+}
+
+interface MaterialAttrField {
+  attr_id: number
+  code: string
+  name: string
+  name_i18n?: {
+    ja?: string
+    en?: string
+  } | null
+  data_type: string
+  required: boolean
+  ui_section: string
+  ui_widget: string
+  help_text: string
+  description: string
+  uom_id: string | null
+  uom_code: string | null
+  num_min: number | null
+  num_max: number | null
+  text_regex: string | null
+  allowed_values: unknown | null
+  ref_kind: string | null
+  ref_domain: string | null
+  value: string | boolean
+  error: string
+}
+
+interface MaterialTreeNode {
+  row: MaterialTypeRow
+  children: MaterialTreeNode[]
+}
+
+interface MaterialTreeEntry {
+  node: MaterialTreeNode
+  depth: number
 }
 
 interface RecipeOutputSpec {
@@ -1029,14 +1011,6 @@ interface RecipeOutputSpec {
   qty: number
   uom_code: string
   basis?: string
-  notes?: string
-}
-
-interface RecipeEquipmentRequirement {
-  equipment_type_code: string
-  equipment_template_code?: string
-  quantity?: number
-  capability_rules?: JsonObject
   notes?: string
 }
 
@@ -1093,9 +1067,6 @@ interface RecipeBody {
     required: RecipeMaterialRequirement[]
     optional: RecipeMaterialRequirement[]
   }
-  equipment: {
-    default_requirements: RecipeEquipmentRequirement[]
-  }
   flow: {
     steps: RecipeFlowStep[]
   }
@@ -1124,24 +1095,11 @@ interface MaterialRowState {
   item: RecipeMaterialRequirement
 }
 
-interface ParameterRowState {
-  key: string
-  parameter_code: string
-  target: string
-  uom_code: string
-}
-
-interface QualityRowState {
-  key: string
-  check_code: string
-  frequency: string
-}
-
-type RecipeSectionKey = 'materials' | 'outputs' | 'equipment' | 'flow' | 'quality' | 'documents'
+type RecipeSectionKey = 'materials' | 'outputs' | 'flow' | 'quality' | 'documents'
 
 const route = useRoute()
 const router = useRouter()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 const pageTitle = computed(() => t('recipe.edit.title'))
 const recipeId = computed(() => (typeof route.params.recipeId === 'string' ? route.params.recipeId : ''))
@@ -1160,10 +1118,7 @@ const activeVersion = ref<RecipeVersionRow | null>(null)
 const recipeBody = ref<RecipeBody>(createDefaultRecipeBody(DEFAULT_SCHEMA_KEY, ''))
 
 const materialTypes = ref<MaterialTypeRow[]>([])
-const materialSpecs = ref<MaterialSpecRow[]>([])
 const materialOptions = ref<MaterialMasterRow[]>([])
-const equipmentTypes = ref<EquipmentTypeRow[]>([])
-const equipmentTemplates = ref<EquipmentTemplateRow[]>([])
 const qualityCheckOptions = ref<QualityCheckMasterRow[]>([])
 const uoms = ref<UomRow[]>([])
 
@@ -1176,7 +1131,6 @@ const recipeSchema = ref<JsonObject | null>(null)
 const sectionVisibility = reactive<Record<RecipeSectionKey, boolean>>({
   materials: true,
   outputs: true,
-  equipment: true,
   flow: true,
   quality: true,
   documents: true,
@@ -1204,10 +1158,15 @@ const versionForm = reactive({
 const headerErrors = reactive<Record<string, string>>({})
 const versionErrors = reactive<Record<string, string>>({})
 
-const showMaterialModal = ref(false)
+const showMaterialEditor = ref(false)
 const materialEditIndex = ref<number | null>(null)
+const selectedMaterialTypeId = ref('')
+const materialAttrLoading = ref(false)
+const materialAttrFields = ref<MaterialAttrField[]>([])
+const materialAttrValueSeed = ref<JsonObject | null>(null)
 const materialForm = reactive({
   section: 'required' as MaterialSection,
+  material_type_code: '',
   material_id: '',
   material_role: '',
   qty: '',
@@ -1230,17 +1189,6 @@ const outputForm = reactive({
   notes: '',
 })
 const outputErrors = reactive<Record<string, string>>({})
-
-const showEquipmentModal = ref(false)
-const equipmentEditIndex = ref<number | null>(null)
-const equipmentForm = reactive({
-  equipment_type_code: '',
-  equipment_template_code: '',
-  quantity: '1',
-  capability_rules: '{}',
-  notes: '',
-})
-const equipmentErrors = reactive<Record<string, string>>({})
 
 const showGlobalQualityModal = ref(false)
 const globalQualityEditIndex = ref<number | null>(null)
@@ -1268,27 +1216,7 @@ const documentForm = reactive({
 })
 const documentErrors = reactive<Record<string, string>>({})
 
-const showStepModal = ref(false)
-const stepEditIndex = ref<number | null>(null)
-const stepSource = ref<RecipeFlowStep | null>(null)
-const stepForm = reactive({
-  step_no: 1,
-  step_code: '',
-  step_name: '',
-  step_type: FALLBACK_STEP_TYPES[0],
-  step_template_code: '',
-  duration_sec: '',
-  instructions: '',
-  notes: '',
-})
-const stepErrors = reactive<Record<string, string>>({})
-
-let parameterRowCounter = 0
-let qualityRowCounter = 0
 const releaseCriteriaText = ref('{}')
-
-const parameterRows = ref<ParameterRowState[]>([])
-const qualityRows = ref<QualityRowState[]>([])
 
 const mesClient = () => supabase.schema('mes')
 
@@ -1302,12 +1230,71 @@ const materialTypeMap = computed(() => {
   return map
 })
 
-const materialSpecMap = computed(() => {
-  const map = new Map<string, MaterialSpecRow>()
-  for (const row of materialSpecs.value) {
+const uomMap = computed(() => {
+  const map = new Map<string, UomRow>()
+  for (const row of uoms.value) {
     map.set(row.id, row)
   }
   return map
+})
+
+const rawMaterialRoot = computed(() => materialTypes.value.find((row) => row.code === 'RAW_MATERIAL') ?? null)
+
+const rawMaterialTree = computed(() => {
+  if (!rawMaterialRoot.value) return null
+  const childrenByParent = new Map<string | null, MaterialTypeRow[]>()
+  for (const row of materialTypes.value) {
+    const key = row.parent_type_id ?? null
+    const list = childrenByParent.get(key) ?? []
+    list.push(row)
+    childrenByParent.set(key, list)
+  }
+
+  const sortRows = (rows: MaterialTypeRow[]) =>
+    rows.slice().sort((a, b) => {
+      const sortDiff = (a.sort_order ?? 0) - (b.sort_order ?? 0)
+      if (sortDiff !== 0) return sortDiff
+      return a.code.localeCompare(b.code)
+    })
+
+  const buildNode = (row: MaterialTypeRow): MaterialTreeNode => ({
+    row,
+    children: sortRows(childrenByParent.get(row.type_id) ?? []).map((child) => buildNode(child)),
+  })
+
+  return buildNode(rawMaterialRoot.value)
+})
+
+const materialTypeTreeEntries = computed<MaterialTreeEntry[]>(() => {
+  const root = rawMaterialTree.value
+  if (!root) return []
+  const entries: MaterialTreeEntry[] = []
+  const visit = (node: MaterialTreeNode, depth: number) => {
+    entries.push({ node, depth })
+    node.children.forEach((child) => visit(child, depth + 1))
+  }
+  visit(root, 0)
+  return entries
+})
+
+const selectedMaterialType = computed(() => (selectedMaterialTypeId.value ? materialTypeMap.value.get(selectedMaterialTypeId.value) ?? null : null))
+
+const selectedMaterialTypeFilterIds = computed(() => {
+  const selectedId = selectedMaterialTypeId.value || rawMaterialRoot.value?.type_id || ''
+  if (!selectedId) return new Set<string>()
+
+  const root = materialTypeMap.value.get(selectedId)
+  if (!root) return new Set<string>()
+
+  const ids = new Set<string>()
+  const walk = (typeId: string) => {
+    ids.add(typeId)
+    for (const row of materialTypes.value) {
+      if (row.parent_type_id === typeId) walk(row.type_id)
+    }
+  }
+  walk(root.type_id)
+  return ids
 })
 
 const materialMasterMap = computed(() => {
@@ -1318,12 +1305,27 @@ const materialMasterMap = computed(() => {
   return map
 })
 
-const equipmentTypeMap = computed(() => {
-  const map = new Map<string, EquipmentTypeRow>()
-  for (const row of equipmentTypes.value) {
-    map.set(row.type_id, row)
+const selectedMaterialOption = computed(() => (
+  materialForm.material_id ? materialMasterMap.value.get(materialForm.material_id) ?? null : null
+))
+
+const filteredMaterialOptions = computed(() => {
+  if (selectedMaterialTypeFilterIds.value.size === 0) return materialOptions.value
+  return materialOptions.value.filter((row) => {
+    if (!row.material_type_id) return false
+    return selectedMaterialTypeFilterIds.value.has(row.material_type_id)
+  })
+})
+
+const materialAttrSections = computed(() => {
+  const groups = new Map<string, MaterialAttrField[]>()
+  for (const field of materialAttrFields.value) {
+    const key = field.ui_section || t('recipe.edit.materialAttributeDefaultSection')
+    const list = groups.get(key) ?? []
+    list.push(field)
+    groups.set(key, list)
   }
-  return map
+  return Array.from(groups.entries()).map(([section, fields]) => ({ section, fields }))
 })
 
 const qualityCheckMap = computed(() => {
@@ -1339,7 +1341,6 @@ const optionalMaterials = computed(() => recipeBody.value.materials.optional)
 const primaryOutputs = computed(() => recipeBody.value.outputs.primary)
 const coProductOutputs = computed(() => recipeBody.value.outputs.co_products)
 const wasteOutputs = computed(() => recipeBody.value.outputs.waste)
-const equipmentRequirements = computed(() => recipeBody.value.equipment.default_requirements)
 const flowSteps = computed(() => recipeBody.value.flow.steps)
 const globalQualityChecks = computed(() => recipeBody.value.quality.global_checks)
 const documentRows = computed(() => recipeBody.value.documents)
@@ -1366,17 +1367,9 @@ const isDefaultRecipeBodySchema = computed(() => activeSchemaKey.value === DEFAU
 
 const schemaStepTypes = computed(() => extractSchemaStepTypes(recipeSchema.value))
 const usesSchemaStepOptions = computed(() => schemaStepTypes.value.length > 0)
-const stepTypeOptions = computed(() => {
-  const options = usesSchemaStepOptions.value ? [...schemaStepTypes.value] : [...FALLBACK_STEP_TYPES]
-  if (stepForm.step_type && !options.includes(stepForm.step_type)) {
-    options.unshift(stepForm.step_type)
-  }
-  return options
-})
 
 const showMaterialsSection = computed(() => !recipeSchema.value || schemaHasSection(recipeSchema.value, 'materials'))
 const showOutputsSection = computed(() => isDefaultRecipeBodySchema.value || !recipeSchema.value || schemaHasSection(recipeSchema.value, 'outputs') || primaryOutputs.value.length > 0 || coProductOutputs.value.length > 0 || wasteOutputs.value.length > 0)
-const showEquipmentSection = computed(() => isDefaultRecipeBodySchema.value || !recipeSchema.value || schemaHasSection(recipeSchema.value, 'equipment') || equipmentRequirements.value.length > 0)
 const showFlowSection = computed(() => !recipeSchema.value || schemaHasSection(recipeSchema.value, 'flow'))
 const showQualitySection = computed(() => isDefaultRecipeBodySchema.value || !recipeSchema.value || schemaHasSection(recipeSchema.value, 'quality') || globalQualityChecks.value.length > 0 || Object.keys(recipeBody.value.quality.release_criteria ?? {}).length > 0)
 const showDocumentsSection = computed(() => isDefaultRecipeBodySchema.value || !recipeSchema.value || schemaHasSection(recipeSchema.value, 'documents') || documentRows.value.length > 0)
@@ -1384,7 +1377,6 @@ const schemaSectionBadges = computed(() => [
   { key: 'materials', label: formatSchemaSection('materials'), enabled: showMaterialsSection.value },
   { key: 'flow', label: formatSchemaSection('flow'), enabled: showFlowSection.value },
   { key: 'outputs', label: formatSchemaSection('outputs'), enabled: showOutputsSection.value },
-  { key: 'equipment', label: formatSchemaSection('equipment'), enabled: showEquipmentSection.value },
   { key: 'quality', label: formatSchemaSection('quality'), enabled: showQualitySection.value },
   { key: 'documents', label: formatSchemaSection('documents'), enabled: showDocumentsSection.value },
 ])
@@ -1395,8 +1387,6 @@ function isSectionAvailable(section: RecipeSectionKey) {
       return showMaterialsSection.value
     case 'outputs':
       return showOutputsSection.value
-    case 'equipment':
-      return showEquipmentSection.value
     case 'flow':
       return showFlowSection.value
     case 'quality':
@@ -1444,9 +1434,6 @@ function createDefaultRecipeBody(schemaCode: string, industryType: string): Reci
       required: [],
       optional: [],
     },
-    equipment: {
-      default_requirements: [],
-    },
     flow: {
       steps: [],
     },
@@ -1489,26 +1476,12 @@ function normalizeMaterialRequirement(value: unknown): RecipeMaterialRequirement
     material_name: typeof value.material_name === 'string' ? value.material_name : undefined,
     material_role: materialRole,
     material_type_code: typeof value.material_type_code === 'string' ? value.material_type_code : undefined,
-    material_spec_code: typeof value.material_spec_code === 'string' ? value.material_spec_code : undefined,
     material_code: typeof value.material_code === 'string' ? value.material_code : undefined,
     qty,
     uom_code: uomCode,
     basis: typeof value.basis === 'string' ? value.basis : undefined,
     is_optional: typeof value.is_optional === 'boolean' ? value.is_optional : undefined,
-    notes: typeof value.notes === 'string' ? value.notes : undefined,
-  }
-}
-
-function normalizeEquipmentRequirement(value: unknown): RecipeEquipmentRequirement | null {
-  if (!isJsonObject(value)) return null
-  const equipmentTypeCode = typeof value.equipment_type_code === 'string' ? value.equipment_type_code : ''
-  if (!equipmentTypeCode) return null
-  const quantity = typeof value.quantity === 'number' ? value.quantity : Number(value.quantity)
-  return {
-    equipment_type_code: equipmentTypeCode,
-    equipment_template_code: typeof value.equipment_template_code === 'string' ? value.equipment_template_code : undefined,
-    quantity: Number.isFinite(quantity) && quantity > 0 ? Math.trunc(quantity) : undefined,
-    capability_rules: isJsonObject(value.capability_rules) ? deepCloneJson(value.capability_rules) : undefined,
+    attr_values: isJsonObject(value.attr_values) ? deepCloneJson(value.attr_values) : undefined,
     notes: typeof value.notes === 'string' ? value.notes : undefined,
   }
 }
@@ -1610,11 +1583,6 @@ function normalizeRecipeBody(raw: unknown, industryType: string, schemaCode: str
     ? materials.optional.map(normalizeMaterialRequirement).filter((item): item is RecipeMaterialRequirement => Boolean(item))
     : []
 
-  const equipment = isJsonObject(base.equipment) ? base.equipment : {}
-  const defaultEquipmentRequirements = Array.isArray(equipment.default_requirements)
-    ? equipment.default_requirements.map(normalizeEquipmentRequirement).filter((item): item is RecipeEquipmentRequirement => Boolean(item))
-    : []
-
   const flow = isJsonObject(base.flow) ? base.flow : {}
   const steps = Array.isArray(flow.steps)
     ? flow.steps.map(normalizeFlowStep).filter((item): item is RecipeFlowStep => Boolean(item))
@@ -1643,9 +1611,6 @@ function normalizeRecipeBody(raw: unknown, industryType: string, schemaCode: str
     materials: {
       required,
       optional,
-    },
-    equipment: {
-      default_requirements: defaultEquipmentRequirements,
     },
     flow: {
       steps,
@@ -1686,6 +1651,15 @@ function formatVersionStatus(value: VersionStatus) {
 
 function formatMaterialSection(value: MaterialSection) {
   return translateEnum('recipe.materialSections', value)
+}
+
+function displayMaterialTypeName(row: Pick<MaterialTypeRow, 'name' | 'code' | 'name_i18n'> | null) {
+  if (!row) return ''
+  const isJa = locale.value.toString().toLowerCase().startsWith('ja')
+  const ja = row.name_i18n?.ja?.trim()
+  const en = row.name_i18n?.en?.trim()
+  if (isJa) return ja || row.name || en || row.code
+  return en || row.name || ja || row.code
 }
 
 function formatBasis(value: string) {
@@ -1773,42 +1747,23 @@ function validateHeaderForms() {
 
 async function loadReferenceData() {
   const [
-    { data: materialData },
-    { data: materialSpecData },
-    { data: materialTypeData },
-    { data: equipmentTypeData },
-    { data: equipmentTemplateData },
-    { data: qualityCheckData },
-    { data: uomData },
+    { data: materialData, error: materialError },
+    { data: materialTypeData, error: materialTypeError },
+    { data: qualityCheckData, error: qualityCheckError },
+    { data: uomData, error: uomError },
   ] = await Promise.all([
     mesClient()
       .from('mst_material')
-      .select('id, material_code, material_name, material_type_id, material_spec_id, base_uom_id, status')
+      .select('id, material_code, material_name, material_type_id, base_uom_id, status')
       .eq('status', 'active')
       .order('material_code', { ascending: true }),
-    mesClient()
-      .from('mst_material_spec')
-      .select('id, material_type_id, spec_code, spec_name')
-      .eq('status', 'active')
-      .order('spec_code', { ascending: true }),
     supabase
       .from('type_def')
-      .select('type_id, code, name')
+      .select('type_id, code, name, name_i18n, parent_type_id, sort_order')
       .eq('domain', 'material_type')
       .eq('is_active', true)
       .order('sort_order', { ascending: true }),
     supabase
-      .from('type_def')
-      .select('type_id, code, name')
-      .eq('domain', 'equipment_type')
-      .eq('is_active', true)
-      .order('sort_order', { ascending: true }),
-    mesClient()
-      .from('mst_equipment_template')
-      .select('id, template_code, template_name, equipment_type_id, status')
-      .eq('status', 'active')
-      .order('template_code', { ascending: true }),
-    mesClient()
       .from('mst_quality_check')
       .select('id, check_code, check_name, status')
       .eq('status', 'active')
@@ -1819,11 +1774,19 @@ async function loadReferenceData() {
       .order('code', { ascending: true }),
   ])
 
+  const referenceError = [
+    materialError,
+    materialTypeError,
+    qualityCheckError,
+    uomError,
+  ].find(Boolean)
+
+  if (referenceError) {
+    toast.error(t('recipe.edit.loadRecipeFailed', { message: referenceError.message }))
+  }
+
   materialOptions.value = (materialData ?? []) as MaterialMasterRow[]
-  materialSpecs.value = (materialSpecData ?? []) as MaterialSpecRow[]
   materialTypes.value = (materialTypeData ?? []) as MaterialTypeRow[]
-  equipmentTypes.value = (equipmentTypeData ?? []) as EquipmentTypeRow[]
-  equipmentTemplates.value = (equipmentTemplateData ?? []) as EquipmentTemplateRow[]
   qualityCheckOptions.value = (qualityCheckData ?? []) as QualityCheckMasterRow[]
   uoms.value = (uomData ?? []) as UomRow[]
 }
@@ -2068,46 +2031,258 @@ async function versionUp() {
 
 function resetMaterialErrors() {
   Object.keys(materialErrors).forEach((key) => delete materialErrors[key])
+  materialAttrFields.value.forEach((field) => {
+    field.error = ''
+  })
 }
 
-function openMaterialCreate(optional: boolean) {
-  materialEditIndex.value = null
-  materialForm.section = optional ? 'optional' : 'required'
-  materialForm.material_id = ''
-  materialForm.material_role = ''
-  materialForm.qty = ''
-  materialForm.uom_code = ''
-  materialForm.basis = 'per_base'
-  materialForm.notes = ''
-  resetMaterialErrors()
-  showMaterialModal.value = true
+function selectMaterialType(typeId: string) {
+  selectedMaterialTypeId.value = typeId
 }
 
-function openMaterialEdit(section: MaterialSection, index: number) {
-  const item = recipeBody.value.materials[section][index]
-  if (!item) return
-
-  materialEditIndex.value = index
-  materialForm.section = section
-  materialForm.material_id = findMaterialIdForRequirement(item)
-  materialForm.material_role = item.material_role
-  materialForm.qty = String(item.qty)
-  materialForm.uom_code = item.uom_code
-  materialForm.basis = item.basis || 'per_base'
-  materialForm.notes = item.notes || ''
-  resetMaterialErrors()
-  showMaterialModal.value = true
+function materialAttrLabel(field: MaterialAttrField) {
+  const isJa = locale.value.toString().toLowerCase().startsWith('ja')
+  const ja = field.name_i18n?.ja?.trim()
+  const en = field.name_i18n?.en?.trim()
+  if (isJa) return ja || field.name || en || field.code
+  return en || field.name || ja || field.code
 }
 
-function closeMaterialModal() {
-  showMaterialModal.value = false
+function materialAttrInputKind(field: MaterialAttrField) {
+  const dataType = normalizeBatchAttrDataType(field.data_type)
+  if (dataType === 'number') return 'number'
+  if (dataType === 'bool') return 'boolean'
+  if (dataType === 'json') return 'json'
+  if (dataType === 'text') {
+    const options = materialAttrAllowedOptions(field)
+    if (options.length > 0 || field.ui_widget === 'select') return 'select'
+    return 'text'
+  }
+  return 'text'
 }
 
-function findMaterialIdForRequirement(item: RecipeMaterialRequirement) {
-  const exact = materialOptions.value.find((row) => row.material_code === item.material_code)
-  if (exact) return exact.id
-  const fallback = materialOptions.value.find((row) => row.material_code === item.material_key)
-  return fallback?.id ?? ''
+function materialAttrAllowedOptions(field: MaterialAttrField) {
+  if (Array.isArray(field.allowed_values)) {
+    return field.allowed_values
+      .map((entry) => String(entry ?? '').trim())
+      .filter(Boolean)
+      .map((value) => ({ value, label: value }))
+  }
+  if (!field.allowed_values || typeof field.allowed_values !== 'object') return []
+  return Object.entries(field.allowed_values as Record<string, unknown>)
+    .map(([key, value]) => {
+      const normalizedKey = key.trim()
+      const normalizedLabel = String(value ?? key).trim()
+      if (!normalizedKey) return null
+      return {
+        value: normalizedKey,
+        label: normalizedLabel || normalizedKey,
+      }
+    })
+    .filter((entry): entry is { value: string, label: string } => Boolean(entry))
+}
+
+function materialAttrTextValue(field: MaterialAttrField) {
+  return typeof field.value === 'string' ? field.value : ''
+}
+
+function updateMaterialAttrText(field: MaterialAttrField, event: Event) {
+  const target = event.target as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null
+  field.value = target?.value ?? ''
+}
+
+function updateMaterialAttrBoolean(field: MaterialAttrField, event: Event) {
+  const target = event.target as HTMLInputElement | null
+  field.value = Boolean(target?.checked)
+}
+
+function normalizeMaterialAttrFieldValue(field: Pick<MaterialAttrField, 'data_type'>, raw: unknown) {
+  const dataType = normalizeBatchAttrDataType(field.data_type)
+  if (dataType === 'bool') return Boolean(raw)
+  if (raw === null || raw === undefined) return dataType === 'bool' ? false : ''
+  if (dataType === 'number') return typeof raw === 'number' ? String(raw) : String(raw)
+  if (dataType === 'json') return typeof raw === 'string' ? raw : JSON.stringify(raw, null, 2)
+  return String(raw)
+}
+
+async function loadMaterialAttrFields(typeId: string) {
+  if (!typeId) {
+    materialAttrFields.value = []
+    return
+  }
+
+  try {
+    materialAttrLoading.value = true
+    const existingValues = new Map(materialAttrFields.value.map((field) => [field.code, field.value]))
+    const seed = materialAttrValueSeed.value
+    const { data: assignmentData, error: assignmentError } = await supabase
+      .from('entity_attr_set')
+      .select('attr_set_id')
+      .eq('entity_type', 'material_type')
+      .eq('entity_id', typeId)
+      .eq('is_active', true)
+    if (assignmentError) throw assignmentError
+
+    const setIds = (assignmentData ?? []).map((row) => (row as AttrSetAssignmentRow).attr_set_id)
+    if (setIds.length === 0) {
+      if (selectedMaterialTypeId.value === typeId) materialAttrFields.value = []
+      materialAttrValueSeed.value = null
+      return
+    }
+
+    const { data: ruleData, error: ruleError } = await supabase
+      .from('attr_set_rule')
+      .select(
+        'attr_set_id, attr_id, required, sort_order, is_active, ui_section, ui_widget, help_text, attr_def:attr_def!fk_attr_set_rule_attr(attr_id, code, name, name_i18n, data_type, description, is_active, required, uom_id, num_min, num_max, text_regex, allowed_values, ref_kind, ref_domain)'
+      )
+      .in('attr_set_id', setIds)
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true })
+    if (ruleError) throw ruleError
+
+    const fields: MaterialAttrField[] = []
+    for (const row of ruleData ?? []) {
+      const typedRow = row as unknown as MaterialAttrRuleRow
+      const attrRaw = typedRow.attr_def as MaterialAttrDefRow | MaterialAttrDefRow[] | null
+      const attr = Array.isArray(attrRaw) ? (attrRaw[0] ?? null) : attrRaw
+      if (!attr || attr.is_active === false) continue
+      const dataType = normalizeBatchAttrDataType(attr.data_type)
+      const seededValue = seed && Object.prototype.hasOwnProperty.call(seed, attr.code)
+        ? seed[attr.code]
+        : existingValues.get(attr.code)
+      fields.push({
+        attr_id: attr.attr_id,
+        code: attr.code,
+        name: attr.name,
+        name_i18n: attr.name_i18n ?? null,
+        data_type: dataType,
+        required: Boolean(typedRow.required || attr.required),
+        ui_section: typedRow.ui_section?.trim() || t('recipe.edit.materialAttributeDefaultSection'),
+        ui_widget: typedRow.ui_widget?.trim() || '',
+        help_text: typedRow.help_text?.trim() || '',
+        description: attr.description?.trim() || '',
+        uom_id: attr.uom_id ?? null,
+        uom_code: attr.uom_id ? uomMap.value.get(attr.uom_id)?.code ?? null : null,
+        num_min: typeof attr.num_min === 'number' ? attr.num_min : attr.num_min != null ? Number(attr.num_min) : null,
+        num_max: typeof attr.num_max === 'number' ? attr.num_max : attr.num_max != null ? Number(attr.num_max) : null,
+        text_regex: attr.text_regex ?? null,
+        allowed_values: attr.allowed_values ?? null,
+        ref_kind: attr.ref_kind ?? null,
+        ref_domain: attr.ref_domain ?? null,
+        value: normalizeMaterialAttrFieldValue({ data_type: dataType }, seededValue),
+        error: '',
+      })
+    }
+    fields.sort((a, b) => a.ui_section.localeCompare(b.ui_section) || a.code.localeCompare(b.code))
+
+    if (selectedMaterialTypeId.value === typeId) {
+      materialAttrFields.value = fields
+    }
+    materialAttrValueSeed.value = null
+  } catch (error: unknown) {
+    materialAttrFields.value = []
+    materialAttrValueSeed.value = null
+    const message = error instanceof Error ? error.message : String(error)
+    toast.error(t('recipe.edit.loadRecipeFailed', { message }))
+  } finally {
+    materialAttrLoading.value = false
+  }
+}
+
+function validateMaterialAttrFields() {
+  let hasError = false
+  materialAttrFields.value.forEach((field) => {
+    field.error = validateBatchAttrField(
+      {
+        code: field.code,
+        name: materialAttrLabel(field),
+        data_type: field.data_type,
+        required: field.required,
+        num_min: field.num_min,
+        num_max: field.num_max,
+        text_regex: field.text_regex,
+        allowed_values: field.allowed_values,
+        ref_kind: field.ref_kind,
+        value: field.value,
+      },
+        {
+        required: (label) => t('errors.required', { field: label }),
+        mustBeNumber: (label) => t('errors.mustBeNumber', { field: label }),
+        minValue: (label, min) => t('recipe.edit.materialAttributeMin', { field: label, min }),
+        maxValue: (label, max) => t('recipe.edit.materialAttributeMax', { field: label, max }),
+        pattern: (label) => t('recipe.edit.materialAttributePattern', { field: label }),
+        allowedValues: (label) => t('recipe.edit.materialAttributeAllowedValues', { field: label }),
+        invalidJson: (label) => t('recipe.edit.materialAttributeJson', { field: label }),
+        invalidReference: (label) => t('recipe.edit.materialAttributeReference', { field: label }),
+      },
+    )
+    if (field.error) hasError = true
+  })
+  return !hasError
+}
+
+function buildMaterialAttrValues() {
+  const values: JsonObject = {}
+  materialAttrFields.value.forEach((field) => {
+    const dataType = normalizeBatchAttrDataType(field.data_type)
+    if (dataType === 'bool') {
+      values[field.code] = Boolean(field.value)
+      return
+    }
+
+    if (field.value === null || field.value === undefined) return
+    const rawValue = typeof field.value === 'string' ? field.value.trim() : field.value
+    if (rawValue === '') return
+
+    if (dataType === 'number') {
+      values[field.code] = Number(rawValue)
+      return
+    }
+    if (dataType === 'json') {
+      values[field.code] = JSON.parse(String(rawValue))
+      return
+    }
+    values[field.code] = rawValue
+  })
+  return Object.keys(values).length > 0 ? values : undefined
+}
+
+async function openMaterialCreate(optional: boolean) {
+  if (!recipeHeader.value || !activeVersion.value) return
+  const saved = await persistRecipe(false)
+  if (!saved) return
+  void router.push({
+    name: 'recipeItemEditor',
+    params: {
+      recipeId: recipeHeader.value.id,
+      versionId: activeVersion.value.id,
+      kind: 'material',
+      section: optional ? 'optional' : 'required',
+    },
+  })
+}
+
+async function openMaterialEdit(section: MaterialSection, index: number) {
+  if (!recipeHeader.value || !activeVersion.value) return
+  const saved = await persistRecipe(false)
+  if (!saved) return
+  void router.push({
+    name: 'recipeItemEditor',
+    params: {
+      recipeId: recipeHeader.value.id,
+      versionId: activeVersion.value.id,
+      kind: 'material',
+      section,
+      index: String(index),
+    },
+  })
+}
+
+function closeMaterialEditor() {
+  showMaterialEditor.value = false
+  selectedMaterialTypeId.value = ''
+  materialAttrFields.value = []
+  materialAttrValueSeed.value = null
 }
 
 function validateMaterialForm() {
@@ -2117,7 +2292,8 @@ function validateMaterialForm() {
   const qty = Number(materialForm.qty)
   if (!Number.isFinite(qty) || qty < 0) materialErrors.qty = t('recipe.edit.quantityNonNegative')
   if (!materialForm.uom_code.trim()) materialErrors.uom_code = t('recipe.edit.uomCodeRequired')
-  return Object.keys(materialErrors).length === 0
+  const attrValid = validateMaterialAttrFields()
+  return Object.keys(materialErrors).length === 0 && attrValid
 }
 
 function saveMaterial() {
@@ -2128,19 +2304,19 @@ function saveMaterial() {
     return
   }
 
-  const spec = material.material_spec_id ? materialSpecMap.value.get(material.material_spec_id) : undefined
   const type = material.material_type_id != null ? materialTypeMap.value.get(material.material_type_id) : undefined
+  const attrValues = buildMaterialAttrValues()
   const requirement: RecipeMaterialRequirement = {
     material_key: material.material_code,
     material_name: material.material_name,
     material_role: materialForm.material_role.trim(),
     material_code: material.material_code,
-    material_spec_code: spec?.spec_code,
-    material_type_code: type?.code,
+    material_type_code: type?.code || selectedMaterialType.value?.code,
     qty: Number(materialForm.qty),
     uom_code: materialForm.uom_code.trim(),
     basis: materialForm.basis,
     is_optional: materialForm.section === 'optional',
+    attr_values: attrValues,
     notes: materialForm.notes.trim() || undefined,
   }
 
@@ -2151,7 +2327,7 @@ function saveMaterial() {
     targetList.splice(materialEditIndex.value, 1, requirement)
   }
 
-  closeMaterialModal()
+  closeMaterialEditor()
 }
 
 function deleteMaterial(section: MaterialSection, index: number) {
@@ -2162,34 +2338,35 @@ function resetOutputErrors() {
   Object.keys(outputErrors).forEach((key) => delete outputErrors[key])
 }
 
-function openOutputCreate(section: OutputSection) {
-  outputEditIndex.value = null
-  outputForm.section = section
-  outputForm.output_code = ''
-  outputForm.output_name = ''
-  outputForm.output_type = section === 'co_products' ? 'co_product' : section === 'waste' ? 'waste' : 'primary'
-  outputForm.qty = ''
-  outputForm.uom_code = ''
-  outputForm.basis = 'per_base'
-  outputForm.notes = ''
-  resetOutputErrors()
-  showOutputModal.value = true
+async function openOutputCreate(section: OutputSection) {
+  if (!recipeHeader.value || !activeVersion.value) return
+  const saved = await persistRecipe(false)
+  if (!saved) return
+  void router.push({
+    name: 'recipeItemEditor',
+    params: {
+      recipeId: recipeHeader.value.id,
+      versionId: activeVersion.value.id,
+      kind: 'output',
+      section,
+    },
+  })
 }
 
-function openOutputEdit(section: OutputSection, index: number) {
-  const item = recipeBody.value.outputs[section][index]
-  if (!item) return
-  outputEditIndex.value = index
-  outputForm.section = section
-  outputForm.output_code = item.output_code
-  outputForm.output_name = item.output_name
-  outputForm.output_type = item.output_type
-  outputForm.qty = String(item.qty)
-  outputForm.uom_code = item.uom_code
-  outputForm.basis = item.basis || 'per_base'
-  outputForm.notes = item.notes || ''
-  resetOutputErrors()
-  showOutputModal.value = true
+async function openOutputEdit(section: OutputSection, index: number) {
+  if (!recipeHeader.value || !activeVersion.value) return
+  const saved = await persistRecipe(false)
+  if (!saved) return
+  void router.push({
+    name: 'recipeItemEditor',
+    params: {
+      recipeId: recipeHeader.value.id,
+      versionId: activeVersion.value.id,
+      kind: 'output',
+      section,
+      index: String(index),
+    },
+  })
 }
 
 function closeOutputModal() {
@@ -2228,72 +2405,6 @@ function saveOutput() {
 
 function deleteOutput(section: OutputSection, index: number) {
   recipeBody.value.outputs[section].splice(index, 1)
-}
-
-function resetEquipmentErrors() {
-  Object.keys(equipmentErrors).forEach((key) => delete equipmentErrors[key])
-}
-
-function openEquipmentCreate() {
-  equipmentEditIndex.value = null
-  equipmentForm.equipment_type_code = ''
-  equipmentForm.equipment_template_code = ''
-  equipmentForm.quantity = '1'
-  equipmentForm.capability_rules = '{}'
-  equipmentForm.notes = ''
-  resetEquipmentErrors()
-  showEquipmentModal.value = true
-}
-
-function openEquipmentEdit(index: number) {
-  const item = equipmentRequirements.value[index]
-  if (!item) return
-  equipmentEditIndex.value = index
-  equipmentForm.equipment_type_code = item.equipment_type_code
-  equipmentForm.equipment_template_code = item.equipment_template_code || ''
-  equipmentForm.quantity = String(item.quantity ?? 1)
-  equipmentForm.capability_rules = JSON.stringify(item.capability_rules ?? {}, null, 2)
-  equipmentForm.notes = item.notes || ''
-  resetEquipmentErrors()
-  showEquipmentModal.value = true
-}
-
-function closeEquipmentModal() {
-  showEquipmentModal.value = false
-}
-
-function validateEquipmentForm() {
-  resetEquipmentErrors()
-  if (!equipmentForm.equipment_type_code.trim()) equipmentErrors.equipment_type_code = t('recipe.edit.equipmentTypeRequired')
-  const quantity = Number(equipmentForm.quantity)
-  if (!Number.isInteger(quantity) || quantity < 1) equipmentErrors.quantity = t('recipe.edit.equipmentQuantityMin')
-  try {
-    parseJsonObjectText(equipmentForm.capability_rules, t('recipe.edit.capabilityRulesInvalid'))
-  } catch (error: unknown) {
-    equipmentErrors.capability_rules = error instanceof Error ? error.message : String(error)
-  }
-  return Object.keys(equipmentErrors).length === 0
-}
-
-function saveEquipmentRequirement() {
-  if (!validateEquipmentForm()) return
-  const requirement: RecipeEquipmentRequirement = {
-    equipment_type_code: equipmentForm.equipment_type_code.trim(),
-    equipment_template_code: equipmentForm.equipment_template_code.trim() || undefined,
-    quantity: Number(equipmentForm.quantity),
-    capability_rules: parseJsonObjectText(equipmentForm.capability_rules, t('recipe.edit.capabilityRulesInvalid')),
-    notes: equipmentForm.notes.trim() || undefined,
-  }
-  if (equipmentEditIndex.value === null) {
-    recipeBody.value.equipment.default_requirements.push(requirement)
-  } else {
-    recipeBody.value.equipment.default_requirements.splice(equipmentEditIndex.value, 1, requirement)
-  }
-  closeEquipmentModal()
-}
-
-function deleteEquipmentRequirement(index: number) {
-  recipeBody.value.equipment.default_requirements.splice(index, 1)
 }
 
 function resetGlobalQualityErrors() {
@@ -2449,154 +2560,33 @@ function deleteDocument(index: number) {
   recipeBody.value.documents.splice(index, 1)
 }
 
-function createParameterRow(initial?: Partial<ParameterRowState>) {
-  return {
-    key: `param-${++parameterRowCounter}`,
-    parameter_code: initial?.parameter_code ?? '',
-    target: initial?.target ?? '',
-    uom_code: initial?.uom_code ?? '',
-  }
+async function openStepCreate() {
+  if (!recipeHeader.value || !activeVersion.value) return
+  const saved = await persistRecipe(false)
+  if (!saved) return
+  void router.push({
+    name: 'recipeStepEditor',
+    params: {
+      recipeId: recipeHeader.value.id,
+      versionId: activeVersion.value.id,
+    },
+  })
 }
 
-function createQualityRow(initial?: Partial<QualityRowState>) {
-  return {
-    key: `qc-${++qualityRowCounter}`,
-    check_code: initial?.check_code ?? '',
-    frequency: initial?.frequency ?? '',
-  }
-}
-
-function resetStepErrors() {
-  Object.keys(stepErrors).forEach((key) => delete stepErrors[key])
-}
-
-function resetStepForm() {
-  stepEditIndex.value = null
-  stepSource.value = null
-  stepForm.step_no = flowSteps.value.length > 0 ? Math.max(...flowSteps.value.map((item) => item.step_no)) + 10 : 10
-  stepForm.step_code = ''
-  stepForm.step_name = ''
-  stepForm.step_type = stepTypeOptions.value[0] ?? FALLBACK_STEP_TYPES[0]
-  stepForm.step_template_code = ''
-  stepForm.duration_sec = ''
-  stepForm.instructions = ''
-  stepForm.notes = ''
-  parameterRows.value = []
-  qualityRows.value = []
-  resetStepErrors()
-}
-
-function openStepCreate() {
-  resetStepForm()
-  showStepModal.value = true
-}
-
-function openStepEdit(index: number) {
+async function openStepEdit(index: number) {
+  if (!recipeHeader.value || !activeVersion.value) return
   const step = flowSteps.value[index]
   if (!step) return
-  resetStepForm()
-  stepEditIndex.value = index
-  stepSource.value = deepCloneJson(step)
-  stepForm.step_no = step.step_no
-  stepForm.step_code = step.step_code
-  stepForm.step_name = step.step_name
-  stepForm.step_type = step.step_type || stepTypeOptions.value[0] || FALLBACK_STEP_TYPES[0]
-  stepForm.step_template_code = step.step_template_code || ''
-  stepForm.duration_sec = step.duration_sec != null ? String(step.duration_sec) : ''
-  stepForm.instructions = step.instructions || ''
-  stepForm.notes = step.notes || ''
-  parameterRows.value = (step.parameters ?? []).map((row) => createParameterRow({
-    parameter_code: row.parameter_code,
-    target: row.target == null ? '' : String(row.target),
-    uom_code: row.uom_code || '',
-  }))
-  qualityRows.value = (step.quality_checks ?? []).map((row) => createQualityRow({
-    check_code: row.check_code,
-    frequency: row.frequency || '',
-  }))
-  showStepModal.value = true
-}
-
-function closeStepModal() {
-  showStepModal.value = false
-}
-
-function addParameterRow() {
-  parameterRows.value.push(createParameterRow())
-}
-
-function removeParameterRow(index: number) {
-  parameterRows.value.splice(index, 1)
-}
-
-function addQualityRow() {
-  qualityRows.value.push(createQualityRow())
-}
-
-function removeQualityRow(index: number) {
-  qualityRows.value.splice(index, 1)
-}
-
-function validateStepForm() {
-  resetStepErrors()
-  if (!Number.isInteger(stepForm.step_no) || stepForm.step_no < 1) stepErrors.step_no = t('recipe.edit.stepNumberPositive')
-  if (!stepForm.step_code.trim()) stepErrors.step_code = t('recipe.edit.stepCodeRequired')
-  if (!stepForm.step_name.trim()) stepErrors.step_name = t('recipe.edit.stepNameRequired')
-  return Object.keys(stepErrors).length === 0
-}
-
-function saveStep() {
-  if (!validateStepForm()) return
-
-  const parameters = parameterRows.value
-    .map((row) => ({
-      parameter_code: row.parameter_code.trim(),
-      target: row.target.trim(),
-      uom_code: row.uom_code.trim(),
-    }))
-    .filter((row) => row.parameter_code)
-    .map((row): RecipeParameterTarget => ({
-      parameter_code: row.parameter_code,
-      target: row.target === '' ? undefined : (Number.isNaN(Number(row.target)) ? row.target : Number(row.target)),
-      uom_code: row.uom_code || undefined,
-    }))
-
-  const qualityChecks = qualityRows.value
-    .map((row) => ({
-      check_code: row.check_code.trim(),
-      frequency: row.frequency.trim(),
-    }))
-    .filter((row) => row.check_code)
-    .map((row): RecipeQualityCheck => ({
-      check_code: row.check_code,
-      frequency: row.frequency || undefined,
-    }))
-
-  const step: RecipeFlowStep = {
-    step_code: stepForm.step_code.trim(),
-    step_name: stepForm.step_name.trim(),
-    step_no: stepForm.step_no,
-    step_type: stepForm.step_type,
-    step_template_code: stepForm.step_template_code.trim() || undefined,
-    instructions: stepForm.instructions.trim() || undefined,
-    duration_sec: stepForm.duration_sec.trim() ? Number(stepForm.duration_sec) : undefined,
-    parameters,
-    quality_checks: qualityChecks,
-    notes: stepForm.notes.trim() || undefined,
-    material_inputs: stepSource.value?.material_inputs ?? [],
-    material_outputs: stepSource.value?.material_outputs ?? [],
-    equipment_requirements: stepSource.value?.equipment_requirements ?? [],
-    hold_constraints: stepSource.value?.hold_constraints ?? [],
-  }
-
-  if (stepEditIndex.value === null) {
-    recipeBody.value.flow.steps.push(step)
-  } else {
-    recipeBody.value.flow.steps.splice(stepEditIndex.value, 1, step)
-  }
-
-  recipeBody.value.flow.steps.sort((a, b) => a.step_no - b.step_no)
-  closeStepModal()
+  const saved = await persistRecipe(false)
+  if (!saved) return
+  void router.push({
+    name: 'recipeStepEditor',
+    params: {
+      recipeId: recipeHeader.value.id,
+      versionId: activeVersion.value.id,
+      index: String(index),
+    },
+  })
 }
 
 function deleteStep(index: number) {
@@ -2613,6 +2603,53 @@ watch(
   async (next, previous) => {
     if (JSON.stringify(next) === JSON.stringify(previous)) return
     await loadRecipeContext()
+  },
+)
+
+watch(
+  () => materialForm.material_id,
+  (materialId) => {
+    if (!materialId) return
+    const material = materialMasterMap.value.get(materialId)
+    if (!material) return
+
+    if (material.material_type_id) {
+      const type = materialTypeMap.value.get(material.material_type_id)
+      if (type?.type_id && selectedMaterialTypeId.value !== type.type_id) {
+        selectedMaterialTypeId.value = type.type_id
+      }
+      if (type?.code && materialForm.material_type_code !== type.code) {
+        materialForm.material_type_code = type.code
+      }
+    }
+
+    if (!materialForm.uom_code && material.base_uom_id) {
+      const uom = uoms.value.find((row) => row.id === material.base_uom_id)
+      if (uom?.code) materialForm.uom_code = uom.code
+    }
+  },
+)
+
+watch(
+  () => selectedMaterialTypeId.value,
+  async (typeId) => {
+    const type = typeId ? materialTypeMap.value.get(typeId) : null
+    materialForm.material_type_code = type?.code || ''
+    if (typeId) {
+      await loadMaterialAttrFields(typeId)
+    } else {
+      materialAttrFields.value = []
+    }
+
+    if (!typeId || !materialForm.material_id) return
+    const material = materialMasterMap.value.get(materialForm.material_id)
+    if (!material?.material_type_id) {
+      materialForm.material_id = ''
+      return
+    }
+    if (!selectedMaterialTypeFilterIds.value.has(material.material_type_id)) {
+      materialForm.material_id = ''
+    }
   },
 )
 </script>

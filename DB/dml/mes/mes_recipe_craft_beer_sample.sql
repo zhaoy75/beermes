@@ -37,24 +37,6 @@ DECLARE
   v_et_brite_tank uuid;
   v_et_bottling_line uuid;
 
-  v_spec_water uuid;
-  v_spec_pale_malt uuid;
-  v_spec_saaz uuid;
-  v_spec_lager_yeast uuid;
-  v_spec_bottle uuid;
-  v_spec_cap uuid;
-  v_spec_label uuid;
-  v_spec_lager_beer uuid;
-
-  v_material_water uuid;
-  v_material_malt uuid;
-  v_material_hops uuid;
-  v_material_yeast uuid;
-  v_material_bottle uuid;
-  v_material_cap uuid;
-  v_material_label uuid;
-  v_material_beer uuid;
-
   v_eqtpl_mash uuid;
   v_eqtpl_boil uuid;
   v_eqtpl_ferm uuid;
@@ -219,40 +201,11 @@ BEGIN
   SELECT type_id INTO v_et_brite_tank FROM public.type_def WHERE tenant_id = v_tenant AND domain = 'equipment_type' AND industry_id = v_industry_id AND code = 'BRITE_TANK';
   SELECT type_id INTO v_et_bottling_line FROM public.type_def WHERE tenant_id = v_tenant AND domain = 'equipment_type' AND industry_id = v_industry_id AND code = 'BOTTLING_LINE';
 
-  INSERT INTO mes.mst_material_spec (
-    tenant_id, material_type_id, spec_code, spec_name, status
-  )
-  VALUES
-    (v_tenant, v_mt_water, 'BREWING_WATER_STD', 'Brewing Water Standard', 'active'),
-    (v_tenant, v_mt_malt, 'PALE_MALT', 'Pale Malt', 'active'),
-    (v_tenant, v_mt_hops, 'SAAZ', 'Saaz Hops', 'active'),
-    (v_tenant, v_mt_yeast, 'LAGER_YEAST', 'Lager Yeast', 'active'),
-    (v_tenant, v_mt_packaging, 'BOTTLE_330_CLEAR', '330mL Clear Bottle', 'active'),
-    (v_tenant, v_mt_packaging, 'CAP_330_STD', '330 Bottle Cap', 'active'),
-    (v_tenant, v_mt_packaging, 'LABEL_STD', 'Standard Label', 'active'),
-    (v_tenant, v_mt_beer, 'LAGER_BEER_330', 'Lager Beer 330mL', 'active')
-  ON CONFLICT (tenant_id, spec_code)
-  DO UPDATE SET
-    material_type_id = EXCLUDED.material_type_id,
-    spec_name = EXCLUDED.spec_name,
-    status = EXCLUDED.status,
-    updated_at = now();
-
-  SELECT id INTO v_spec_water FROM mes.mst_material_spec WHERE tenant_id = v_tenant AND spec_code = 'BREWING_WATER_STD';
-  SELECT id INTO v_spec_pale_malt FROM mes.mst_material_spec WHERE tenant_id = v_tenant AND spec_code = 'PALE_MALT';
-  SELECT id INTO v_spec_saaz FROM mes.mst_material_spec WHERE tenant_id = v_tenant AND spec_code = 'SAAZ';
-  SELECT id INTO v_spec_lager_yeast FROM mes.mst_material_spec WHERE tenant_id = v_tenant AND spec_code = 'LAGER_YEAST';
-  SELECT id INTO v_spec_bottle FROM mes.mst_material_spec WHERE tenant_id = v_tenant AND spec_code = 'BOTTLE_330_CLEAR';
-  SELECT id INTO v_spec_cap FROM mes.mst_material_spec WHERE tenant_id = v_tenant AND spec_code = 'CAP_330_STD';
-  SELECT id INTO v_spec_label FROM mes.mst_material_spec WHERE tenant_id = v_tenant AND spec_code = 'LABEL_STD';
-  SELECT id INTO v_spec_lager_beer FROM mes.mst_material_spec WHERE tenant_id = v_tenant AND spec_code = 'LAGER_BEER_330';
-
   INSERT INTO mes.mst_material (
     tenant_id,
     material_code,
     material_name,
     material_type_id,
-    material_spec_id,
     base_uom_id,
     material_category,
     is_batch_managed,
@@ -261,19 +214,18 @@ BEGIN
     status
   )
   VALUES
-    (v_tenant, 'MAT_WATER_BREW', 'Brewing Water', v_mt_water, v_spec_water, v_uom_l, 'raw_material', false, false, '{"material_key":"WATER_BREW"}'::jsonb, 'active'),
-    (v_tenant, 'MAT_MALT_PALE', 'Pale Malt', v_mt_malt, v_spec_pale_malt, v_uom_kg, 'raw_material', true, true, '{"material_key":"MALT_BASE"}'::jsonb, 'active'),
-    (v_tenant, 'MAT_HOPS_SAAZ', 'Saaz Hops', v_mt_hops, v_spec_saaz, v_uom_kg, 'raw_material', true, true, '{"material_key":"HOPS_BITTER"}'::jsonb, 'active'),
-    (v_tenant, 'MAT_YEAST_LAGER', 'Lager Yeast', v_mt_yeast, v_spec_lager_yeast, v_uom_kg, 'raw_material', true, true, '{"material_key":"YEAST_MAIN"}'::jsonb, 'active'),
-    (v_tenant, 'PKG_BOTTLE_330', '330mL Bottle', v_mt_packaging, v_spec_bottle, v_uom_pcs, 'packaging', true, true, '{"material_key":"BOTTLE_330"}'::jsonb, 'active'),
-    (v_tenant, 'PKG_CAP_330', 'Bottle Cap', v_mt_packaging, v_spec_cap, v_uom_pcs, 'packaging', true, true, '{"material_key":"CAP_330"}'::jsonb, 'active'),
-    (v_tenant, 'PKG_LABEL_STD', 'Standard Label', v_mt_packaging, v_spec_label, v_uom_pcs, 'packaging', true, true, '{"material_key":"LABEL_STD"}'::jsonb, 'active'),
-    (v_tenant, 'FG_LAGER_330', 'Lager Beer 330mL', v_mt_beer, v_spec_lager_beer, v_uom_pcs, 'finished_good', true, true, '{"material_key":"BEER_LAGER_330"}'::jsonb, 'active')
+    (v_tenant, 'MAT_WATER_BREW', 'Brewing Water', v_mt_water, v_uom_l, 'raw_material', false, false, '{"material_key":"WATER_BREW"}'::jsonb, 'active'),
+    (v_tenant, 'MAT_MALT_PALE', 'Pale Malt', v_mt_malt, v_uom_kg, 'raw_material', true, true, '{"material_key":"MALT_BASE"}'::jsonb, 'active'),
+    (v_tenant, 'MAT_HOPS_SAAZ', 'Saaz Hops', v_mt_hops, v_uom_kg, 'raw_material', true, true, '{"material_key":"HOPS_BITTER"}'::jsonb, 'active'),
+    (v_tenant, 'MAT_YEAST_LAGER', 'Lager Yeast', v_mt_yeast, v_uom_kg, 'raw_material', true, true, '{"material_key":"YEAST_MAIN"}'::jsonb, 'active'),
+    (v_tenant, 'PKG_BOTTLE_330', '330mL Bottle', v_mt_packaging, v_uom_pcs, 'packaging', true, true, '{"material_key":"BOTTLE_330"}'::jsonb, 'active'),
+    (v_tenant, 'PKG_CAP_330', 'Bottle Cap', v_mt_packaging, v_uom_pcs, 'packaging', true, true, '{"material_key":"CAP_330"}'::jsonb, 'active'),
+    (v_tenant, 'PKG_LABEL_STD', 'Standard Label', v_mt_packaging, v_uom_pcs, 'packaging', true, true, '{"material_key":"LABEL_STD"}'::jsonb, 'active'),
+    (v_tenant, 'FG_LAGER_330', 'Lager Beer 330mL', v_mt_beer, v_uom_pcs, 'finished_good', true, true, '{"material_key":"BEER_LAGER_330"}'::jsonb, 'active')
   ON CONFLICT (tenant_id, material_code)
   DO UPDATE SET
     material_name = EXCLUDED.material_name,
     material_type_id = EXCLUDED.material_type_id,
-    material_spec_id = EXCLUDED.material_spec_id,
     base_uom_id = EXCLUDED.base_uom_id,
     material_category = EXCLUDED.material_category,
     is_batch_managed = EXCLUDED.is_batch_managed,
@@ -281,15 +233,6 @@ BEGIN
     meta_json = EXCLUDED.meta_json,
     status = EXCLUDED.status,
     updated_at = now();
-
-  SELECT id INTO v_material_water FROM mes.mst_material WHERE tenant_id = v_tenant AND material_code = 'MAT_WATER_BREW';
-  SELECT id INTO v_material_malt FROM mes.mst_material WHERE tenant_id = v_tenant AND material_code = 'MAT_MALT_PALE';
-  SELECT id INTO v_material_hops FROM mes.mst_material WHERE tenant_id = v_tenant AND material_code = 'MAT_HOPS_SAAZ';
-  SELECT id INTO v_material_yeast FROM mes.mst_material WHERE tenant_id = v_tenant AND material_code = 'MAT_YEAST_LAGER';
-  SELECT id INTO v_material_bottle FROM mes.mst_material WHERE tenant_id = v_tenant AND material_code = 'PKG_BOTTLE_330';
-  SELECT id INTO v_material_cap FROM mes.mst_material WHERE tenant_id = v_tenant AND material_code = 'PKG_CAP_330';
-  SELECT id INTO v_material_label FROM mes.mst_material WHERE tenant_id = v_tenant AND material_code = 'PKG_LABEL_STD';
-  SELECT id INTO v_material_beer FROM mes.mst_material WHERE tenant_id = v_tenant AND material_code = 'FG_LAGER_330';
 
   INSERT INTO mes.mst_equipment_template (
     tenant_id,
@@ -577,7 +520,7 @@ BEGIN
             "material_name": "Brewing Water",
             "material_role": "process_water",
             "material_type_code": "WATER",
-            "material_spec_code": "BREWING_WATER_STD",
+            "material_code": "MAT_WATER_BREW",
             "qty": 1200,
             "uom_code": "L",
             "basis": "per_base"
@@ -587,7 +530,7 @@ BEGIN
             "material_name": "Pale Malt",
             "material_role": "main_substrate",
             "material_type_code": "MALT",
-            "material_spec_code": "PALE_MALT",
+            "material_code": "MAT_MALT_PALE",
             "qty": 180,
             "uom_code": "kg",
             "basis": "per_base"
@@ -597,7 +540,7 @@ BEGIN
             "material_name": "Saaz Hops",
             "material_role": "flavor",
             "material_type_code": "HOPS",
-            "material_spec_code": "SAAZ",
+            "material_code": "MAT_HOPS_SAAZ",
             "qty": 2.5,
             "uom_code": "kg",
             "basis": "per_base"
@@ -607,7 +550,7 @@ BEGIN
             "material_name": "Lager Yeast",
             "material_role": "culture",
             "material_type_code": "YEAST",
-            "material_spec_code": "LAGER_YEAST",
+            "material_code": "MAT_YEAST_LAGER",
             "qty": 5,
             "uom_code": "kg",
             "basis": "per_base"
@@ -617,7 +560,7 @@ BEGIN
             "material_name": "330mL Bottle",
             "material_role": "packaging_primary",
             "material_type_code": "PACKAGING",
-            "material_spec_code": "BOTTLE_330_CLEAR",
+            "material_code": "PKG_BOTTLE_330",
             "qty": 3000,
             "uom_code": "pcs",
             "basis": "per_base"
@@ -627,7 +570,7 @@ BEGIN
             "material_name": "Bottle Cap",
             "material_role": "packaging_component",
             "material_type_code": "PACKAGING",
-            "material_spec_code": "CAP_330_STD",
+            "material_code": "PKG_CAP_330",
             "qty": 3000,
             "uom_code": "pcs",
             "basis": "per_base"
@@ -637,34 +580,10 @@ BEGIN
             "material_name": "Standard Label",
             "material_role": "packaging_component",
             "material_type_code": "PACKAGING",
-            "material_spec_code": "LABEL_STD",
+            "material_code": "PKG_LABEL_STD",
             "qty": 3000,
             "uom_code": "pcs",
             "basis": "per_base"
-          }
-        ]
-      },
-      "equipment": {
-        "default_requirements": [
-          {
-            "equipment_type_code": "MASH_TUN",
-            "equipment_template_code": "MASH_TUN_1000L",
-            "quantity": 1
-          },
-          {
-            "equipment_type_code": "BOIL_KETTLE",
-            "equipment_template_code": "BOIL_KETTLE_1000L",
-            "quantity": 1
-          },
-          {
-            "equipment_type_code": "FERMENTER",
-            "equipment_template_code": "FERMENTER_1000L",
-            "quantity": 1
-          },
-          {
-            "equipment_type_code": "BOTTLING_LINE",
-            "equipment_template_code": "BOTTLING_LINE_STD",
-            "quantity": 1
           }
         ]
       },
@@ -980,16 +899,6 @@ BEGIN
         'BRITE_TANK', v_et_brite_tank,
         'BOTTLING_LINE', v_et_bottling_line
       ),
-      'material_spec_map', jsonb_build_object(
-        'BREWING_WATER_STD', v_spec_water,
-        'PALE_MALT', v_spec_pale_malt,
-        'SAAZ', v_spec_saaz,
-        'LAGER_YEAST', v_spec_lager_yeast,
-        'BOTTLE_330_CLEAR', v_spec_bottle,
-        'CAP_330_STD', v_spec_cap,
-        'LABEL_STD', v_spec_label,
-        'LAGER_BEER_330', v_spec_lager_beer
-      ),
       'step_template_map', jsonb_build_object(
         'STEP_MASH', v_step_mash,
         'STEP_BOIL', v_step_boil,
@@ -1007,7 +916,7 @@ BEGIN
         'pcs', v_uom_pcs
       )
     ),
-    'recipe_body_schema_v1',
+    'recipe_body_v1',
     'CRAFT_BEER_STD_V1',
     'approved',
     now(),

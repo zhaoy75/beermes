@@ -1,244 +1,385 @@
 <template>
   <AdminLayout>
     <PageBreadcrumb :pageTitle="pageTitle" />
-    <div class="min-h-screen bg-white text-gray-900 p-4 max-w-6xl mx-auto">
-      <header class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <h1 class="text-xl font-semibold">{{ t('material.title') }}</h1>
-          <p class="text-sm text-gray-500">{{ t('material.subtitle') }}</p>
-        </div>
-        <div class="flex flex-wrap items-center gap-2">
-          <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" @click="openCreate">
-            {{ t('common.new') }}
-          </button>
-          <button
-            class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
-            :disabled="loading"
-            @click="fetchMaterials"
-          >
-            {{ t('common.refresh') }}
-          </button>
-          <div class="relative">
-            <input
-              v-model.trim="searchTerm"
-              type="search"
-              :placeholder="t('material.searchPlaceholder')"
-              class="w-56 h-[40px] border rounded px-3 pr-8 text-sm"
-            />
-            <span class="absolute inset-y-0 right-2 flex items-center text-gray-400">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1016.65 16.65z" />
-              </svg>
-            </span>
+
+    <div class="space-y-6">
+      <section class="rounded-lg border border-gray-200 bg-white shadow">
+        <header class="flex flex-col gap-4 border-b p-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h2 class="text-lg font-semibold text-gray-900">{{ pageTitle }}</h2>
+            <p class="mt-1 text-sm text-gray-500">{{ pageSubtitle }}</p>
           </div>
+
+          <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div class="relative">
+              <input
+                v-model.trim="materialSearchTerm"
+                type="search"
+                :placeholder="t('material.searchPlaceholder')"
+                class="h-[40px] w-full rounded border border-gray-300 px-3 pr-9 text-sm sm:w-72"
+              />
+              <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-400">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1016.65 16.65z" />
+                </svg>
+              </span>
+            </div>
+
+            <button
+              type="button"
+              class="rounded border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50 disabled:opacity-60"
+              :disabled="loading"
+              @click="loadPage"
+            >
+              {{ t('common.refresh') }}
+            </button>
+
+            <button
+              type="button"
+              class="rounded bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-60"
+              :disabled="!canCreate"
+              @click="startCreate"
+            >
+              {{ t('material.actions.newMaterial') }}
+            </button>
+          </div>
+        </header>
+
+        <div v-if="pageError" class="border-b border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {{ pageError }}
         </div>
-      </header>
 
-      <nav class="mb-4 flex flex-wrap gap-2">
-        <button
-          v-for="tab in categoryTabs"
-          :key="tab"
-          class="px-3 py-1 rounded-full border text-sm transition"
-          :class="[
-            currentCategory === tab
-              ? 'bg-blue-600 text-white border-blue-600'
-              : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-100'
-          ]"
-          @click="currentCategory = tab"
-        >
-          {{ tab === 'all' ? t('common.all') : categoryLabel(tab) }}
-        </button>
-      </nav>
+        <div v-if="loading" class="px-4 py-8 text-sm text-gray-500">
+          {{ t('common.loading') }}
+        </div>
 
-      <section class="hidden md:block overflow-x-auto border border-gray-200 rounded-xl shadow-sm">
-        <table class="min-w-full divide-y divide-gray-200">
-          <thead class="bg-gray-50">
-            <tr>
-              <th
-                class="px-3 py-2 text-left text-xs font-medium text-gray-600 cursor-pointer select-none"
-                @click="setSort('code')"
+        <div v-else class="grid grid-cols-1 gap-4 p-4 xl:grid-cols-[280px_minmax(0,1fr)_360px]">
+          <aside class="rounded-lg border border-gray-200 bg-gray-50">
+            <div class="border-b border-gray-200 px-4 py-3">
+              <h3 class="text-sm font-semibold text-gray-900">{{ t('material.treeTitle') }}</h3>
+              <p class="mt-1 text-xs text-gray-500">{{ t('material.treeHint') }}</p>
+            </div>
+
+            <div class="space-y-3 p-4">
+              <div class="relative">
+                <input
+                  v-model.trim="typeSearchTerm"
+                  type="search"
+                  :placeholder="t('material.typeSearchPlaceholder')"
+                  class="h-[40px] w-full rounded border border-gray-300 bg-white px-3 pr-9 text-sm"
+                />
+                <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-400">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1016.65 16.65z" />
+                  </svg>
+                </span>
+              </div>
+
+              <div class="rounded-lg border border-dashed border-gray-300 bg-white px-3 py-3">
+                <div class="text-xs text-gray-500">{{ t('material.selectedType') }}</div>
+                <div v-if="selectedType" class="mt-1">
+                  <div class="font-medium text-gray-900">{{ displayMaterialTypeName(selectedType) }}</div>
+                  <div class="font-mono text-xs text-gray-500">{{ selectedType.code }}</div>
+                  <div class="mt-1 text-xs text-gray-500">{{ selectedTypePathText }}</div>
+                </div>
+                <div v-else class="mt-1 text-sm text-gray-500">{{ t('material.empty.noTypeSelected') }}</div>
+              </div>
+            </div>
+
+            <div class="max-h-[520px] overflow-y-auto px-2 pb-3">
+              <div v-if="materialTypeTreeEntries.length === 0" class="px-3 py-6 text-sm text-gray-500">
+                {{ t('material.empty.typeTree') }}
+              </div>
+
+              <ul v-else class="space-y-1">
+                <li v-for="entry in materialTypeTreeEntries" :key="entry.node.row.type_id">
+                  <button
+                    type="button"
+                    class="flex w-full items-center rounded px-2 py-2 text-left text-sm transition hover:bg-white"
+                    :class="selectedTypeId === entry.node.row.type_id ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200' : 'text-gray-700'"
+                    :style="{ paddingLeft: `${12 + entry.depth * 16}px` }"
+                    @click="selectType(entry.node.row.type_id)"
+                  >
+                    <span class="truncate">{{ displayMaterialTypeName(entry.node.row) }}</span>
+                  </button>
+                </li>
+              </ul>
+            </div>
+          </aside>
+
+          <section class="rounded-lg border border-gray-200 bg-white">
+            <div class="border-b border-gray-200 px-4 py-3">
+              <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <h3 class="text-sm font-semibold text-gray-900">{{ t('material.listTitle') }}</h3>
+                  <p class="mt-1 text-xs text-gray-500">
+                    {{ selectedType ? selectedTypePathText : t('material.empty.noTypeSelected') }}
+                  </p>
+                </div>
+
+                <div class="flex items-center gap-2">
+                  <span class="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600">
+                    {{ filteredMaterialRows.length }}
+                  </span>
+                  <button
+                    type="button"
+                    class="rounded border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50 disabled:opacity-60"
+                    :disabled="!canCreate"
+                    @click="startCreate"
+                  >
+                    {{ t('material.actions.createHere') }}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div v-if="!selectedType" class="px-4 py-10 text-sm text-gray-500">
+              {{ t('material.empty.noTypeSelected') }}
+            </div>
+
+            <div v-else-if="filteredMaterialRows.length === 0" class="space-y-3 px-4 py-10 text-sm text-gray-500">
+              <p>{{ materialSearchTerm ? t('material.empty.noSearchResults') : t('material.empty.noMaterials') }}</p>
+              <button
+                type="button"
+                class="rounded border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+                :disabled="!canCreate"
+                @click="startCreate"
               >
-                {{ t('labels.code') }}<span v-if="sortKey === 'code'"> {{ sortIcon }}</span>
-              </th>
-              <th
-                class="px-3 py-2 text-left text-xs font-medium text-gray-600 cursor-pointer select-none"
-                @click="setSort('name')"
+                {{ t('material.actions.createFirst') }}
+              </button>
+            </div>
+
+            <div v-else>
+              <div class="hidden overflow-x-auto lg:block">
+                <table class="min-w-full divide-y divide-gray-200">
+                  <thead class="bg-gray-50">
+                    <tr>
+                      <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">{{ t('material.fields.code') }}</th>
+                      <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">{{ t('material.fields.name') }}</th>
+                      <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">{{ t('material.fields.uom') }}</th>
+                      <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">{{ t('material.fields.status') }}</th>
+                      <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">{{ t('common.actions') }}</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-100">
+                    <tr
+                      v-for="row in filteredMaterialRows"
+                      :key="row.id"
+                      class="cursor-pointer transition hover:bg-gray-50"
+                      :class="selectedMaterialId === row.id ? 'bg-blue-50' : ''"
+                      @click="selectMaterial(row)"
+                    >
+                      <td class="px-4 py-3 font-mono text-xs text-gray-700">{{ row.material_code }}</td>
+                      <td class="px-4 py-3">
+                        <div class="font-medium text-gray-900">{{ row.material_name || row.material_code }}</div>
+                        <div class="mt-1 text-xs text-gray-500">{{ materialTypePathText(row.material_type_id) }}</div>
+                      </td>
+                      <td class="px-4 py-3 text-sm text-gray-600">{{ uomLabel(row.base_uom_id) }}</td>
+                      <td class="px-4 py-3">
+                        <span class="rounded-full px-2 py-1 text-xs font-medium" :class="statusBadgeClass(row.status)">
+                          {{ formatStatus(row.status) }}
+                        </span>
+                      </td>
+                      <td class="px-4 py-3">
+                        <div class="flex items-center gap-2">
+                          <button type="button" class="rounded border border-gray-300 px-2 py-1 text-sm hover:bg-white" @click.stop="selectMaterial(row)">
+                            {{ t('common.edit') }}
+                          </button>
+                          <button type="button" class="rounded border border-red-200 px-2 py-1 text-sm text-red-600 hover:bg-red-50" @click.stop="openDelete(row)">
+                            {{ t('common.delete') }}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="grid gap-3 p-4 lg:hidden">
+                <article
+                  v-for="row in filteredMaterialRows"
+                  :key="`card-${row.id}`"
+                  class="rounded-lg border border-gray-200 p-4"
+                  :class="selectedMaterialId === row.id ? 'ring-1 ring-blue-200' : ''"
+                >
+                  <div class="flex items-start justify-between gap-3">
+                    <div>
+                      <div class="font-medium text-gray-900">{{ row.material_name || row.material_code }}</div>
+                      <div class="font-mono text-xs text-gray-500">{{ row.material_code }}</div>
+                    </div>
+                    <span class="rounded-full px-2 py-1 text-xs font-medium" :class="statusBadgeClass(row.status)">
+                      {{ formatStatus(row.status) }}
+                    </span>
+                  </div>
+
+                  <dl class="mt-3 space-y-2 text-sm text-gray-600">
+                    <div class="flex justify-between gap-3">
+                      <dt>{{ t('material.fields.uom') }}</dt>
+                      <dd>{{ uomLabel(row.base_uom_id) }}</dd>
+                    </div>
+                    <div class="space-y-1">
+                      <dt>{{ t('material.fields.type') }}</dt>
+                      <dd class="text-xs text-gray-500">{{ materialTypePathText(row.material_type_id) }}</dd>
+                    </div>
+                  </dl>
+
+                  <div class="mt-4 flex items-center gap-2">
+                    <button type="button" class="rounded border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50" @click="selectMaterial(row)">
+                      {{ t('common.edit') }}
+                    </button>
+                    <button type="button" class="rounded border border-red-200 px-3 py-2 text-sm text-red-600 hover:bg-red-50" @click="openDelete(row)">
+                      {{ t('common.delete') }}
+                    </button>
+                  </div>
+                </article>
+              </div>
+            </div>
+          </section>
+
+          <section class="rounded-lg border border-gray-200 bg-white">
+            <div class="border-b border-gray-200 px-4 py-3">
+              <h3 class="text-sm font-semibold text-gray-900">{{ formTitle }}</h3>
+              <p class="mt-1 text-xs text-gray-500">{{ formSubtitle }}</p>
+            </div>
+
+            <div v-if="formMode === 'idle'" class="space-y-4 px-4 py-6">
+              <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-4">
+                <div class="text-xs text-gray-500">{{ t('material.selectedType') }}</div>
+                <div v-if="selectedType" class="mt-1">
+                  <div class="font-medium text-gray-900">{{ displayMaterialTypeName(selectedType) }}</div>
+                  <div class="font-mono text-xs text-gray-500">{{ selectedType.code }}</div>
+                  <div class="mt-1 text-xs text-gray-500">{{ selectedTypePathText }}</div>
+                </div>
+                <div v-else class="mt-1 text-sm text-gray-500">{{ t('material.empty.noTypeSelected') }}</div>
+              </div>
+
+              <p class="text-sm text-gray-500">{{ t('material.detailHint') }}</p>
+
+              <button
+                type="button"
+                class="rounded bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-60"
+                :disabled="!canCreate"
+                @click="startCreate"
               >
-                {{ t('labels.name') }}<span v-if="sortKey === 'name'"> {{ sortIcon }}</span>
-              </th>
-              <th
-                class="px-3 py-2 text-left text-xs font-medium text-gray-600 cursor-pointer select-none"
-                @click="setSort('category')"
-              >
-                {{ t('labels.category') }}<span v-if="sortKey === 'category'"> {{ sortIcon }}</span>
-              </th>
-              <th
-                class="px-3 py-2 text-left text-xs font-medium text-gray-600 cursor-pointer select-none"
-                @click="setSort('uomCode')"
-              >
-                {{ t('labels.uom') }}<span v-if="sortKey === 'uomCode'"> {{ sortIcon }}</span>
-              </th>
-              <th
-                class="px-3 py-2 text-left text-xs font-medium text-gray-600 cursor-pointer select-none"
-                @click="setSort('active')"
-              >
-                {{ t('labels.active') }}<span v-if="sortKey === 'active'"> {{ sortIcon }}</span>
-              </th>
-              <th
-                class="px-3 py-2 text-left text-xs font-medium text-gray-600 cursor-pointer select-none"
-                @click="setSort('created_at')"
-              >
-                {{ t('labels.createdAt') }}<span v-if="sortKey === 'created_at'"> {{ sortIcon }}</span>
-              </th>
-              <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('common.actions') }}</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-100">
-            <tr v-for="row in sortedRows" :key="row.id" class="hover:bg-gray-50">
-              <td class="px-3 py-2 font-mono text-xs text-gray-700">{{ row.code }}</td>
-              <td class="px-3 py-2">{{ row.name || '—' }}</td>
-              <td class="px-3 py-2">{{ categoryLabel(row.category) }}</td>
-              <td class="px-3 py-2">{{ row.uomCode || '—' }}</td>
-              <td class="px-3 py-2">{{ row.active ? t('common.yes') : t('common.no') }}</td>
-              <td class="px-3 py-2 text-xs text-gray-500">{{ formatTimestamp(row.created_at) }}</td>
-              <td class="px-3 py-2 space-x-2">
-                <button class="px-2 py-1 text-sm rounded border hover:bg-gray-100" @click="openEdit(row)">
-                  {{ t('common.edit') }}
+                {{ t('material.actions.newMaterial') }}
+              </button>
+            </div>
+
+            <form v-else class="space-y-4 px-4 py-4" @submit.prevent="saveRecord">
+              <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-3">
+                <div class="text-xs text-gray-500">{{ t('material.selectedType') }}</div>
+                <div v-if="formSelectedType" class="mt-1">
+                  <div class="font-medium text-gray-900">{{ displayMaterialTypeName(formSelectedType) }}</div>
+                  <div class="font-mono text-xs text-gray-500">{{ formSelectedType.code }}</div>
+                  <div class="mt-1 text-xs text-gray-500">{{ formTypePathText }}</div>
+                </div>
+                <div v-else class="mt-1 text-sm text-red-600">{{ errors.material_type_id || t('material.empty.noTypeSelected') }}</div>
+                <div class="mt-3 flex flex-wrap items-center gap-2">
+                  <button
+                    v-if="selectedTypeId && selectedTypeId !== form.material_type_id"
+                    type="button"
+                    class="rounded border border-gray-300 px-3 py-2 text-sm hover:bg-white"
+                    @click="applySelectedTypeToForm"
+                  >
+                    {{ t('material.actions.useSelectedType') }}
+                  </button>
+                  <span class="text-xs text-gray-500">{{ t('material.formTypeHint') }}</span>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                  <label class="mb-1 block text-sm text-gray-600">
+                    {{ t('material.fields.code') }}<span class="text-red-600">*</span>
+                  </label>
+                  <input
+                    v-model.trim="form.material_code"
+                    :placeholder="t('material.placeholders.code')"
+                    class="h-[40px] w-full rounded border border-gray-300 px-3"
+                  />
+                  <p v-if="errors.material_code" class="mt-1 text-xs text-red-600">{{ errors.material_code }}</p>
+                </div>
+
+                <div>
+                  <label class="mb-1 block text-sm text-gray-600">
+                    {{ t('material.fields.name') }}<span class="text-red-600">*</span>
+                  </label>
+                  <input
+                    v-model.trim="form.material_name"
+                    :placeholder="t('material.placeholders.name')"
+                    class="h-[40px] w-full rounded border border-gray-300 px-3"
+                  />
+                  <p v-if="errors.material_name" class="mt-1 text-xs text-red-600">{{ errors.material_name }}</p>
+                </div>
+
+                <div>
+                  <label class="mb-1 block text-sm text-gray-600">
+                    {{ t('material.fields.uom') }}<span class="text-red-600">*</span>
+                  </label>
+                  <select v-model="form.base_uom_id" class="h-[40px] w-full rounded border border-gray-300 bg-white px-3">
+                    <option value="">{{ t('material.placeholders.uom') }}</option>
+                    <option v-for="uom in uomOptions" :key="uom.id" :value="uom.id">
+                      {{ uom.code }}{{ uom.name ? ` - ${uom.name}` : '' }}
+                    </option>
+                  </select>
+                  <p v-if="errors.base_uom_id" class="mt-1 text-xs text-red-600">{{ errors.base_uom_id }}</p>
+                </div>
+
+                <div>
+                  <label class="mb-1 block text-sm text-gray-600">
+                    {{ t('material.fields.status') }}<span class="text-red-600">*</span>
+                  </label>
+                  <select v-model="form.status" class="h-[40px] w-full rounded border border-gray-300 bg-white px-3">
+                    <option value="">{{ t('material.placeholders.status') }}</option>
+                    <option v-for="status in statusOptions" :key="status" :value="status">{{ formatStatus(status) }}</option>
+                  </select>
+                  <p v-if="errors.status" class="mt-1 text-xs text-red-600">{{ errors.status }}</p>
+                </div>
+              </div>
+
+              <div class="flex flex-wrap items-center justify-end gap-2 border-t border-gray-200 pt-4">
+                <button type="button" class="rounded border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50" @click="resetFormPane">
+                  {{ t('common.cancel') }}
                 </button>
                 <button
-                  class="px-2 py-1 text-sm rounded bg-red-600 text-white hover:bg-red-700"
-                  @click="confirmDelete(row)"
+                  v-if="formMode === 'edit' && selectedMaterialRow"
+                  type="button"
+                  class="rounded border border-red-200 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+                  @click="openDelete(selectedMaterialRow)"
                 >
                   {{ t('common.delete') }}
                 </button>
-              </td>
-            </tr>
-            <tr v-if="!loading && sortedRows.length === 0">
-              <td colspan="7" class="px-3 py-8 text-center text-gray-500">{{ t('common.noData') }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </section>
-
-      <section class="md:hidden grid gap-3">
-        <div
-          v-for="row in sortedRows"
-          :key="`card-${row.id}`"
-          class="border border-gray-200 rounded-xl shadow-sm p-4"
-        >
-          <div class="flex items-center justify-between mb-2">
-            <div>
-              <p class="text-xs uppercase tracking-wide text-gray-400">{{ categoryLabel(row.category) }}</p>
-              <h2 class="text-lg font-semibold text-gray-900">{{ row.name || row.code }}</h2>
-            </div>
-            <span
-              class="text-xs font-medium px-2 py-1 rounded-full"
-              :class="row.active ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-600'"
-            >
-              {{ row.active ? t('common.yes') : t('common.no') }}
-            </span>
-          </div>
-          <dl class="text-sm text-gray-600 space-y-1">
-            <div class="flex justify-between">
-              <dt class="font-medium">{{ t('labels.code') }}</dt>
-              <dd class="font-mono text-xs text-gray-700">{{ row.code }}</dd>
-            </div>
-            <div class="flex justify-between">
-              <dt class="font-medium">{{ t('labels.uom') }}</dt>
-              <dd>{{ row.uomCode || '—' }}</dd>
-            </div>
-            <div class="flex justify-between">
-              <dt class="font-medium">{{ t('labels.createdAt') }}</dt>
-              <dd class="text-xs text-gray-500">{{ formatTimestamp(row.created_at) }}</dd>
-            </div>
-          </dl>
-          <div class="mt-3 flex gap-2">
-            <button class="px-3 py-2 text-sm rounded border hover:bg-gray-100" @click="openEdit(row)">
-              {{ t('common.edit') }}
-            </button>
-            <button class="px-3 py-2 text-sm rounded bg-red-600 text-white hover:bg-red-700" @click="confirmDelete(row)">
-              {{ t('common.delete') }}
-            </button>
-          </div>
+                <button
+                  type="submit"
+                  class="rounded bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-60"
+                  :disabled="saving"
+                >
+                  {{ saving ? t('common.saving') : t('common.save') }}
+                </button>
+              </div>
+            </form>
+          </section>
         </div>
-        <p v-if="!loading && sortedRows.length === 0" class="text-center text-gray-500 text-sm">
-          {{ t('common.noData') }}
-        </p>
       </section>
 
-      <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-        <div class="w-full max-w-3xl bg-white rounded-xl shadow-lg border">
-          <div class="px-4 py-3 border-b">
-            <h3 class="font-semibold">
-              {{ editing ? t('material.editTitle') : t('material.newTitle') }}
-            </h3>
+      <div v-if="showDelete" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div class="w-full max-w-md rounded-xl border bg-white shadow-lg">
+          <div class="border-b px-4 py-3">
+            <h3 class="font-semibold text-gray-900">{{ t('material.deleteTitle') }}</h3>
           </div>
-          <div class="p-4 space-y-4">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm text-gray-600 mb-1">{{ t('labels.code') }}<span class="text-red-600">*</span></label>
-                <input v-model.trim="form.code" class="w-full h-[40px] border rounded px-3" />
-                <p v-if="errors.code" class="mt-1 text-xs text-red-600">{{ errors.code }}</p>
-              </div>
-              <div>
-                <label class="block text-sm text-gray-600 mb-1">{{ t('labels.name') }}<span class="text-red-600">*</span></label>
-                <input v-model.trim="form.name" class="w-full h-[40px] border rounded px-3" />
-                <p v-if="errors.name" class="mt-1 text-xs text-red-600">{{ errors.name }}</p>
-              </div>
-              <div>
-                <label class="block text-sm text-gray-600 mb-1">{{ t('labels.category') }}<span class="text-red-600">*</span></label>
-                <select v-model="form.category" class="w-full h-[40px] border rounded px-3 bg-white">
-                  <option disabled value="">{{ t('material.categoryPlaceholder') }}</option>
-                  <option v-for="option in categoryOptions" :key="option.value" :value="option.value">
-                    {{ option.label }}
-                  </option>
-                </select>
-                <p v-if="errors.category" class="mt-1 text-xs text-red-600">{{ errors.category }}</p>
-              </div>
-              <div>
-                <label class="block text-sm text-gray-600 mb-1">{{ t('labels.uom') }}<span class="text-red-600">*</span></label>
-                <select v-model="form.uom_id" class="w-full h-[40px] border rounded px-3 bg-white">
-                  <option disabled value="">{{ t('material.uomPlaceholder') }}</option>
-                  <option v-for="uom in uomOptions" :key="uom.id" :value="uom.id">
-                    {{ uom.code }}<span v-if="uom.name"> · {{ uom.name }}</span>
-                  </option>
-                </select>
-                <p v-if="errors.uom_id" class="mt-1 text-xs text-red-600">{{ errors.uom_id }}</p>
-              </div>
-              <div class="flex items-center gap-2">
-                <input id="material-active" v-model="form.active" type="checkbox" class="h-4 w-4" />
-                <label for="material-active" class="text-sm text-gray-600">{{ t('material.activeLabel') }}</label>
-              </div>
-            </div>
+          <div class="px-4 py-4 text-sm text-gray-700">
+            {{ t('material.deleteConfirm', { code: deleteTarget?.material_code ?? '' }) }}
           </div>
-          <div class="px-4 py-3 border-t flex items-center justify-end gap-2">
-            <button class="px-3 py-2 rounded border hover:bg-gray-50" @click="closeModal">
+          <div class="flex items-center justify-end gap-2 border-t px-4 py-3">
+            <button type="button" class="rounded border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50" @click="closeDelete">
               {{ t('common.cancel') }}
             </button>
             <button
-              class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
-              :disabled="saving"
-              @click="saveRecord"
+              type="button"
+              class="rounded bg-red-600 px-3 py-2 text-sm text-white hover:bg-red-700 disabled:opacity-60"
+              :disabled="deleting"
+              @click="deleteRecord"
             >
-              {{ saving ? t('common.saving') : t('common.save') }}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div v-if="showDelete" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-        <div class="w-full max-w-md bg-white rounded-xl shadow-lg border">
-          <div class="px-4 py-3 border-b">
-            <h3 class="font-semibold">{{ t('material.deleteTitle') }}</h3>
-          </div>
-          <div class="p-4 text-sm">
-            {{ t('material.deleteConfirm', { code: toDelete?.code ?? '' }) }}
-          </div>
-          <div class="px-4 py-3 border-t flex items-center justify-end gap-2">
-            <button class="px-3 py-2 rounded border hover:bg-gray-50" @click="showDelete = false">
-              {{ t('common.cancel') }}
-            </button>
-            <button class="px-3 py-2 rounded bg-red-600 text-white hover:bg-red-700" @click="deleteRecord">
               {{ t('common.delete') }}
             </button>
           </div>
@@ -249,339 +390,554 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { supabase } from '../../lib/supabase'
-import AdminLayout from '@/components/layout/AdminLayout.vue'
-import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
+import AdminLayout from '@/components/layout/AdminLayout.vue'
+import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import { supabase } from '@/lib/supabase'
+
+type NameI18n = {
+  ja?: string | null
+  en?: string | null
+} | null
+
+type MaterialTypeRow = {
+  type_id: string
+  code: string
+  name: string | null
+  name_i18n?: NameI18n
+  parent_type_id: string | null
+  sort_order: number | null
+}
+
+type MaterialTreeNode = {
+  row: MaterialTypeRow
+  children: MaterialTreeNode[]
+}
+
+type MaterialTreeEntry = {
+  node: MaterialTreeNode
+  depth: number
+}
+
+type UomRow = {
+  id: string
+  code: string
+  name: string | null
+}
 
 type MaterialRow = {
   id: string
-  code: string
-  name: string | null
-  category: string
-  uom_id: string
-  active: boolean
-  created_at: string | null
+  material_code: string
+  material_name: string
+  material_type_id: string | null
+  base_uom_id: string | null
+  status: string
 }
 
-type MaterialDisplayRow = MaterialRow & {
-  uomCode: string
-  uomName: string | null
-}
-
-type SortKey = 'code' | 'name' | 'category' | 'uomCode' | 'active' | 'created_at'
-type SortDirection = 'asc' | 'desc'
-
-type UomOption = {
+type MaterialFormState = {
   id: string
-  code: string
-  name: string | null
+  material_code: string
+  material_name: string
+  material_type_id: string
+  base_uom_id: string
+  status: string
 }
 
-const MATERIAL_TABLE = 'mst_materials'
-const UOM_TABLE = 'mst_uom'
+type MaterialFormMode = 'idle' | 'create' | 'edit'
 
-const CATEGORY_SOURCE = ['malt', 'hop', 'yeast', 'adjunct'] as const
+const STATUS_OPTIONS = ['active', 'inactive'] as const
 
-type CategoryValue = (typeof CATEGORY_SOURCE)[number]
+const { t, locale } = useI18n()
 
-const { t } = useI18n()
 const pageTitle = computed(() => t('material.title'))
+const pageSubtitle = computed(() => t('material.subtitle'))
 
-const rows = ref<MaterialRow[]>([])
+const mesClient = () => supabase.schema('mes')
+
 const loading = ref(false)
 const saving = ref(false)
-const showModal = ref(false)
+const deleting = ref(false)
+const pageError = ref('')
+
+const typeSearchTerm = ref('')
+const materialSearchTerm = ref('')
+
+const materialTypes = ref<MaterialTypeRow[]>([])
+const materialRows = ref<MaterialRow[]>([])
+const uomOptions = ref<UomRow[]>([])
+
+const selectedTypeId = ref('')
+const selectedMaterialId = ref('')
+const formMode = ref<MaterialFormMode>('idle')
+
 const showDelete = ref(false)
-const editing = ref(false)
-const toDelete = ref<MaterialRow | null>(null)
+const deleteTarget = ref<MaterialRow | null>(null)
 
-const searchTerm = ref('')
-const currentCategory = ref<'all' | CategoryValue>('all')
-const sortKey = ref<SortKey>('code')
-const sortDirection = ref<SortDirection>('asc')
+const form = reactive<MaterialFormState>(blankForm())
+const errors = reactive<Record<string, string>>({})
 
-const uomOptions = ref<UomOption[]>([])
+function blankForm(): MaterialFormState {
+  return {
+    id: '',
+    material_code: '',
+    material_name: '',
+    material_type_id: '',
+    base_uom_id: '',
+    status: 'active',
+  }
+}
 
-const categoryOptions = computed(() =>
-  CATEGORY_SOURCE.map((value) => ({ value, label: categoryLabel(value) }))
-)
-
-const categoryTabs = computed(() => ['all', ...CATEGORY_SOURCE] as Array<'all' | CategoryValue>)
-
-const uomMap = computed(() => {
-  const map = new Map<string, UomOption>()
-  uomOptions.value.forEach((item) => {
-    map.set(item.id, item)
+function sortTypeRows(rows: MaterialTypeRow[]) {
+  return rows.slice().sort((a, b) => {
+    const sortDiff = (a.sort_order ?? 0) - (b.sort_order ?? 0)
+    if (sortDiff !== 0) return sortDiff
+    return a.code.localeCompare(b.code)
   })
+}
+
+function normalizeMaterialRow(value: Record<string, unknown>): MaterialRow {
+  return {
+    id: String(value.id),
+    material_code: typeof value.material_code === 'string' ? value.material_code : '',
+    material_name: typeof value.material_name === 'string' ? value.material_name : '',
+    material_type_id: typeof value.material_type_id === 'string' && value.material_type_id.trim() ? value.material_type_id : null,
+    base_uom_id: typeof value.base_uom_id === 'string' && value.base_uom_id.trim() ? value.base_uom_id : null,
+    status: typeof value.status === 'string' && value.status.trim() ? value.status : 'active',
+  }
+}
+
+const materialTypeMap = computed(() => {
+  const map = new Map<string, MaterialTypeRow>()
+  materialTypes.value.forEach((row) => map.set(row.type_id, row))
   return map
 })
 
-const decoratedRows = computed<MaterialDisplayRow[]>(() =>
-  rows.value.map((row) => {
-    const match = uomMap.value.get(row.uom_id)
-    return {
-      ...row,
-      uomCode: match?.code ?? '',
-      uomName: match?.name ?? null,
-    }
-  })
-)
-
-const filteredRows = computed(() => {
-  const cat = currentCategory.value
-  const keyword = searchTerm.value.trim().toLowerCase()
-
-  return decoratedRows.value.filter((row) => {
-    const matchesCategory = cat === 'all' || row.category === cat
-    const matchesSearch =
-      keyword === '' || (row.name ?? '').toLowerCase().includes(keyword) || row.code.toLowerCase().includes(keyword)
-    return matchesCategory && matchesSearch
-  })
+const materialMap = computed(() => {
+  const map = new Map<string, MaterialRow>()
+  materialRows.value.forEach((row) => map.set(row.id, row))
+  return map
 })
 
-const sortedRows = computed<MaterialDisplayRow[]>(() => {
-  const data = [...filteredRows.value]
-  const direction = sortDirection.value === 'asc' ? 1 : -1
-  const key = sortKey.value
-
-  data.sort((a, b) => {
-    const aVal = a[key]
-    const bVal = b[key]
-
-    if (key === 'active') {
-      return ((aVal ? 1 : 0) - (bVal ? 1 : 0)) * direction
-    }
-
-    if (key === 'created_at') {
-      const aTime = aVal ? Date.parse(aVal as string) : 0
-      const bTime = bVal ? Date.parse(bVal as string) : 0
-      return (aTime - bTime) * direction
-    }
-
-    if (aVal == null && bVal == null) return 0
-    if (aVal == null) return 1 * direction
-    if (bVal == null) return -1 * direction
-
-    if (typeof aVal === 'number' && typeof bVal === 'number') {
-      return (aVal - bVal) * direction
-    }
-
-    const aStr = String(aVal).toLowerCase()
-    const bStr = String(bVal).toLowerCase()
-    return aStr.localeCompare(bStr) * direction
-  })
-
-  return data
+const uomMap = computed(() => {
+  const map = new Map<string, UomRow>()
+  uomOptions.value.forEach((row) => map.set(row.id, row))
+  return map
 })
 
-const sortIcon = computed(() => (sortDirection.value === 'asc' ? '▲' : '▼'))
+const rawMaterialRoot = computed(() => materialTypes.value.find((row) => row.code === 'RAW_MATERIAL') ?? null)
 
-const blank = () => ({
-  id: '',
-  code: '',
-  name: '',
-  category: '' as '' | CategoryValue,
-  uom_id: '',
-  active: true,
-})
+const materialTypeForest = computed<MaterialTreeNode[]>(() => {
+  if (materialTypes.value.length === 0) return []
 
-const form = reactive<Record<string, any>>(blank())
-const errors = reactive<Record<string, string>>({})
-
-function categoryLabel(value: string | null | undefined) {
-  if (!value) return ''
-  const key = `material.categories.${value}`
-  const translated = t(key as any)
-  return translated === key ? value : translated
-}
-
-function setSort(column: SortKey) {
-  if (sortKey.value === column) {
-    sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc'
-  } else {
-    sortKey.value = column
-    sortDirection.value = 'asc'
+  const childrenByParent = new Map<string | null, MaterialTypeRow[]>()
+  for (const row of materialTypes.value) {
+    const key = row.parent_type_id ?? null
+    const list = childrenByParent.get(key) ?? []
+    list.push(row)
+    childrenByParent.set(key, list)
   }
+
+  const buildNode = (row: MaterialTypeRow): MaterialTreeNode => ({
+    row,
+    children: sortTypeRows(childrenByParent.get(row.type_id) ?? []).map((child) => buildNode(child)),
+  })
+
+  if (rawMaterialRoot.value) return [buildNode(rawMaterialRoot.value)]
+
+  const roots = materialTypes.value.filter((row) => !row.parent_type_id || !materialTypeMap.value.has(row.parent_type_id))
+  return sortTypeRows(roots).map((row) => buildNode(row))
+})
+
+const visibleMaterialTypeForest = computed<MaterialTreeNode[]>(() => {
+  const query = typeSearchTerm.value.trim().toLowerCase()
+  if (!query) return materialTypeForest.value
+
+  const filterNode = (node: MaterialTreeNode): MaterialTreeNode | null => {
+    const label = displayMaterialTypeName(node.row).toLowerCase()
+    const selfMatches = label.includes(query) || node.row.code.toLowerCase().includes(query)
+    if (selfMatches) return node
+
+    const children = node.children
+      .map((child) => filterNode(child))
+      .filter((child): child is MaterialTreeNode => Boolean(child))
+
+    if (children.length === 0) return null
+    return { row: node.row, children }
+  }
+
+  return materialTypeForest.value
+    .map((node) => filterNode(node))
+    .filter((node): node is MaterialTreeNode => Boolean(node))
+})
+
+const materialTypeTreeEntries = computed<MaterialTreeEntry[]>(() => {
+  const entries: MaterialTreeEntry[] = []
+  const visit = (node: MaterialTreeNode, depth: number) => {
+    entries.push({ node, depth })
+    node.children.forEach((child) => visit(child, depth + 1))
+  }
+  visibleMaterialTypeForest.value.forEach((node) => visit(node, 0))
+  return entries
+})
+
+const selectedType = computed(() => (selectedTypeId.value ? materialTypeMap.value.get(selectedTypeId.value) ?? null : null))
+
+const selectedTypeDescendantIds = computed(() => {
+  if (!selectedTypeId.value) return new Set<string>()
+  const ids = new Set<string>()
+  const walk = (typeId: string) => {
+    if (ids.has(typeId)) return
+    ids.add(typeId)
+    for (const row of materialTypes.value) {
+      if (row.parent_type_id === typeId) walk(row.type_id)
+    }
+  }
+  walk(selectedTypeId.value)
+  return ids
+})
+
+const filteredMaterialRows = computed(() => {
+  const keyword = materialSearchTerm.value.trim().toLowerCase()
+
+  return materialRows.value
+    .filter((row) => {
+      if (selectedTypeDescendantIds.value.size > 0 && (!row.material_type_id || !selectedTypeDescendantIds.value.has(row.material_type_id))) {
+        return false
+      }
+
+      if (!keyword) return true
+      const name = row.material_name.toLowerCase()
+      const code = row.material_code.toLowerCase()
+      return name.includes(keyword) || code.includes(keyword)
+    })
+    .slice()
+    .sort((a, b) => a.material_code.localeCompare(b.material_code))
+})
+
+const selectedMaterialRow = computed(() => (selectedMaterialId.value ? materialMap.value.get(selectedMaterialId.value) ?? null : null))
+
+const formSelectedType = computed(() => (form.material_type_id ? materialTypeMap.value.get(form.material_type_id) ?? null : null))
+
+const statusOptions = computed(() => {
+  const values = new Set<string>(STATUS_OPTIONS)
+  if (form.status) values.add(form.status)
+  return Array.from(values)
+})
+
+const canCreate = computed(() => Boolean(selectedTypeId.value) && !loading.value)
+
+const formTitle = computed(() => {
+  if (formMode.value === 'edit') return t('material.editTitle')
+  if (formMode.value === 'create') return t('material.newTitle')
+  return t('material.detailTitle')
+})
+
+const formSubtitle = computed(() => {
+  if (formMode.value === 'edit') return t('material.formEditHint')
+  if (formMode.value === 'create') return t('material.formCreateHint')
+  return t('material.detailHint')
+})
+
+const selectedTypePathText = computed(() => materialTypePathText(selectedTypeId.value))
+const formTypePathText = computed(() => materialTypePathText(form.material_type_id))
+
+function displayMaterialTypeName(row: Pick<MaterialTypeRow, 'name' | 'code' | 'name_i18n'> | null) {
+  if (!row) return ''
+  const isJa = locale.value.toString().toLowerCase().startsWith('ja')
+  const ja = row.name_i18n?.ja?.trim()
+  const en = row.name_i18n?.en?.trim()
+  if (isJa) return ja || row.name || en || row.code
+  return en || row.name || ja || row.code
 }
 
-function resetForm() {
-  Object.assign(form, blank())
+function materialTypePathText(typeId: string | null | undefined) {
+  if (!typeId) return ''
+
+  const visited = new Set<string>()
+  const parts: string[] = []
+  let current = materialTypeMap.value.get(typeId) ?? null
+
+  while (current && !visited.has(current.type_id)) {
+    visited.add(current.type_id)
+    parts.unshift(displayMaterialTypeName(current))
+    current = current.parent_type_id ? materialTypeMap.value.get(current.parent_type_id) ?? null : null
+  }
+
+  return parts.join(' / ')
+}
+
+function uomLabel(uomId: string | null) {
+  if (!uomId) return '-'
+  const uom = uomMap.value.get(uomId)
+  if (!uom) return '-'
+  return uom.name ? `${uom.code} - ${uom.name}` : uom.code
+}
+
+function formatStatus(value: string | null | undefined) {
+  if (!value) return '-'
+  if (value === 'active') return t('common.active')
+  if (value === 'inactive') return t('common.inactive')
+  return value
+}
+
+function statusBadgeClass(value: string | null | undefined) {
+  if (value === 'active') return 'bg-green-100 text-green-700'
+  if (value === 'inactive') return 'bg-gray-200 text-gray-700'
+  return 'bg-amber-100 text-amber-700'
+}
+
+function clearErrors() {
   Object.keys(errors).forEach((key) => delete errors[key])
 }
 
-function openCreate() {
-  editing.value = false
-  resetForm()
-  form.category = CATEGORY_SOURCE[0] ?? ''
-  form.active = true
-  showModal.value = true
+function ensureTypeSelection() {
+  if (selectedTypeId.value && materialTypeMap.value.has(selectedTypeId.value)) return
+  if (rawMaterialRoot.value) {
+    selectedTypeId.value = rawMaterialRoot.value.type_id
+    return
+  }
+  const first = materialTypeForest.value[0]?.row.type_id ?? ''
+  selectedTypeId.value = first
 }
 
-function openEdit(row: MaterialDisplayRow) {
-  editing.value = true
-  resetForm()
+function resetFormPane() {
+  formMode.value = 'idle'
+  selectedMaterialId.value = ''
+  Object.assign(form, blankForm())
+  clearErrors()
+}
+
+function selectType(typeId: string) {
+  selectedTypeId.value = typeId
+}
+
+function startCreate() {
+  clearErrors()
+  selectedMaterialId.value = ''
+  formMode.value = 'create'
+  Object.assign(form, {
+    id: '',
+    material_code: '',
+    material_name: '',
+    material_type_id: selectedTypeId.value,
+    base_uom_id: '',
+    status: 'active',
+  })
+}
+
+function selectMaterial(row: MaterialRow) {
+  clearErrors()
+  selectedMaterialId.value = row.id
+  formMode.value = 'edit'
   Object.assign(form, {
     id: row.id,
-    code: row.code,
-    name: row.name ?? '',
-    category: CATEGORY_SOURCE.includes(row.category as CategoryValue) ? row.category : CATEGORY_SOURCE[0],
-    uom_id: row.uom_id,
-    active: Boolean(row.active),
+    material_code: row.material_code,
+    material_name: row.material_name,
+    material_type_id: row.material_type_id ?? '',
+    base_uom_id: row.base_uom_id ?? '',
+    status: row.status,
   })
-  showModal.value = true
+
+  if (row.material_type_id) {
+    selectedTypeId.value = row.material_type_id
+  }
 }
 
-function closeModal() {
-  showModal.value = false
+function applySelectedTypeToForm() {
+  if (!selectedTypeId.value) return
+  form.material_type_id = selectedTypeId.value
+  if (errors.material_type_id) delete errors.material_type_id
 }
 
-function confirmDelete(row: MaterialRow) {
-  toDelete.value = row
+function openDelete(row: MaterialRow) {
+  deleteTarget.value = row
   showDelete.value = true
 }
 
-function validate() {
-  Object.keys(errors).forEach((key) => delete errors[key])
+function closeDelete() {
+  if (deleting.value) return
+  showDelete.value = false
+  deleteTarget.value = null
+}
 
-  if (!form.code || String(form.code).trim() === '') {
-    errors.code = t('errors.required', { field: t('labels.code') })
+function validateForm() {
+  clearErrors()
+
+  if (!form.material_code.trim()) {
+    errors.material_code = t('errors.required', { field: t('material.fields.code') })
   }
 
-  if (!form.name || String(form.name).trim() === '') {
-    errors.name = t('errors.required', { field: t('labels.name') })
+  if (!form.material_name.trim()) {
+    errors.material_name = t('errors.required', { field: t('material.fields.name') })
   }
 
-  if (!form.category) {
-    errors.category = t('errors.required', { field: t('labels.category') })
-  } else if (!CATEGORY_SOURCE.includes(form.category as CategoryValue)) {
-    errors.category = t('material.invalidCategory')
+  if (!form.material_type_id) {
+    errors.material_type_id = t('errors.required', { field: t('material.fields.type') })
   }
 
-  if (!form.uom_id) {
-    errors.uom_id = t('errors.required', { field: t('labels.uom') })
+  if (!form.base_uom_id) {
+    errors.base_uom_id = t('errors.required', { field: t('material.fields.uom') })
+  }
+
+  if (!form.status) {
+    errors.status = t('errors.required', { field: t('material.fields.status') })
   }
 
   return Object.keys(errors).length === 0
 }
 
-async function fetchUoms() {
-  const { data, error } = await supabase
-    .from(UOM_TABLE)
-    .select('id, code, name')
-    .order('code', { ascending: true })
-
-  if (error) {
-    toast.error('UOM fetch error: ' + error.message)
-    return
+function messageText(error: unknown) {
+  if (error instanceof Error) return error.message
+  if (typeof error === 'object' && error && 'message' in error && typeof (error as { message?: unknown }).message === 'string') {
+    return (error as { message: string }).message
   }
-
-  uomOptions.value = (data ?? []) as UomOption[]
+  return String(error)
 }
 
-async function fetchMaterials() {
+async function loadPage() {
   loading.value = true
-  const allowedCategories = [...CATEGORY_SOURCE]
-  const { data, error } = await supabase
-    .from(MATERIAL_TABLE)
-    .select('id, code, name, category, uom_id, active, created_at')
-    .in('category', allowedCategories)
-    .order('code', { ascending: true })
-  loading.value = false
+  pageError.value = ''
 
-  if (error) {
-    toast.error('Fetch error: ' + error.message)
-    return
+  try {
+    const [
+      { data: uomData, error: uomError },
+      { data: typeData, error: typeError },
+      { data: materialData, error: materialError },
+    ] = await Promise.all([
+      supabase.from('mst_uom').select('id, code, name').order('code', { ascending: true }),
+      supabase
+        .from('type_def')
+        .select('type_id, code, name, name_i18n, parent_type_id, sort_order')
+        .eq('domain', 'material_type')
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true })
+        .order('code', { ascending: true }),
+      mesClient()
+        .from('mst_material')
+        .select('id, material_code, material_name, material_type_id, base_uom_id, status')
+        .order('material_code', { ascending: true }),
+    ])
+
+    if (uomError) throw uomError
+    if (typeError) throw typeError
+    if (materialError) throw materialError
+
+    uomOptions.value = (uomData ?? []) as UomRow[]
+    materialTypes.value = (typeData ?? []) as MaterialTypeRow[]
+    materialRows.value = (materialData ?? []).map((row) => normalizeMaterialRow(row))
+
+    ensureTypeSelection()
+
+    if (formMode.value === 'edit' && selectedMaterialId.value) {
+      const latest = materialRows.value.find((row) => row.id === selectedMaterialId.value)
+      if (latest) {
+        Object.assign(form, {
+          id: latest.id,
+          material_code: latest.material_code,
+          material_name: latest.material_name,
+          material_type_id: latest.material_type_id ?? '',
+          base_uom_id: latest.base_uom_id ?? '',
+          status: latest.status,
+        })
+      } else {
+        resetFormPane()
+      }
+    }
+  } catch (error) {
+    pageError.value = t('material.errors.loadFailed', { message: messageText(error) })
+    toast.error(pageError.value)
+  } finally {
+    loading.value = false
   }
-
-  const allowedSet = new Set(allowedCategories)
-  const sanitized = (data ?? []).filter((item) => allowedSet.has(item.category))
-
-  rows.value = sanitized.map((item) => ({
-    ...item,
-    name: item.name ?? '',
-    active: Boolean(item.active),
-  }))
 }
 
 async function saveRecord() {
-  if (!validate()) return
+  if (!validateForm()) return
 
   saving.value = true
+
   const payload = {
-    code: form.code?.trim() || '',
-    name: form.name?.trim() || '',
-    category: form.category,
-    uom_id: form.uom_id,
-    active: Boolean(form.active),
+    material_code: form.material_code.trim(),
+    material_name: form.material_name.trim(),
+    material_type_id: form.material_type_id,
+    base_uom_id: form.base_uom_id,
+    status: form.status,
   }
 
-  let response
-  if (editing.value) {
-    response = await supabase
-      .from(MATERIAL_TABLE)
-      .update(payload)
-      .eq('id', form.id)
-      .select('id, code, name, category, uom_id, active, created_at')
-      .single()
-  } else {
-    response = await supabase
-      .from(MATERIAL_TABLE)
-      .insert(payload)
-      .select('id, code, name, category, uom_id, active, created_at')
-      .single()
-  }
+  try {
+    const response = formMode.value === 'edit'
+      ? await mesClient()
+          .from('mst_material')
+          .update(payload)
+          .eq('id', form.id)
+          .select('id, material_code, material_name, material_type_id, base_uom_id, status')
+          .single()
+      : await mesClient()
+          .from('mst_material')
+          .insert(payload)
+          .select('id, material_code, material_name, material_type_id, base_uom_id, status')
+          .single()
 
-  saving.value = false
-  if (response.error) {
-    toast.error('Save error: ' + response.error.message)
-    return
-  }
+    if (response.error) {
+      if (response.error.code === '23505') {
+        errors.material_code = t('material.errors.codeUnique')
+        toast.error(errors.material_code)
+        return
+      }
+      throw response.error
+    }
 
-  const saved = response.data as MaterialRow
-  const idx = rows.value.findIndex((row) => row.id === saved.id)
-  const normalized: MaterialRow = {
-    ...saved,
-    name: saved.name ?? '',
-    active: Boolean(saved.active),
-  }
+    const saved = normalizeMaterialRow(response.data)
+    const index = materialRows.value.findIndex((row) => row.id === saved.id)
+    if (index === -1) {
+      materialRows.value = [...materialRows.value, saved]
+    } else {
+      const next = materialRows.value.slice()
+      next[index] = saved
+      materialRows.value = next
+    }
 
-  if (idx > -1) {
-    rows.value[idx] = normalized
-  } else {
-    rows.value.push(normalized)
+    selectedTypeId.value = saved.material_type_id ?? selectedTypeId.value
+    selectMaterial(saved)
+    toast.success(t('common.saved'))
+  } catch (error) {
+    toast.error(t('material.errors.saveFailed', { message: messageText(error) }))
+  } finally {
+    saving.value = false
   }
-  rows.value = [...rows.value]
-
-  showModal.value = false
 }
 
 async function deleteRecord() {
-  if (!toDelete.value) return
+  if (!deleteTarget.value) return
 
-  const { error } = await supabase.from(MATERIAL_TABLE).delete().eq('id', toDelete.value.id)
-  if (error) {
-    toast.error('Delete error: ' + error.message)
-    return
+  deleting.value = true
+
+  try {
+    const { error } = await mesClient().from('mst_material').delete().eq('id', deleteTarget.value.id)
+    if (error) throw error
+
+    const deletedId = deleteTarget.value.id
+    materialRows.value = materialRows.value.filter((row) => row.id !== deletedId)
+
+    if (selectedMaterialId.value === deletedId) {
+      resetFormPane()
+    }
+
+    toast.success(t('common.deleted'))
+    showDelete.value = false
+    deleteTarget.value = null
+  } catch (error) {
+    toast.error(t('material.errors.deleteFailed', { message: messageText(error) }))
+  } finally {
+    deleting.value = false
   }
-
-  rows.value = rows.value.filter((row) => row.id !== toDelete.value?.id)
-  showDelete.value = false
-  toDelete.value = null
 }
 
-function formatTimestamp(value: string | null) {
-  if (!value) return '—'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-  return date.toLocaleString()
-}
-
-onMounted(async () => {
-  await Promise.all([fetchUoms(), fetchMaterials()])
+onMounted(() => {
+  void loadPage()
 })
 </script>
 

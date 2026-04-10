@@ -43,7 +43,7 @@
         "material_name": "Brewing Water",
         "material_role": "process_water",
         "material_type_code": "WATER",
-        "material_spec_code": "BREWING_WATER_STD",
+        "material_code": "MAT_WATER_BREW",
         "qty": 1200,
         "uom_code": "L",
         "basis": "per_base"
@@ -53,7 +53,7 @@
         "material_name": "Pale Malt",
         "material_role": "main_substrate",
         "material_type_code": "MALT",
-        "material_spec_code": "PALE_MALT",
+        "material_code": "MAT_MALT_PALE",
         "qty": 180,
         "uom_code": "KG",
         "basis": "per_base"
@@ -63,7 +63,7 @@
         "material_name": "Saaz Hops",
         "material_role": "flavor",
         "material_type_code": "HOPS",
-        "material_spec_code": "SAAZ",
+        "material_code": "MAT_HOPS_SAAZ",
         "qty": 2.5,
         "uom_code": "KG",
         "basis": "per_base"
@@ -73,7 +73,7 @@
         "material_name": "Lager Yeast",
         "material_role": "culture",
         "material_type_code": "YEAST",
-        "material_spec_code": "LAGER_YEAST",
+        "material_code": "MAT_YEAST_LAGER",
         "qty": 5,
         "uom_code": "KG",
         "basis": "per_base"
@@ -83,7 +83,7 @@
         "material_name": "330mL Bottle",
         "material_role": "packaging_primary",
         "material_type_code": "PACKAGING",
-        "material_spec_code": "BOTTLE_330_CLEAR",
+        "material_code": "PKG_BOTTLE_330",
         "qty": 3000,
         "uom_code": "PCS",
         "basis": "per_base"
@@ -93,7 +93,7 @@
         "material_name": "Bottle Cap",
         "material_role": "packaging_component",
         "material_type_code": "PACKAGING",
-        "material_spec_code": "CAP_330_STD",
+        "material_code": "PKG_CAP_330",
         "qty": 3000,
         "uom_code": "PCS",
         "basis": "per_base"
@@ -103,34 +103,10 @@
         "material_name": "Standard Label",
         "material_role": "packaging_component",
         "material_type_code": "PACKAGING",
-        "material_spec_code": "LABEL_STD",
+        "material_code": "PKG_LABEL_STD",
         "qty": 3000,
         "uom_code": "PCS",
         "basis": "per_base"
-      }
-    ]
-  },
-  "equipment": {
-    "default_requirements": [
-      {
-        "equipment_type_code": "MASH_TUN",
-        "equipment_template_code": "MASH_TUN_1000L",
-        "quantity": 1
-      },
-      {
-        "equipment_type_code": "BOIL_KETTLE",
-        "equipment_template_code": "BOIL_KETTLE_1000L",
-        "quantity": 1
-      },
-      {
-        "equipment_type_code": "FERMENTER",
-        "equipment_template_code": "FERMENTER_1000L",
-        "quantity": 1
-      },
-      {
-        "equipment_type_code": "BOTTLING_LINE",
-        "equipment_template_code": "BOTTLING_LINE_STD",
-        "quantity": 1
       }
     ]
   },

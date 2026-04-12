@@ -1201,7 +1201,7 @@
     }
   },
   "producedBeer": {
-    "title": "移出記録",
+    "title": "移出登録",
     "subtitle": "製品ビールの移出を管理します。",
     "sections": {
       "inventory": "在庫",
@@ -2383,7 +2383,7 @@
       "beerInventory": "ビール在庫管理",
       "rawMaterialReceipts": "原材料受入",
       "rawMaterialInventory": "原材料在庫",
-      "producedBeer": "移出記録",
+      "producedBeer": "移出登録",
       "waste": "廃棄物管理",
       "masterMaintenance": "マスタ管理",
       "systemMaintenance": "システム管理",

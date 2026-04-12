@@ -1201,7 +1201,7 @@
     }
   },
   "producedBeer": {
-    "title": "Produced Craft Beer",
+    "title": "Movement Register",
     "subtitle": "Monitor packaged craft beer movements.",
     "sections": {
       "inventory": "Inventory",
@@ -2391,7 +2391,7 @@
       "beerInventory": "Beer Inventory Management",
       "rawMaterialReceipts": "Raw Material Receipts",
       "rawMaterialInventory": "Raw Material Inventory",
-      "producedBeer": "Produced Craft Beer",
+      "producedBeer": "Movement Register",
       "waste": "Waste",
       "masterMaintenance": "Master Maintenance",
       "systemMaintenance": "System Maintenance",

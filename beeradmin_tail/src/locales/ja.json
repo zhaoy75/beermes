@@ -1355,7 +1355,7 @@
       }
     },
     "movementFast": {
-      "title": "製品ビール移出 高速入力",
+      "title": "製品ビール移出(社内移出)",
       "subtitle": "ルールエンジンに基づいて製品ビール移出を高速入力します。",
       "actions": {
         "back": "戻る",
@@ -2090,9 +2090,9 @@
         "status": "ステータス"
       }
     },
-    "cancelRemovalConfirm": "{lot} の移出を取り消します。よろしいですか？",
-    "cancelRemovalSuccess": "移出を取り消しました。",
-    "cancelRemovalFailed": "移出取消に失敗しました。"
+    "cancelRemovalConfirm": "{lot} の国内移出を完了します。よろしいですか？",
+    "cancelRemovalSuccess": "国内移出を完了しました。",
+    "cancelRemovalFailed": "国内移出完了に失敗しました。"
   },
   "fillingReport": {
     "title": "詰口一覧表",

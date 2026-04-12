@@ -1355,7 +1355,7 @@
       }
     },
     "movementFast": {
-      "title": "Product Move Fast",
+      "title": "Product Move (Internal Transfer)",
       "subtitle": "Fast entry page for rule-driven product beer movements.",
       "actions": {
         "back": "Back",
@@ -2071,7 +2071,7 @@
     },
     "actions": {
       "showDag": "Show DAG",
-      "cancelRemoval": "Cancel Removal"
+      "cancelRemoval": "Complete Domestic Removal"
     },
     "merge": {
       "expand": "Show merged details",
@@ -2098,9 +2098,9 @@
         "status": "Status"
       }
     },
-    "cancelRemovalConfirm": "Cancel removal for {lot}?",
-    "cancelRemovalSuccess": "Removal was canceled.",
-    "cancelRemovalFailed": "Failed to cancel removal."
+    "cancelRemovalConfirm": "Complete domestic removal for {lot}?",
+    "cancelRemovalSuccess": "Domestic removal was completed.",
+    "cancelRemovalFailed": "Failed to complete domestic removal."
   },
   "fillingReport": {
     "title": "Filling Report",

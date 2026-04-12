@@ -647,6 +647,20 @@ begin
          set qty = i.qty + v_qty
        where i.id = v_dest_inv_id;
     end if;
+
+    if v_movement_intent = 'RETURN_FROM_CUSTOMER'
+       and not exists (
+         select 1
+         from public.inv_inventory i
+         where i.tenant_id = v_tenant
+           and i.site_id = v_dst_site_id
+           and i.lot_id = v_to_lot_id
+           and i.uom_id = v_uom_id
+       ) then
+      raise exception
+        'PM012: RETURN_FROM_CUSTOMER must land in inv_inventory. dst_site_type=%',
+        v_dst_site_type;
+    end if;
   end if;
 
   update public.lot l

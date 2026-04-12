@@ -1,6 +1,7 @@
 # Current Task Spec
 
 ## Goal
+<<<<<<< ours
 - Implement `BatchStepExecution.vue` as the dedicated page for step-level execution input.
 - Keep `BatchEdit.vue` focused on batch-level operations.
 - Preserve current `actual_yield`, `filling / packing`, `Lot DAG`, and `batch relation` behavior without regression.
@@ -43,12 +44,29 @@
 - [batchedit.md](/Users/zhao/dev/other/beer/docs/UI/batchedit.md)
 - [batch_step_execution.md](/Users/zhao/dev/other/beer/docs/UI/batch_step_execution.md)
 - [BatchStepExecution.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/BatchStepExecution.vue)
+=======
+- Change the `製品ビール移出 高速入力` page title to `製品ビール移出(社内移出)`.
+
+## Scope
+- Update the UI title label used by the `ProductMoveFast` page.
+- Keep the change limited to page labeling and locale resources.
+
+## Non-Goals
+- Do not change posting behavior.
+- Do not change page subtitle unless required for consistency.
+- Do not change route names or page logic.
+- Do not redesign the page.
+
+## Affected Files
+- [current-task.md](/Users/zhao/dev/other/beer/specs/current-task.md)
+>>>>>>> theirs
 - [ja.json](/Users/zhao/dev/other/beer/beeradmin_tail/src/locales/ja.json)
 - [en.json](/Users/zhao/dev/other/beer/beeradmin_tail/src/locales/en.json)
 
 ## Data Model / API Changes
 - No data model changes.
 - No API changes.
+<<<<<<< ours
 - Use existing execution-side tables only:
   - `public.mes_batches`
   - `mes.batch_step`
@@ -144,3 +162,22 @@
 - `npm run type-check` in `beeradmin_tail`: passed
 - `npm run test` in `beeradmin_tail`: failed because `beeradmin_tail/package.json` has no `test` script
 - `npx eslint . --no-fix` in `beeradmin_tail`: failed on the existing repo-wide ESLint backlog outside this task
+=======
+
+## Planned File Changes
+- Update the Japanese page title string for `movementFast.title`.
+- Update the English page title string to keep locale parity.
+
+## Final Decisions
+- Pending implementation.
+
+## Validation Plan
+- Run:
+  - locale JSON parse check for `ja.json` and `en.json`
+  - `npx eslint src/views/Pages/ProductMoveFast.vue --no-fix` in `beeradmin_tail`
+  - `npm run type-check` in `beeradmin_tail`
+  - `npm run test` in `beeradmin_tail`
+
+## Validation Results
+- Pending implementation.
+>>>>>>> theirs

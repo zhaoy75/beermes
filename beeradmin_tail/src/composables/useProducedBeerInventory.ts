@@ -21,7 +21,9 @@ interface SiteOption {
   value: string
   label: string
   ownerType: string | null
+  ownerName: string | null
   siteTypeKey: string | null
+  isDomesticRemovalDummy: boolean
 }
 
 interface PackageCategoryRow {
@@ -51,6 +53,8 @@ interface InventoryRow {
   packageCode: string | null
   packageBarcode: string | null
   containerKind: ContainerKind
+  arrivalIntent: string | null
+  showAsInventoryWithoutPackage: boolean
   keywordIndex: string
   productionDate: string | null
   qtyPackages: number | null
@@ -92,6 +96,9 @@ interface BatchInfo {
   productName: string | null
   keywordText: string
 }
+
+const DOMESTIC_REMOVAL_DUMMY_OWNER_TYPE = 'OUTSIDE'
+const DOMESTIC_REMOVAL_DUMMY_OWNER_NAME = 'SYSTEM_DOMESTIC_REMOVAL_COMPLETE'
 
 function pushKeyword(set: Set<string>, value: unknown) {
   if (value == null) return
@@ -230,6 +237,11 @@ export function useProducedBeerInventory() {
     return siteMap.value.get(siteId)?.siteTypeKey ?? null
   }
 
+  function isDomesticRemovalDummySite(siteId: string | null | undefined) {
+    if (!siteId) return false
+    return siteMap.value.get(siteId)?.isDomesticRemovalDummy ?? false
+  }
+
   function resolveLang() {
     return String(locale.value ?? '')
       .toLowerCase()
@@ -349,7 +361,7 @@ export function useProducedBeerInventory() {
 
     const { data, error } = await supabase
       .from('mst_sites')
-      .select('id, name, owner_type, site_type_id')
+      .select('id, name, owner_type, owner_name, site_type_id')
       .eq('tenant_id', tenant)
       .order('name', { ascending: true })
     if (error) throw error
@@ -357,7 +369,11 @@ export function useProducedBeerInventory() {
       value: row.id,
       label: row.name ?? row.id,
       ownerType: row.owner_type ?? null,
+      ownerName: row.owner_name ?? null,
       siteTypeKey: row.site_type_id ? siteTypeMap.get(String(row.site_type_id)) ?? null : null,
+      isDomesticRemovalDummy:
+        row.owner_type === DOMESTIC_REMOVAL_DUMMY_OWNER_TYPE
+        && row.owner_name === DOMESTIC_REMOVAL_DUMMY_OWNER_NAME,
     }))
   }
 
@@ -575,7 +591,7 @@ export function useProducedBeerInventory() {
 
       const { data: lots, error: lotError } = await supabase
         .from('lot')
-        .select('id, lot_no, lot_tax_type, batch_id, package_id, produced_at, status')
+        .select('id, lot_no, lot_tax_type, batch_id, package_id, produced_at, status, meta')
         .eq('tenant_id', tenant)
         .in('id', lotIds)
         .neq('status', 'void')
@@ -628,6 +644,8 @@ export function useProducedBeerInventory() {
         packageCode: string | null
         packageBarcode: string | null
         containerKind: ContainerKind
+        arrivalIntent: string | null
+        showAsInventoryWithoutPackage: boolean
         keywordParts: Set<string>
         productionDate: string | null
         qtyPackages: number
@@ -645,9 +663,18 @@ export function useProducedBeerInventory() {
 
         const siteId = row.site_id as string | null
         if (!siteId) return
+        if (isDomesticRemovalDummySite(siteId)) return
 
         const pkgInfo = lot.package_id ? packageInfoMap.get(lot.package_id) : undefined
         const batchInfo = lot.batch_id ? batchInfoMap.get(lot.batch_id) : undefined
+        const lotMeta =
+          lot.meta && typeof lot.meta === 'object' && !Array.isArray(lot.meta)
+            ? (lot.meta as Record<string, unknown>)
+            : null
+        const arrivalIntentRaw = lotMeta?.movement_intent
+        const arrivalIntent = typeof arrivalIntentRaw === 'string' ? arrivalIntentRaw : null
+        const showAsInventoryWithoutPackage =
+          arrivalIntent === 'INTERNAL_TRANSFER' || arrivalIntent === 'RETURN_FROM_CUSTOMER'
         const inventoryQty = toNumber(row.qty)
         if (inventoryQty == null || inventoryQty <= 0) return
 
@@ -699,6 +726,8 @@ export function useProducedBeerInventory() {
             packageCode: pkgInfo?.packageCode ?? null,
             packageBarcode: pkgInfo?.packageBarcode ?? null,
             containerKind,
+            arrivalIntent,
+            showAsInventoryWithoutPackage,
             keywordParts,
             productionDate: lot.produced_at ?? null,
             qtyPackages: 0,
@@ -769,6 +798,8 @@ export function useProducedBeerInventory() {
           packageCode: row.packageCode,
           packageBarcode: row.packageBarcode,
           containerKind: row.containerKind,
+          arrivalIntent: row.arrivalIntent,
+          showAsInventoryWithoutPackage: row.showAsInventoryWithoutPackage,
           keywordIndex: Array.from(row.keywordParts).join(' '),
           productionDate: row.productionDate,
           qtyPackages: row.qtyPackages > 0 ? row.qtyPackages : null,

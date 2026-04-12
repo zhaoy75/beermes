@@ -173,6 +173,7 @@ System behavior:
   - `src_lot_tax_type`
 - When source stock exists in `inv_inventory`, Step 3 resolves candidates from inventory rows.
 - When `movement_intent = RETURN_FROM_CUSTOMER` and source stock does not exist in `inv_inventory`, Step 3 switches to lot lookup mode and resolves candidates from `lot`-based data.
+- A successful `RETURN_FROM_CUSTOMER` post must also create or update destination `inv_inventory`; if the destination inventory row does not exist after posting, backend raises `PM012`.
 - When `src_site_type = DOMESTIC_CUSTOMER` or `src_site_type = OTHER_BREWERY`, Step 3 must search the tenant `lot` table instead of `inv_inventory`, without site filtering and without `src_lot_tax_type` candidate filtering, because `SHIP_DOMESTIC` is not registered in this system.
 - For this special case, filled-lot lookup means tenant `lot` rows where `package_id` is present.
 - In lot lookup mode, the page still posts using `lot.id`, not `lot_no`.

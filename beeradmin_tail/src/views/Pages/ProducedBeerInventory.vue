@@ -229,11 +229,11 @@
                     <button
                       class="px-2 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
                       type="button"
-                      :disabled="cancelingRowId === row.id || !row.canVoid"
-                      @click="cancelRemoval(row)"
+                      :disabled="processingRowId === row.id || !row.canVoid"
+                      @click="completeDomesticRemoval(row)"
                     >
                       {{
-                        cancelingRowId === row.id
+                        processingRowId === row.id
                           ? t('common.saving')
                           : t('producedBeerInventory.actions.cancelRemoval')
                       }}
@@ -535,7 +535,7 @@ const sortState = reactive<{
   direction: 'desc',
 })
 
-const cancelingRowId = ref('')
+const processingRowId = ref('')
 const expandedRowIds = ref<string[]>([])
 
 const dagDialog = reactive({
@@ -587,7 +587,7 @@ const filteredRows = computed(() => {
     if (filters.product && productFilterValue(row) !== filters.product) return false
     if (filters.site && !row.siteIds.includes(filters.site)) return false
     if (filters.packageId && row.packageId !== filters.packageId) return false
-    if (!filters.showNonPackage && !row.packageId) return false
+    if (!filters.showNonPackage && !row.packageId && !row.showAsInventoryWithoutPackage) return false
     return true
   })
 })
@@ -822,17 +822,17 @@ async function openDagDialog(row: InventoryPageRow) {
   }
 }
 
-async function cancelRemoval(row: InventoryPageRow) {
+async function completeDomesticRemoval(row: InventoryPageRow) {
   if (!row.canVoid) return
   const target = row.lotNo || row.batchCode || row.id
   if (!window.confirm(t('producedBeerInventory.cancelRemovalConfirm', { lot: target }))) return
   try {
-    cancelingRowId.value = row.id
+    processingRowId.value = row.id
     for (const targetRow of row.voidTargets) {
-      const { error } = await supabase.rpc('inventory_lot_void', {
+      const { error } = await supabase.rpc('domestic_removal_complete', {
         p_lot_id: targetRow.lotId,
         p_site_id: targetRow.siteId,
-        p_reason: 'inventory_removal_cancel_from_inventory_page',
+        p_reason: 'domestic_removal_complete_from_inventory_page',
       })
       if (error) throw error
     }
@@ -847,7 +847,7 @@ async function cancelRemoval(row: InventoryPageRow) {
         : t('producedBeerInventory.cancelRemovalFailed'),
     )
   } finally {
-    cancelingRowId.value = ''
+    processingRowId.value = ''
   }
 }
 

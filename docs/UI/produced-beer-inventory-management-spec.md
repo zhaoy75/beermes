@@ -77,7 +77,9 @@
   - filters are shown inline above the grid
   - filtering updates the visible grid rows without requiring page navigation
   - refresh button reloads the underlying inventory dataset
+  - `RETURN_FROM_CUSTOMER` is expected to land in destination `inv_inventory`; returned beer should appear here as inventory when the movement posts successfully
   - when `Show Non-Package` is `off`, rows with `package_id is null` are hidden
+    - exception: rows whose latest `lot.meta.movement_intent` is `INTERNAL_TRANSFER` or `RETURN_FROM_CUSTOMER` must remain visible as inventory arrivals
   - when `Show Non-Package` is `on`, rows with `package_id is null` may appear together with packaged rows
 
 ### Inventory Grid Sort
@@ -92,7 +94,7 @@
 ### Row Actions
 - Each inventory row must show:
   - `関連履歴` / `Show DAG`
-  - `国内移出完了` / `Cancel Removal`
+  - `国内移出完了` / `Complete Domestic Removal`
 
 #### `関連履歴` / `Show DAG`
 - Purpose:
@@ -105,20 +107,24 @@
   - preferred read source is `public.lot_trace_full(p_lot_id uuid, p_max_depth int default 10)`
   - UI may render graph, table, or mixed representation as long as all related movement is traceable from the selected lot
 
-#### `国内移出完了` / `Cancel Removal`
+#### `国内移出完了` / `Complete Domestic Removal`
 - Purpose:
-  - cancel inventory removal for the selected visible inventory row through a backend business action
+  - complete domestic shipment for the selected visible inventory row through a backend business action
 - UI behavior:
   - show confirmation dialog before execution
   - this action is only available when all underlying source rows of the visible inventory row are in `TAX_STORAGE` (`蔵置所`)
-  - after success, refresh inventory grid and remove or update the affected merged row from the visible positive inventory result
+  - the action always moves the full current quantity of each underlying lot
+  - after success, refresh inventory grid and remove or update the affected `TAX_STORAGE` row from the visible positive inventory result
   - if the action is rejected by backend business rules, show an explicit error message
 - Backend direction:
   - UI must not update `inv_inventory` or `lot` directly
-  - implement or call a backend endpoint / RPC that performs the cancellation through business logic
+  - implement or call a backend endpoint / RPC that performs the shipment through business logic
   - backend must reject the action for non-`TAX_STORAGE` sites
+  - backend should resolve or lazily create the tenant hidden dummy `DOMESTIC_CUSTOMER` site as shipment destination
+  - backend should call standard shipment logic through `public.product_move(p_doc jsonb)` instead of inventory-zero adjustment logic
   - backend should update inventory / lot quantity consistently and keep audit metadata
   - backend should not delete rows
+  - see dedicated redesign spec: [domestic-removal-complete-redesign.md](/Users/zhao/dev/other/beer/specs/domestic-removal-complete-redesign.md)
 
 ### Row Merge
 - inventory rows are merged only when manufacturing batch, lot code, lot tax type, package type, and site all match
@@ -150,7 +156,7 @@
 3. `ProducedBeer` no longer renders the inventory section.
 4. `ProducedBeer` still supports movement listing, filtering, export, and creation flows.
 5. The inventory page includes a search section with `Keyword`, `Product`, `Site`, `Package`, and `Show Non-Package` filters.
-6. `Show Non-Package` defaults to `off`, and rows without `package_id` are hidden until the checkbox is turned on.
+6. `Show Non-Package` defaults to `off`, and rows without `package_id` are hidden until the checkbox is turned on, except for inventory-arrival rows created by `INTERNAL_TRANSFER` or `RETURN_FROM_CUSTOMER`.
 7. The inventory grid supports sort on each visible data column.
 8. Each inventory row includes `関連履歴` and `国内移出完了` actions.
 9. `関連履歴` shows all related movement / lot genealogy for the selected row.

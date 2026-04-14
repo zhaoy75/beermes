@@ -1198,15 +1198,75 @@
   },
   "rawMaterialInventory": {
     "title": "原材料在庫一覧",
-    "subtitle": "主要原材料の現在庫を確認します。",
+    "subtitle": "ロット単位の原材料在庫を確認し、編集・移動・廃棄を行います。",
     "filters": {
-      "warehouse": "倉庫",
-      "category": "カテゴリ"
+      "materialName": "原材料名",
+      "materialType": "原材料種別",
+      "location": "保管場所"
     },
+    "placeholders": {
+      "materialName": "原材料名で検索"
+    },
+    "results": {
+      "count": "{count}件"
+    },
+    "tableTitle": "在庫一覧",
     "table": {
+      "materialName": "原材料名",
+      "materialType": "原材料種別",
+      "qty": "在庫数量",
+      "uom": "単位",
+      "location": "保管場所"
+    },
+    "actions": {
+      "newInventory": "新規在庫",
+      "move": "移動",
+      "dispose": "廃棄"
+    },
+    "dispose": {
+      "title": "原材料在庫を廃棄",
+      "confirm": "原材料: {material}\nロット: {lotNo}\n数量: {qty}\n保管場所: {location}\n\nこの在庫を廃棄しますか？",
+      "done": "在庫を廃棄しました。"
+    },
+    "errors": {
+      "locationRequired": "保管場所が設定されていないため廃棄できません。",
+      "uomRequired": "単位が設定されていないため廃棄できません。"
+    }
+  },
+  "rawMaterialInventoryEdit": {
+    "newTitle": "原材料在庫登録",
+    "newSubtitle": "新しい原材料ロット在庫を登録します。",
+    "editTitle": "原材料在庫編集",
+    "editSubtitle": "原材料ロットの在庫情報を編集します。",
+    "moveTitle": "原材料在庫移動",
+    "moveSubtitle": "原材料ロットを別の保管場所へ移動します。",
+    "movePanelTitle": "移動対象ロット",
+    "movePanelSubtitle": "移動では数量は変更せず、保管場所のみを変更します。",
+    "fields": {
+      "materialType": "原材料種別",
       "material": "原材料",
-      "warehouse": "倉庫",
-      "qty": "数量"
+      "qty": "数量",
+      "currentQty": "現在数量",
+      "location": "保管場所",
+      "currentLocation": "現在の保管場所",
+      "destinationLocation": "移動先保管場所"
+    },
+    "attributeTitle": "追加属性",
+    "attributeSubtitle": "原材料種別に紐づく属性を入力します。",
+    "attributeEmpty": "この原材料種別に追加属性はありません。",
+    "attributeDefaultSection": "基本情報",
+    "attributeMin": "{field} は {min} 以上で入力してください",
+    "attributeMax": "{field} は {max} 以下で入力してください",
+    "attributePattern": "{field} の形式が正しくありません",
+    "attributeAllowedValues": "{field} は許可された値から選択してください",
+    "attributeJson": "{field} は有効なJSONで入力してください",
+    "attributeReference": "{field} の参照先が不正です",
+    "errors": {
+      "qtyPositive": "数量は0より大きい値を入力してください",
+      "destinationSame": "移動先保管場所は現在の保管場所と別にしてください"
+    },
+    "actions": {
+      "move": "移動"
     }
   },
   "producedBeer": {

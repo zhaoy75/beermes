@@ -1198,15 +1198,75 @@
   },
   "rawMaterialInventory": {
     "title": "Raw Material Inventory",
-    "subtitle": "View on-hand balances for core brewing ingredients.",
+    "subtitle": "Review lot-based raw material inventory and perform edit, move, and dispose actions.",
     "filters": {
-      "warehouse": "Warehouse",
-      "category": "Category"
+      "materialName": "Material name",
+      "materialType": "Material type",
+      "location": "Location"
     },
+    "placeholders": {
+      "materialName": "Search by material name"
+    },
+    "results": {
+      "count": "{count} records"
+    },
+    "tableTitle": "Inventory",
     "table": {
+      "materialName": "Material name",
+      "materialType": "Material type",
+      "qty": "Quantity in stock",
+      "uom": "UOM",
+      "location": "Location"
+    },
+    "actions": {
+      "newInventory": "New inventory",
+      "move": "Move",
+      "dispose": "Dispose"
+    },
+    "dispose": {
+      "title": "Dispose raw material inventory",
+      "confirm": "Material: {material}\nLot: {lotNo}\nQuantity: {qty}\nLocation: {location}\n\nDo you want to dispose this inventory?",
+      "done": "Inventory was disposed."
+    },
+    "errors": {
+      "locationRequired": "Location is required before disposing inventory.",
+      "uomRequired": "UOM is required before disposing inventory."
+    }
+  },
+  "rawMaterialInventoryEdit": {
+    "newTitle": "New Raw Material Inventory",
+    "newSubtitle": "Create a new raw material lot balance.",
+    "editTitle": "Edit Raw Material Inventory",
+    "editSubtitle": "Update an existing raw material lot record.",
+    "moveTitle": "Move Raw Material Inventory",
+    "moveSubtitle": "Move a raw material lot to another location.",
+    "movePanelTitle": "Lot to move",
+    "movePanelSubtitle": "Move keeps the quantity unchanged and only changes the location.",
+    "fields": {
+      "materialType": "Material type",
       "material": "Material",
-      "warehouse": "Warehouse",
-      "qty": "Quantity"
+      "qty": "Quantity",
+      "currentQty": "Current quantity",
+      "location": "Location",
+      "currentLocation": "Current location",
+      "destinationLocation": "Destination location"
+    },
+    "attributeTitle": "Additional attributes",
+    "attributeSubtitle": "Enter the attributes linked to the selected material type.",
+    "attributeEmpty": "There are no additional attributes for this material type.",
+    "attributeDefaultSection": "General",
+    "attributeMin": "{field} must be at least {min}",
+    "attributeMax": "{field} must be at most {max}",
+    "attributePattern": "{field} has an invalid format",
+    "attributeAllowedValues": "{field} must use one of the allowed values",
+    "attributeJson": "{field} must be valid JSON",
+    "attributeReference": "{field} has an invalid reference value",
+    "errors": {
+      "qtyPositive": "Quantity must be greater than zero",
+      "destinationSame": "Destination location must differ from the current location"
+    },
+    "actions": {
+      "move": "Move"
     }
   },
   "producedBeer": {

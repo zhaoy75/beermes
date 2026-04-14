@@ -401,6 +401,7 @@ const menuGroups = computed<MenuGroup[]>(() => [
         name: t('sidebar.items.inventory'),
         subItems: [
           { name: t('sidebar.items.beerInventory'), path: "/producedBeerInventory", pro: false },
+          ...(canSeeDevelopmentFeatures.value ? [{ name: t('sidebar.items.rawMaterialInventory'), path: "/rawMaterialInventory", pro: false, textClass: developmentMenuTextClass }] : []),
         ],
       },
       // {

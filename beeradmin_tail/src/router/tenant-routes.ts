@@ -250,6 +250,15 @@ export const tenantRoutes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/rawMaterialInventory/edit/:lotId?',
+    name: 'RawMaterialInventoryEdit',
+    component: () => import('@/views/Pages/RawMaterialInventoryEdit.vue'),
+    meta: {
+      title: 'Raw Material Inventory Edit',
+      requiresAuth: true,
+    },
+  },
+  {
     path: '/rawMaterialInventory',
     name: 'RawMaterialInventory',
     component: () => import('@/views/Pages/RawMaterialInventory.vue'),

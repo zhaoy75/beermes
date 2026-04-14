@@ -890,3 +890,45 @@ I want to rewrite the 原材料登録 page, first clean the page. following is t
 - the page should be used to maintain raw material information
 - since user need to choose a material type when they create a raw material, i want to incrase usability 
 
+can you create an table crud table for design , row will be tables and column will be process
+- the crud table will include all tables and fields and fiels in ddl files
+- the crud result is a should be not as it is 
+  - R: read
+  - U: update
+  - D: delete
+- the crud table will some know looks like this 
+  table name | field name | field type | description |  process1 | process2 | ... | process n
+  mes_batches | batch_id | uuid | primary key | c | R | ... | r
+- the process will include 
+   - regist raw material type
+   - regist raw material 
+   - buy raw material and regist the movement
+   - use raw material in production and regist the movement
+   - return raw material and regist the movement
+   - dispose raw material and regist the movement
+   - output finished product and regist the movement
+   - packaging the finished product and regist the movement
+   - ship the finished product and regist the movement
+   - return the finished product and regist the movement
+   - dispose the finished product and regist the movement
+   - unpacking the finished product and regist the movement
+   - maintain the inventory of raw material and finished product
+   - maintain the recipe and link to the raw material
+   - maintain the equipment and link to the raw material
+   - maintain the master data like material type, equipment type, tax category and link to the
+
+I want to create an vue page to maintain inventory of raw material. the page should have following features:
+- the page should show a table (prime datatable) of inventory of raw material with following columns
+  - material name (only name, no need to show material code)
+  - material type
+  - quantity in stock
+  - unit of measure
+  - location
+  - actions
+- since the prime datatable has different css style. I want you to refer to tables in other pages. Plus never change global css for table, the style change should be only applied to the inventory table in this page
+- the page should have a search section to filter by material name, material type and location
+  - material type will be column style for user to quickly filter by material type
+- the page should have a button to launch inventory edit page to add, edit, move, dispose inventory of raw material
+- the inventory edit page should have a form to input material name, material type, quantity, other attr defined in type_def and attr_def tables and location
+- the inventory edit page should have a save button to save the inventory data to database
+- data will stored in lot, movement table and inv_inventory is just projection table, the inventory quantity should be calculated based on the movement in and movement out of the raw material

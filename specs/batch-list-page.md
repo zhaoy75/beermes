@@ -189,7 +189,7 @@
 - Recommended:
   - Option B
 
-### 2. Alerts Column Style
+### 2. Alerts 
 - Option A:
   - text labels such as `Hold`, `Deviation`
 - Option B:

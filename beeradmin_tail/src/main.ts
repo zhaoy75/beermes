@@ -5,10 +5,12 @@ import 'swiper/css/navigation'
 import 'swiper/css/pagination'
 import 'jsvectormap/dist/jsvectormap.css'
 import 'flatpickr/dist/flatpickr.css'
+import 'primeicons/primeicons.css'
 import { createPinia } from 'pinia'
 import piniaPersist from 'pinia-plugin-persistedstate'
 import Toast from 'vue3-toastify';
 import 'vue3-toastify/dist/index.css';
+import PrimeVue from 'primevue/config'
 
 
 import { createApp } from 'vue'
@@ -27,6 +29,8 @@ app.use(pinia)
 app.use(router)
 app.use(VueApexCharts)
 app.use(i18n)
+app.use(PrimeVue, {
+  })
 app.use(Toast, {
     position: 'bottom-center',
     autoClose: 3000,

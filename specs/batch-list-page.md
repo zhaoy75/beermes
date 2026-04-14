@@ -38,7 +38,10 @@
 
 ### Rules
 - default planned start from = two months before today
+- `planned start from` and `planned start to` must use calendar-selectable date inputs
 - dynamic batch attribute filters follow `attr_def` data type behavior
+- numeric dynamic batch attribute filters must validate entered values against `attr_def.num_min` / `attr_def.num_max`
+- invalid numeric batch attribute filters should show inline error text and should not be applied until corrected
 - filter values are optional
 
 ## Section 2: Batch Table
@@ -136,6 +139,7 @@
 
 ### Rules
 - recipe is nullable
+- `planned start` and `planned end` must use calendar-selectable date inputs
 - if recipe is selected:
   - call `create_batch_from_recipe`
   - released recipe info and step rows are created
@@ -164,6 +168,7 @@
 
 ## Business Rules
 - batch delete remains blocked for normal users when status is `in_progress` or `completed`
+- blocked delete feedback from row actions should use multilingual toast messaging, not browser `window.alert`
 - batch list should not query legacy `public.mes_recipes`
 - batch list should not query legacy `public.mes_batch_steps` for execution progress
 - execution progress must use `mes.batch_step`

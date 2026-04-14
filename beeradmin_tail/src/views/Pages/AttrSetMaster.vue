@@ -473,13 +473,26 @@
         </div>
       </div>
     </div>
+
+    <ConfirmActionDialog
+      :open="confirmDialog.open"
+      :title="confirmDialog.title"
+      :message="confirmDialog.message"
+      :confirm-label="confirmDialog.confirmLabel"
+      :cancel-label="confirmDialog.cancelLabel"
+      :tone="confirmDialog.tone"
+      @cancel="cancelConfirmation"
+      @confirm="acceptConfirmation"
+    />
   </SystemAdminLayout>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import ConfirmActionDialog from '@/components/common/ConfirmActionDialog.vue'
 import { supabase } from '@/lib/supabase'
+import { useConfirmDialog } from '@/composables/useConfirmDialog'
 import SystemAdminLayout from '@/layouts/SystemAdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { toast } from 'vue3-toastify'
@@ -571,6 +584,7 @@ type IndustryRow = {
 }
 
 const { t } = useI18n()
+const { confirmDialog, requestConfirmation, cancelConfirmation, acceptConfirmation } = useConfirmDialog()
 const auth = useAuthStore()
 const pageTitle = computed(() => t('attrSet.title'))
 const SYSTEM_TENANT_ID = '00000000-0000-0000-0000-000000000000'
@@ -1083,7 +1097,12 @@ async function confirmDeleteSet(set: AttrSetRow) {
     toast.error(t('attrSet.errors.adminOnlySystem'))
     return
   }
-  const confirmed = window.confirm(t('attrSet.deleteConfirm', { code: set.code }))
+  const confirmed = await requestConfirmation({
+    title: t('common.delete'),
+    message: t('attrSet.deleteConfirm', { code: set.code }),
+    confirmLabel: t('common.delete'),
+    tone: 'danger',
+  })
   if (!confirmed) return
   try {
     saving.value = true

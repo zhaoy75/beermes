@@ -77,13 +77,22 @@
             type="datetime-local"
             class="w-full h-[36px] border rounded px-3"
           />
-          <input
-            v-else-if="field.data_type === 'number'"
-            :id="`attr-search-${field.attr_id}`"
-            v-model.trim="search.attr[String(field.attr_id)]"
-            type="number"
-            class="w-full h-[36px] border rounded px-3"
-          />
+          <template v-else-if="field.data_type === 'number'">
+            <input
+              :id="`attr-search-${field.attr_id}`"
+              v-model.trim="search.attr[String(field.attr_id)]"
+              type="number"
+              :min="field.num_min ?? undefined"
+              :max="field.num_max ?? undefined"
+              :class="[
+                'w-full h-[36px] border rounded px-3',
+                attrSearchError(field) ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : '',
+              ]"
+            />
+            <p v-if="attrSearchError(field)" class="mt-1 text-xs text-red-600">
+              {{ attrSearchError(field) }}
+            </p>
+          </template>
           <input
             v-else
             :id="`attr-search-${field.attr_id}`"
@@ -159,6 +168,8 @@
 import { computed, reactive, ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
+import { toast } from 'vue3-toastify'
+import 'vue3-toastify/dist/index.css'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import {
@@ -166,6 +177,7 @@ import {
   loadAlcoholTypeReferenceData,
   resolveAlcoholTypeLabel,
 } from '@/lib/alcoholTypeRegistry'
+import { validateBatchAttrField } from '@/lib/batchAttrValidation'
 import { supabase } from '@/lib/supabase'
 import BatchSummaryDialog from '@/views/Pages/components/BatchSummaryDialog.vue'
 import BatchCreateDialog from '@/views/Pages/components/BatchCreateDialog.vue'
@@ -222,6 +234,8 @@ type AttrField = {
   name: string
   name_i18n?: Record<string, string> | null
   data_type: string
+  num_min?: number | null
+  num_max?: number | null
   ref_kind?: string | null
   ref_domain?: string | null
 }
@@ -291,6 +305,36 @@ const batchStatusOptions = computed(() => {
     })
 })
 
+const attrSearchErrors = computed<Record<string, string>>(() => {
+  const errors: Record<string, string> = {}
+  attrSearchFields.value.forEach((field) => {
+    const key = String(field.attr_id)
+    errors[key] = validateBatchAttrField(
+      {
+        code: field.code,
+        name: attrLabel(field),
+        data_type: field.data_type,
+        required: false,
+        num_min: field.num_min ?? null,
+        num_max: field.num_max ?? null,
+        ref_kind: field.ref_kind ?? null,
+        value: search.attr[key],
+      },
+      {
+        required: (label) => t('errors.required', { field: label }),
+        mustBeNumber: (label) => t('errors.mustBeNumber', { field: label }),
+        minValue: (label, min) => t('batch.list.errors.attrMin', { field: label, min }),
+        maxValue: (label, max) => t('batch.list.errors.attrMax', { field: label, max }),
+        pattern: () => '',
+        allowedValues: () => '',
+        invalidJson: () => '',
+        invalidReference: () => '',
+      },
+    )
+  })
+  return errors
+})
+
 const searchConditions = computed(() => {
   const conditions: Array<{ key: string; label: string; value: string }> = []
   if (search.name) conditions.push({ key: 'name', label: t('batch.list.nameLabel'), value: search.name })
@@ -301,6 +345,7 @@ const searchConditions = computed(() => {
   if (search.start) conditions.push({ key: 'start', label: t('batch.list.startDate'), value: search.start })
   if (search.end) conditions.push({ key: 'end', label: t('batch.list.endDate'), value: search.end })
   attrSearchFields.value.forEach((field) => {
+    if (attrSearchError(field)) return
     const value = normalizeSearchText(search.attr[String(field.attr_id)])
     if (value) {
       conditions.push({ key: `attr-${field.attr_id}`, label: attrLabel(field), value })
@@ -344,7 +389,7 @@ async function loadAttrFields() {
     }
     const { data: ruleData, error: ruleError } = await supabase
       .from('attr_set_rule')
-      .select('attr_set_id, attr_id, required, sort_order, is_active, attr_def:attr_def!fk_attr_set_rule_attr(attr_id, code, name, name_i18n, data_type, ref_kind, ref_domain, is_active)')
+      .select('attr_set_id, attr_id, required, sort_order, is_active, attr_def:attr_def!fk_attr_set_rule_attr(attr_id, code, name, name_i18n, data_type, num_min, num_max, ref_kind, ref_domain, is_active)')
       .in('attr_set_id', setIds)
       .eq('is_active', true)
       .order('sort_order', { ascending: true })
@@ -364,6 +409,8 @@ async function loadAttrFields() {
         name: String(attr.name ?? attr.code ?? attr.attr_id),
         name_i18n: (attr as any).name_i18n ?? null,
         data_type: String(attr.data_type ?? ''),
+        num_min: parseOptionalNumber((attr as any).num_min),
+        num_max: parseOptionalNumber((attr as any).num_max),
         ref_kind: (attr as any).ref_kind ?? null,
         ref_domain: (attr as any).ref_domain ?? null,
       })
@@ -616,6 +663,7 @@ const filteredBatches = computed(() => {
     const attrMatch = attrSearchFields.value.every((field) => {
       const query = normalizeSearchText(search.attr[String(field.attr_id)])
       if (!query) return true
+      if (attrSearchError(field)) return true
       const raw = attrValueFor(batch.id, field.attr_id)
       return matchAttrValue(raw, query, field)
     })
@@ -715,6 +763,10 @@ function attrLabel(field: AttrField) {
   return label || field.name || field.code
 }
 
+function attrSearchError(field: AttrField) {
+  return attrSearchErrors.value[String(field.attr_id)] ?? ''
+}
+
 function attrOptions(field: AttrField) {
   if (!field.ref_kind || !field.ref_domain) return []
   const key = `${field.ref_kind}:${field.ref_domain}`
@@ -770,6 +822,12 @@ function normalizeSearchText(value: unknown) {
   if (typeof value === 'number' || typeof value === 'boolean') return String(value).trim()
   if (value instanceof Date) return value.toISOString().trim()
   return String(value).trim()
+}
+
+function parseOptionalNumber(value: unknown) {
+  if (value == null || value === '') return null
+  const parsed = typeof value === 'number' ? value : Number(value)
+  return Number.isFinite(parsed) ? parsed : null
 }
 
 function formatAttrValueForField(value: unknown, field: AttrField) {
@@ -836,11 +894,6 @@ function matchAttrValue(raw: unknown, query: string, field?: AttrField) {
   return String(normalized).toLowerCase().includes(queryTrimmed.toLowerCase())
 }
 
-function tOr(key: string, fallback: string) {
-  const value = t(key)
-  return value === key ? fallback : value
-}
-
 function isRestrictedStatus(status: string | null | undefined) {
   if (!status) return false
   const lower = status.toLowerCase()
@@ -853,7 +906,7 @@ function goEdit(batch: BatchRow) {
 
 function confirmDelete(batch: BatchRow) {
   if (!isAdmin.value && isRestrictedStatus(batch.status)) {
-    window.alert(tOr('batch.list.deleteBlocked', 'This batch cannot be deleted in its current status.'))
+    toast.warning(t('batch.list.deleteBlocked'))
     return
   }
   toDelete.value = batch
@@ -862,7 +915,7 @@ function confirmDelete(batch: BatchRow) {
 async function deleteBatch() {
   if (!toDelete.value) return
   if (!isAdmin.value && isRestrictedStatus(toDelete.value.status)) {
-    window.alert(tOr('batch.list.deleteBlocked', 'This batch cannot be deleted in its current status.'))
+    toast.warning(t('batch.list.deleteBlocked'))
     return
   }
   try {

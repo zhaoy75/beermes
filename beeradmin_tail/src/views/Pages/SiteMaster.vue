@@ -177,14 +177,27 @@
         </footer>
       </div>
     </div>
+
+    <ConfirmActionDialog
+      :open="confirmDialog.open"
+      :title="confirmDialog.title"
+      :message="confirmDialog.message"
+      :confirm-label="confirmDialog.confirmLabel"
+      :cancel-label="confirmDialog.cancelLabel"
+      :tone="confirmDialog.tone"
+      @cancel="cancelConfirmation"
+      @confirm="acceptConfirmation"
+    />
   </AdminLayout>
 </template>
 
 <script setup lang="ts">
 import { computed, reactive, ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import ConfirmActionDialog from '@/components/common/ConfirmActionDialog.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import { useConfirmDialog } from '@/composables/useConfirmDialog'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
@@ -226,6 +239,7 @@ interface TreeNode {
 
 const { t, locale } = useI18n()
 const pageTitle = computed(() => t('site.title'))
+const { confirmDialog, requestConfirmation, cancelConfirmation, acceptConfirmation } = useConfirmDialog()
 
 const TABLE = 'mst_sites'
 const OWNER_TYPE_OWN = 'OWN'
@@ -693,7 +707,13 @@ async function deleteSelected() {
     resetForm()
     return
   }
-  if (!window.confirm(t('site.deleteConfirm', { name: selectedSite.value?.name ?? '' }))) return
+  const confirmed = await requestConfirmation({
+    title: t('common.delete'),
+    message: t('site.deleteConfirm', { name: selectedSite.value?.name ?? '' }),
+    confirmLabel: t('common.delete'),
+    tone: 'danger',
+  })
+  if (!confirmed) return
   try {
     const ids = collectDescendantIds(selectedId.value)
     const { error } = await supabase.from(TABLE).delete().in('id', ids)

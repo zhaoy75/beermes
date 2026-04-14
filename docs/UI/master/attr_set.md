@@ -280,7 +280,7 @@
 
 ## Delete Set
 - Triggered from the context menu.
-- Confirmation uses browser `window.confirm`.
+- Confirmation uses an in-app confirmation dialog.
 - Delete sequence:
   - delete `attr_set_rule` rows by `tenant_id` and `attr_set_id`
   - delete `attr_set` row by `tenant_id` and `attr_set_id`

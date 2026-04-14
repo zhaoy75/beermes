@@ -40,6 +40,8 @@
     ステータス
     product_name 
 	　actual_yield 
+      can only be input when batch status is 製造中 or 完了
+      must be greater than 0 and must not exceed 1000000
 	  actual_yield_uom dropdown list from uom with domain volume
       actual_yield site dropdown list from mst_sites
         only sites with site_type = BREWERY_MANUFACTUR can be shown and selected
@@ -162,7 +164,8 @@
   - Batch actual yield entry is for manufacturing result entry.
   - Manufacturing site for actual yield must be `BREWERY_MANUFACTUR`.
   - Stored function `product_produce` is the server-side source of truth and must reject non-manufacturing destination sites.
-  - Batch attribute values stored in `entity_attr` must be validated against the linked `attr_def` conditions before save.
+  - Batch attribute values stored in `entity_attr` must be validated against the linked `attr_def` conditions before save when a value is entered.
+  - Missing / blank `entity_attr` values on Batch Edit do not block save.
 
 
 ## Data Handling

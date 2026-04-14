@@ -235,6 +235,17 @@
         </section>
       </section>
     </div>
+
+    <ConfirmActionDialog
+      :open="confirmDialog.open"
+      :title="confirmDialog.title"
+      :message="confirmDialog.message"
+      :confirm-label="confirmDialog.confirmLabel"
+      :cancel-label="confirmDialog.cancelLabel"
+      :tone="confirmDialog.tone"
+      @cancel="cancelConfirmation"
+      @confirm="acceptConfirmation"
+    />
   </AdminLayout>
 </template>
 
@@ -242,6 +253,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
+import ConfirmActionDialog from '@/components/common/ConfirmActionDialog.vue'
 import {
   buildAlcoholTypeLabelMap,
   loadAlcoholTypeReferenceData,
@@ -253,6 +265,7 @@ import {
   resolveBatchStyleName,
   resolveBatchTargetAbv,
 } from '@/lib/batchRecipeSnapshot'
+import { useConfirmDialog } from '@/composables/useConfirmDialog'
 import { createWorkbookBlob, type WorkbookCell, type WorkbookSheet } from '@/lib/fillingReportExport'
 import { supabase } from '@/lib/supabase'
 import { formatVolumeNumber } from '@/lib/volumeFormat'
@@ -361,6 +374,7 @@ interface MovementCardView extends MovementCard {
 
 const { t, locale } = useI18n()
 const router = useRouter()
+const { confirmDialog, requestConfirmation, cancelConfirmation, acceptConfirmation } = useConfirmDialog()
 const pageTitle = computed(() => t('producedBeer.title'))
 
 const tenantId = ref<string | null>(null)
@@ -1080,9 +1094,12 @@ function openMovementCreateFast() {
 async function reverseMovement(card: MovementCard) {
   if (movementLoading.value || card.status === 'void') return
 
-  const confirmed = window.confirm(
-    t('producedBeer.movement.actions.reverseConfirm', { docNo: card.docNo }),
-  )
+  const confirmed = await requestConfirmation({
+    title: t('producedBeer.movement.actions.reverse'),
+    message: t('producedBeer.movement.actions.reverseConfirm', { docNo: card.docNo }),
+    confirmLabel: t('producedBeer.movement.actions.reverse'),
+    tone: 'danger',
+  })
   if (!confirmed) return
 
   try {

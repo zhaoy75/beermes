@@ -175,6 +175,17 @@
         </div>
       </div>
     </div>
+
+    <ConfirmActionDialog
+      :open="confirmDialog.open"
+      :title="confirmDialog.title"
+      :message="confirmDialog.message"
+      :confirm-label="confirmDialog.confirmLabel"
+      :cancel-label="confirmDialog.cancelLabel"
+      :tone="confirmDialog.tone"
+      @cancel="cancelConfirmation"
+      @confirm="acceptConfirmation"
+    />
   </AdminLayout>
 </template>
 
@@ -184,8 +195,10 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
+import ConfirmActionDialog from '@/components/common/ConfirmActionDialog.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import { useConfirmDialog } from '@/composables/useConfirmDialog'
 import { formatVolume as formatVolumeDisplay } from '@/lib/volumeFormat'
 import { supabase } from '@/lib/supabase'
 import {
@@ -215,6 +228,7 @@ const TAX_TYPE_OPTIONS = ['monthly'] as const
 
 const { t, tm, locale } = useI18n()
 const router = useRouter()
+const { confirmDialog, requestConfirmation, cancelConfirmation, acceptConfirmation } = useConfirmDialog()
 
 const pageTitle = computed(() => t('taxReport.title'))
 const rows = ref<TaxReportRow[]>([])
@@ -425,7 +439,12 @@ async function deleteReport(row: TaxReportRow) {
     toast.info(t('taxReport.deleteDraftOnly'))
     return
   }
-  const confirmed = window.confirm(t('taxReport.deleteConfirm', { period: formatPeriod(row) }))
+  const confirmed = await requestConfirmation({
+    title: t('common.delete'),
+    message: t('taxReport.deleteConfirm', { period: formatPeriod(row) }),
+    confirmLabel: t('common.delete'),
+    tone: 'danger',
+  })
   if (!confirmed) return
 
   try {

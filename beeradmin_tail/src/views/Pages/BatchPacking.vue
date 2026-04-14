@@ -688,6 +688,17 @@
         </footer>
       </div>
     </div>
+
+    <ConfirmActionDialog
+      :open="confirmDialog.open"
+      :title="confirmDialog.title"
+      :message="confirmDialog.message"
+      :confirm-label="confirmDialog.confirmLabel"
+      :cancel-label="confirmDialog.cancelLabel"
+      :tone="confirmDialog.tone"
+      @cancel="cancelConfirmation"
+      @confirm="acceptConfirmation"
+    />
   </AdminLayout>
 </template>
 
@@ -695,8 +706,10 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
+import ConfirmActionDialog from '@/components/common/ConfirmActionDialog.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import { useConfirmDialog } from '@/composables/useConfirmDialog'
 import {
   fillingUnitsFromEvent,
   packingFillingPayoutFromEvent as derivePackingFillingPayoutFromEvent,
@@ -720,6 +733,7 @@ import { VOLUME_DISPLAY_DECIMALS, formatVolume, formatVolumeNumber } from '@/lib
 const route = useRoute()
 const router = useRouter()
 const { t, locale } = useI18n()
+const { confirmDialog, requestConfirmation, cancelConfirmation, acceptConfirmation } = useConfirmDialog()
 
 const batchId = computed(() => route.params.batchId as string | undefined)
 const isPackingPage = computed(() => route.name === 'batchPacking')
@@ -2266,7 +2280,13 @@ async function backToBatchEdit() {
   if (!batchId.value) return
   const form = packingDialog.form
   if (packingDialog.open && !packingDialog.readOnly && form && isPackingFormDirty(form)) {
-    if (!window.confirm(t('batch.packaging.dialog.closeConfirm'))) return
+    const confirmed = await requestConfirmation({
+      title: t('common.close'),
+      message: t('batch.packaging.dialog.closeConfirm'),
+      confirmLabel: t('common.close'),
+      tone: 'warning',
+    })
+    if (!confirmed) return
   }
   await router.push({
     name: 'batchEdit',
@@ -2301,7 +2321,13 @@ async function openPackingDialog() {
     return
   }
   if (!packingDialog.readOnly && packingDialog.form && isPackingFormDirty(packingDialog.form)) {
-    if (!window.confirm(t('batch.packaging.dialog.typeChangeConfirm'))) return
+    const confirmed = await requestConfirmation({
+      title: t('common.continue'),
+      message: t('batch.packaging.dialog.typeChangeConfirm'),
+      confirmLabel: t('common.continue'),
+      tone: 'warning',
+    })
+    if (!confirmed) return
   }
   if (routeEventId()) await clearPackingEventQuery()
   openPackingDialogInternal('filling')
@@ -2362,10 +2388,16 @@ function openPackingEdit(event: PackingEvent) {
   openPackingEditInternal(event, !canEditPackingEvent(event))
 }
 
-function closePackingDialog() {
+async function closePackingDialog() {
   const form = packingDialog.form
   if (!packingDialog.readOnly && form && isPackingFormDirty(form)) {
-    if (!window.confirm(t('batch.packaging.dialog.closeConfirm'))) return
+    const confirmed = await requestConfirmation({
+      title: t('common.close'),
+      message: t('batch.packaging.dialog.closeConfirm'),
+      confirmLabel: t('common.close'),
+      tone: 'warning',
+    })
+    if (!confirmed) return
   }
   packingDialog.open = false
   packingDialog.form = null
@@ -2431,11 +2463,17 @@ function syncPackingPageEditor() {
   packingDialog.globalError = ''
 }
 
-function selectPackingType(value: PackingType) {
+async function selectPackingType(value: PackingType) {
   if (!packingDialog.form) return
   if (packingDialog.form.packing_type === value) return
   if (shouldConfirmPackingTypeChange(packingDialog.form, value)) {
-    if (!window.confirm(t('batch.packaging.dialog.typeChangeConfirm'))) return
+    const confirmed = await requestConfirmation({
+      title: t('common.continue'),
+      message: t('batch.packaging.dialog.typeChangeConfirm'),
+      confirmLabel: t('common.continue'),
+      tone: 'warning',
+    })
+    if (!confirmed) return
   }
   const prevType = packingDialog.form.packing_type
   packingDialog.form.packing_type = value
@@ -2726,7 +2764,13 @@ async function saveRelation() {
 }
 
 async function deleteRelation(row: BatchRelationRow) {
-  if (!window.confirm(t('batch.relation.confirmDelete'))) return
+  const confirmed = await requestConfirmation({
+    title: t('common.delete'),
+    message: t('batch.relation.confirmDelete'),
+    confirmLabel: t('common.delete'),
+    tone: 'danger',
+  })
+  if (!confirmed) return
   try {
     const { error } = await supabase
       .from('mes_batch_relation')
@@ -2740,7 +2784,13 @@ async function deleteRelation(row: BatchRelationRow) {
 }
 
 async function deletePackingEvent(event: PackingEvent) {
-  if (!window.confirm(t('batch.packaging.confirmDelete'))) return
+  const confirmed = await requestConfirmation({
+    title: t('common.delete'),
+    message: t('batch.packaging.confirmDelete'),
+    confirmLabel: t('common.delete'),
+    tone: 'danger',
+  })
+  if (!confirmed) return
   try {
     const { error } = await supabase
       .from('inv_movements')

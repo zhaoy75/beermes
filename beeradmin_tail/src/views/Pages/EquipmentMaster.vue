@@ -440,14 +440,27 @@
         </footer>
       </div>
     </div>
+
+    <ConfirmActionDialog
+      :open="confirmDialog.open"
+      :title="confirmDialog.title"
+      :message="confirmDialog.message"
+      :confirm-label="confirmDialog.confirmLabel"
+      :cancel-label="confirmDialog.cancelLabel"
+      :tone="confirmDialog.tone"
+      @cancel="cancelConfirmation"
+      @confirm="acceptConfirmation"
+    />
   </AdminLayout>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import ConfirmActionDialog from '@/components/common/ConfirmActionDialog.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import { useConfirmDialog } from '@/composables/useConfirmDialog'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
@@ -497,6 +510,8 @@ type CalibrationEditorRow = {
   depth_mm: string
   volume_l: string
 }
+
+const { confirmDialog, requestConfirmation, cancelConfirmation, acceptConfirmation } = useConfirmDialog()
 
 type CalibrationRowError = {
   depth_mm?: string
@@ -907,10 +922,17 @@ function selectRow(row: EquipmentRow) {
   loadDetail(row)
 }
 
-function handleKindChange() {
+async function handleKindChange() {
   if (!isEditing.value) return
   if (form.equipment_kind === 'tank') return
-  if (hasTankProfile.value && !window.confirm(t('equipment.confirmTankRemoval'))) {
+  if (hasTankProfile.value) {
+    const confirmed = await requestConfirmation({
+      title: t('common.continue'),
+      message: t('equipment.confirmTankRemoval'),
+      confirmLabel: t('common.continue'),
+      tone: 'warning',
+    })
+    if (confirmed) return
     form.equipment_kind = 'tank'
   }
 }

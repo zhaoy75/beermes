@@ -12,7 +12,13 @@
             <p class="text-xs text-gray-500">{{ t('batch.edit.infoSubtitle') }}</p>
           </div>
           <div class="flex items-center gap-2">
-            <button class="px-3 py-2 rounded border hover:bg-gray-50" type="button" @click="openActualYieldDialog">
+            <button
+              class="px-3 py-2 rounded border hover:bg-gray-50 disabled:opacity-50"
+              type="button"
+              :disabled="!canInputActualYield"
+              :title="canInputActualYield ? '' : t('batch.edit.actualYieldStatusBlocked')"
+              @click="openActualYieldDialog"
+            >
               {{ t('batch.edit.actualYieldDialogButton') }}
             </button>
             <button class="px-3 py-2 rounded border hover:bg-gray-50" type="button" @click="openRelationDialog()">
@@ -106,7 +112,7 @@
           <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div v-for="field in attrFields" :key="field.attr_id">
               <label class="block text-sm text-gray-600 mb-1">
-                {{ attrLabel(field) }}<span v-if="field.required" class="text-red-600">*</span>
+                {{ attrLabel(field) }}
               </label>
               <template v-if="field.data_type === 'ref'">
                 <select v-model="field.value" class="w-full h-[40px] border rounded px-3 bg-white">
@@ -116,7 +122,19 @@
               </template>
               <template v-else-if="field.data_type === 'number'">
                 <div class="flex items-center gap-2">
-                  <input v-model="field.value" type="number" step="any" class="w-full h-[40px] border rounded px-3" />
+                  <input
+                    v-model="field.value"
+                    type="number"
+                    step="any"
+                    :min="field.num_min ?? undefined"
+                    :max="field.num_max ?? undefined"
+                    :class="[
+                      'w-full h-[40px] border rounded px-3',
+                      field.error ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : '',
+                    ]"
+                    @input="validateBatchAttributeField(field)"
+                    @blur="validateBatchAttributeField(field)"
+                  />
                   <span v-if="field.uom_code" class="text-xs text-gray-500">{{ field.uom_code }}</span>
                 </div>
               </template>
@@ -448,7 +466,15 @@
           <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div>
               <label class="block text-sm text-gray-600 mb-1" for="actualYieldDialogQty">{{ t('batch.edit.actualYield') }}</label>
-              <input id="actualYieldDialogQty" v-model="actualYieldDialog.form.actual_yield" type="number" min="0" step="0.000001" class="w-full h-[40px] border rounded px-3 text-right" />
+              <input
+                id="actualYieldDialogQty"
+                v-model="actualYieldDialog.form.actual_yield"
+                type="number"
+                min="0"
+                :max="MAX_BATCH_ACTUAL_YIELD"
+                step="0.000001"
+                class="w-full h-[40px] border rounded px-3 text-right"
+              />
               <p v-if="actualYieldDialog.errors.actual_yield" class="mt-1 text-xs text-red-600">{{ actualYieldDialog.errors.actual_yield }}</p>
             </div>
             <div>
@@ -479,6 +505,17 @@
         </footer>
       </div>
     </div>
+
+    <ConfirmActionDialog
+      :open="confirmDialog.open"
+      :title="confirmDialog.title"
+      :message="confirmDialog.message"
+      :confirm-label="confirmDialog.confirmLabel"
+      :cancel-label="confirmDialog.cancelLabel"
+      :tone="confirmDialog.tone"
+      @cancel="cancelConfirmation"
+      @confirm="acceptConfirmation"
+    />
   </AdminLayout>
 </template>
 
@@ -487,8 +524,10 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
+import ConfirmActionDialog from '@/components/common/ConfirmActionDialog.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import { useConfirmDialog } from '@/composables/useConfirmDialog'
 import {
   fillingUnitsFromEvent,
   packingFillingPayoutFromEvent as derivePackingFillingPayoutFromEvent,
@@ -512,11 +551,14 @@ import { formatVolume } from '@/lib/volumeFormat'
 const route = useRoute()
 const router = useRouter()
 const { t, locale } = useI18n()
+const { confirmDialog, requestConfirmation, cancelConfirmation, acceptConfirmation } = useConfirmDialog()
 const mesClient = () => supabase.schema('mes')
 
 const batchId = computed(() => route.params.batchId as string | undefined)
 const pageTitle = computed(() => t('batch.edit.title'))
 const ZERO_UUID = '00000000-0000-0000-0000-000000000000'
+const MAX_BATCH_ACTUAL_YIELD = 1000000
+const ACTUAL_YIELD_ALLOWED_STATUSES = new Set(['in_progress', 'finished', 'completed'])
 
 const tenantId = ref<string | null>(null)
 const batch = ref<any>(null)
@@ -976,6 +1018,15 @@ function statusLabel(status: string | null | undefined) {
   return match?.label ?? humanizeToken(value)
 }
 
+function isActualYieldAllowedStatus(status: string | null | undefined) {
+  const value = safeText(status).toLowerCase()
+  return ACTUAL_YIELD_ALLOWED_STATUSES.has(value)
+}
+
+const canInputActualYield = computed(() =>
+  isActualYieldAllowedStatus(batchForm.status || batch.value?.status),
+)
+
 async function ensureTenant() {
   if (tenantId.value) return tenantId.value
   const { data, error } = await supabase.auth.getUser()
@@ -1166,8 +1217,8 @@ async function loadBatchAttributes(batchUuid: string) {
         required: Boolean(typedRow.required || attr.required),
         uom_id: attr.uom_id ?? null,
         uom_code: attr.uom_id ? uomMap.get(String(attr.uom_id)) ?? null : null,
-        num_min: attr.num_min ?? null,
-        num_max: attr.num_max ?? null,
+        num_min: parseOptionalNumber(attr.num_min),
+        num_max: parseOptionalNumber(attr.num_max),
         text_regex: attr.text_regex ?? null,
         allowed_values: attr.allowed_values ?? null,
         ref_kind: attr.ref_kind ?? null,
@@ -1191,31 +1242,7 @@ function validateBatchAttributes() {
   batchSaveError.value = ''
 
   for (const field of attrFields.value) {
-    field.error = validateBatchAttrField(
-      {
-        code: field.code,
-        name: attrLabel(field),
-        data_type: field.data_type,
-        required: field.required,
-        num_min: field.num_min,
-        num_max: field.num_max,
-        text_regex: field.text_regex,
-        allowed_values: field.allowed_values,
-        ref_kind: field.ref_kind,
-        value: field.value,
-      },
-      {
-        required: (label) => t('errors.required', { field: label }),
-        mustBeNumber: (label) => t('errors.mustBeNumber', { field: label }),
-        minValue: (label, min) => t('batch.edit.errors.attrMin', { field: label, min }),
-        maxValue: (label, max) => t('batch.edit.errors.attrMax', { field: label, max }),
-        pattern: (label) => t('batch.edit.errors.attrPattern', { field: label }),
-        allowedValues: (label) => t('batch.edit.errors.attrAllowedValues', { field: label }),
-        invalidJson: (label) => t('batch.edit.errors.attrJson', { field: label }),
-        invalidReference: (label) => t('batch.edit.errors.attrReference', { field: label }),
-      },
-    )
-    if (field.error) hasError = true
+    if (validateBatchAttributeField(field)) hasError = true
   }
 
   if (hasError) {
@@ -1223,6 +1250,40 @@ function validateBatchAttributes() {
   }
 
   return !hasError
+}
+
+function validateBatchAttributeField(field: AttrField) {
+  field.error = validateBatchAttrField(
+    {
+      code: field.code,
+      name: attrLabel(field),
+      data_type: field.data_type,
+      required: false,
+      num_min: field.num_min,
+      num_max: field.num_max,
+      text_regex: field.text_regex,
+      allowed_values: field.allowed_values,
+      ref_kind: field.ref_kind,
+      value: field.value,
+    },
+    {
+      required: (label) => t('errors.required', { field: label }),
+      mustBeNumber: (label) => t('errors.mustBeNumber', { field: label }),
+      minValue: (label, min) => t('batch.edit.errors.attrMin', { field: label, min }),
+      maxValue: (label, max) => t('batch.edit.errors.attrMax', { field: label, max }),
+      pattern: (label) => t('batch.edit.errors.attrPattern', { field: label }),
+      allowedValues: (label) => t('batch.edit.errors.attrAllowedValues', { field: label }),
+      invalidJson: (label) => t('batch.edit.errors.attrJson', { field: label }),
+      invalidReference: (label) => t('batch.edit.errors.attrReference', { field: label }),
+    },
+  )
+  return field.error
+}
+
+function parseOptionalNumber(value: unknown) {
+  if (value == null || value === '') return null
+  const parsed = typeof value === 'number' ? value : Number(value)
+  return Number.isFinite(parsed) ? parsed : null
 }
 
 async function saveBatchAttributes(batchUuid: string) {
@@ -1728,6 +1789,10 @@ function openRelationDialog(row?: BatchRelationRow) {
 }
 
 function openActualYieldDialog() {
+  if (!canInputActualYield.value) {
+    showPackingNotice(t('batch.edit.actualYieldStatusBlocked'))
+    return
+  }
   actualYieldDialog.open = true
   actualYieldDialog.loading = false
   actualYieldDialog.globalError = ''
@@ -1833,11 +1898,18 @@ async function rollbackActualYieldProduceMovement(
 }
 
 async function saveActualYieldDialog() {
+  if (!canInputActualYield.value) {
+    actualYieldDialog.globalError = t('batch.edit.actualYieldStatusBlocked')
+    return
+  }
   const errors: Record<string, string> = {}
   const qty = toNumber(actualYieldDialog.form.actual_yield)
   const uomId = actualYieldDialog.form.actual_yield_uom
   const siteId = actualYieldDialog.form.site_id
   if (qty == null || qty <= 0) errors.actual_yield = t('batch.edit.actualYieldRequired')
+  else if (qty > MAX_BATCH_ACTUAL_YIELD) {
+    errors.actual_yield = t('batch.edit.actualYieldMax', { max: MAX_BATCH_ACTUAL_YIELD })
+  }
   if (!uomId) errors.actual_yield_uom = t('batch.edit.actualYieldUomRequired')
   if (!siteId) errors.site_id = t('batch.edit.actualYieldSiteRequired')
   else if (!isSelectableManufacturingSite(siteId)) errors.site_id = t('batch.edit.actualYieldSiteInvalid')
@@ -2046,7 +2118,13 @@ async function saveRelation() {
 }
 
 async function deleteRelation(row: BatchRelationRow) {
-  if (!window.confirm(t('batch.relation.confirmDelete'))) return
+  const confirmed = await requestConfirmation({
+    title: t('common.delete'),
+    message: t('batch.relation.confirmDelete'),
+    confirmLabel: t('common.delete'),
+    tone: 'danger',
+  })
+  if (!confirmed) return
   try {
     const { error } = await supabase
       .from('mes_batch_relation')
@@ -2060,7 +2138,13 @@ async function deleteRelation(row: BatchRelationRow) {
 }
 
 async function deletePackingEvent(event: PackingEvent) {
-  if (!window.confirm(t('batch.packaging.confirmDelete'))) return
+  const confirmed = await requestConfirmation({
+    title: t('common.delete'),
+    message: t('batch.packaging.confirmDelete'),
+    confirmLabel: t('common.delete'),
+    tone: 'danger',
+  })
+  if (!confirmed) return
   try {
     const { error } = await supabase
       .from('inv_movements')

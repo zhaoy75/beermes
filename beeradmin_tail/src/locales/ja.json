@@ -21,6 +21,7 @@
     "deleted": "削除しました",
     "reset": "リセット",
     "add": "追加",
+    "continue": "続行",
     "collapse": "折りたたむ",
     "expand": "展開",
     "none": "なし",
@@ -149,7 +150,12 @@
       "colPlannedEnd": "計画終了",
       "colActualStart": "実績開始",
       "colActualEnd": "実績終了",
-      "summary": "サマリー"
+      "summary": "サマリー",
+      "deleteBlocked": "このステータスのバッチは削除できません。",
+      "errors": {
+        "attrMin": "{field} は {min} 以上で入力してください。",
+        "attrMax": "{field} は {max} 以下で入力してください。"
+      }
     },
     "create": {
       "title": "バッチ作成",
@@ -230,6 +236,8 @@
       "actualYieldDialogTitle": "バッチ実績生産量",
       "actualYieldDialogSubtitle": "実績生産量と単位を入力します。",
       "actualYieldRequired": "実績生産量は0より大きい値を入力してください。",
+      "actualYieldMax": "実績生産量は {max} 以下で入力してください。",
+      "actualYieldStatusBlocked": "実績生産量はバッチステータスが製造中または完了のときのみ入力できます。",
       "actualYieldUomRequired": "実績生産単位を選択してください。",
       "actualYieldSite": "製造サイト",
       "actualYieldSiteRequired": "製造サイトを選択してください。",

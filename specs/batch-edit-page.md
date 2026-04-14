@@ -74,10 +74,14 @@
 
 ### Rules
 - batch code is readonly after create
-- dynamic batch attributes follow `attr_def` validation rules
+- planned start and planned end must use calendar-selectable date inputs
+- actual start and actual end must use calendar-selectable date inputs
+- dynamic batch attributes on Batch Edit should validate entered values against `attr_def` rules, including numeric `num_min` / `num_max`, but missing / blank values must not block save
 - save should block when dynamic attribute validation fails
 - `actual_yield` dialog remains part of this section
 - `actual_yield` save flow must keep:
+  - batch status gate: allowed only when batch status is `in_progress` or terminal `finished`
+  - quantity validation `0 < actual_yield <= 1000000`
   - volume UOM selection from `mst_uom`
   - manufacturing-site validation
   - `product_produce` call
@@ -94,7 +98,15 @@
   - `released_reference_json`
   - `mes_recipe_id`
   - `recipe_version_id`
-- legacy `recipe_id -> public.mes_recipes` fallback should be treated as compatibility only, not as the primary source
+- batch edit runtime code must not query `public.mes_recipes`
+- recipe display and batch beer-category resolution must use:
+  - `released_reference_json`
+  - `recipe_json`
+  - `mes_recipe_id`
+  - `recipe_version_id`
+  - batch `entity_attr`
+  - batch `meta`
+- legacy `recipe_id` on `mes_batches` may remain in the schema for compatibility, but it is not a runtime UI source for batch edit
 
 ## Section 2: Step Execution Table
 
@@ -237,6 +249,8 @@
 - batch attributes:
   - `entity_attr`
 - released recipe:
+  - `public.mes_batches.mes_recipe_id`
+  - `public.mes_batches.recipe_version_id`
   - `public.mes_batches.recipe_json`
   - `public.mes_batches.released_reference_json`
 - steps:

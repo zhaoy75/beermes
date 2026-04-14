@@ -21,6 +21,7 @@
     "deleted": "Deleted",
     "reset": "Reset",
     "add": "Add",
+    "continue": "Continue",
     "collapse": "Collapse",
     "expand": "Expand",
     "none": "None",
@@ -149,7 +150,12 @@
       "colPlannedEnd": "Planned end",
       "colActualStart": "Actual start",
       "colActualEnd": "Actual end",
-      "summary": "Summary"
+      "summary": "Summary",
+      "deleteBlocked": "This batch cannot be deleted in its current status.",
+      "errors": {
+        "attrMin": "{field} must be greater than or equal to {min}.",
+        "attrMax": "{field} must be less than or equal to {max}."
+      }
     },
     "create": {
       "title": "Create Batch",
@@ -230,6 +236,8 @@
       "actualYieldDialogTitle": "Batch actual yield",
       "actualYieldDialogSubtitle": "Input actual yield quantity and volume UOM.",
       "actualYieldRequired": "Actual yield must be greater than 0.",
+      "actualYieldMax": "Actual yield must be less than or equal to {max}.",
+      "actualYieldStatusBlocked": "Actual yield can only be input when batch status is In Progress or Finished.",
       "actualYieldUomRequired": "Select an actual yield UOM.",
       "actualYieldSite": "Manufacturing site",
       "actualYieldSiteRequired": "Select a manufacturing site.",

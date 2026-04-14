@@ -31,7 +31,6 @@
             type="date"
             class="w-full h-[40px] border rounded px-3"
             placeholder="YYYY-MM-DD"
-            @focus="openDatePicker"
           />
         </div>
         <div>
@@ -42,7 +41,6 @@
             type="date"
             class="w-full h-[40px] border rounded px-3"
             placeholder="YYYY-MM-DD"
-            @focus="openDatePicker"
           />
         </div>
         <div>
@@ -106,14 +104,6 @@ function submitForm() {
     plannedEnd: form.plannedEnd || null,
     notes: form.notes ? form.notes.trim() : null,
   })
-}
-
-function openDatePicker(event: Event) {
-  const target = event.target as HTMLInputElement | null
-  if (!target) return
-  if (typeof target.showPicker === 'function') {
-    target.showPicker()
-  }
 }
 
 function recipeLabel(recipe: RecipeOption) {

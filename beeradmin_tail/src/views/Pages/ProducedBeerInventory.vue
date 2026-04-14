@@ -420,6 +420,17 @@
           </div>
         </template>
       </Modal>
+
+      <ConfirmActionDialog
+        :open="confirmDialog.open"
+        :title="confirmDialog.title"
+        :message="confirmDialog.message"
+        :confirm-label="confirmDialog.confirmLabel"
+        :cancel-label="confirmDialog.cancelLabel"
+        :tone="confirmDialog.tone"
+        @cancel="cancelConfirmation"
+        @confirm="acceptConfirmation"
+      />
     </div>
   </AdminLayout>
 </template>
@@ -428,9 +439,11 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
+import ConfirmActionDialog from '@/components/common/ConfirmActionDialog.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import Modal from '@/components/ui/Modal.vue'
+import { useConfirmDialog } from '@/composables/useConfirmDialog'
 import { supabase } from '@/lib/supabase'
 import { useProducedBeerInventory } from '@/composables/useProducedBeerInventory'
 import { toast } from 'vue3-toastify'
@@ -438,6 +451,7 @@ import { toast } from 'vue3-toastify'
 const { t } = useI18n()
 const router = useRouter()
 const pageTitle = computed(() => t('producedBeerInventory.title'))
+const { confirmDialog, requestConfirmation, cancelConfirmation, acceptConfirmation } = useConfirmDialog()
 
 const {
   categoryLabel,
@@ -847,7 +861,13 @@ async function openDagDialog(row: InventoryPageRow) {
 async function completeDomesticRemoval(row: InventoryPageRow) {
   if (!row.canVoid) return
   const target = row.lotNo || row.batchCode || row.id
-  if (!window.confirm(t('producedBeerInventory.cancelRemovalConfirm', { lot: target }))) return
+  const confirmed = await requestConfirmation({
+    title: t('producedBeerInventory.actions.cancelRemoval'),
+    message: t('producedBeerInventory.cancelRemovalConfirm', { lot: target }),
+    confirmLabel: t('producedBeerInventory.actions.cancelRemoval'),
+    tone: 'warning',
+  })
+  if (!confirmed) return
   try {
     processingRowId.value = row.id
     for (const targetRow of row.voidTargets) {

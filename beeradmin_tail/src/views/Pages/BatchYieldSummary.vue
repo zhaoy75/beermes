@@ -122,6 +122,13 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import {
+  resolveBatchStyleName,
+  resolveReleasedRecipeCode,
+  resolveReleasedRecipeId,
+  resolveReleasedRecipeName,
+  type BatchRecipeAttrFallback,
+} from '@/lib/batchRecipeSnapshot'
 import { supabase } from '@/lib/supabase'
 import { formatVolumeNumber } from '@/lib/volumeFormat'
 
@@ -307,7 +314,7 @@ async function fetchBatches() {
 
     const batchQuery = supabase
       .from('mes_batches')
-      .select('id, batch_code, status, planned_start, kpi, recipe:mes_recipes(id, name, code, style)')
+      .select('id, batch_code, batch_label, product_name, status, planned_start, kpi, meta, mes_recipe_id, released_reference_json, recipe_json')
       .eq('tenant_id', tenant)
 
     if (filters.dateFrom) batchQuery.gte('planned_start', `${filters.dateFrom}`)
@@ -320,11 +327,46 @@ async function fetchBatches() {
 
     const batchIds = (batchRows ?? []).map((row) => row.id)
     const packageVolumes = new Map<string, number>()
+    const styleAttrByBatch = new Map<string, BatchRecipeAttrFallback>()
 
     if (batchIds.length > 0) {
       if (!uoms.value.length) {
         await loadUoms()
       }
+
+      try {
+        const { data: attrDefs, error: attrDefError } = await supabase
+          .from('attr_def')
+          .select('attr_id, code')
+          .eq('domain', 'batch')
+          .in('code', ['style_name'])
+          .eq('is_active', true)
+        if (attrDefError) throw attrDefError
+
+        const styleAttrIds = (attrDefs ?? [])
+          .map((row: any) => Number(row.attr_id))
+          .filter((value: number) => Number.isFinite(value))
+
+        if (styleAttrIds.length) {
+          const { data: attrRows, error: attrError } = await supabase
+            .from('entity_attr')
+            .select('entity_id, value_text')
+            .eq('entity_type', 'batch')
+            .in('entity_id', batchIds)
+            .in('attr_id', styleAttrIds)
+          if (attrError) throw attrError
+
+          ;(attrRows ?? []).forEach((row: any) => {
+            const batchId = String(row.entity_id ?? '')
+            const styleName = typeof row.value_text === 'string' ? row.value_text.trim() : ''
+            if (!batchId || !styleName) return
+            styleAttrByBatch.set(batchId, { styleName })
+          })
+        }
+      } catch (err) {
+        console.warn('Failed to load batch style attributes for batch yield summary', err)
+      }
+
       const { data: lineRows, error: lineError } = await supabase
         .from('inv_movement_lines')
         .select('batch_id, package_id, qty, uom_id, meta, movement:movement_id ( doc_type, status )')
@@ -354,14 +396,18 @@ async function fetchBatches() {
 
     const filteredBatches: BatchRow[] = []
     ;(batchRows ?? []).forEach((row: any) => {
-      const recipeRaw = Array.isArray(row.recipe) ? row.recipe[0] : row.recipe
-      const recipe = recipeRaw as { id?: string; name?: string; code?: string; style?: string | null } | null | undefined
-      if (recipe?.id && !recipeMap.has(recipe.id)) {
-        recipeMap.set(recipe.id, {
-          id: recipe.id,
-          name: recipe.name ?? recipe.code ?? recipe.id,
-          code: recipe.code ?? recipe.id,
-          style: recipe.style ?? null,
+      const attr = styleAttrByBatch.get(String(row.id))
+      const recipeId = resolveReleasedRecipeId(row) ?? ''
+      const recipeName = resolveReleasedRecipeName(row) ?? '—'
+      const recipeCode = resolveReleasedRecipeCode(row) ?? recipeId
+      const style = resolveBatchStyleName(row, attr) ?? null
+
+      if (recipeId && !recipeMap.has(recipeId)) {
+        recipeMap.set(recipeId, {
+          id: recipeId,
+          name: recipeName,
+          code: recipeCode || recipeId,
+          style,
         })
       }
 
@@ -383,9 +429,9 @@ async function fetchBatches() {
         target_volume_l: targetVolume,
         actual_volume_l: actualVolume,
         yield_percent: yieldPercent,
-        recipeId: String(recipe?.id ?? ''),
-        recipeName: String(recipe?.name ?? recipe?.code ?? '—'),
-        style: recipe?.style ?? null,
+        recipeId,
+        recipeName,
+        style,
       })
     })
 

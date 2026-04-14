@@ -7,6 +7,12 @@ import {
   loadAlcoholTypeReferenceData,
   resolveAlcoholTypeLabel,
 } from '@/lib/alcoholTypeRegistry'
+import {
+  resolveBatchBeerCategoryId,
+  resolveBatchDisplayName,
+  resolveBatchStyleName,
+  resolveBatchTargetAbv,
+} from '@/lib/batchRecipeSnapshot'
 import { formatVolumeNumber } from '@/lib/volumeFormat'
 
 type ContainerKind = 'tank' | 'keg' | 'case' | 'other'
@@ -513,22 +519,18 @@ export function useProducedBeerInventory() {
 
     const { data, error } = await supabase
       .from('mes_batches')
-      .select(
-        'id, batch_code, batch_label, product_name, meta, recipe_id, recipe:recipe_id ( category, target_abv, style )',
-      )
+      .select('id, batch_code, batch_label, product_name, meta, mes_recipe_id, released_reference_json, recipe_json')
       .eq('tenant_id', tenant)
       .in('id', uniqueIds)
     if (error) throw error
 
     ;(data ?? []).forEach((row: any) => {
       const attr = attrValueByBatch.get(row.id)
-      const recipe = Array.isArray(row.recipe) ? row.recipe[0] : row.recipe
       const meta =
         row.meta && typeof row.meta === 'object' && !Array.isArray(row.meta)
           ? (row.meta as Record<string, any>)
           : null
-      const productName =
-        row.product_name ?? row.batch_label ?? resolveBatchLabel(meta) ?? null
+      const productName = resolveBatchDisplayName(row)
       const keywordText = buildKeywordIndex(
         row.batch_code,
         row.batch_label,
@@ -539,24 +541,9 @@ export function useProducedBeerInventory() {
 
       infoMap.set(row.id, {
         batchCode: row.batch_code ?? resolveBatchLabel(meta) ?? null,
-        beerCategoryId:
-          attr?.beerCategoryId ??
-          (typeof recipe?.category === 'string' ? recipe.category : null) ??
-          resolveMetaString(meta, 'beer_category') ??
-          resolveMetaString(meta, 'category') ??
-          null,
-        targetAbv:
-          attr?.targetAbv ??
-          toNumber(recipe?.target_abv) ??
-          resolveMetaNumber(meta, 'actual_abv') ??
-          resolveMetaNumber(meta, 'target_abv') ??
-          null,
-        styleName:
-          attr?.styleName ??
-          (typeof recipe?.style === 'string' ? recipe.style : null) ??
-          resolveMetaString(meta, 'style_name') ??
-          resolveMetaString(meta, 'style') ??
-          null,
+        beerCategoryId: resolveBatchBeerCategoryId(row, attr),
+        targetAbv: resolveBatchTargetAbv(row, attr),
+        styleName: resolveBatchStyleName(row, attr),
         productName,
         keywordText,
       })

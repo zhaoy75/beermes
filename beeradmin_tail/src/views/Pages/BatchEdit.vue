@@ -1014,7 +1014,7 @@ async function fetchBatch() {
       batchForm.actual_start = toInputDate(header.actual_start)
       batchForm.actual_end = toInputDate(header.actual_end)
       batchForm.related_batch_id = resolveMetaString(header.meta, 'related_batch_id') ?? ''
-      recipeCategoryId.value = await loadRecipeCategory(header.recipe_id ?? null, header.mes_recipe_id ?? null)
+      recipeCategoryId.value = await loadRecipeCategory(header.mes_recipe_id ?? null)
       batchRelations.value = (Array.isArray(detail?.relations) ? detail.relations : []).map((row: any) => ({
         id: row.id,
         src_batch_id: row.src_batch_id,
@@ -1383,29 +1383,18 @@ async function loadBeerCategories() {
   }
 }
 
-async function loadRecipeCategory(recipeId: string | null | undefined, mesRecipeId?: string | null | undefined) {
+async function loadRecipeCategory(mesRecipeId: string | null | undefined) {
   try {
     const tenant = await ensureTenant()
-    if (mesRecipeId) {
-      const { data, error } = await mesClient()
-        .from('mst_recipe')
-        .select('recipe_category')
-        .eq('tenant_id', tenant)
-        .eq('id', mesRecipeId)
-        .maybeSingle()
-      if (error) throw error
-      if (data?.recipe_category) return String(data.recipe_category)
-    }
-    if (recipeId) {
-      const { data, error } = await supabase
-        .from('mes_recipes')
-        .select('category')
-        .eq('tenant_id', tenant)
-        .eq('id', recipeId)
-        .maybeSingle()
-      if (error) throw error
-      if (data?.category) return String(data.category)
-    }
+    if (!mesRecipeId) return null
+    const { data, error } = await mesClient()
+      .from('mst_recipe')
+      .select('recipe_category')
+      .eq('tenant_id', tenant)
+      .eq('id', mesRecipeId)
+      .maybeSingle()
+    if (error) throw error
+    if (data?.recipe_category) return String(data.recipe_category)
     return null
   } catch (err) {
     console.error(err)

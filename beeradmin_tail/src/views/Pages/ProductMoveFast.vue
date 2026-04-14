@@ -626,6 +626,12 @@ import {
   registerInventorySearchContext,
   type InventorySearchSelection,
 } from '@/composables/useInventorySearchModal'
+import {
+  resolveBatchDisplayName,
+  resolveBatchStyleName,
+  resolveReleasedRecipeCode,
+  type BatchRecipeAttrFallback,
+} from '@/lib/batchRecipeSnapshot'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
@@ -1188,6 +1194,7 @@ async function loadBeerOptionsForSite(siteId: string) {
     }
 
     const batchEntityAttrMap = new Map<string, string>()
+    const batchRecipeAttrMap = new Map<string, BatchRecipeAttrFallback>()
     if (batchIds.length) {
       try {
         const { data: attrDefs, error: attrDefError } = await supabase
@@ -1231,6 +1238,9 @@ async function loadBeerOptionsForSite(siteId: string) {
             const list = attrPartsByBatch.get(batchId)
             if (!list) return
             list.push(`${attrCode}:${trimmed}`)
+            if (attrCode === 'style_name') {
+              batchRecipeAttrMap.set(batchId, { styleName: trimmed })
+            }
           })
 
           attrPartsByBatch.forEach((parts, batchId) => {
@@ -1256,29 +1266,16 @@ async function loadBeerOptionsForSite(siteId: string) {
     if (batchIds.length) {
       const { data: batches, error: batchError } = await supabase
         .from('mes_batches')
-        .select('id, batch_code, batch_label, product_name, meta, recipe:recipe_id ( style )')
+        .select('id, batch_code, batch_label, product_name, meta, mes_recipe_id, released_reference_json, recipe_json')
         .eq('tenant_id', auth.tenantId)
         .in('id', batchIds)
       if (batchError) throw batchError
       ;(batches ?? []).forEach((row: any) => {
-        const meta =
-          row.meta && typeof row.meta === 'object' && !Array.isArray(row.meta)
-            ? (row.meta as Record<string, any>)
-            : null
-        const recipe = Array.isArray(row.recipe) ? row.recipe[0] : row.recipe
         const batchCode = String(row.batch_code ?? row.id)
-        const beerCode =
-          resolveMetaString(meta, 'product_code') ??
-          resolveMetaString(meta, 'beer_code') ??
-          resolveMetaString(meta, 'recipe_code') ??
-          batchCode
-        const styleName =
-          typeof recipe?.style === 'string' && recipe.style.trim()
-            ? recipe.style.trim()
-            : (resolveMetaString(meta, 'style_name') ?? resolveMetaString(meta, 'style'))
-        const beerName = String(
-          row.product_name ?? row.batch_label ?? resolveBatchLabel(meta) ?? styleName ?? beerCode,
-        )
+        const attr = batchRecipeAttrMap.get(String(row.id))
+        const beerCode = resolveReleasedRecipeCode(row) ?? batchCode
+        const styleName = resolveBatchStyleName(row, attr)
+        const beerName = String(resolveBatchDisplayName(row) ?? styleName ?? beerCode)
         batchMap.set(String(row.id), {
           batchCode,
           beerCode,

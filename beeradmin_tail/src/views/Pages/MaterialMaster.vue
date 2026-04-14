@@ -36,15 +36,6 @@
 
             <button
               type="button"
-              class="rounded border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50"
-              :title="typePanelToggleText"
-              @click="toggleTypePanel"
-            >
-              {{ typePanelToggleText }}
-            </button>
-
-            <button
-              type="button"
               class="rounded bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-60"
               :disabled="!canCreate"
               @click="startCreate"
@@ -63,83 +54,99 @@
         </div>
 
         <div v-else class="grid grid-cols-1 gap-4 p-4" :class="contentGridClass">
-          <aside v-if="showTypePanel" class="rounded-lg border border-gray-200 bg-gray-50">
-            <div class="flex items-start justify-between gap-3 border-b border-gray-200 px-4 py-3">
-              <div>
+          <div class="relative" :class="showTypePanel ? 'xl:block' : 'xl:hidden'">
+            <aside class="rounded-lg border border-gray-200 bg-gray-50">
+              <div class="border-b border-gray-200 px-4 py-3">
                 <h3 class="text-sm font-semibold text-gray-900">{{ t('material.treeTitle') }}</h3>
                 <p class="mt-1 text-xs text-gray-500">{{ t('material.treeHint') }}</p>
               </div>
-              <button
-                type="button"
-                class="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-white"
-                :title="typePanelToggleText"
-                @click="toggleTypePanel"
-              >
-                {{ t('common.collapse') }}
-              </button>
-            </div>
 
-            <div class="space-y-3 p-4">
-              <div class="relative">
-                <input
-                  v-model.trim="typeSearchTerm"
-                  type="search"
-                  :placeholder="t('material.typeSearchPlaceholder')"
-                  class="h-[40px] w-full rounded border border-gray-300 bg-white px-3 pr-9 text-sm"
-                />
-                <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-400">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1016.65 16.65z" />
-                  </svg>
-                </span>
-              </div>
-
-              <div class="rounded-lg border border-dashed border-gray-300 bg-white px-3 py-3">
-                <div class="text-xs text-gray-500">{{ t('material.selectedType') }}</div>
-                <div v-if="selectedType" class="mt-1">
-                  <div class="font-medium text-gray-900">{{ displayMaterialTypeName(selectedType) }}</div>
-                  <div class="font-mono text-xs text-gray-500">{{ selectedType.code }}</div>
-                  <div class="mt-1 text-xs text-gray-500">{{ selectedTypePathText }}</div>
+              <div class="space-y-3 p-4">
+                <div class="relative">
+                  <input
+                    v-model.trim="typeSearchTerm"
+                    type="search"
+                    :placeholder="t('material.typeSearchPlaceholder')"
+                    class="h-[40px] w-full rounded border border-gray-300 bg-white px-3 pr-9 text-sm"
+                  />
+                  <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1016.65 16.65z" />
+                    </svg>
+                  </span>
                 </div>
-                <div v-else class="mt-1 text-sm text-gray-500">{{ t('material.empty.noTypeSelected') }}</div>
-              </div>
-            </div>
 
-            <div class="max-h-[520px] overflow-y-auto px-2 pb-3">
-              <div v-if="materialTypeTreeEntries.length === 0" class="px-3 py-6 text-sm text-gray-500">
-                {{ t('material.empty.typeTree') }}
-              </div>
-
-              <ul v-else class="space-y-1">
-                <li v-for="entry in materialTypeTreeEntries" :key="entry.node.row.type_id">
-                  <div class="flex items-center gap-1" :style="{ paddingLeft: `${8 + entry.depth * 16}px` }">
-                    <button
-                      v-if="isExpandableType(entry.node.row.type_id)"
-                      type="button"
-                      class="flex h-8 w-8 items-center justify-center rounded text-gray-500 transition hover:bg-white hover:text-gray-700"
-                      :aria-label="typeToggleLabel(isTypeExpanded(entry.node.row.type_id))"
-                      :title="typeToggleLabel(isTypeExpanded(entry.node.row.type_id))"
-                      @click.stop="toggleTypeExpanded(entry.node.row.type_id)"
-                    >
-                      <span aria-hidden="true">{{ isTypeExpanded(entry.node.row.type_id) ? '▾' : '▸' }}</span>
-                    </button>
-                    <span v-else class="inline-block h-8 w-8" aria-hidden="true" />
-
-                    <button
-                      type="button"
-                      class="flex min-w-0 flex-1 items-center rounded px-2 py-2 text-left text-sm transition hover:bg-white"
-                      :class="selectedTypeId === entry.node.row.type_id ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200' : 'text-gray-700'"
-                      @click="selectType(entry.node.row.type_id)"
-                    >
-                      <span class="truncate">{{ displayMaterialTypeName(entry.node.row) }}</span>
-                    </button>
+                <div class="rounded-lg border border-dashed border-gray-300 bg-white px-3 py-3">
+                  <div class="text-xs text-gray-500">{{ t('material.selectedType') }}</div>
+                  <div v-if="selectedType" class="mt-1">
+                    <div class="font-medium text-gray-900">{{ displayMaterialTypeName(selectedType) }}</div>
+                    <div class="font-mono text-xs text-gray-500">{{ selectedType.code }}</div>
+                    <div class="mt-1 text-xs text-gray-500">{{ selectedTypePathText }}</div>
                   </div>
-                </li>
-              </ul>
-            </div>
-          </aside>
+                  <div v-else class="mt-1 text-sm text-gray-500">{{ t('material.empty.noTypeSelected') }}</div>
+                </div>
+              </div>
 
-          <section class="rounded-lg border border-gray-200 bg-white">
+              <div class="max-h-[520px] overflow-y-auto px-2 pb-3">
+                <div v-if="materialTypeTreeEntries.length === 0" class="px-3 py-6 text-sm text-gray-500">
+                  {{ t('material.empty.typeTree') }}
+                </div>
+
+                <ul v-else class="space-y-1">
+                  <li v-for="entry in materialTypeTreeEntries" :key="entry.node.row.type_id">
+                    <div class="flex items-center gap-1" :style="{ paddingLeft: `${8 + entry.depth * 16}px` }">
+                      <button
+                        v-if="isExpandableType(entry.node.row.type_id)"
+                        type="button"
+                        class="flex h-8 w-8 items-center justify-center rounded text-gray-500 transition hover:bg-white hover:text-gray-700"
+                        :aria-label="typeToggleLabel(isTypeExpanded(entry.node.row.type_id))"
+                        :title="typeToggleLabel(isTypeExpanded(entry.node.row.type_id))"
+                        @click.stop="toggleTypeExpanded(entry.node.row.type_id)"
+                      >
+                        <span aria-hidden="true">{{ isTypeExpanded(entry.node.row.type_id) ? '▾' : '▸' }}</span>
+                      </button>
+                      <span v-else class="inline-block h-8 w-8" aria-hidden="true" />
+
+                      <button
+                        type="button"
+                        class="flex min-w-0 flex-1 items-center rounded px-2 py-2 text-left text-sm transition hover:bg-white"
+                        :class="selectedTypeId === entry.node.row.type_id ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200' : 'text-gray-700'"
+                        @click="selectType(entry.node.row.type_id)"
+                      >
+                        <span class="truncate">{{ displayMaterialTypeName(entry.node.row) }}</span>
+                      </button>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+            </aside>
+
+            <button
+              type="button"
+              class="absolute right-0 top-6 z-10 hidden h-9 w-7 translate-x-1/2 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-500 shadow-sm transition hover:border-gray-400 hover:bg-gray-50 hover:text-gray-700 xl:flex"
+              :aria-label="typePanelToggleText"
+              :title="typePanelToggleText"
+              @click="toggleTypePanel"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 6l-6 6 6 6" />
+              </svg>
+            </button>
+          </div>
+
+          <section class="relative rounded-lg border border-gray-200 bg-white">
+            <button
+              v-if="!showTypePanel"
+              type="button"
+              class="absolute left-0 top-6 z-10 hidden h-9 w-7 -translate-x-1/2 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-500 shadow-sm transition hover:border-gray-400 hover:bg-gray-50 hover:text-gray-700 xl:flex"
+              :aria-label="typePanelToggleText"
+              :title="typePanelToggleText"
+              @click="toggleTypePanel"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 6l6 6-6 6" />
+              </svg>
+            </button>
             <div class="border-b border-gray-200 px-4 py-3">
               <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div>

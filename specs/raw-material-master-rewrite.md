@@ -76,6 +76,12 @@
   - left: material type tree
   - center: material list under selected type
   - right: material form / detail pane
+- The left `原材料種別` panel should be hideable on large screens.
+- The hide/show control should be a small icon handle placed on the boundary between the left `原材料種別` panel and the center `原材料一覧` panel.
+- When the left panel is hidden:
+  - the remaining layout should collapse cleanly without leaving a wide empty column
+  - the small boundary handle should remain visible so the panel can be reopened
+  - the selected type context should remain active for list filtering and form context
 
 ### Mobile
 - Stacked layout:
@@ -107,10 +113,14 @@
   - selecting a type filters the material list
   - selecting a type sets the default create context
   - tree remains expanded enough to keep navigation easy
+  - parent nodes must be foldable / unfoldable
+  - when search is active, matching branches should still be visible even if the user previously collapsed a parent
+  - when a type is selected from the list/edit flow, its ancestor path should be expanded so the current selection stays visible
 - UX helpers:
   - search box for types
   - recent or pinned types section above the tree if simple to implement
   - path/breadcrumb for selected type
+  - small boundary icon handle for hide/show on desktop
 
 ### Center: Material List
 - Shows materials filtered by selected type subtree.
@@ -280,6 +290,7 @@
 - `materialListFilter`
 - `materialFormMode = create | edit`
 - `expandedTypeIds`
+- `showTypePanel`
 
 ### Empty States
 - No type selected:
@@ -325,6 +336,11 @@
   - `base_uom_id`
   - `status`
 - Router changes were not required for this implementation.
+- Additional implemented UI refinement:
+  - on large screens, the `原材料種別` panel hide/show interaction uses a small boundary icon handle between `原材料種別` and `原材料一覧`
+  - the hidden state collapses cleanly to the remaining list/form columns without leaving a wide empty desktop column
+  - hiding the panel does not clear the selected type context
+  - a large top-header show/hide button is not used for the final desktop interaction
 
 ## Validation Results
 - `npx eslint src/views/Pages/MaterialMaster.vue --no-fix`: passed

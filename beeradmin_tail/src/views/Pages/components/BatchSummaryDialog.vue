@@ -20,7 +20,7 @@
             </div>
             <div>
               <dt class="font-medium text-gray-600">{{ t('batch.summary.recipe') }}</dt>
-              <dd class="text-gray-800">{{ detail?.recipe?.name ?? '—' }} <span v-if="detail?.recipe?.code" class="text-xs text-gray-500">({{ detail?.recipe?.code }})</span></dd>
+              <dd class="text-gray-800">{{ detailRecipeName }} <span v-if="detailRecipeCode" class="text-xs text-gray-500">({{ detailRecipeCode }})</span></dd>
             </div>
             <div>
               <dt class="font-medium text-gray-600">{{ t('batch.summary.plannedStart') }}</dt>
@@ -108,8 +108,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import {
+  resolveReleasedRecipeCode,
+  resolveReleasedRecipeName,
+} from '@/lib/batchRecipeSnapshot'
 import { supabase } from '@/lib/supabase'
 import { formatVolumeNumber } from '@/lib/volumeFormat'
 
@@ -122,6 +126,7 @@ const props = defineProps<{ open: boolean, batch: BatchSummaryBatch }>()
 const emit = defineEmits(['close'])
 
 const { t, locale } = useI18n()
+const mesClient = () => supabase.schema('mes')
 
 const loading = ref(false)
 const loadingIngredients = ref(false)
@@ -130,6 +135,8 @@ const loadingSteps = ref(false)
 const detail = ref<any>(null)
 const ingredients = ref<Array<{ id: string, material_name: string, amount: number | null, uom_code: string | null, usage_stage: string | null, notes: string | null }>>([])
 const steps = ref<Array<any>>([])
+const detailRecipeName = computed(() => resolveReleasedRecipeName(detail.value) ?? '—')
+const detailRecipeCode = computed(() => resolveReleasedRecipeCode(detail.value))
 
 function toNumber(value: any): number | null {
   if (value === null || value === undefined || value === '') return null
@@ -163,6 +170,65 @@ function formatVolume(value: number | null) {
   return formatVolumeNumber(value, locale.value)
 }
 
+function formatQualityChecks(value: unknown) {
+  if (!Array.isArray(value)) return '[]'
+  const labels = value.map((row) => {
+    if (typeof row === 'string') return row
+    if (row && typeof row === 'object') {
+      const record = row as Record<string, unknown>
+      return String(record.check_code ?? record.parameter_code ?? record.code ?? record.name ?? '')
+    }
+    return ''
+  }).map((row) => row.trim()).filter(Boolean)
+  return labels.length ? labels.join('\n') : '[]'
+}
+
+function ingredientRowsFromRecipeJson(recipeJson: unknown) {
+  const record = recipeJson && typeof recipeJson === 'object' && !Array.isArray(recipeJson)
+    ? recipeJson as Record<string, unknown>
+    : null
+  const materials = record && materialsKey(record)
+  const materialRows = materials ? [
+    ...arrayValue(materials.required),
+    ...arrayValue(materials.optional),
+  ] : []
+  return materialRows.map((row, index) => {
+    const item = row && typeof row === 'object' && !Array.isArray(row)
+      ? row as Record<string, unknown>
+      : {}
+    const materialName = String(
+      item.material_name
+      ?? item.material_code
+      ?? item.material_type_code
+      ?? item.material_type
+      ?? `material-${index + 1}`,
+    )
+    const amount = toNumber(item.qty)
+    const uomCode = typeof item.uom_code === 'string' && item.uom_code.trim() ? item.uom_code.trim() : null
+    const usageStage = typeof item.material_role === 'string' && item.material_role.trim() ? item.material_role.trim() : null
+    const notes = typeof item.notes === 'string' && item.notes.trim() ? item.notes.trim() : null
+    return {
+      id: `recipe-${index}`,
+      material_name: materialName,
+      amount,
+      uom_code: uomCode,
+      usage_stage: usageStage,
+      notes,
+    }
+  })
+}
+
+function materialsKey(record: Record<string, unknown>) {
+  const materials = record.materials
+  return materials && typeof materials === 'object' && !Array.isArray(materials)
+    ? materials as Record<string, unknown>
+    : null
+}
+
+function arrayValue(value: unknown) {
+  return Array.isArray(value) ? value : []
+}
+
 watch(() => props.open, (val) => {
   if (val) {
     loadSummary()
@@ -181,12 +247,12 @@ async function loadSummary() {
     loading.value = true
     const { data, error } = await supabase
       .from('mes_batches')
-      .select('*, recipe:mes_recipes(name, code, version)')
+      .select('id, batch_code, status, planned_start, planned_end, actual_start, actual_end, notes, kpi, batch_label, product_name, meta, mes_recipe_id, recipe_version_id, released_reference_json, recipe_json')
       .eq('id', props.batch.id)
       .maybeSingle()
     if (error) throw error
     detail.value = data
-    await Promise.all([loadIngredients(data?.recipe_id), loadSteps(props.batch.id)])
+    await Promise.all([loadIngredients(props.batch.id, data?.recipe_json), loadSteps(props.batch.id)])
   } catch (err) {
     console.error(err)
   } finally {
@@ -194,31 +260,54 @@ async function loadSummary() {
   }
 }
 
-async function loadIngredients(recipeId: string | undefined) {
+async function loadIngredients(batchId: string, recipeJson: unknown) {
   ingredients.value = []
-  if (!recipeId) return
   try {
     loadingIngredients.value = true
-    const { data, error } = await supabase
-      .from('mes_ingredients')
-      .select('id, amount, usage_stage, notes, material:mst_materials(name, code), uom:mst_uom(code)')
-      .eq('recipe_id', recipeId)
-      .order('usage_stage', { ascending: true })
+    const { data, error } = await mesClient()
+      .from('batch_material_plan')
+      .select('id, batch_step_id, material_role, planned_qty, requirement_json, snapshot_json, uom_id')
+      .eq('batch_id', batchId)
+      .order('created_at', { ascending: true })
     if (error) throw error
     ingredients.value = (data ?? []).map((row: any) => {
-      const material = Array.isArray(row.material) ? row.material[0] : row.material
-      const uom = Array.isArray(row.uom) ? row.uom[0] : row.uom
+      const requirement = row.requirement_json && typeof row.requirement_json === 'object' && !Array.isArray(row.requirement_json)
+        ? row.requirement_json as Record<string, unknown>
+        : {}
+      const snapshot = row.snapshot_json && typeof row.snapshot_json === 'object' && !Array.isArray(row.snapshot_json)
+        ? row.snapshot_json as Record<string, unknown>
+        : {}
+      const materialName = String(
+        requirement.material_name
+        ?? requirement.material_code
+        ?? requirement.material_type_code
+        ?? requirement.material_type
+        ?? row.material_role
+        ?? row.id,
+      )
+      const usageStage =
+        (typeof snapshot.step_code === 'string' && snapshot.step_code.trim())
+        || (typeof row.material_role === 'string' && row.material_role.trim())
+        || null
+      const notes =
+        (typeof requirement.notes === 'string' && requirement.notes.trim())
+        || (typeof snapshot.source === 'string' && snapshot.source.trim())
+        || null
       return {
         id: row.id,
-        amount: row.amount,
-        usage_stage: row.usage_stage,
-        notes: row.notes,
-        material_name: `${material?.name ?? ''} (${material?.code ?? ''})`.trim(),
-        uom_code: uom?.code ?? null,
+        amount: toNumber(row.planned_qty) ?? toNumber(requirement.qty),
+        usage_stage: usageStage,
+        notes,
+        material_name: materialName,
+        uom_code: typeof requirement.uom_code === 'string' && requirement.uom_code.trim() ? requirement.uom_code.trim() : null,
       }
     })
+    if (ingredients.value.length === 0) {
+      ingredients.value = ingredientRowsFromRecipeJson(recipeJson)
+    }
   } catch (err) {
     console.error(err)
+    ingredients.value = ingredientRowsFromRecipeJson(recipeJson)
   } finally {
     loadingIngredients.value = false
   }
@@ -228,15 +317,19 @@ async function loadSteps(batchId: string) {
   steps.value = []
   try {
     loadingSteps.value = true
-    const { data, error } = await supabase
-      .from('mes_batch_steps')
-      .select('id, step_no, step, status, planned_params, qa_checks, actual_params, notes')
+    const { data, error } = await mesClient()
+      .from('batch_step')
+      .select('id, step_no, step_code, step_name, status, quality_checks_json, notes')
       .eq('batch_id', batchId)
       .order('step_no', { ascending: true })
     if (error) throw error
     steps.value = (data ?? []).map((row) => ({
-      ...row,
-      qa_checks: Array.isArray(row.qa_checks) ? row.qa_checks.join('\n') : (typeof row.qa_checks === 'string' ? row.qa_checks : JSON.stringify(row.qa_checks ?? [])),
+      id: row.id,
+      step_no: row.step_no,
+      step: row.step_name ?? row.step_code ?? '—',
+      status: row.status,
+      qa_checks: formatQualityChecks(row.quality_checks_json),
+      notes: row.notes,
     }))
   } catch (err) {
     console.error(err)

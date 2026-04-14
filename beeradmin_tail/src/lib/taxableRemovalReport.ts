@@ -4,6 +4,11 @@ import {
   loadAlcoholTypeReferenceData,
   resolveAlcoholTypeLabel as resolveAlcoholTypeRegistryLabel,
 } from '@/lib/alcoholTypeRegistry'
+import {
+  resolveBatchBeerCategoryId,
+  resolveBatchDisplayName,
+  resolveBatchTargetAbv,
+} from '@/lib/batchRecipeSnapshot'
 import { createWorkbookBlob, type WorkbookCell, type WorkbookCellValue, type WorkbookSheet } from '@/lib/fillingReportExport'
 
 type JsonMap = Record<string, unknown>
@@ -78,7 +83,9 @@ type BatchRow = {
   batch_label: string | null
   product_name: string | null
   meta: JsonMap | null
-  recipe: JsonMap | JsonMap[] | null
+  mes_recipe_id: string | null
+  released_reference_json: JsonMap | null
+  recipe_json: JsonMap | null
 }
 
 type LotRow = {
@@ -821,34 +828,23 @@ async function loadBatchInfo(supabase: SupabaseClient, tenantId: string, batchId
 
   const { data, error } = await supabase
     .from('mes_batches')
-    .select('id, batch_code, batch_label, product_name, meta, recipe_id, recipe:recipe_id ( category, target_abv )')
+    .select('id, batch_code, batch_label, product_name, meta, mes_recipe_id, released_reference_json, recipe_json')
     .eq('tenant_id', tenantId)
     .in('id', uniqueIds)
   if (error) throw error
 
   ;((data ?? []) as BatchRow[]).forEach((row) => {
     const attr = attrValueByBatch.get(row.id)
-    const recipe = Array.isArray(row.recipe) ? row.recipe[0] : row.recipe
-    const meta =
-      row.meta && typeof row.meta === 'object' && !Array.isArray(row.meta)
-        ? (row.meta as JsonMap)
-        : null
 
     infoMap.set(String(row.id), {
       batchCode: row.batch_code ?? null,
-      brandName: row.product_name ?? row.batch_label ?? resolveBatchLabel(meta) ?? null,
-      liquorCode:
-        attr?.liquorCode ??
-        (typeof recipe?.category === 'string' ? recipe.category : null) ??
-        resolveMetaString(meta, 'beer_category') ??
-        resolveMetaString(meta, 'category') ??
-        null,
-      abv:
-        attr?.abv ??
-        toNumber(recipe?.target_abv) ??
-        resolveMetaNumber(meta, 'actual_abv') ??
-        resolveMetaNumber(meta, 'target_abv') ??
-        null,
+      brandName: resolveBatchDisplayName(row),
+      liquorCode: resolveBatchBeerCategoryId(row, {
+        beerCategoryId: attr?.liquorCode ?? null,
+      }),
+      abv: resolveBatchTargetAbv(row, {
+        targetAbv: attr?.abv ?? null,
+      }),
     })
   })
 

@@ -330,6 +330,11 @@ import {
   loadAlcoholTypeReferenceData,
   resolveAlcoholTypeLabel,
 } from '@/lib/alcoholTypeRegistry'
+import {
+  resolveBatchBeerCategoryId,
+  resolveBatchStyleName,
+  resolveBatchTargetAbv,
+} from '@/lib/batchRecipeSnapshot'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
@@ -1320,40 +1325,17 @@ async function loadLotReferenceMaps(
 
     const { data: batchRows, error: batchError } = await supabase
       .from('mes_batches')
-      .select('id, batch_code, meta, recipe:recipe_id ( category, target_abv, style )')
+      .select('id, batch_code, meta, mes_recipe_id, released_reference_json, recipe_json')
       .eq('tenant_id', tenant)
       .in('id', batchIds)
     if (batchError) throw batchError
     ;(batchRows ?? []).forEach((row: any) => {
       const attr = attrValueByBatch.get(row.id)
-      const recipe = Array.isArray(row.recipe) ? row.recipe[0] : row.recipe
-      const meta = (row.meta && typeof row.meta === 'object' && !Array.isArray(row.meta)) ? row.meta as Record<string, any> : null
 
       batchMap.set(row.id, row.batch_code ?? null)
-      batchCategoryMap.set(
-        row.id,
-        attr?.beerCategoryId
-          ?? (typeof recipe?.category === 'string' ? recipe.category : null)
-          ?? resolveMetaString(meta, 'beer_category')
-          ?? resolveMetaString(meta, 'category')
-          ?? null
-      )
-      batchTargetAbvMap.set(
-        row.id,
-        attr?.targetAbv
-          ?? toNumber(recipe?.target_abv)
-          ?? resolveMetaNumber(meta, 'actual_abv')
-          ?? resolveMetaNumber(meta, 'target_abv')
-          ?? null
-      )
-      batchStyleMap.set(
-        row.id,
-        attr?.styleName
-          ?? (typeof recipe?.style === 'string' ? recipe.style : null)
-          ?? resolveMetaString(meta, 'style_name')
-          ?? resolveMetaString(meta, 'style')
-          ?? null
-      )
+      batchCategoryMap.set(row.id, resolveBatchBeerCategoryId(row, attr))
+      batchTargetAbvMap.set(row.id, resolveBatchTargetAbv(row, attr))
+      batchStyleMap.set(row.id, resolveBatchStyleName(row, attr))
     })
   }
 

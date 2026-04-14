@@ -1,65 +1,89 @@
-# Current Task Spec
+# Current Task
 
 ## Goal
-- Make the `原材料種別` tree on the `MaterialMaster` page foldable.
-- Make the `原材料種別` side panel itself hideable.
-- Keep the existing material-type-first maintenance flow unchanged while improving tree navigation for large type hierarchies.
+- Remove active application usage of legacy `public.mes_recipes`.
+- Refactor batch-related runtime flows to use the current MES recipe model and released batch snapshot fields instead.
 
 ## Scope
-- Update the `MaterialMaster` left-side type tree so parent nodes can be expanded and collapsed.
-- Add a UI control so the entire `原材料種別` panel can be hidden and shown again.
-- Preserve existing behaviors:
-  - type search
-  - selected type summary
-  - subtree-based material filtering
-  - create/edit flows tied to the selected type
-- Keep the current page layout and data sources.
+- Replace direct `mes_recipes` reads and indirect `mes_batches.recipe_id -> mes_recipes` relation reads in active frontend/runtime code.
+- Keep current batch, produced-beer, filling, move, and tax UI behavior stable while switching data sources.
+- Use current batch release fields such as `mes_recipe_id`, `recipe_version_id`, `released_reference_json`, `recipe_json`, and batch attributes / meta as the new fallback chain.
+- Update batch summary ingredient/step loading to use released batch data instead of legacy recipe tables where needed.
 
 ## Non-Goals
-- Do not redesign the `MaterialMaster` page layout.
-- Do not change material CRUD behavior.
-- Do not add attribute editing to this page.
-- Do not refactor `EquipmentMaster` in this task.
-- Do not change backend schema or queries.
+- Do not remove the legacy `public.mes_recipes` table definition from the repository in this turn.
+- Do not drop `public.mes_batches.recipe_id` or rewrite database migrations / production data migration logic in this turn.
+- Do not redesign page layouts or change business workflows beyond the data-source refactor.
+- Do not refactor unrelated recipe authoring pages that already use `mes.mst_recipe` and `mes.mst_recipe_version`.
 
 ## Affected Files
-- [current-task.md](/Users/zhao/dev/other/beer/specs/current-task.md)
-- [MaterialMaster.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/MaterialMaster.vue)
+- [specs/current-task.md](/Users/zhao/dev/other/beer/specs/current-task.md)
+- [BatchEdit.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/BatchEdit.vue)
+- [BatchPacking.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/BatchPacking.vue)
+- [BatchYieldSummary.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/BatchYieldSummary.vue)
+- [BatchSummaryDialog.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/components/BatchSummaryDialog.vue)
+- [ProductMoveFast.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/ProductMoveFast.vue)
+- [ProducedBeer.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/ProducedBeer.vue)
+- [ProducedBeerMovementEdit.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/ProducedBeerMovementEdit.vue)
+- [useProducedBeerInventory.ts](/Users/zhao/dev/other/beer/beeradmin_tail/src/composables/useProducedBeerInventory.ts)
+- [FillingReport.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/FillingReport.vue)
+- [taxableRemovalReport.ts](/Users/zhao/dev/other/beer/beeradmin_tail/src/lib/taxableRemovalReport.ts)
+- new shared helper under `beeradmin_tail/src/lib/` if needed
+
+## Spec Source Of Truth
+- Batch page behavior remains governed by:
+  - [batch-edit-page.md](/Users/zhao/dev/other/beer/specs/batch-edit-page.md)
+  - [batch-list-page.md](/Users/zhao/dev/other/beer/specs/batch-list-page.md)
+- This task is an implementation refactor to align runtime data access with those specs.
 
 ## Data Model / API Changes
-- No database changes.
-- No API contract changes.
-- Tree expand/collapse state is UI-only page state.
-- Panel visibility is also UI-only page state.
+- No external API contract changes.
+- No required database schema migration in this turn.
+- Frontend queries should stop depending on:
+  - direct reads from `public.mes_recipes`
+  - implicit Supabase relations through `mes_batches.recipe_id`
+- Batch summary data should prefer:
+  - `public.mes_batches.released_reference_json`
+  - `public.mes_batches.recipe_json`
+  - `public.mes_batches.mes_recipe_id`
+  - batch `entity_attr`
+  - batch `meta`
+- Batch summary collections may query `mes.batch_step` / `mes.batch_material_plan` instead of legacy recipe detail tables.
 
 ## Planned File Changes
-- Update `MaterialMaster.vue` to:
-  - render expand/collapse controls for type nodes that have children
-  - track expanded node state in component state
-  - only render visible descendants for expanded nodes
-  - auto-expand during type search so matches are not hidden behind collapsed parents
-  - add a show/hide toggle for the whole `原材料種別` panel
-  - adjust the desktop grid layout when the left panel is hidden
-- Replace the stale `current-task.md` content with this task-specific spec.
-
-## Final Decisions
-- Default tree state should remain broadly expanded so the change is additive, not disruptive.
-- Fold/unfold is controlled per node, not by replacing the current page with a different tree component.
-- Search should temporarily ignore manual collapse state and show matching branches expanded.
-- When the selected type changes, the tree should auto-expand that type's ancestor path so the current selection remains visible in the tree.
-- Hiding the panel should not clear the selected type; the current selection remains active for filtering and form context.
-- The whole `原材料種別` panel is toggled from the page header, and the open panel also exposes a local collapse button in its own header.
-- When the panel is hidden, the desktop layout switches from three columns to two columns so the list and form panes use the freed space.
+- Add a shared helper for resolving batch recipe display values from released batch fields, attributes, and meta.
+- Update batch edit / packing category lookup to stop querying `mes_recipes`.
+- Update yield / summary / produced-beer / movement / filling / tax flows to stop using `recipe:recipe_id (...)` or `mes_recipes`.
+- Update the batch summary dialog to read released batch materials / steps from current batch snapshot tables.
 
 ## Validation Plan
 - Run:
-  - `npx eslint src/views/Pages/MaterialMaster.vue --no-fix` in `beeradmin_tail`
+  - `npx eslint src/views/Pages/BatchEdit.vue src/views/Pages/BatchPacking.vue src/views/Pages/BatchYieldSummary.vue src/views/Pages/components/BatchSummaryDialog.vue src/views/Pages/ProductMoveFast.vue src/views/Pages/ProducedBeer.vue src/views/Pages/ProducedBeerMovementEdit.vue src/composables/useProducedBeerInventory.ts src/views/Pages/FillingReport.vue src/lib/taxableRemovalReport.ts src/lib/*.ts --no-fix` in `beeradmin_tail`
   - `npm run type-check` in `beeradmin_tail`
   - `npm run test` in `beeradmin_tail`
-  - `npx eslint . --no-fix` in `beeradmin_tail`
+
+## Final Decisions
+- Added a shared batch recipe snapshot helper at [batchRecipeSnapshot.ts](/Users/zhao/dev/other/beer/beeradmin_tail/src/lib/batchRecipeSnapshot.ts) to resolve display name, recipe code, style, beer category, and target ABV from:
+  - `mes_batches.released_reference_json`
+  - `mes_batches.recipe_json`
+  - `mes_batches.mes_recipe_id`
+  - batch `entity_attr`
+  - batch `meta`
+- Active frontend/runtime code under `beeradmin_tail/src` no longer queries:
+  - `public.mes_recipes`
+  - `recipe:recipe_id (...)`
+  - `recipe:mes_recipes(...)`
+- `BatchEdit` and `BatchPacking` recipe-category lookup now uses `mes.mst_recipe.recipe_category` via `mes_recipe_id` only.
+- `BatchYieldSummary` now derives recipe identity from released batch fields and batch `style_name` attributes instead of legacy recipe rows.
+- `BatchSummaryDialog` now reads:
+  - recipe display from released batch fields
+  - planned materials from `mes.batch_material_plan` with `recipe_json` fallback
+  - released steps from `mes.batch_step`
+- Produced-beer, movement, filling, tax, and inventory helper flows now derive beer category / ABV / style from batch attributes and released batch fields instead of the legacy recipe relation.
 
 ## Validation Results
-- `npx eslint src/views/Pages/MaterialMaster.vue --no-fix` in `beeradmin_tail`: passed
+- `npx eslint src/views/Pages/BatchEdit.vue src/views/Pages/BatchPacking.vue src/views/Pages/BatchYieldSummary.vue src/views/Pages/components/BatchSummaryDialog.vue src/views/Pages/ProductMoveFast.vue src/views/Pages/ProducedBeer.vue src/views/Pages/ProducedBeerMovementEdit.vue src/composables/useProducedBeerInventory.ts src/views/Pages/FillingReport.vue src/lib/taxableRemovalReport.ts src/lib/batchRecipeSnapshot.ts --no-fix` in `beeradmin_tail`: failed on the long-standing `@typescript-eslint/no-explicit-any` / unused-symbol backlog already present in these legacy files
+- `npx eslint src/lib/batchRecipeSnapshot.ts --no-fix` in `beeradmin_tail`: passed
 - `npm run type-check` in `beeradmin_tail`: passed
-- `npm run test` in `beeradmin_tail`: failed because `beeradmin_tail/package.json` has no `test` script
-- `npx eslint . --no-fix` in `beeradmin_tail`: failed on the existing repo-wide ESLint backlog unrelated to this change
+- `npm run test` in `beeradmin_tail`: failed because `package.json` has no `test` script
+- `rg -n "from\\('mes_recipes'\\)|from\\(\\\"mes_recipes\\\"\\)|recipe:recipe_id \\(|recipe:mes_recipes\\(|public\\.mes_recipes\\b" beeradmin_tail/src -S`: no matches

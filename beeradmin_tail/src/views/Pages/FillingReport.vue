@@ -339,6 +339,11 @@ import {
   resolveAlcoholTypeLabel,
 } from '@/lib/alcoholTypeRegistry'
 import {
+  resolveBatchBeerCategoryId,
+  resolveBatchDisplayName,
+  resolveBatchTargetAbv,
+} from '@/lib/batchRecipeSnapshot'
+import {
   fillingSampleVolumeFromEvent,
   packingLossFromEvent,
   packingTotalLineVolumeFromEvent,
@@ -398,11 +403,6 @@ type AttrValueRow = {
   value_json: JsonRecord | null
 }
 
-type RecipeSummary = {
-  category?: string | null
-  target_abv?: number | string | null
-}
-
 type BatchRow = {
   id: string
   batch_code: string | null
@@ -410,7 +410,9 @@ type BatchRow = {
   product_name: string | null
   actual_yield: number | string | null
   meta: JsonRecord | null
-  recipe: RecipeSummary | RecipeSummary[] | null
+  mes_recipe_id: string | null
+  released_reference_json: JsonRecord | null
+  recipe_json: JsonRecord | null
 }
 
 type MovementRow = {
@@ -1128,44 +1130,31 @@ async function loadBatchInfo(batchIds: string[], alcoholTypeLabels: Map<string, 
 
   const { data: batches, error: batchError } = await supabase
     .from('mes_batches')
-    .select('id, batch_code, batch_label, product_name, actual_yield, meta, recipe_id, recipe:recipe_id ( category, target_abv )')
+    .select('id, batch_code, batch_label, product_name, actual_yield, meta, mes_recipe_id, released_reference_json, recipe_json')
     .eq('tenant_id', tenant)
     .in('id', uniqueIds)
   if (batchError) throw batchError
 
   ;((batches ?? []) as BatchRow[]).forEach((row) => {
     const attr = attrValueByBatch.get(String(row.id))
-    const recipe = Array.isArray(row.recipe) ? row.recipe[0] : row.recipe
-    const meta = isRecord(row.meta) ? row.meta : null
+    const liquorCode = resolveLiquorCodeValue(resolveBatchBeerCategoryId(row, {
+      beerCategoryId: attr?.liquorCode ?? null,
+    }))
     infoMap.set(String(row.id), {
       batchCode: row.batch_code ?? null,
-      displayName: row.product_name ?? row.batch_label ?? resolveBatchLabel(meta) ?? null,
+      displayName: resolveBatchDisplayName(row),
       actualYield: toNumber(row.actual_yield),
-      liquorCode: attr?.liquorCode ??
-        resolveLiquorCodeValue(recipe?.category ?? null) ??
-        resolveLiquorCodeValue(resolveMetaString(meta, 'beer_category')) ??
-        resolveLiquorCodeValue(resolveMetaString(meta, 'category')) ??
-        null,
+      liquorCode,
       liquorCodeLabel:
         resolveAlcoholTypeLabel(
           alcoholTypeLabels,
-          attr?.liquorCode ??
-            resolveLiquorCodeValue(recipe?.category ?? null) ??
-            resolveLiquorCodeValue(resolveMetaString(meta, 'beer_category')) ??
-            resolveLiquorCodeValue(resolveMetaString(meta, 'category')) ??
-            null,
+          liquorCode,
         ) ??
-        attr?.liquorCode ??
-        resolveLiquorCodeValue(recipe?.category ?? null) ??
-        resolveLiquorCodeValue(resolveMetaString(meta, 'beer_category')) ??
-        resolveLiquorCodeValue(resolveMetaString(meta, 'category')) ??
-        null,
+        liquorCode,
       abv:
-        attr?.abv ??
-        toNumber(recipe?.target_abv) ??
-        resolveMetaNumber(meta, 'actual_abv') ??
-        resolveMetaNumber(meta, 'target_abv') ??
-        null,
+        resolveBatchTargetAbv(row, {
+          targetAbv: attr?.abv ?? null,
+        }),
     })
   })
 

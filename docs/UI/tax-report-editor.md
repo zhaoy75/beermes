@@ -187,7 +187,7 @@
   - tax basis comes from `inv_movements.meta.tax_event`
   - fallback tax basis comes from `inv_movements.meta.tax_decision_code`
   - legacy fallback only when neither field exists: infer from `doc_type`
-  - displayed `税務移出種別` label must use the same movement-rule `tax_event_labels` source as `移出記録`
+  - displayed `税務移出種別` label must use the same movement-rule `tax_event_labels` source as `移出登録`
   - matching `inv_movement_lines`
   - only lines with `package_id` or `batch_id`
 - Category resolution order for batch rows:

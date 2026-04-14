@@ -74,19 +74,19 @@ VALUES (
       "show_in_movement_wizard": false
     },
     "SHIP_EXPORT": {
-      "ja": "輸出（免税）",
-      "en": "Export (Exempt)",
+      "ja": "輸出（輸出免税含む）",
+      "en": "Export (Exempt Included)",
       "show_in_movement_wizard": true
     },
     "RETURN_FROM_CUSTOMER": {
-      "ja": "返品（戻入）",
+      "ja": "返品（移入・戻入）",
       "en": "Return from Customer",
       "show_in_movement_wizard": true
     },
     "LOSS": {
       "ja": "滅失（事故・破損）",
       "en": "Loss",
-      "show_in_movement_wizard": true
+      "show_in_movement_wizard": false
     },
     "DISPOSE": {
       "ja": "廃棄",
@@ -383,7 +383,7 @@ VALUES (
         "wizard_entry": true,
         "icon": "return",
         "title_en": "Return",
-        "title_ja": "返品（戻入）"
+        "title_ja": "返品（移入・戻入）"
       }
     },
     {
@@ -1055,30 +1055,7 @@ VALUES (
           }
         }
       ]
-    },
-    {
-      "movement_intent": "SHIP_EXPORT",
-      "src_site_type": "BREWERY_STORAGE",
-      "dst_site_type": "OVERSEA_CUSTOMER",
-      "lot_tax_type": "TAX_PAID",
-      "allowed_tax_decisions": [
-        {
-          "tax_decision_code": "NONE",
-          "tax_event": "NONE",
-          "result_lot_tax_type": "TAX_PAID",
-          "default": true,
-          "lines_rules": {
-            "allow_partial_quantity": true,
-            "require_full_lot": false,
-            "allow_multiple_lots": true,
-            "lot_split_required": true,
-            "approval_required": true,
-            "require_reference_document": true,
-            "require_reason_code": false
-          }
-        }
-      ]
-    },
+    }, 
     {
       "movement_intent": "SHIP_EXPORT",
       "src_site_type": "TAX_STORAGE",

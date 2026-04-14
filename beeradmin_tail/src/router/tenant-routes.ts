@@ -277,6 +277,15 @@ export const tenantRoutes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/producedBeerInventory/unpack/:lotId',
+    name: 'ProducedBeerUnpacking',
+    component: () => import('@/views/Pages/ProducedBeerUnpacking.vue'),
+    meta: {
+      title: 'Packaged Beer Unpacking',
+      requiresAuth: true,
+    },
+  },
+  {
     path: '/fillingReport',
     name: 'FillingReport',
     component: () => import('@/views/Pages/FillingReport.vue'),

@@ -565,7 +565,8 @@
         "filling": "詰口",
         "transfer": "社内非納税移出",
         "loss": "ロス",
-        "dispose": "廃棄"
+        "dispose": "廃棄",
+        "unpack": "解体"
       },
       "actions": {
         "return": "戻る",
@@ -2062,6 +2063,7 @@
       "count": "{count}件"
     },
     "actions": {
+      "unpack": "解体",
       "showDag": "関連履歴",
       "cancelRemoval": "国内移出完了"
     },
@@ -2093,6 +2095,66 @@
     "cancelRemovalConfirm": "{lot} の国内移出を完了します。よろしいですか？",
     "cancelRemovalSuccess": "国内移出を完了しました。",
     "cancelRemovalFailed": "国内移出完了に失敗しました。"
+  },
+  "producedBeerUnpacking": {
+    "title": "製品ビール解体登録",
+    "subtitle": "パッケージ済みビールを未充填のビールへ戻します。",
+    "sections": {
+      "source": "元在庫",
+      "form": "解体入力",
+      "preview": "結果プレビュー"
+    },
+    "source": {
+      "subtitle": "現在在庫として存在するパッケージ済みロットを確認します。",
+      "lotNo": "ロット番号",
+      "batch": "バッチ",
+      "product": "製品",
+      "package": "パッケージ",
+      "site": "現在サイト",
+      "available": "解体可能数量"
+    },
+    "form": {
+      "subtitle": "解体数量と戻し先を入力します。",
+      "qty": "解体数量",
+      "uom": "単位",
+      "destSite": "戻し先サイト",
+      "tank": "戻し先タンク",
+      "targetBatch": "対象バッチ",
+      "lossQty": "解体ロス数量",
+      "reason": "理由",
+      "memo": "メモ"
+    },
+    "preview": {
+      "subtitle": "保存前に戻り数量と残数量を確認します。",
+      "remaining": "解体後残数量",
+      "recovered": "戻し数量",
+      "loss": "ロス数量",
+      "destSite": "戻し先サイト",
+      "tank": "戻し先タンク",
+      "targetBatch": "対象バッチ"
+    },
+    "defaults": {
+      "noTank": "タンク指定なし"
+    },
+    "actions": {
+      "back": "在庫管理へ戻る"
+    },
+    "errors": {
+      "loadFailed": "解体画面の初期データ取得に失敗しました。",
+      "invalidLot": "解体対象ロットを特定できません。",
+      "notPackaged": "パッケージ済みロットのみ解体できます。",
+      "noInventory": "解体対象の在庫数量が見つかりません。",
+      "uomRequired": "単位は必須です。",
+      "qtyRequired": "解体数量は 0 より大きい値を入力してください。",
+      "qtyExceeded": "解体数量が現在在庫数量を超えています。",
+      "lossInvalid": "ロス数量は 0 以上で入力してください。",
+      "lossTooLarge": "ロス数量は解体数量より小さくしてください。",
+      "destSiteRequired": "戻し先サイトは必須です。",
+      "batchRequired": "対象バッチは必須です。",
+      "uomConvertFailed": "数量単位の変換に失敗しました。"
+    },
+    "saveSuccess": "製品ビールの解体を登録しました。",
+    "saveFailed": "製品ビールの解体登録に失敗しました。"
   },
   "fillingReport": {
     "title": "詰口一覧表",

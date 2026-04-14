@@ -36,6 +36,15 @@
 
             <button
               type="button"
+              class="rounded border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50"
+              :title="typePanelToggleText"
+              @click="toggleTypePanel"
+            >
+              {{ typePanelToggleText }}
+            </button>
+
+            <button
+              type="button"
               class="rounded bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-60"
               :disabled="!canCreate"
               @click="startCreate"
@@ -53,11 +62,21 @@
           {{ t('common.loading') }}
         </div>
 
-        <div v-else class="grid grid-cols-1 gap-4 p-4 xl:grid-cols-[280px_minmax(0,1fr)_360px]">
-          <aside class="rounded-lg border border-gray-200 bg-gray-50">
-            <div class="border-b border-gray-200 px-4 py-3">
-              <h3 class="text-sm font-semibold text-gray-900">{{ t('material.treeTitle') }}</h3>
-              <p class="mt-1 text-xs text-gray-500">{{ t('material.treeHint') }}</p>
+        <div v-else class="grid grid-cols-1 gap-4 p-4" :class="contentGridClass">
+          <aside v-if="showTypePanel" class="rounded-lg border border-gray-200 bg-gray-50">
+            <div class="flex items-start justify-between gap-3 border-b border-gray-200 px-4 py-3">
+              <div>
+                <h3 class="text-sm font-semibold text-gray-900">{{ t('material.treeTitle') }}</h3>
+                <p class="mt-1 text-xs text-gray-500">{{ t('material.treeHint') }}</p>
+              </div>
+              <button
+                type="button"
+                class="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-white"
+                :title="typePanelToggleText"
+                @click="toggleTypePanel"
+              >
+                {{ t('common.collapse') }}
+              </button>
             </div>
 
             <div class="space-y-3 p-4">
@@ -93,15 +112,28 @@
 
               <ul v-else class="space-y-1">
                 <li v-for="entry in materialTypeTreeEntries" :key="entry.node.row.type_id">
-                  <button
-                    type="button"
-                    class="flex w-full items-center rounded px-2 py-2 text-left text-sm transition hover:bg-white"
-                    :class="selectedTypeId === entry.node.row.type_id ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200' : 'text-gray-700'"
-                    :style="{ paddingLeft: `${12 + entry.depth * 16}px` }"
-                    @click="selectType(entry.node.row.type_id)"
-                  >
-                    <span class="truncate">{{ displayMaterialTypeName(entry.node.row) }}</span>
-                  </button>
+                  <div class="flex items-center gap-1" :style="{ paddingLeft: `${8 + entry.depth * 16}px` }">
+                    <button
+                      v-if="isExpandableType(entry.node.row.type_id)"
+                      type="button"
+                      class="flex h-8 w-8 items-center justify-center rounded text-gray-500 transition hover:bg-white hover:text-gray-700"
+                      :aria-label="typeToggleLabel(isTypeExpanded(entry.node.row.type_id))"
+                      :title="typeToggleLabel(isTypeExpanded(entry.node.row.type_id))"
+                      @click.stop="toggleTypeExpanded(entry.node.row.type_id)"
+                    >
+                      <span aria-hidden="true">{{ isTypeExpanded(entry.node.row.type_id) ? '▾' : '▸' }}</span>
+                    </button>
+                    <span v-else class="inline-block h-8 w-8" aria-hidden="true" />
+
+                    <button
+                      type="button"
+                      class="flex min-w-0 flex-1 items-center rounded px-2 py-2 text-left text-sm transition hover:bg-white"
+                      :class="selectedTypeId === entry.node.row.type_id ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200' : 'text-gray-700'"
+                      @click="selectType(entry.node.row.type_id)"
+                    >
+                      <span class="truncate">{{ displayMaterialTypeName(entry.node.row) }}</span>
+                    </button>
+                  </div>
                 </li>
               </ul>
             </div>
@@ -472,6 +504,9 @@ const uomOptions = ref<UomRow[]>([])
 const selectedTypeId = ref('')
 const selectedMaterialId = ref('')
 const formMode = ref<MaterialFormMode>('idle')
+const showTypePanel = ref(true)
+const expandedTypeIds = ref<Set<string>>(new Set())
+const treeExpansionInitialized = ref(false)
 
 const showDelete = ref(false)
 const deleteTarget = ref<MaterialRow | null>(null)
@@ -513,6 +548,14 @@ const materialTypeMap = computed(() => {
   const map = new Map<string, MaterialTypeRow>()
   materialTypes.value.forEach((row) => map.set(row.type_id, row))
   return map
+})
+
+const expandableTypeIds = computed(() => {
+  const parentIds = new Set<string>()
+  for (const row of materialTypes.value) {
+    if (row.parent_type_id) parentIds.add(row.parent_type_id)
+  }
+  return parentIds
 })
 
 const materialMap = computed(() => {
@@ -577,7 +620,9 @@ const materialTypeTreeEntries = computed<MaterialTreeEntry[]>(() => {
   const entries: MaterialTreeEntry[] = []
   const visit = (node: MaterialTreeNode, depth: number) => {
     entries.push({ node, depth })
-    node.children.forEach((child) => visit(child, depth + 1))
+    if (node.children.length === 0 || isTypeExpanded(node.row.type_id)) {
+      node.children.forEach((child) => visit(child, depth + 1))
+    }
   }
   visibleMaterialTypeForest.value.forEach((node) => visit(node, 0))
   return entries
@@ -628,6 +673,17 @@ const statusOptions = computed(() => {
 })
 
 const canCreate = computed(() => Boolean(selectedTypeId.value) && !loading.value)
+const contentGridClass = computed(() => (
+  showTypePanel.value
+    ? 'xl:grid-cols-[280px_minmax(0,1fr)_360px]'
+    : 'xl:grid-cols-[minmax(0,1fr)_360px]'
+))
+const typePanelToggleText = computed(() => {
+  const title = t('material.treeTitle')
+  const action = showTypePanel.value ? t('common.collapse') : t('common.expand')
+  const isJa = locale.value.toString().toLowerCase().startsWith('ja')
+  return isJa ? `${title}を${action}` : `${action} ${title}`
+})
 
 const formTitle = computed(() => {
   if (formMode.value === 'edit') return t('material.editTitle')
@@ -669,6 +725,52 @@ function materialTypePathText(typeId: string | null | undefined) {
   return parts.join(' / ')
 }
 
+function isExpandableType(typeId: string) {
+  return expandableTypeIds.value.has(typeId)
+}
+
+function isTypeExpanded(typeId: string) {
+  if (typeSearchTerm.value.trim()) return true
+  return expandedTypeIds.value.has(typeId)
+}
+
+function typeToggleLabel(isExpanded: boolean) {
+  const isJa = locale.value.toString().toLowerCase().startsWith('ja')
+  if (isJa) return isExpanded ? '折りたたむ' : '展開'
+  return isExpanded ? 'Collapse' : 'Expand'
+}
+
+function expandTypePath(typeId: string | null | undefined) {
+  if (!typeId) return
+
+  const next = new Set(expandedTypeIds.value)
+  let current = materialTypeMap.value.get(typeId) ?? null
+
+  while (current?.parent_type_id) {
+    next.add(current.parent_type_id)
+    current = materialTypeMap.value.get(current.parent_type_id) ?? null
+  }
+
+  expandedTypeIds.value = next
+}
+
+function syncExpandedTypeState() {
+  const next = new Set<string>()
+
+  if (!treeExpansionInitialized.value) {
+    expandableTypeIds.value.forEach((typeId) => next.add(typeId))
+    expandedTypeIds.value = next
+    treeExpansionInitialized.value = true
+    return
+  }
+
+  expandableTypeIds.value.forEach((typeId) => {
+    if (expandedTypeIds.value.has(typeId)) next.add(typeId)
+  })
+
+  expandedTypeIds.value = next
+}
+
 function uomLabel(uomId: string | null) {
   if (!uomId) return '-'
   const uom = uomMap.value.get(uomId)
@@ -694,13 +796,18 @@ function clearErrors() {
 }
 
 function ensureTypeSelection() {
-  if (selectedTypeId.value && materialTypeMap.value.has(selectedTypeId.value)) return
+  if (selectedTypeId.value && materialTypeMap.value.has(selectedTypeId.value)) {
+    expandTypePath(selectedTypeId.value)
+    return
+  }
   if (rawMaterialRoot.value) {
     selectedTypeId.value = rawMaterialRoot.value.type_id
+    expandTypePath(selectedTypeId.value)
     return
   }
   const first = materialTypeForest.value[0]?.row.type_id ?? ''
   selectedTypeId.value = first
+  expandTypePath(selectedTypeId.value)
 }
 
 function resetFormPane() {
@@ -712,6 +819,20 @@ function resetFormPane() {
 
 function selectType(typeId: string) {
   selectedTypeId.value = typeId
+  expandTypePath(typeId)
+}
+
+function toggleTypeExpanded(typeId: string) {
+  if (!isExpandableType(typeId) || typeSearchTerm.value.trim()) return
+
+  const next = new Set(expandedTypeIds.value)
+  if (next.has(typeId)) next.delete(typeId)
+  else next.add(typeId)
+  expandedTypeIds.value = next
+}
+
+function toggleTypePanel() {
+  showTypePanel.value = !showTypePanel.value
 }
 
 function startCreate() {
@@ -743,6 +864,7 @@ function selectMaterial(row: MaterialRow) {
 
   if (row.material_type_id) {
     selectedTypeId.value = row.material_type_id
+    expandTypePath(row.material_type_id)
   }
 }
 
@@ -829,6 +951,7 @@ async function loadPage() {
     materialTypes.value = (typeData ?? []) as MaterialTypeRow[]
     materialRows.value = (materialData ?? []).map((row) => normalizeMaterialRow(row))
 
+    syncExpandedTypeState()
     ensureTypeSelection()
 
     if (formMode.value === 'edit' && selectedMaterialId.value) {

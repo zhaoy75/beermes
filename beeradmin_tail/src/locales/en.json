@@ -565,7 +565,8 @@
         "filling": "Filling",
         "transfer": "Transfer",
         "loss": "Loss",
-        "dispose": "Dispose"
+        "dispose": "Dispose",
+        "unpack": "Unpack"
       },
       "actions": {
         "return": "Return",
@@ -2070,6 +2071,7 @@
       "count": "{count} results"
     },
     "actions": {
+      "unpack": "Unpack",
       "showDag": "Show DAG",
       "cancelRemoval": "Complete Domestic Removal"
     },
@@ -2101,6 +2103,66 @@
     "cancelRemovalConfirm": "Complete domestic removal for {lot}?",
     "cancelRemovalSuccess": "Domestic removal was completed.",
     "cancelRemovalFailed": "Failed to complete domestic removal."
+  },
+  "producedBeerUnpacking": {
+    "title": "Packaged Beer Unpacking",
+    "subtitle": "Return packaged beer to unpacked bulk beer.",
+    "sections": {
+      "source": "Source Inventory",
+      "form": "Unpacking Entry",
+      "preview": "Result Preview"
+    },
+    "source": {
+      "subtitle": "Review the packaged lot currently available in inventory.",
+      "lotNo": "Lot No",
+      "batch": "Batch",
+      "product": "Product",
+      "package": "Package",
+      "site": "Current Site",
+      "available": "Available Qty"
+    },
+    "form": {
+      "subtitle": "Enter the unpack quantity and destination.",
+      "qty": "Unpack Qty",
+      "uom": "UOM",
+      "destSite": "Destination Site",
+      "tank": "Destination Tank",
+      "targetBatch": "Target Batch",
+      "lossQty": "Unpack Loss Qty",
+      "reason": "Reason",
+      "memo": "Memo"
+    },
+    "preview": {
+      "subtitle": "Review the remaining and recovered quantities before saving.",
+      "remaining": "Remaining Qty",
+      "recovered": "Recovered Qty",
+      "loss": "Loss Qty",
+      "destSite": "Destination Site",
+      "tank": "Destination Tank",
+      "targetBatch": "Target Batch"
+    },
+    "defaults": {
+      "noTank": "No Tank"
+    },
+    "actions": {
+      "back": "Back to Inventory"
+    },
+    "errors": {
+      "loadFailed": "Failed to load unpacking data.",
+      "invalidLot": "The unpack source lot could not be resolved.",
+      "notPackaged": "Only packaged lots can be unpacked.",
+      "noInventory": "No positive inventory quantity was found for the selected lot.",
+      "uomRequired": "UOM is required.",
+      "qtyRequired": "Enter an unpack quantity greater than 0.",
+      "qtyExceeded": "The unpack quantity exceeds the available inventory.",
+      "lossInvalid": "Loss quantity must be 0 or greater.",
+      "lossTooLarge": "Loss quantity must be smaller than the unpack quantity.",
+      "destSiteRequired": "Destination site is required.",
+      "batchRequired": "Target batch is required.",
+      "uomConvertFailed": "Failed to convert the selected quantity unit."
+    },
+    "saveSuccess": "Packaged beer unpacking was registered.",
+    "saveFailed": "Failed to register packaged beer unpacking."
   },
   "fillingReport": {
     "title": "Filling Report",

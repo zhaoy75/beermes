@@ -5,6 +5,7 @@
 - User selects packing type and inputs required fields by type
 - One save creates one packing event
 - For Filling type, multiple filling lines may be created
+- Unpacking events may be shown here as read-only history rows when they belong to the same batch context
 
 ## Entry Points
 - Batch Edit page -> button: `移送詰口管理` (Batch Packing)
@@ -75,6 +76,13 @@
    - actions: Edit / View / Delete
    - Edit switches to Edit mode with selected row values prefilled
    - View switches to read-only detail mode with selected row values prefilled
+   - unpacking events are read-only in phase 1 and must not use the standard edit form
+   - unpacking events must not show Delete from this page in phase 1
+   - unpacking events reduce `Processed volume` by the recovered quantity and show unpack loss in the `Loss` column
+   - unpacking events should display source package / source lot context in `Package Info`
+   - unpacking events should display recovered bulk quantity in `Filling Payout Qty`
+   - unpacking events should display unpack input quantity in `Total line volume`
+   - unpacking events should display remaining packaged quantity in `Filling Remaining Qty`
    - Batch Edit page packing history list must show the same derived values and use the same filling calculation rules as this page
    - In particular, for Filling rows on Batch Edit page:
      - `明細総容量` must match `Total line volume`
@@ -89,6 +97,7 @@
    - UI: segmented control or radio cards
    - Values: Filling(詰口), Ship(外部製造場移動), Transfer(社内移動), Loss, Dispose
    - Default: Filling
+   - phase 1 unpacking is not created from this selector; it is launched from inventory and consumed here only as history
 2) Common Fields
    - Event time (default now)
    - Memo (optional)
@@ -107,6 +116,7 @@
 - Total product volume of the batch
 - Processed volume (filling, shipped, transferred, lost, disposed)
 - Remaining volume = total volume - processed volume
+- Unpacking subtracts recovered volume from processed volume
 - Remaining volume must be >= 0
 - Remaining volume color:
   - yellow when > 0

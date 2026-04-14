@@ -283,7 +283,12 @@
                   >
                     {{ canEditPackingEvent(event) ? t('batch.packaging.actions.edit') : t('batch.packaging.actions.view') }}
                   </button>
-                  <button class="px-2 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700" type="button" @click="deletePackingEvent(event)">
+                  <button
+                    v-if="event.packing_type !== 'unpack'"
+                    class="px-2 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700"
+                    type="button"
+                    @click="deletePackingEvent(event)"
+                  >
                     {{ t('batch.packaging.actions.delete') }}
                   </button>
                 </td>
@@ -338,11 +343,12 @@
               <p class="text-xs uppercase text-gray-500 mb-2">{{ t('batch.packaging.dialog.packingType') }}</p>
               <div class="grid grid-cols-1 sm:grid-cols-5 gap-2">
                 <button
-                  v-for="option in packingTypeOptions"
+                  v-for="option in packingTypeButtonOptions"
                   :key="option.value"
                   class="px-3 py-2 rounded border text-sm"
                   :class="packingDialog.form?.packing_type === option.value ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'"
                   type="button"
+                  :disabled="packingDialog.readOnly"
                   @click="selectPackingType(option.value)"
                 >
                   {{ option.label }}
@@ -692,15 +698,12 @@ import { useRoute, useRouter } from 'vue-router'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import {
-  fillingLinesVolumeFromEvent as deriveFillingLinesVolumeFromEvent,
-  fillingSampleVolumeFromEvent as deriveFillingSampleVolumeFromEvent,
   fillingUnitsFromEvent,
   packingFillingPayoutFromEvent as derivePackingFillingPayoutFromEvent,
   packingFillingRemainingFromEvent as derivePackingFillingRemainingFromEvent,
   packingLossFromEvent as derivePackingLossFromEvent,
   packingTotalLineVolumeFromEvent as derivePackingTotalLineVolumeFromEvent,
   processedFillingVolumeFromEvent,
-  resolveFillingLineVolumeFromEvent as deriveResolveFillingLineVolumeFromEvent,
 } from '@/lib/batchFilling'
 import {
   buildAlcoholTypeLabelMap,
@@ -846,8 +849,8 @@ type UomOption = {
   name: string | null
 }
 
-type PackingType = 'ship' | 'filling' | 'transfer' | 'loss' | 'dispose'
-const MOVEMENT_SITE_TYPE_KEYS: Record<PackingType, string[]> = {
+type PackingType = 'ship' | 'filling' | 'transfer' | 'loss' | 'dispose' | 'unpack'
+const MOVEMENT_SITE_TYPE_KEYS: Record<Exclude<PackingType, 'unpack'>, string[]> = {
   ship: ['OTHER_BREWERY'],
   filling: [],
   transfer: ['BREWERY_STORAGE'],
@@ -881,6 +884,15 @@ type PackingEvent = {
   tank_fill_left_depth: number | null
   tank_left_volume: number | null
   sample_volume: number | null
+  loss_qty: number | null
+  loss_uom: string | null
+  source_lot_no: string | null
+  source_package_id: string | null
+  unpack_qty: number | null
+  unpack_uom: string | null
+  unpack_units: number | null
+  source_remaining_qty: number | null
+  source_remaining_uom: string | null
 }
 
 type PackingFillingLineForm = {
@@ -1082,21 +1094,15 @@ function fillingCalculationOptions() {
   }
 }
 
-function resolveFillingLineVolumeFromEvent(line: PackingFillingLine) {
-  return deriveResolveFillingLineVolumeFromEvent(line, fillingCalculationOptions())
-}
-
-function fillingLinesVolumeFromEvent(lines: PackingFillingLine[]) {
-  return deriveFillingLinesVolumeFromEvent(lines, fillingCalculationOptions())
-}
-
-function fillingSampleVolumeFromEvent(lines: PackingFillingLine[]) {
-  return deriveFillingSampleVolumeFromEvent(lines, fillingCalculationOptions())
-}
-
 function processedVolumeFromPackingEvent(event: PackingEvent) {
   if (event.packing_type === 'filling') {
     return processedFillingVolumeFromEvent(event, fillingCalculationOptions())
+  }
+  if (event.packing_type === 'unpack') {
+    const volume = eventVolumeInLiters(event)
+    if (volume != null) return -volume
+    if (event.movement?.qty != null && Number.isFinite(event.movement.qty)) return -event.movement.qty
+    return 0
   }
   const volume = eventVolumeInLiters(event)
   if (volume != null) return volume
@@ -1160,7 +1166,17 @@ const packingTypeOptions = computed(() => ([
   { value: 'transfer', label: t('batch.packaging.types.transfer') },
   { value: 'loss', label: t('batch.packaging.types.loss') },
   { value: 'dispose', label: t('batch.packaging.types.dispose') },
-] as Array<{ value: PackingType, label: string }>))
+] as Array<{ value: Exclude<PackingType, 'unpack'>, label: string }>))
+
+const packingTypeButtonOptions = computed(() => {
+  if (packingDialog.readOnly && packingDialog.form?.packing_type === 'unpack') {
+    return [
+      ...packingTypeOptions.value,
+      { value: 'unpack' as const, label: t('batch.packaging.types.unpack') },
+    ]
+  }
+  return packingTypeOptions.value
+})
 
 const packageCategoryOptions = computed(() =>
   packageCategories.value.map((row) => ({
@@ -1288,6 +1304,7 @@ const showPackingReason = computed(() => {
 const movementSiteOptions = computed(() => {
   const type = packingDialog.form?.packing_type
   if (!type) return []
+  if (type === 'unpack') return allSiteOptions.value
   const allowedKeys = MOVEMENT_SITE_TYPE_KEYS[type]
   if (!allowedKeys.length) return allSiteOptions.value
   const keySet = new Set(allowedKeys)
@@ -1958,6 +1975,10 @@ async function loadPackingEvents() {
 
     packingEvents.value = rows.map((row) => {
       const meta = (row.meta ?? {}) as Record<string, any>
+      const movementLines = linesByMovement.get(row.id) ?? []
+      const recoveredLineMeta = movementLines
+        .map((line: any) => (line?.meta ?? {}) as Record<string, any>)
+        .find((lineMeta) => String(lineMeta?.line_role ?? '') === 'RECOVERED')
       const rawTankNo = meta.tank_no != null ? String(meta.tank_no) : null
       const rawTankId = meta.tank_id != null ? String(meta.tank_id) : null
       const tankId = rawTankId || (rawTankNo && isUuidLike(rawTankNo) ? rawTankNo : null)
@@ -1992,6 +2013,31 @@ async function loadPackingEvents() {
         tank_fill_left_depth: meta.tank_fill_left_depth != null ? toNumber(meta.tank_fill_left_depth) : null,
         tank_left_volume: meta.tank_left_volume != null ? toNumber(meta.tank_left_volume) : null,
         sample_volume: meta.sample_volume != null ? toNumber(meta.sample_volume) : null,
+        loss_qty: meta.loss_qty != null ? toNumber(meta.loss_qty) : null,
+        loss_uom: meta.loss_uom != null ? String(meta.loss_uom) : null,
+        source_lot_no: meta.source_lot_no != null ? String(meta.source_lot_no) : null,
+        source_package_id: meta.source_package_id != null
+          ? String(meta.source_package_id)
+          : recoveredLineMeta?.source_package_id != null
+            ? String(recoveredLineMeta.source_package_id)
+            : null,
+        unpack_qty: meta.unpack_qty != null
+          ? toNumber(meta.unpack_qty)
+          : (meta.volume_qty != null ? (toNumber(meta.volume_qty) ?? 0) + (toNumber(meta.loss_qty) ?? 0) : null),
+        unpack_uom: meta.unpack_uom != null
+          ? String(meta.unpack_uom)
+          : meta.volume_uom != null
+            ? String(meta.volume_uom)
+            : null,
+        unpack_units: meta.unpack_units != null ? toNumber(meta.unpack_units) : null,
+        source_remaining_qty: meta.source_remaining_qty != null ? toNumber(meta.source_remaining_qty) : null,
+        source_remaining_uom: meta.source_remaining_uom != null
+          ? String(meta.source_remaining_uom)
+          : meta.unpack_uom != null
+            ? String(meta.unpack_uom)
+            : meta.volume_uom != null
+              ? String(meta.volume_uom)
+              : null,
       } as PackingEvent
     })
     syncPackingPageEditor()
@@ -2261,7 +2307,12 @@ async function openPackingDialog() {
 }
 
 function canEditPackingEvent(event: PackingEvent) {
-  return event.packing_type !== 'filling' && event.packing_type !== 'transfer' && event.packing_type !== 'ship'
+  return (
+    event.packing_type !== 'filling'
+    && event.packing_type !== 'transfer'
+    && event.packing_type !== 'ship'
+    && event.packing_type !== 'unpack'
+  )
 }
 
 function openPackingEditInternal(event: PackingEvent, readOnly = false) {
@@ -3185,6 +3236,7 @@ function formatFillingTotals(totals: { totalUnits: number, totalVolume: number |
 }
 
 function formatPackingType(type: PackingType) {
+  if (type === 'unpack') return t('batch.packaging.types.unpack')
   const match = packingTypeOptions.value.find((option) => option.value === type)
   return match?.label ?? type
 }
@@ -3238,6 +3290,14 @@ function resolvePackageCode(packageTypeId: string) {
 }
 
 function formatPackingPackageInfo(event: PackingEvent) {
+  if (event.packing_type === 'unpack') {
+    const parts: string[] = []
+    const packageCode = event.source_package_id ? resolvePackageCode(event.source_package_id) : ''
+    const sourceLotNo = event.source_lot_no?.trim() ?? ''
+    if (packageCode) parts.push(packageCode)
+    if (sourceLotNo) parts.push(sourceLotNo)
+    return parts.length ? parts.join(' / ') : '—'
+  }
   if (!event.filling_lines.length) return '—'
   const codes = event.filling_lines
     .map((line) => resolvePackageCode(line.package_type_id))
@@ -3247,6 +3307,18 @@ function formatPackingPackageInfo(event: PackingEvent) {
 }
 
 function formatPackingNumber(event: PackingEvent) {
+  if (event.packing_type === 'unpack') {
+    let unpackUnits = event.unpack_units
+    if ((unpackUnits == null || !Number.isFinite(unpackUnits)) && event.source_package_id) {
+      const unpackVolume = packingTotalLineVolumeFromEvent(event)
+      const packageUnitVolume = resolvePackageUnitVolume(event.source_package_id)
+      if (unpackVolume != null && packageUnitVolume != null && packageUnitVolume > 0) {
+        unpackUnits = unpackVolume / packageUnitVolume
+      }
+    }
+    if (unpackUnits == null || !Number.isFinite(unpackUnits)) return '—'
+    return unpackUnits.toLocaleString(undefined, { maximumFractionDigits: 3 })
+  }
   if (!event.filling_lines.length) return '—'
   const totalUnits = fillingUnitsFromEvent(event.filling_lines, fillingCalculationOptions())
   if (!Number.isFinite(totalUnits)) return '—'
@@ -3266,15 +3338,24 @@ function packingTankLeftVolumeFromEvent(event: PackingEvent) {
 }
 
 function packingFillingPayoutFromEvent(event: PackingEvent) {
+  if (event.packing_type === 'unpack') return eventVolumeInLiters(event)
   return derivePackingFillingPayoutFromEvent(event)
 }
 
 function packingTotalLineVolumeFromEvent(event: PackingEvent) {
+  if (event.packing_type === 'unpack') {
+    if (event.unpack_qty == null) return null
+    return convertToLiters(event.unpack_qty, resolveUomCode(event.unpack_uom))
+  }
   if (event.packing_type !== 'filling') return null
   return derivePackingTotalLineVolumeFromEvent(event, fillingCalculationOptions())
 }
 
 function packingFillingRemainingFromEvent(event: PackingEvent) {
+  if (event.packing_type === 'unpack') {
+    if (event.source_remaining_qty == null) return null
+    return convertToLiters(event.source_remaining_qty, resolveUomCode(event.source_remaining_uom))
+  }
   if (event.packing_type !== 'filling') return null
   return derivePackingFillingRemainingFromEvent(event, fillingCalculationOptions())
 }
@@ -3310,6 +3391,10 @@ function formatPackingFillingRemaining(event: PackingEvent) {
 }
 
 function packingLossFromEvent(event: PackingEvent) {
+  if (event.packing_type === 'unpack') {
+    if (event.loss_qty == null) return null
+    return convertToLiters(event.loss_qty, resolveUomCode(event.loss_uom))
+  }
   if (event.packing_type !== 'filling') return null
   return derivePackingLossFromEvent(event, fillingCalculationOptions())
 }

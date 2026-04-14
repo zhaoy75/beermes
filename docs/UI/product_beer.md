@@ -4,7 +4,7 @@
 - Keep inventory browsing on the dedicated `ProducedBeerInventory` page, not on this page.
 
 ## Entry Points
-- Sidebar -> `移出記録` / `Produced Craft Beer`
+- Sidebar -> `移出登録` / `Movement Register`
 - Route: `/producedBeer`
 - Create page: `/producedBeerMovement`
 - Fast-create page: `/producedBeerMovementFast`

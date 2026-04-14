@@ -219,6 +219,14 @@
                   <td class="px-3 py-2">{{ row.siteLabelText }}</td>
                   <td class="px-3 py-2 space-x-2">
                     <button
+                      v-if="canUnpack(row)"
+                      class="px-2 py-1 text-xs rounded border border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
+                      type="button"
+                      @click="openUnpackPage(row)"
+                    >
+                      {{ t('producedBeerInventory.actions.unpack') }}
+                    </button>
+                    <button
                       class="px-2 py-1 text-xs rounded border hover:bg-gray-100 disabled:opacity-50"
                       type="button"
                       :disabled="!row.canShowDag"
@@ -419,6 +427,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import Modal from '@/components/ui/Modal.vue'
@@ -427,6 +436,7 @@ import { useProducedBeerInventory } from '@/composables/useProducedBeerInventory
 import { toast } from 'vue3-toastify'
 
 const { t } = useI18n()
+const router = useRouter()
 const pageTitle = computed(() => t('producedBeerInventory.title'))
 
 const {
@@ -687,6 +697,18 @@ function extractErrorMessage(err: unknown) {
   if (typeof rec.details === 'string' && rec.details.trim()) return rec.details
   if (typeof rec.hint === 'string' && rec.hint.trim()) return rec.hint
   return ''
+}
+
+function canUnpack(row: InventoryPageRow) {
+  return Boolean(row.packageId && row.lotIds.length === 1 && row.siteId)
+}
+
+function openUnpackPage(row: InventoryPageRow) {
+  if (!canUnpack(row)) return
+  void router.push({
+    name: 'ProducedBeerUnpacking',
+    params: { lotId: row.lotId },
+  })
 }
 
 function closeDagDialog() {

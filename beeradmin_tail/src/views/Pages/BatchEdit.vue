@@ -288,7 +288,12 @@
                 <td class="px-3 py-2 text-right text-gray-700">{{ formatPackingLoss(event) }}</td>
                 <td class="px-3 py-2 text-gray-600">{{ event.memo || '—' }}</td>
                 <td class="px-3 py-2">
-                  <button class="px-2 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700" type="button" @click="deletePackingEvent(event)">
+                  <button
+                    v-if="event.packing_type !== 'unpack'"
+                    class="px-2 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700"
+                    type="button"
+                    @click="deletePackingEvent(event)"
+                  >
                     {{ t('batch.packaging.actions.delete') }}
                   </button>
                 </td>
@@ -630,7 +635,7 @@ type UomOption = {
   name: string | null
 }
 
-type PackingType = 'ship' | 'filling' | 'transfer' | 'loss' | 'dispose'
+type PackingType = 'ship' | 'filling' | 'transfer' | 'loss' | 'dispose' | 'unpack'
 
 type PackingFillingLine = {
   id: string
@@ -655,6 +660,15 @@ type PackingEvent = {
   tank_fill_start_volume: number | null
   tank_left_volume: number | null
   sample_volume: number | null
+  loss_qty: number | null
+  loss_uom: string | null
+  source_lot_no: string | null
+  source_package_id: string | null
+  unpack_qty: number | null
+  unpack_uom: string | null
+  unpack_units: number | null
+  source_remaining_qty: number | null
+  source_remaining_uom: string | null
 }
 
 const packageCategories = ref<PackageCategoryOption[]>([])
@@ -857,6 +871,12 @@ function fillingCalculationOptions() {
 function processedVolumeFromPackingEvent(event: PackingEvent) {
   if (event.packing_type === 'filling') {
     return processedFillingVolumeFromEvent(event, fillingCalculationOptions())
+  }
+  if (event.packing_type === 'unpack') {
+    const volume = eventVolumeInLiters(event)
+    if (volume != null) return -volume
+    if (event.movement?.qty != null && Number.isFinite(event.movement.qty)) return -event.movement.qty
+    return 0
   }
   const volume = eventVolumeInLiters(event)
   if (volume != null) return volume
@@ -1575,6 +1595,10 @@ async function loadPackingEvents() {
 
     packingEvents.value = rows.map((row) => {
       const meta = (row.meta ?? {}) as Record<string, any>
+      const movementLines = linesByMovement.get(row.id) ?? []
+      const recoveredLineMeta = movementLines
+        .map((line: any) => (line?.meta ?? {}) as Record<string, any>)
+        .find((lineMeta) => String(lineMeta?.line_role ?? '') === 'RECOVERED')
       const fillingLines = Array.isArray(meta.filling_lines)
         ? meta.filling_lines.map((line: any) => ({
           id: String(line?.id ?? generateLocalId()),
@@ -1603,6 +1627,31 @@ async function loadPackingEvents() {
         tank_fill_start_volume: meta.tank_fill_start_volume != null ? toNumber(meta.tank_fill_start_volume) : null,
         tank_left_volume: meta.tank_left_volume != null ? toNumber(meta.tank_left_volume) : null,
         sample_volume: meta.sample_volume != null ? toNumber(meta.sample_volume) : null,
+        loss_qty: meta.loss_qty != null ? toNumber(meta.loss_qty) : null,
+        loss_uom: meta.loss_uom != null ? String(meta.loss_uom) : null,
+        source_lot_no: meta.source_lot_no != null ? String(meta.source_lot_no) : null,
+        source_package_id: meta.source_package_id != null
+          ? String(meta.source_package_id)
+          : recoveredLineMeta?.source_package_id != null
+            ? String(recoveredLineMeta.source_package_id)
+            : null,
+        unpack_qty: meta.unpack_qty != null
+          ? toNumber(meta.unpack_qty)
+          : (meta.volume_qty != null ? (toNumber(meta.volume_qty) ?? 0) + (toNumber(meta.loss_qty) ?? 0) : null),
+        unpack_uom: meta.unpack_uom != null
+          ? String(meta.unpack_uom)
+          : meta.volume_uom != null
+            ? String(meta.volume_uom)
+            : null,
+        unpack_units: meta.unpack_units != null ? toNumber(meta.unpack_units) : null,
+        source_remaining_qty: meta.source_remaining_qty != null ? toNumber(meta.source_remaining_qty) : null,
+        source_remaining_uom: meta.source_remaining_uom != null
+          ? String(meta.source_remaining_uom)
+          : meta.unpack_uom != null
+            ? String(meta.unpack_uom)
+            : meta.volume_uom != null
+              ? String(meta.volume_uom)
+              : null,
       } as PackingEvent
     })
   } catch (err) {
@@ -2050,6 +2099,7 @@ function isPackageVolumeFixed(packageTypeId: string) {
 }
 
 function formatPackingType(type: PackingType) {
+  if (type === 'unpack') return t('batch.packaging.types.unpack')
   const match = packingTypeOptions.value.find((option) => option.value === type)
   return match?.label ?? type
 }
@@ -2097,6 +2147,14 @@ function resolvePackageCode(packageTypeId: string) {
 }
 
 function formatPackingPackageInfo(event: PackingEvent) {
+  if (event.packing_type === 'unpack') {
+    const parts: string[] = []
+    const packageCode = event.source_package_id ? resolvePackageCode(event.source_package_id) : ''
+    const sourceLotNo = event.source_lot_no?.trim() ?? ''
+    if (packageCode) parts.push(packageCode)
+    if (sourceLotNo) parts.push(sourceLotNo)
+    return parts.length ? parts.join(' / ') : '—'
+  }
   if (!event.filling_lines.length) return '—'
   const codes = event.filling_lines
     .map((line) => resolvePackageCode(line.package_type_id))
@@ -2106,6 +2164,18 @@ function formatPackingPackageInfo(event: PackingEvent) {
 }
 
 function formatPackingNumber(event: PackingEvent) {
+  if (event.packing_type === 'unpack') {
+    let unpackUnits = event.unpack_units
+    if ((unpackUnits == null || !Number.isFinite(unpackUnits)) && event.source_package_id) {
+      const unpackVolume = packingTotalLineVolumeFromEvent(event)
+      const packageUnitVolume = resolvePackageUnitVolume(event.source_package_id)
+      if (unpackVolume != null && packageUnitVolume != null && packageUnitVolume > 0) {
+        unpackUnits = unpackVolume / packageUnitVolume
+      }
+    }
+    if (unpackUnits == null || !Number.isFinite(unpackUnits)) return '—'
+    return unpackUnits.toLocaleString(undefined, { maximumFractionDigits: 3 })
+  }
   if (!event.filling_lines.length) return '—'
   const totalUnits = fillingUnitsFromEvent(event.filling_lines, fillingCalculationOptions())
   if (!Number.isFinite(totalUnits)) return '—'
@@ -2125,20 +2195,33 @@ function packingTankLeftVolumeFromEvent(event: PackingEvent) {
 }
 
 function packingFillingPayoutFromEvent(event: PackingEvent) {
+  if (event.packing_type === 'unpack') return eventVolumeInLiters(event)
   return derivePackingFillingPayoutFromEvent(event)
 }
 
 function packingTotalLineVolumeFromEvent(event: PackingEvent) {
+  if (event.packing_type === 'unpack') {
+    if (event.unpack_qty == null) return null
+    return convertToLiters(event.unpack_qty, resolveUomCode(event.unpack_uom))
+  }
   if (event.packing_type !== 'filling') return null
   return derivePackingTotalLineVolumeFromEvent(event, fillingCalculationOptions())
 }
 
 function packingFillingRemainingFromEvent(event: PackingEvent) {
+  if (event.packing_type === 'unpack') {
+    if (event.source_remaining_qty == null) return null
+    return convertToLiters(event.source_remaining_qty, resolveUomCode(event.source_remaining_uom))
+  }
   if (event.packing_type !== 'filling') return null
   return derivePackingFillingRemainingFromEvent(event, fillingCalculationOptions())
 }
 
 function packingLossFromEvent(event: PackingEvent) {
+  if (event.packing_type === 'unpack') {
+    if (event.loss_qty == null) return null
+    return convertToLiters(event.loss_qty, resolveUomCode(event.loss_uom))
+  }
   if (event.packing_type !== 'filling') return null
   return derivePackingLossFromEvent(event, fillingCalculationOptions())
 }

@@ -95,6 +95,7 @@
 - Each inventory row must show:
   - `関連履歴` / `Show DAG`
   - `国内移出完了` / `Complete Domestic Removal`
+  - `解体` / `Unpack`
 
 #### `関連履歴` / `Show DAG`
 - Purpose:
@@ -125,6 +126,21 @@
   - backend should update inventory / lot quantity consistently and keep audit metadata
   - backend should not delete rows
   - see dedicated redesign spec: [domestic-removal-complete-redesign.md](/Users/zhao/dev/other/beer/specs/domestic-removal-complete-redesign.md)
+
+#### `解体` / `Unpack`
+- Purpose:
+  - start a packaged-beer unpacking workflow from the current packaged inventory row
+- UI behavior:
+  - this action is visible only for rows that represent packaged beer with positive quantity
+  - this action is hidden when the visible row is a merged multi-lot row
+  - clicking the action does not unpack inline inside the grid
+  - clicking the action navigates to the dedicated unpacking registration page
+  - the selected inventory row provides the initial source lot context
+- Backend direction:
+  - save behavior is not implemented on the inventory page itself
+  - the destination page must call a dedicated unpacking RPC
+  - unpacking must create a new bulk lot rather than directly rewriting the historical source lot before filling
+  - see dedicated spec: [produced-beer-unpacking-page.md](/Users/zhao/dev/other/beer/specs/produced-beer-unpacking-page.md)
 
 ### Row Merge
 - inventory rows are merged only when manufacturing batch, lot code, lot tax type, package type, and site all match
@@ -158,7 +174,8 @@
 5. The inventory page includes a search section with `Keyword`, `Product`, `Site`, `Package`, and `Show Non-Package` filters.
 6. `Show Non-Package` defaults to `off`, and rows without `package_id` are hidden until the checkbox is turned on, except for inventory-arrival rows created by `INTERNAL_TRANSFER` or `RETURN_FROM_CUSTOMER`.
 7. The inventory grid supports sort on each visible data column.
-8. Each inventory row includes `関連履歴` and `国内移出完了` actions.
+8. Each inventory row includes `関連履歴`, `国内移出完了`, and `解体` actions.
 9. `関連履歴` shows all related movement / lot genealogy for the selected row.
 10. `国内移出完了` executes through backend business logic, only for `TAX_STORAGE` rows, and removes or updates the visible merged row after refresh.
-11. The new page and existing movement page both load successfully without TypeScript or build regressions.
+11. `解体` navigates to a dedicated unpacking page using the selected inventory row as source context.
+12. The new page and existing movement page both load successfully without TypeScript or build regressions.

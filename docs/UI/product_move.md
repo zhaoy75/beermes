@@ -56,7 +56,7 @@ System behavior:
 - movement_get_movement_UI_intent
 - list the movement intents in return json
 - Only movement intents with `movement_intent_labels.<code>.show_in_movement_wizard = true` are shown in this wizard.
-- For this wizard, `INTERNAL_TRANSFER` and `SHIP_DOMESTIC` must be hidden by rule configuration.
+- For this wizard, `INTERNAL_TRANSFER`, `SHIP_DOMESTIC`, and `LOSS` must be hidden by rule configuration.
 
 --------------------------------------------------
 Step 2: Select src/dst site（移出元先選択）

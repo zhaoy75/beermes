@@ -70,6 +70,8 @@
 - do not show full recipe detail blocks here
 - if batch or step is not found, show a clear not-found state
 - static labels, option values, and generic fallback text must come from locale resources
+- this section should stay compact and summary-like rather than card-heavy
+- summary items should prefer denser spacing and shorter vertical rhythm
 
 ## Section 2: Step Execution Control
 
@@ -92,6 +94,7 @@
 - status update is initiated from the current step only
 - changing a step on this page must not update batch header fields directly
 - if status logic later requires validation, that validation belongs here, not on `BatchEdit`
+- keep this section visually compact; prefer a tight grid over large isolated form blocks
 - state machine rule for this phase:
   - when the current step is saved as `completed` or `skipped`
   - if `ended_at` is blank, auto-set it to now
@@ -132,19 +135,18 @@
 ### Purpose
 - Capture what was actually consumed or issued for this step.
 
-### Subsection A: Planned Inputs
-- show:
-  - material role
-  - material type / label
+### Subsection A: Merged Plan / Actual Table
+- show in one table:
+  - planned material type / label
   - planned qty
-  - uom
-
-### Subsection B: Actual Inputs
-- editable / maintainable records for:
-  - material or lot
-  - source site context for auto-allocation cases
+  - planned uom
+  - consumption mode
+  - actual material
   - actual qty
-  - uom
+- editable / maintainable actual-side records:
+  - actual material
+  - actual qty
+  - lot when the operator needs lot-specific execution capture
   - consumed at
   - note
 
@@ -161,6 +163,9 @@
 - planned rows are reference only
 - actual rows belong to the selected `batch_step_id`
 - `mes.batch_material_actual` is an execution record and not the inventory source of truth
+- planned and actual material inputs should be shown together instead of in separate sections
+- when an actual row is tied to a planned row, the actual material selector should default to materials matching the planned material type
+- the operator must still be able to add extra actual rows that are not tied to a planned row
 - when the planned recipe input uses `consumption_mode = backflush`, the actual row may remain unresolved to a lot while the step is in progress
 - when a `backflush` step is completed, the page must resolve the actual issue to concrete raw-material lots and create posted inventory issue movements
 - the backflush inventory issue must use `doc_type = 'production_issue'`
@@ -169,6 +174,24 @@
 - insufficient stock for backflush must block step completion
 - this page must not change filling / packing data
 - this page must not alter finished-goods inventory result logic owned by `actual_yield` or packing
+
+### Subsection B: Output Materials
+- show a separate output-material section on the same page
+- show:
+  - output material type / name
+  - planned qty
+  - uom
+  - output type
+  - actual qty
+- support an add button for extra output rows
+- actual output qty should be maintained in execution-side JSON only
+- extra operator-added rows may capture:
+  - output material type
+  - output name
+  - output type
+  - uom
+  - actual qty
+- this section is step-level execution reference and actual capture, not finished-goods inventory posting
 
 ## Section 5: Equipment Execution
 

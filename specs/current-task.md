@@ -1,49 +1,42 @@
 # Current Task
 
 ## Goal
-- Create a sample DML script for `mes.mst_material` covering typical craft beer manufacturing materials.
+- Make the top summary and `工程実行コントロール` sections on `BatchStepExecution` more compact.
 
 ## Scope
-- Add a new SQL seed/sample file under `DB/dml/mes`.
-- Follow the repo's existing material seed style:
-  - tenant-scoped
-  - type and UOM lookup by code
-  - `INSERT ... ON CONFLICT (tenant_id, material_code) DO UPDATE`
-- Include representative craft beer manufacturing materials across:
-  - brewing water
-  - malts
-  - adjuncts
-  - hops
-  - yeast
-  - process aids / utilities if useful
-  - packaging
-  - finished goods
+- Reduce vertical space usage in the top summary section.
+- Reduce vertical space usage in the `工程実行コントロール` section.
+- Keep the same fields, actions, and save behavior.
+- Limit this task to layout / spacing / density changes in those two sections.
 
 ## Non-Goals
 - Do not change schema.
-- Do not modify existing seed files unless necessary.
-- Do not add frontend changes.
-- Do not redesign recipe sample data in this task.
+- Do not change step save behavior.
+- Do not change materials, outputs, equipment, QA, deviation, or execution-log sections.
+- Do not refactor unrelated page structure outside the top summary and execution control sections.
 
 ## Affected Files
 - [specs/current-task.md](/Users/zhao/dev/other/beer/specs/current-task.md)
-- [DB/dml/mes/mst_material_craft_beer_sample.sql](/Users/zhao/dev/other/beer/DB/dml/mes/mst_material_craft_beer_sample.sql)
+- [specs/batch-step-execution-page.md](/Users/zhao/dev/other/beer/specs/batch-step-execution-page.md)
+- [beeradmin_tail/src/views/Pages/BatchStepExecution.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/BatchStepExecution.vue)
 
 ## Data Model / API Changes
 - None.
-- Sample DML targets `mes.mst_material`.
 
 ## Final Decisions
-- The sample should be safe to rerun through idempotent upsert behavior.
-- The sample should use shared `public.type_def` entries in the `material_type` domain and existing `mst_uom` rows.
-- The sample should be useful independently of the larger recipe seed files.
+- The summary area uses denser cards, smaller heading text, and reduced section padding so more step context fits above the fold.
+- The execution control section keeps the same inputs but uses a tighter grid, shorter field heights, and a smaller notes area.
+- This task is visual only and must not change data handling.
 
 ## Validation Plan
 - Run:
-  - review the SQL for consistency with existing seed patterns
+  - `npx eslint src/views/Pages/BatchStepExecution.vue --no-fix` in `beeradmin_tail`
   - `npm run type-check` in `beeradmin_tail`
   - `npm run lint` in `beeradmin_tail`
   - `npm run test` in `beeradmin_tail`
 
 ## Validation Results
-- Pending implementation.
+- `npx eslint src/views/Pages/BatchStepExecution.vue --no-fix`: passed
+- `npm run type-check`: passed
+- `npm run lint`: failed with the same 315 pre-existing repo-wide ESLint errors outside this task
+- `npm run test`: failed because `beeradmin_tail/package.json` has no `test` script

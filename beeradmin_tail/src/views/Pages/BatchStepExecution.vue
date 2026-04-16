@@ -2,19 +2,19 @@
   <AdminLayout>
     <PageBreadcrumb :pageTitle="pageTitle" />
 
-    <div class="space-y-6">
+    <div class="space-y-5">
       <section class="rounded-lg border border-gray-200 bg-white shadow">
-        <header class="flex flex-col gap-3 border-b p-4 md:flex-row md:items-start md:justify-between">
+        <header class="flex flex-col gap-2 border-b px-4 py-3 md:flex-row md:items-start md:justify-between">
           <div>
-            <h2 class="text-lg font-semibold text-gray-900">{{ pageTitle }}</h2>
-            <p class="text-sm text-gray-500">{{ pageSubtitle }}</p>
+            <h2 class="text-base font-semibold text-gray-900">{{ pageTitle }}</h2>
+            <p class="text-xs text-gray-500">{{ pageSubtitle }}</p>
           </div>
           <div class="flex flex-wrap gap-2">
-            <button class="rounded border border-gray-300 px-3 py-2 hover:bg-gray-100" type="button" @click="goBack">
+            <button class="rounded border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-100" type="button" @click="goBack">
               {{ t('batch.edit.backToBatch') }}
             </button>
             <button
-              class="rounded bg-brand-500 px-3 py-2 text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60"
+              class="rounded bg-brand-500 px-3 py-1.5 text-sm text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60"
               type="button"
               :disabled="!step || loadingPage || stepSaveState.saving"
               @click="saveStepInputs"
@@ -24,10 +24,10 @@
           </div>
         </header>
 
-        <div v-if="loadingPage" class="p-6 text-sm text-gray-500">
+        <div v-if="loadingPage" class="p-5 text-sm text-gray-500">
           {{ t('common.loading') }}
         </div>
-        <div v-else-if="pageError" class="p-6 text-sm text-red-600">
+        <div v-else-if="pageError" class="p-5 text-sm text-red-600">
           {{ pageError }}
         </div>
         <template v-else-if="step && batch">
@@ -38,18 +38,18 @@
             {{ stepSaveState.success }}
           </div>
 
-          <div class="grid grid-cols-1 gap-3 p-4 md:grid-cols-2 xl:grid-cols-4">
-            <div class="rounded-lg border border-gray-200 p-3">
-              <div class="text-xs uppercase text-gray-500">{{ t('batch.edit.batchCode') }}</div>
-              <div class="mt-1 text-sm font-medium text-gray-800">{{ batch.batch_code || '—' }}</div>
+          <div class="grid grid-cols-1 gap-2.5 p-3 md:grid-cols-2 xl:grid-cols-6">
+            <div class="rounded-lg border border-gray-200 px-3 py-2">
+              <div class="text-[11px] uppercase tracking-wide text-gray-500">{{ t('batch.edit.batchCode') }}</div>
+              <div class="mt-0.5 text-sm font-medium text-gray-800">{{ batch.batch_code || '—' }}</div>
             </div>
-            <div class="rounded-lg border border-gray-200 p-3">
-              <div class="text-xs uppercase text-gray-500">{{ t('batch.edit.productName') }}</div>
-              <div class="mt-1 text-sm font-medium text-gray-800">{{ batch.product_name || '—' }}</div>
+            <div class="rounded-lg border border-gray-200 px-3 py-2">
+              <div class="text-[11px] uppercase tracking-wide text-gray-500">{{ t('batch.edit.productName') }}</div>
+              <div class="mt-0.5 text-sm font-medium text-gray-800">{{ batch.product_name || '—' }}</div>
             </div>
-            <div class="rounded-lg border border-gray-200 p-3 xl:col-span-2">
-              <div class="text-xs uppercase text-gray-500">{{ t('batch.edit.releasedRecipeTitle') }}</div>
-              <div class="mt-1 flex flex-wrap items-center gap-2 text-sm">
+            <div class="rounded-lg border border-gray-200 px-3 py-2 md:col-span-2 xl:col-span-2">
+              <div class="text-[11px] uppercase tracking-wide text-gray-500">{{ t('batch.edit.releasedRecipeTitle') }}</div>
+              <div class="mt-0.5 flex flex-wrap items-center gap-1.5 text-sm">
                 <template v-if="hasReleasedRecipe">
                   <button
                     v-if="canOpenReleasedRecipe"
@@ -67,25 +67,25 @@
                 <span v-else class="text-gray-500">{{ t('batch.edit.releasedRecipeEmpty') }}</span>
               </div>
             </div>
-            <div class="rounded-lg border border-gray-200 p-3">
-              <div class="text-xs uppercase text-gray-500">{{ t('batch.edit.stepName') }}</div>
-              <div class="mt-1 text-sm font-medium text-gray-800">{{ `${step.step_no}. ${step.step_name}` }}</div>
+            <div class="rounded-lg border border-gray-200 px-3 py-2">
+              <div class="text-[11px] uppercase tracking-wide text-gray-500">{{ t('batch.edit.stepName') }}</div>
+              <div class="mt-0.5 text-sm font-medium text-gray-800">{{ `${step.step_no}. ${step.step_name}` }}</div>
             </div>
-            <div class="rounded-lg border border-gray-200 p-3">
-              <div class="text-xs uppercase text-gray-500">{{ t('batch.edit.stepCode') }}</div>
-              <div class="mt-1 text-sm font-medium text-gray-800">{{ step.step_code }}</div>
+            <div class="rounded-lg border border-gray-200 px-3 py-2">
+              <div class="text-[11px] uppercase tracking-wide text-gray-500">{{ t('batch.edit.stepCode') }}</div>
+              <div class="mt-0.5 text-sm font-medium text-gray-800">{{ step.step_code }}</div>
             </div>
-            <div class="rounded-lg border border-gray-200 p-3">
-              <div class="text-xs uppercase text-gray-500">{{ t('batch.edit.stepTemplate') }}</div>
-              <div class="mt-1 text-sm text-gray-700">{{ step.step_template_code || '—' }}</div>
+            <div class="rounded-lg border border-gray-200 px-3 py-2">
+              <div class="text-[11px] uppercase tracking-wide text-gray-500">{{ t('batch.edit.stepTemplate') }}</div>
+              <div class="mt-0.5 text-sm text-gray-700">{{ step.step_template_code || '—' }}</div>
             </div>
-            <div class="rounded-lg border border-gray-200 p-3">
-              <div class="text-xs uppercase text-gray-500">{{ t('batch.edit.stepType') }}</div>
-              <div class="mt-1 text-sm text-gray-700">{{ selectedStepTypeText }}</div>
+            <div class="rounded-lg border border-gray-200 px-3 py-2">
+              <div class="text-[11px] uppercase tracking-wide text-gray-500">{{ t('batch.edit.stepType') }}</div>
+              <div class="mt-0.5 text-sm text-gray-700">{{ selectedStepTypeText }}</div>
             </div>
-            <div class="rounded-lg border border-gray-200 p-3 xl:col-span-2">
-              <div class="text-xs uppercase text-gray-500">{{ t('batch.edit.stepInstructions') }}</div>
-              <div class="mt-1 whitespace-pre-wrap text-sm text-gray-700">{{ selectedStepInstructionsText }}</div>
+            <div class="rounded-lg border border-gray-200 px-3 py-2 md:col-span-2 xl:col-span-3">
+              <div class="text-[11px] uppercase tracking-wide text-gray-500">{{ t('batch.edit.stepInstructions') }}</div>
+              <div class="mt-0.5 whitespace-pre-wrap text-sm leading-5 text-gray-700">{{ selectedStepInstructionsText }}</div>
             </div>
           </div>
         </template>
@@ -93,35 +93,35 @@
 
       <template v-if="step && batch">
         <section class="rounded-lg border border-gray-200 bg-white shadow">
-          <div class="border-b px-4 py-3">
+          <div class="border-b px-4 py-2.5">
             <h3 class="text-sm font-semibold text-gray-900">{{ t('batch.edit.stepExecutionControlTitle') }}</h3>
           </div>
-          <div class="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 xl:grid-cols-4">
+          <div class="grid grid-cols-1 gap-3 p-3 md:grid-cols-2 xl:grid-cols-5">
             <div>
-              <label class="mb-1 block text-sm text-gray-600">{{ t('batch.edit.stepStatus') }}</label>
-              <select v-model="stepForm.status" class="h-[40px] w-full rounded border px-3">
+              <label class="mb-1 block text-xs font-medium text-gray-600">{{ t('batch.edit.stepStatus') }}</label>
+              <select v-model="stepForm.status" class="h-[36px] w-full rounded border px-2.5 text-sm">
                 <option v-for="option in stepStatusOptions" :key="option.value" :value="option.value">
                   {{ option.label }}
                 </option>
               </select>
             </div>
             <div>
-              <label class="mb-1 block text-sm text-gray-600">{{ t('batch.edit.stepStartedAt') }}</label>
-              <input v-model="stepForm.started_at" type="datetime-local" class="h-[40px] w-full rounded border px-3" />
+              <label class="mb-1 block text-xs font-medium text-gray-600">{{ t('batch.edit.stepStartedAt') }}</label>
+              <input v-model="stepForm.started_at" type="datetime-local" class="h-[36px] w-full rounded border px-2.5 text-sm" />
             </div>
             <div>
-              <label class="mb-1 block text-sm text-gray-600">{{ t('batch.edit.stepEndedAt') }}</label>
-              <input v-model="stepForm.ended_at" type="datetime-local" class="h-[40px] w-full rounded border px-3" />
+              <label class="mb-1 block text-xs font-medium text-gray-600">{{ t('batch.edit.stepEndedAt') }}</label>
+              <input v-model="stepForm.ended_at" type="datetime-local" class="h-[36px] w-full rounded border px-2.5 text-sm" />
             </div>
             <div>
-              <label class="mb-1 block text-sm text-gray-600">{{ t('batch.edit.stepDuration') }}</label>
-              <div class="flex h-[40px] items-center rounded border bg-gray-50 px-3 text-sm text-gray-700">
+              <label class="mb-1 block text-xs font-medium text-gray-600">{{ t('batch.edit.stepDuration') }}</label>
+              <div class="flex h-[36px] items-center rounded border bg-gray-50 px-2.5 text-sm text-gray-700">
                 {{ formatDurationSeconds(step.planned_duration_sec) }}
               </div>
             </div>
-            <div class="md:col-span-2 xl:col-span-4">
-              <label class="mb-1 block text-sm text-gray-600">{{ t('batch.edit.notes') }}</label>
-              <textarea v-model.trim="stepForm.notes" rows="3" class="w-full rounded border px-3 py-2" />
+            <div class="md:col-span-2 xl:col-span-5">
+              <label class="mb-1 block text-xs font-medium text-gray-600">{{ t('batch.edit.notes') }}</label>
+              <textarea v-model.trim="stepForm.notes" rows="2" class="w-full rounded border px-2.5 py-2 text-sm" />
             </div>
           </div>
         </section>
@@ -214,35 +214,8 @@
         </section>
 
         <section class="rounded-lg border border-gray-200 bg-white shadow">
-          <div class="border-b px-4 py-3">
-            <h3 class="text-sm font-semibold text-gray-900">{{ t('batch.edit.stepPlannedMaterialsTitle') }}</h3>
-          </div>
-          <div v-if="plannedMaterials.length === 0" class="p-4 text-sm text-gray-500">{{ t('common.noData') }}</div>
-          <div v-else class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200 text-sm">
-              <thead class="bg-gray-50 text-xs uppercase text-gray-600">
-                <tr>
-                  <th class="px-3 py-2 text-left">{{ t('batch.edit.stepMaterial') }}</th>
-                  <th class="px-3 py-2 text-left">{{ t('recipe.materials.role') }}</th>
-                  <th class="px-3 py-2 text-right">{{ t('recipe.materials.qty') }}</th>
-                  <th class="px-3 py-2 text-left">{{ t('recipe.materials.uomCode') }}</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-gray-100">
-                <tr v-for="row in plannedMaterials" :key="row.id">
-                  <td class="px-3 py-2 text-gray-700">{{ plannedMaterialLabel(row) }}</td>
-                  <td class="px-3 py-2 text-gray-700">{{ row.material_role || row.requirement_json?.material_role || '—' }}</td>
-                  <td class="px-3 py-2 text-right text-gray-700">{{ formatNumber(row.planned_qty) }}</td>
-                  <td class="px-3 py-2 text-gray-700">{{ uomLabel(row.uom_id) }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section class="rounded-lg border border-gray-200 bg-white shadow">
           <div class="flex flex-col gap-3 border-b px-4 py-3 md:flex-row md:items-center md:justify-between">
-            <h3 class="text-sm font-semibold text-gray-900">{{ t('batch.edit.stepActualMaterialsTitle') }}</h3>
+            <h3 class="text-sm font-semibold text-gray-900">{{ `${t('batch.edit.stepPlannedMaterialsTitle')} / ${t('batch.edit.stepActualMaterialsTitle')}` }}</h3>
             <div class="flex flex-wrap gap-2">
               <button class="rounded border border-gray-300 px-3 py-2 text-sm hover:bg-gray-100" type="button" @click="addActualMaterialRow">
                 {{ t('batch.edit.stepAddActualMaterial') }}
@@ -263,51 +236,109 @@
           <div v-else-if="actualMaterialsState.success" class="border-b border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
             {{ actualMaterialsState.success }}
           </div>
-          <div v-if="actualMaterialForms.length === 0" class="p-4 text-sm text-gray-500">{{ t('common.noData') }}</div>
+          <div v-if="materialExecutionRows.length === 0" class="p-4 text-sm text-gray-500">{{ t('common.noData') }}</div>
           <div v-else class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200 text-sm">
               <thead class="bg-gray-50 text-xs uppercase text-gray-600">
                 <tr>
-                  <th class="px-3 py-2 text-left">{{ t('batch.edit.stepMaterial') }}</th>
-                  <th class="px-3 py-2 text-left">{{ t('batch.edit.stepLot') }}</th>
-                  <th class="px-3 py-2 text-right">{{ t('batch.edit.stepActualQty') }}</th>
+                  <th class="px-3 py-2 text-left">{{ t('recipe.edit.materialTypeFilter') }}</th>
+                  <th class="px-3 py-2 text-right">{{ t('recipe.materials.qty') }}</th>
                   <th class="px-3 py-2 text-left">{{ t('recipe.materials.uomCode') }}</th>
-                  <th class="px-3 py-2 text-left">{{ t('batch.edit.stepConsumedAt') }}</th>
-                  <th class="px-3 py-2 text-left">{{ t('batch.edit.stepComment') }}</th>
+                  <th class="px-3 py-2 text-left">{{ t('recipe.itemEditor.consumptionMode') }}</th>
+                  <th class="px-3 py-2 text-left">{{ t('batch.edit.stepMaterial') }}</th>
+                  <th class="px-3 py-2 text-right">{{ t('batch.edit.stepActualQty') }}</th>
                   <th class="px-3 py-2 text-left">{{ t('common.delete') }}</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-100">
-                <tr v-for="(row, index) in actualMaterialForms" :key="row.local_key">
+                <tr v-for="(displayRow, index) in materialExecutionRows" :key="displayRow.row.local_key">
+                  <td class="px-3 py-2 text-gray-700">
+                    <div>{{ displayRow.planTypeLabel }}</div>
+                    <div v-if="displayRow.planRoleLabel" class="text-xs text-gray-500">{{ displayRow.planRoleLabel }}</div>
+                  </td>
+                  <td class="px-3 py-2 text-right text-gray-700">{{ displayRow.planQtyLabel }}</td>
+                  <td class="px-3 py-2 text-gray-700">{{ displayRow.planUomLabel }}</td>
+                  <td class="px-3 py-2 text-gray-700">{{ displayRow.planConsumptionModeLabel }}</td>
                   <td class="px-3 py-2">
-                    <select v-model="row.material_id" class="h-[36px] w-full rounded border px-2" @change="handleActualMaterialChange(index)">
+                    <select v-model="displayRow.row.material_id" class="h-[36px] w-full rounded border px-2" @change="handleActualMaterialChange(index)">
                       <option value="">{{ t('common.select') }}</option>
-                      <option v-for="option in materialOptions" :key="option.id" :value="option.id">{{ option.label }}</option>
+                      <option v-for="option in materialOptionsForActualRow(displayRow.row)" :key="option.id" :value="option.id">{{ option.label }}</option>
                     </select>
                   </td>
                   <td class="px-3 py-2">
-                    <select v-model="row.lot_id" class="h-[36px] w-full rounded border px-2" @change="handleActualLotChange(index)">
-                      <option value="">{{ t('common.select') }}</option>
-                      <option v-for="option in lotOptionsForMaterial(row.material_id)" :key="option.id" :value="option.id">{{ option.label }}</option>
-                    </select>
+                    <input v-model.trim="displayRow.row.actual_qty" type="number" step="any" min="0" class="h-[36px] w-full rounded border px-2 text-right" />
+                  </td>
+                  <td class="px-3 py-2">
+                    <button class="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-100" type="button" @click="removeActualMaterialRow(index)">
+                      {{ t('common.delete') }}
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="rounded-lg border border-gray-200 bg-white shadow">
+          <div class="flex flex-col gap-3 border-b px-4 py-3 md:flex-row md:items-center md:justify-between">
+            <h3 class="text-sm font-semibold text-gray-900">{{ t('recipe.itemEditor.outputMaterialsTitle') }}</h3>
+            <button class="rounded border border-gray-300 px-3 py-2 text-sm hover:bg-gray-100" type="button" @click="addOutputMaterialRow">
+              {{ t('recipe.itemEditor.addOutputMaterial') }}
+            </button>
+          </div>
+          <div v-if="outputMaterialForms.length === 0" class="p-4 text-sm text-gray-500">{{ t('recipe.itemEditor.noOutputMaterials') }}</div>
+          <div v-else class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 text-sm">
+              <thead class="bg-gray-50 text-xs uppercase text-gray-600">
+                <tr>
+                  <th class="px-3 py-2 text-left">{{ t('recipe.itemEditor.outputMaterialType') }}</th>
+                  <th class="px-3 py-2 text-right">{{ t('recipe.materials.qty') }}</th>
+                  <th class="px-3 py-2 text-left">{{ t('recipe.materials.uomCode') }}</th>
+                  <th class="px-3 py-2 text-left">{{ t('recipe.edit.outputType') }}</th>
+                  <th class="px-3 py-2 text-right">{{ t('batch.edit.stepActualQty') }}</th>
+                  <th class="px-3 py-2 text-left">{{ t('common.delete') }}</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100">
+                <tr v-for="(row, index) in outputMaterialForms" :key="row.local_key">
+                  <td class="px-3 py-2 text-gray-700">
+                    <template v-if="row.planned_output_index !== null">
+                      <div>{{ row.output_material_type || '—' }}</div>
+                      <div v-if="row.output_name" class="text-xs text-gray-500">{{ row.output_name }}</div>
+                    </template>
+                    <template v-else>
+                      <input v-model.trim="row.output_material_type" type="text" class="h-[36px] w-full rounded border px-2" />
+                      <input v-model.trim="row.output_name" type="text" class="mt-2 h-[36px] w-full rounded border px-2" />
+                    </template>
+                  </td>
+                  <td class="px-3 py-2 text-right text-gray-700">{{ formatDynamicValue(row.planned_qty) }}</td>
+                  <td class="px-3 py-2 text-gray-700">
+                    <template v-if="row.planned_output_index !== null">
+                      {{ row.uom_code || '—' }}
+                    </template>
+                    <template v-else>
+                      <input v-model.trim="row.uom_code" type="text" class="h-[36px] w-full rounded border px-2" />
+                    </template>
+                  </td>
+                  <td class="px-3 py-2 text-gray-700">
+                    <template v-if="row.planned_output_index !== null">
+                      {{ row.output_type || '—' }}
+                    </template>
+                    <template v-else>
+                      <select v-model="row.output_type" class="h-[36px] w-full rounded border px-2">
+                        <option value="">{{ t('common.select') }}</option>
+                        <option value="primary">primary</option>
+                        <option value="intermediate">intermediate</option>
+                        <option value="co_product">co_product</option>
+                        <option value="waste">waste</option>
+                      </select>
+                    </template>
                   </td>
                   <td class="px-3 py-2">
                     <input v-model.trim="row.actual_qty" type="number" step="any" min="0" class="h-[36px] w-full rounded border px-2 text-right" />
                   </td>
                   <td class="px-3 py-2">
-                    <select v-model="row.uom_id" class="h-[36px] w-full rounded border px-2">
-                      <option value="">{{ t('common.select') }}</option>
-                      <option v-for="option in uomOptions" :key="option.id" :value="option.id">{{ option.name || option.code }}</option>
-                    </select>
-                  </td>
-                  <td class="px-3 py-2">
-                    <input v-model="row.consumed_at" type="datetime-local" class="h-[36px] w-full rounded border px-2" />
-                  </td>
-                  <td class="px-3 py-2">
-                    <input v-model.trim="row.note" type="text" class="h-[36px] w-full rounded border px-2" />
-                  </td>
-                  <td class="px-3 py-2">
-                    <button class="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-100" type="button" @click="removeActualMaterialRow(index)">
+                    <button class="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-100" type="button" @click="removeOutputMaterialRow(index)">
                       {{ t('common.delete') }}
                     </button>
                   </td>
@@ -565,6 +596,7 @@ type BatchExecutionStepRow = {
 type BatchMaterialPlanRow = {
   id: string
   material_role: string | null
+  material_type_id: string | null
   planned_qty: number
   uom_id: string
   requirement_json: Record<string, any>
@@ -582,6 +614,7 @@ type MaterialOption = {
   code: string
   name: string
   base_uom_id: string | null
+  material_type_id: string | null
   label: string
 }
 
@@ -644,6 +677,7 @@ type QualityCheckFormRow = {
 type ActualMaterialFormRow = {
   local_key: string
   id: string | null
+  planned_plan_id: string
   material_id: string
   lot_id: string
   actual_qty: string
@@ -651,6 +685,26 @@ type ActualMaterialFormRow = {
   consumed_at: string
   note: string
   snapshot_json: Record<string, any>
+}
+
+type OutputMaterialFormRow = {
+  local_key: string
+  planned_output_index: number | null
+  output_material_type: string
+  output_name: string
+  output_type: string
+  planned_qty: unknown
+  uom_code: string
+  actual_qty: string
+}
+
+type MaterialExecutionDisplayRow = {
+  row: ActualMaterialFormRow
+  planTypeLabel: string
+  planRoleLabel: string
+  planQtyLabel: string
+  planUomLabel: string
+  planConsumptionModeLabel: string
 }
 
 type EquipmentAssignmentFormRow = {
@@ -718,6 +772,7 @@ const plannedMaterials = ref<BatchMaterialPlanRow[]>([])
 const parameterForms = ref<ParameterFormRow[]>([])
 const qualityCheckForms = ref<QualityCheckFormRow[]>([])
 const actualMaterialForms = ref<ActualMaterialFormRow[]>([])
+const outputMaterialForms = ref<OutputMaterialFormRow[]>([])
 const equipmentAssignmentForms = ref<EquipmentAssignmentFormRow[]>([])
 const executionLogForms = ref<ExecutionLogFormRow[]>([])
 const deviationForms = ref<DeviationFormRow[]>([])
@@ -826,6 +881,28 @@ const qualityResultStatusOptions = computed(() => [
   { value: 'not_applicable', label: t('batch.edit.stepResultStatusOptions.notApplicable') },
 ])
 
+const plannedMaterialMap = computed(() => {
+  const map = new Map<string, BatchMaterialPlanRow>()
+  plannedMaterials.value.forEach((row) => {
+    map.set(row.id, row)
+  })
+  return map
+})
+
+const materialExecutionRows = computed<MaterialExecutionDisplayRow[]>(() =>
+  actualMaterialForms.value.map((row) => {
+    const planned = row.planned_plan_id ? plannedMaterialMap.value.get(row.planned_plan_id) ?? null : null
+    return {
+      row,
+      planTypeLabel: planned ? plannedMaterialTypeLabel(planned) : '—',
+      planRoleLabel: planned ? (planned.material_role || safeText(planned.requirement_json?.material_role) || '') : '',
+      planQtyLabel: planned ? formatNumber(planned.planned_qty) : '—',
+      planUomLabel: planned ? uomLabel(planned.uom_id) : '—',
+      planConsumptionModeLabel: planned ? consumptionModeLabel(plannedMaterialConsumptionMode(planned)) : '—',
+    }
+  }),
+)
+
 const durationUnits = computed(() => ({
   hour: t('batch.edit.timeUnits.hour'),
   minute: t('batch.edit.timeUnits.minute'),
@@ -892,7 +969,7 @@ async function loadPage() {
         .order('code'),
       mes
         .from('mst_material')
-        .select('id, material_code, material_name, base_uom_id, status')
+        .select('id, material_code, material_name, material_type_id, base_uom_id, status')
         .eq('status', 'active')
         .order('material_code'),
       supabase
@@ -950,6 +1027,7 @@ async function loadPage() {
       id: String(row.id ?? ''),
       code: String(row.material_code ?? ''),
       name: String(row.material_name ?? row.material_code ?? ''),
+      material_type_id: safeNullableText(row.material_type_id),
       base_uom_id: row.base_uom_id ?? null,
       label: [safeText(row.material_code), safeText(row.material_name)].filter(Boolean).join(' - ') || String(row.id ?? ''),
     }))
@@ -1011,6 +1089,7 @@ function initializeStepForms() {
 
   parameterForms.value = buildParameterForms(step.value)
   qualityCheckForms.value = buildQualityCheckForms(step.value)
+  outputMaterialForms.value = buildOutputMaterialForms(step.value)
 }
 
 async function loadStepCollections(currentStepId: string) {
@@ -1018,7 +1097,7 @@ async function loadStepCollections(currentStepId: string) {
   const [plannedResult, actualResult, equipmentResult, logResult, deviationResult] = await Promise.all([
     mes
       .from('batch_material_plan')
-      .select('id, material_role, planned_qty, uom_id, requirement_json, snapshot_json')
+      .select('id, material_role, material_type_id, planned_qty, uom_id, requirement_json, snapshot_json')
       .eq('batch_step_id', currentStepId)
       .order('created_at', { ascending: true }),
     mes
@@ -1052,6 +1131,7 @@ async function loadStepCollections(currentStepId: string) {
   plannedMaterials.value = (plannedResult.data ?? []).map((row: any) => ({
     id: String(row.id ?? ''),
     material_role: safeNullableText(row.material_role),
+    material_type_id: safeNullableText(row.material_type_id),
     planned_qty: Number(row.planned_qty ?? 0),
     uom_id: String(row.uom_id ?? ''),
     requirement_json: asRecord(row.requirement_json) ?? {},
@@ -1061,6 +1141,7 @@ async function loadStepCollections(currentStepId: string) {
   actualMaterialForms.value = (actualResult.data ?? []).map((row: any) => ({
     local_key: nextLocalKey('actual-material'),
     id: String(row.id ?? ''),
+    planned_plan_id: safeText(asRecord(row.snapshot_json)?.plan_id),
     material_id: safeText(row.material_id),
     lot_id: safeText(row.lot_id),
     actual_qty: row.actual_qty != null ? String(row.actual_qty) : '',
@@ -1072,6 +1153,8 @@ async function loadStepCollections(currentStepId: string) {
   loadedActualMaterialIds.value = actualMaterialForms.value
     .map((row) => row.id)
     .filter((value): value is string => Boolean(value))
+
+  synchronizeActualMaterialRows()
 
   equipmentAssignmentForms.value = (equipmentResult.data ?? []).map((row: any) => ({
     local_key: nextLocalKey('equipment'),
@@ -1251,47 +1334,35 @@ async function moveNextBatchStepToReady(params: {
 }
 
 function addActualMaterialRow() {
-  actualMaterialForms.value.push({
-    local_key: nextLocalKey('actual-material'),
-    id: null,
-    material_id: '',
-    lot_id: '',
-    actual_qty: '',
-    uom_id: '',
-    consumed_at: toDateTimeInputValue(new Date().toISOString()),
-    note: '',
-    snapshot_json: {},
-  })
+  actualMaterialForms.value.push(createActualMaterialRow())
 }
 
 function removeActualMaterialRow(index: number) {
+  const row = actualMaterialForms.value[index]
+  if (row?.planned_plan_id) {
+    actualMaterialForms.value.splice(index, 1, createActualMaterialRow({
+      plannedPlanId: row.planned_plan_id,
+      uomId: plannedMaterialMap.value.get(row.planned_plan_id)?.uom_id ?? '',
+    }))
+    return
+  }
   actualMaterialForms.value.splice(index, 1)
 }
 
 function handleActualMaterialChange(index: number) {
   const row = actualMaterialForms.value[index]
   const material = materialOptions.value.find((option) => option.id === row.material_id)
-  if (!material) return
-  if (!row.uom_id && material.base_uom_id) row.uom_id = material.base_uom_id
+  if (!material) {
+    if (row.planned_plan_id) {
+      row.uom_id = plannedMaterialMap.value.get(row.planned_plan_id)?.uom_id ?? ''
+    }
+    return
+  }
+  if (material.base_uom_id) row.uom_id = material.base_uom_id
   if (row.lot_id) {
     const lot = lotOptions.value.find((option) => option.id === row.lot_id)
-    if (lot && lot.material_id && lot.material_id !== row.material_id) {
-      row.lot_id = ''
-    }
+    if (lot && lot.material_id && lot.material_id !== row.material_id) row.lot_id = ''
   }
-}
-
-function handleActualLotChange(index: number) {
-  const row = actualMaterialForms.value[index]
-  const lot = lotOptions.value.find((option) => option.id === row.lot_id)
-  if (!lot) return
-  if (!row.material_id && lot.material_id) row.material_id = lot.material_id
-  if (!row.uom_id && lot.uom_id) row.uom_id = lot.uom_id
-}
-
-function lotOptionsForMaterial(materialId: string) {
-  if (!materialId) return lotOptions.value
-  return lotOptions.value.filter((option) => option.material_id === materialId || !option.material_id)
 }
 
 async function saveActualMaterials() {
@@ -1334,6 +1405,7 @@ async function persistActualMaterials(options: PersistActualMaterialsOptions = {
     for (const row of rows) {
       const material = materialOptions.value.find((option) => option.id === row.material_id)
       const lot = lotOptions.value.find((option) => option.id === row.lot_id)
+      const planned = row.planned_plan_id ? plannedMaterialMap.value.get(row.planned_plan_id) ?? null : null
       const payload = {
         tenant_id: batch.value.tenant_id,
         batch_id: batch.value.id,
@@ -1345,6 +1417,8 @@ async function persistActualMaterials(options: PersistActualMaterialsOptions = {
         consumed_at: toIsoDateTime(row.consumed_at) ?? new Date().toISOString(),
         snapshot_json: {
           ...(row.snapshot_json ?? {}),
+          plan_id: row.planned_plan_id || null,
+          planned_material_type: planned ? plannedMaterialTypeLabel(planned) : null,
           material_code: material?.code ?? null,
           material_name: material?.name ?? null,
           lot_no: lot?.lot_no ?? null,
@@ -1687,9 +1761,97 @@ function buildQualityCheckForms(stepRow: BatchExecutionStepRow) {
   })
 }
 
+function buildOutputMaterialForms(stepRow: BatchExecutionStepRow) {
+  const plannedRows = asArray(stepRow.snapshot_json?.material_outputs)
+  const actualRows = asArray(stepRow.actual_params?.material_outputs)
+  const plannedOutputForms = plannedRows.map((value: any, index: number) => {
+    const row = asRecord(value) ?? {}
+    const actual = actualRows.find((candidate: any) => Number(asRecord(candidate)?.planned_output_index) === index)
+      ?? actualRows[index]
+      ?? {}
+    return {
+      local_key: nextLocalKey('output-material'),
+      planned_output_index: index,
+      output_material_type: safeText(row.output_material_type),
+      output_name: safeText(row.output_name),
+      output_type: safeText(row.output_type),
+      planned_qty: row.qty,
+      uom_code: safeText(row.uom_code),
+      actual_qty: safeText(actual.actual_qty),
+    }
+  })
+
+  const extraForms = actualRows
+    .filter((value: any) => {
+      const row = asRecord(value) ?? {}
+      return row.planned_output_index == null && (
+        safeText(row.output_material_type)
+        || safeText(row.output_name)
+        || safeText(row.output_type)
+        || safeText(row.uom_code)
+        || safeText(row.actual_qty)
+      )
+    })
+    .map((value: any) => {
+      const row = asRecord(value) ?? {}
+      return createOutputMaterialRow({
+        outputMaterialType: safeText(row.output_material_type),
+        outputName: safeText(row.output_name),
+        outputType: safeText(row.output_type),
+        uomCode: safeText(row.uom_code),
+        actualQty: safeText(row.actual_qty),
+      })
+    })
+
+  return [...plannedOutputForms, ...extraForms]
+}
+
+function createOutputMaterialRow(initial: {
+  plannedOutputIndex?: number | null
+  outputMaterialType?: string
+  outputName?: string
+  outputType?: string
+  plannedQty?: unknown
+  uomCode?: string
+  actualQty?: string
+} = {}): OutputMaterialFormRow {
+  return {
+    local_key: nextLocalKey('output-material'),
+    planned_output_index: initial.plannedOutputIndex ?? null,
+    output_material_type: initial.outputMaterialType ?? '',
+    output_name: initial.outputName ?? '',
+    output_type: initial.outputType ?? '',
+    planned_qty: initial.plannedQty ?? null,
+    uom_code: initial.uomCode ?? '',
+    actual_qty: initial.actualQty ?? '',
+  }
+}
+
+function addOutputMaterialRow() {
+  outputMaterialForms.value.push(createOutputMaterialRow())
+}
+
+function removeOutputMaterialRow(index: number) {
+  const row = outputMaterialForms.value[index]
+  if (!row) return
+  if (row.planned_output_index !== null) {
+    outputMaterialForms.value.splice(index, 1, createOutputMaterialRow({
+      plannedOutputIndex: row.planned_output_index,
+      outputMaterialType: row.output_material_type,
+      outputName: row.output_name,
+      outputType: row.output_type,
+      plannedQty: row.planned_qty,
+      uomCode: row.uom_code,
+    }))
+    return
+  }
+  outputMaterialForms.value.splice(index, 1)
+}
+
 function buildActualParamsPayload(stepRow: BatchExecutionStepRow) {
   const actualParamsBase = { ...(stepRow.actual_params ?? {}) }
   delete actualParamsBase.parameters
+  delete actualParamsBase.material_outputs
   return {
     ...actualParamsBase,
     parameters: parameterForms.value.map((row) => ({
@@ -1699,6 +1861,16 @@ function buildActualParamsPayload(stepRow: BatchExecutionStepRow) {
       actual_value: nullableText(row.actual_value),
       comment: nullableText(row.comment),
     })),
+    material_outputs: outputMaterialForms.value
+      .filter((row) => row.output_material_type || row.output_name || row.actual_qty || row.output_type || row.uom_code)
+      .map((row) => ({
+        planned_output_index: row.planned_output_index,
+        output_material_type: row.output_material_type || null,
+        output_name: row.output_name || null,
+        output_type: row.output_type || null,
+        uom_code: row.uom_code || null,
+        actual_qty: parseNumber(row.actual_qty),
+      })),
   }
 }
 
@@ -1718,19 +1890,93 @@ function buildQualityChecksPayload() {
   }))
 }
 
+function createActualMaterialRow(initial: {
+  plannedPlanId?: string
+  uomId?: string
+  materialId?: string
+  actualQty?: string
+  lotId?: string
+  consumedAt?: string
+  note?: string
+  id?: string | null
+  snapshotJson?: Record<string, any>
+} = {}): ActualMaterialFormRow {
+  return {
+    local_key: nextLocalKey('actual-material'),
+    id: initial.id ?? null,
+    planned_plan_id: initial.plannedPlanId ?? '',
+    material_id: initial.materialId ?? '',
+    lot_id: initial.lotId ?? '',
+    actual_qty: initial.actualQty ?? '',
+    uom_id: initial.uomId ?? '',
+    consumed_at: initial.consumedAt ?? toDateTimeInputValue(new Date().toISOString()),
+    note: initial.note ?? '',
+    snapshot_json: initial.snapshotJson ?? {},
+  }
+}
+
+function synchronizeActualMaterialRows() {
+  const validPlannedIds = new Set(plannedMaterials.value.map((row) => row.id))
+  const linkedByPlan = new Map<string, ActualMaterialFormRow[]>()
+  const orphanRows: ActualMaterialFormRow[] = []
+
+  actualMaterialForms.value.forEach((row) => {
+    if (row.planned_plan_id && validPlannedIds.has(row.planned_plan_id)) {
+      const bucket = linkedByPlan.get(row.planned_plan_id) ?? []
+      bucket.push(row)
+      linkedByPlan.set(row.planned_plan_id, bucket)
+      return
+    }
+    orphanRows.push(row)
+  })
+
+  const synchronized: ActualMaterialFormRow[] = []
+  const extraRows: ActualMaterialFormRow[] = []
+
+  plannedMaterials.value.forEach((plannedRow) => {
+    const linkedRows = linkedByPlan.get(plannedRow.id) ?? []
+    const assignedRow = linkedRows.shift() ?? orphanRows.shift() ?? createActualMaterialRow({
+      plannedPlanId: plannedRow.id,
+      uomId: plannedRow.uom_id,
+    })
+    assignedRow.planned_plan_id = plannedRow.id
+    if (!assignedRow.uom_id) assignedRow.uom_id = plannedRow.uom_id
+    synchronized.push(assignedRow)
+
+    linkedRows.forEach((row) => {
+      row.planned_plan_id = ''
+      extraRows.push(row)
+    })
+  })
+
+  actualMaterialForms.value = [...synchronized, ...orphanRows, ...extraRows]
+}
+
 function plannedMaterialConsumptionMode(row: BatchMaterialPlanRow) {
   return findNestedStringValueByKey(row.requirement_json, 'consumption_mode')
     || findNestedStringValueByKey(row.snapshot_json, 'consumption_mode')
     || 'estimate'
 }
 
-function plannedMaterialLabel(row: BatchMaterialPlanRow) {
-  return safeText(row.requirement_json?.material_name)
-    || safeText(row.requirement_json?.material_code)
-    || safeText(row.requirement_json?.material_type)
-    || safeText(row.snapshot_json?.material_name)
-    || safeText(row.snapshot_json?.material_code)
+function plannedMaterialTypeLabel(row: BatchMaterialPlanRow) {
+  return safeText(row.requirement_json?.material_type)
+    || safeText(row.requirement_json?.material_type_code)
+    || safeText(row.snapshot_json?.material_type)
+    || safeText(row.snapshot_json?.material_type_code)
     || '—'
+}
+
+function consumptionModeLabel(value: string | null | undefined) {
+  const normalized = safeText(value) || 'estimate'
+  const key = `recipe.consumptionModes.${normalized}`
+  const translated = t(key)
+  return translated === key ? humanizeToken(normalized) : translated
+}
+
+function materialOptionsForActualRow(row: ActualMaterialFormRow) {
+  const planned = row.planned_plan_id ? plannedMaterialMap.value.get(row.planned_plan_id) ?? null : null
+  if (!planned?.material_type_id) return materialOptions.value
+  return materialOptions.value.filter((option) => option.material_type_id === planned.material_type_id || option.id === row.material_id)
 }
 
 function clearAllStates() {
@@ -1770,6 +2016,7 @@ function resetCollections() {
   parameterForms.value = []
   qualityCheckForms.value = []
   actualMaterialForms.value = []
+  outputMaterialForms.value = []
   equipmentAssignmentForms.value = []
   executionLogForms.value = []
   deviationForms.value = []

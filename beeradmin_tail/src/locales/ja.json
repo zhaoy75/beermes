@@ -127,6 +127,88 @@
       "calibrationReview": "キャリブレーションテーブルの入力内容を確認してください。"
     }
   },
+  "equipmentSchedule": {
+    "title": "設備スケジュール管理",
+    "subtitle": "複数サイトの設備予約、メンテナンス、実績使用を1画面で確認します。",
+    "empty": "表示対象の設備がありません。",
+    "siteSummary": "設備 {count} 件",
+    "rowSummary": "予約 {reservations} 件 / 実績 {actuals} 件",
+    "filters": {
+      "site": "サイト",
+      "equipmentType": "設備タイプ",
+      "equipment": "設備",
+      "dateFrom": "開始日",
+      "dateTo": "終了日",
+      "viewMode": "表示単位",
+      "showCompleted": "完了を表示",
+      "showActualUsage": "実績使用を表示"
+    },
+    "views": {
+      "day": "日",
+      "week": "週"
+    },
+    "legend": {
+      "reservation": "予約",
+      "actualUsage": "実績使用",
+      "maintenance": "メンテナンス",
+      "completed": "完了",
+      "conflict": "競合"
+    },
+    "grid": {
+      "resourceHeader": "サイト / 設備",
+      "taskLabel": "予定内容"
+    },
+    "actions": {
+      "newReservation": "予約追加"
+    },
+    "modal": {
+      "createTitle": "設備予約登録",
+      "editTitle": "設備予約編集",
+      "subtitle": "設備予約とメンテナンス枠を登録・更新します。",
+      "fields": {
+        "type": "種別",
+        "equipment": "設備",
+        "site": "サイト",
+        "batch": "バッチ",
+        "batchStep": "工程ステップ",
+        "startAt": "開始日時",
+        "endAt": "終了日時",
+        "status": "ステータス",
+        "note": "メモ"
+      }
+    },
+    "reservationTypes": {
+      "batch": "生産予約",
+      "maintenance": "メンテナンス",
+      "cip": "CIP",
+      "manual_block": "手動ブロック"
+    },
+    "reservationStatuses": {
+      "draft": "下書き",
+      "reserved": "予約済",
+      "confirmed": "確定",
+      "in_progress": "進行中",
+      "completed": "完了",
+      "cancelled": "取消"
+    },
+    "assignmentStatuses": {
+      "assigned": "割当済",
+      "in_use": "使用中",
+      "done": "完了",
+      "cancelled": "取消"
+    },
+    "errors": {
+      "loadBoard": "設備スケジュールの読み込みに失敗しました。",
+      "equipmentRequired": "設備を選択してください。",
+      "equipmentInactive": "選択した設備は現在利用できません。",
+      "invalidRange": "開始日時と終了日時を確認してください。",
+      "batchRequired": "生産予約ではバッチの選択が必要です。",
+      "batchStepMismatch": "選択した工程ステップがバッチに属していません。",
+      "reservationOverlap": "同じ設備に重複する予約があります。",
+      "actualOverlap": "同じ設備で実績使用中の枠と重複しています。",
+      "saveFailed": "設備予約の保存に失敗しました。"
+    }
+  },
   "batch": {
     "list": {
       "title": "バッチ管理",
@@ -2538,6 +2620,7 @@
       "dashboard": "概要",
       "production": "製造管理",
       "batchList": "バッチ管理",
+      "equipmentScheduleBoard": "設備スケジュール管理",
       "batchEdit": "バッチ実績入力",
       "liquorTax": "税務管理",
       "taxYearSummary": "年間課税概要",

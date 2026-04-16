@@ -127,6 +127,88 @@
       "calibrationReview": "Review the calibration table rows."
     }
   },
+  "equipmentSchedule": {
+    "title": "Equipment Schedule Board",
+    "subtitle": "Review reservations, maintenance blocks, and actual equipment usage across multiple sites.",
+    "empty": "No equipment matches the current filters.",
+    "siteSummary": "{count} equipment rows",
+    "rowSummary": "{reservations} reservations / {actuals} actuals",
+    "filters": {
+      "site": "Site",
+      "equipmentType": "Equipment type",
+      "equipment": "Equipment",
+      "dateFrom": "Start date",
+      "dateTo": "End date",
+      "viewMode": "View",
+      "showCompleted": "Show completed",
+      "showActualUsage": "Show actual usage"
+    },
+    "views": {
+      "day": "Day",
+      "week": "Week"
+    },
+    "legend": {
+      "reservation": "Reservation",
+      "actualUsage": "Actual usage",
+      "maintenance": "Maintenance",
+      "completed": "Completed",
+      "conflict": "Conflict"
+    },
+    "grid": {
+      "resourceHeader": "Site / Equipment",
+      "taskLabel": "Schedule item"
+    },
+    "actions": {
+      "newReservation": "Add reservation"
+    },
+    "modal": {
+      "createTitle": "Create Equipment Reservation",
+      "editTitle": "Edit Equipment Reservation",
+      "subtitle": "Create or update planned reservations and maintenance windows.",
+      "fields": {
+        "type": "Type",
+        "equipment": "Equipment",
+        "site": "Site",
+        "batch": "Batch",
+        "batchStep": "Batch step",
+        "startAt": "Start",
+        "endAt": "End",
+        "status": "Status",
+        "note": "Note"
+      }
+    },
+    "reservationTypes": {
+      "batch": "Production reservation",
+      "maintenance": "Maintenance",
+      "cip": "CIP",
+      "manual_block": "Manual block"
+    },
+    "reservationStatuses": {
+      "draft": "Draft",
+      "reserved": "Reserved",
+      "confirmed": "Confirmed",
+      "in_progress": "In progress",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
+    "assignmentStatuses": {
+      "assigned": "Assigned",
+      "in_use": "In use",
+      "done": "Done",
+      "cancelled": "Cancelled"
+    },
+    "errors": {
+      "loadBoard": "Failed to load the equipment schedule board.",
+      "equipmentRequired": "Select equipment.",
+      "equipmentInactive": "The selected equipment is not currently available.",
+      "invalidRange": "Check the start and end times.",
+      "batchRequired": "A batch must be selected for production reservations.",
+      "batchStepMismatch": "The selected batch step does not belong to the chosen batch.",
+      "reservationOverlap": "The selected equipment already has an overlapping reservation.",
+      "actualOverlap": "The selected equipment overlaps with active actual usage.",
+      "saveFailed": "Failed to save the equipment reservation."
+    }
+  },
   "batch": {
     "list": {
       "title": "Production Batches",
@@ -2546,6 +2628,7 @@
       "dashboard": "Dashboard",
       "production": "Production",
       "batchList": "Batch List",
+      "equipmentScheduleBoard": "Equipment Schedule Board",
       "batchEdit": "Batch Actual Entry",
       "liquorTax": "Liquor Tax",
       "taxYearSummary": "Tax Year Summary",

@@ -1,4 +1,5 @@
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE EXTENSION IF NOT EXISTS btree_gist;
 
 CREATE SCHEMA IF NOT EXISTS mes;
 
@@ -64,6 +65,34 @@ END $$;
 DO $$
 BEGIN
   CREATE TYPE mes.deviation_status AS ENUM ('open', 'approved', 'rejected', 'closed');
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+  CREATE TYPE mes.equipment_reservation_type AS ENUM ('batch', 'maintenance', 'cip', 'manual_block');
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+  CREATE TYPE mes.equipment_reservation_status AS ENUM ('draft', 'reserved', 'confirmed', 'in_progress', 'completed', 'cancelled');
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+  CREATE TYPE mes.equipment_assignment_role AS ENUM ('main', 'aux', 'qc', 'cleaning');
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+  CREATE TYPE mes.batch_equipment_assignment_status AS ENUM ('assigned', 'in_use', 'done', 'cancelled');
 EXCEPTION
   WHEN duplicate_object THEN NULL;
 END $$;
@@ -411,19 +440,119 @@ CREATE TABLE IF NOT EXISTS mes.batch_equipment_assignment (
   tenant_id uuid NOT NULL DEFAULT app_current_tenant_id(),
   batch_id uuid NOT NULL REFERENCES public.mes_batches(id) ON DELETE CASCADE,
   batch_step_id uuid NULL REFERENCES mes.batch_step(id) ON DELETE CASCADE,
+  reservation_id uuid NULL,
   equipment_id uuid NOT NULL REFERENCES public.mst_equipment(id),
-  assignment_role text NULL,
+  assignment_role mes.equipment_assignment_role NULL,
+  status mes.batch_equipment_assignment_status NOT NULL DEFAULT 'assigned',
   assigned_at timestamptz NOT NULL DEFAULT now(),
   released_at timestamptz NULL,
   snapshot_json jsonb NOT NULL DEFAULT '{}'::jsonb,
+  note text NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
   created_by uuid NULL,
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  updated_by uuid NULL,
   CONSTRAINT batch_equipment_assignment_snapshot_object_ck CHECK (jsonb_typeof(snapshot_json) = 'object'),
   CONSTRAINT batch_equipment_assignment_time_range_ck CHECK (
     released_at IS NULL
     OR assigned_at <= released_at
   )
 );
+
+ALTER TABLE mes.batch_equipment_assignment
+  ADD COLUMN IF NOT EXISTS reservation_id uuid NULL;
+
+ALTER TABLE mes.batch_equipment_assignment
+  ADD COLUMN IF NOT EXISTS status mes.batch_equipment_assignment_status NOT NULL DEFAULT 'assigned';
+
+ALTER TABLE mes.batch_equipment_assignment
+  ADD COLUMN IF NOT EXISTS note text NULL;
+
+ALTER TABLE mes.batch_equipment_assignment
+  ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+
+ALTER TABLE mes.batch_equipment_assignment
+  ADD COLUMN IF NOT EXISTS updated_by uuid NULL;
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'mes'
+      AND table_name = 'batch_equipment_assignment'
+      AND column_name = 'assignment_role'
+      AND udt_name = 'text'
+  ) THEN
+    IF EXISTS (
+      SELECT 1
+      FROM mes.batch_equipment_assignment
+      WHERE assignment_role IS NOT NULL
+        AND lower(assignment_role) NOT IN ('main', 'aux', 'qc', 'cleaning')
+    ) THEN
+      RAISE EXCEPTION 'Existing batch_equipment_assignment.assignment_role contains values outside MAIN/AUX/QC/CLEANING';
+    END IF;
+
+    ALTER TABLE mes.batch_equipment_assignment
+      ALTER COLUMN assignment_role
+      TYPE mes.equipment_assignment_role
+      USING lower(assignment_role)::mes.equipment_assignment_role;
+  END IF;
+END $$;
+
+CREATE TABLE IF NOT EXISTS mes.equipment_reservation (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL DEFAULT app_current_tenant_id(),
+  site_id uuid NOT NULL REFERENCES public.mst_sites(id),
+  equipment_id uuid NOT NULL REFERENCES public.mst_equipment(id),
+  reservation_type mes.equipment_reservation_type NOT NULL,
+  batch_id uuid NULL REFERENCES public.mes_batches(id) ON DELETE CASCADE,
+  batch_step_id uuid NULL REFERENCES mes.batch_step(id) ON DELETE CASCADE,
+  source_type text NULL,
+  source_id uuid NULL,
+  start_at timestamptz NOT NULL,
+  end_at timestamptz NOT NULL,
+  status mes.equipment_reservation_status NOT NULL DEFAULT 'reserved',
+  priority integer NOT NULL DEFAULT 100,
+  exclusive_use boolean NOT NULL DEFAULT true,
+  note text NULL,
+  meta_json jsonb NOT NULL DEFAULT '{}'::jsonb,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  created_by uuid NULL,
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  updated_by uuid NULL,
+  CONSTRAINT equipment_reservation_time_range_ck CHECK (start_at < end_at),
+  CONSTRAINT equipment_reservation_priority_ck CHECK (priority >= 0),
+  CONSTRAINT equipment_reservation_meta_json_object_ck CHECK (jsonb_typeof(meta_json) = 'object'),
+  CONSTRAINT equipment_reservation_step_requires_batch_ck CHECK (
+    batch_step_id IS NULL
+    OR batch_id IS NOT NULL
+  ),
+  CONSTRAINT equipment_reservation_batch_type_ck CHECK (
+    reservation_type <> 'batch'
+    OR batch_id IS NOT NULL
+  ),
+  CONSTRAINT equipment_reservation_source_pair_ck CHECK (
+    (source_type IS NULL AND source_id IS NULL)
+    OR (source_type IS NOT NULL AND source_id IS NOT NULL)
+  )
+);
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'batch_equipment_assignment_reservation_fk'
+      AND conrelid = 'mes.batch_equipment_assignment'::regclass
+  ) THEN
+    ALTER TABLE mes.batch_equipment_assignment
+      ADD CONSTRAINT batch_equipment_assignment_reservation_fk
+      FOREIGN KEY (reservation_id)
+      REFERENCES mes.equipment_reservation(id)
+      ON DELETE SET NULL;
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS mes.batch_execution_log (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -470,6 +599,38 @@ AS $$
 DECLARE
   v_batch_tenant uuid;
 BEGIN
+  IF NEW.tenant_id IS NULL THEN
+    NEW.tenant_id := app_current_tenant_id();
+  END IF;
+
+  SELECT b.tenant_id
+    INTO v_batch_tenant
+  FROM public.mes_batches b
+  WHERE b.id = NEW.batch_id;
+
+  IF v_batch_tenant IS NULL THEN
+    RAISE EXCEPTION 'Batch % does not exist', NEW.batch_id;
+  END IF;
+
+  IF v_batch_tenant <> NEW.tenant_id THEN
+    RAISE EXCEPTION 'Batch % does not belong to tenant %', NEW.batch_id, NEW.tenant_id;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION mes.trg_assert_optional_batch_parent_tenant()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_batch_tenant uuid;
+BEGIN
+  IF NEW.batch_id IS NULL THEN
+    RETURN NEW;
+  END IF;
+
   IF NEW.tenant_id IS NULL THEN
     NEW.tenant_id := app_current_tenant_id();
   END IF;
@@ -542,6 +703,84 @@ BEGIN
 
   IF v_equipment_tenant <> NEW.tenant_id THEN
     RAISE EXCEPTION 'Equipment % does not belong to tenant %', NEW.equipment_id, NEW.tenant_id;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION mes.trg_prepare_equipment_reservation()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_equipment_tenant uuid;
+  v_equipment_site uuid;
+BEGIN
+  IF NEW.tenant_id IS NULL THEN
+    NEW.tenant_id := app_current_tenant_id();
+  END IF;
+
+  SELECT e.tenant_id, e.site_id
+    INTO v_equipment_tenant, v_equipment_site
+  FROM public.mst_equipment e
+  WHERE e.id = NEW.equipment_id;
+
+  IF v_equipment_tenant IS NULL THEN
+    RAISE EXCEPTION 'Equipment % does not exist', NEW.equipment_id;
+  END IF;
+
+  IF v_equipment_tenant <> NEW.tenant_id THEN
+    RAISE EXCEPTION 'Equipment % does not belong to tenant %', NEW.equipment_id, NEW.tenant_id;
+  END IF;
+
+  IF NEW.site_id IS NULL THEN
+    NEW.site_id := v_equipment_site;
+  ELSIF NEW.site_id <> v_equipment_site THEN
+    RAISE EXCEPTION 'Reservation site % must match equipment % site %', NEW.site_id, NEW.equipment_id, v_equipment_site;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION mes.trg_assert_equipment_reservation_parent()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_reservation_tenant uuid;
+  v_reservation_equipment uuid;
+  v_reservation_batch uuid;
+  v_reservation_step uuid;
+BEGIN
+  IF NEW.reservation_id IS NULL THEN
+    RETURN NEW;
+  END IF;
+
+  SELECT r.tenant_id, r.equipment_id, r.batch_id, r.batch_step_id
+    INTO v_reservation_tenant, v_reservation_equipment, v_reservation_batch, v_reservation_step
+  FROM mes.equipment_reservation r
+  WHERE r.id = NEW.reservation_id;
+
+  IF v_reservation_tenant IS NULL THEN
+    RAISE EXCEPTION 'Equipment reservation % does not exist', NEW.reservation_id;
+  END IF;
+
+  IF v_reservation_tenant <> NEW.tenant_id THEN
+    RAISE EXCEPTION 'Equipment reservation % does not belong to tenant %', NEW.reservation_id, NEW.tenant_id;
+  END IF;
+
+  IF v_reservation_equipment <> NEW.equipment_id THEN
+    RAISE EXCEPTION 'Equipment reservation % does not belong to equipment %', NEW.reservation_id, NEW.equipment_id;
+  END IF;
+
+  IF v_reservation_batch IS NOT NULL AND v_reservation_batch <> NEW.batch_id THEN
+    RAISE EXCEPTION 'Equipment reservation % does not belong to batch %', NEW.reservation_id, NEW.batch_id;
+  END IF;
+
+  IF v_reservation_step IS NOT NULL AND v_reservation_step <> NEW.batch_step_id THEN
+    RAISE EXCEPTION 'Equipment reservation % does not belong to batch step %', NEW.reservation_id, NEW.batch_step_id;
   END IF;
 
   RETURN NEW;
@@ -636,6 +875,45 @@ CREATE INDEX IF NOT EXISTS idx_batch_material_actual_tenant_batch
 
 CREATE INDEX IF NOT EXISTS idx_batch_equipment_assignment_tenant_batch
   ON mes.batch_equipment_assignment (tenant_id, batch_id, batch_step_id, assigned_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_batch_equipment_assignment_tenant_status
+  ON mes.batch_equipment_assignment (tenant_id, status, assigned_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_batch_equipment_assignment_reservation
+  ON mes.batch_equipment_assignment (reservation_id)
+  WHERE reservation_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_equipment_reservation_tenant_equipment_window
+  ON mes.equipment_reservation (tenant_id, equipment_id, start_at, end_at);
+
+CREATE INDEX IF NOT EXISTS idx_equipment_reservation_tenant_batch
+  ON mes.equipment_reservation (tenant_id, batch_id, batch_step_id, start_at);
+
+CREATE INDEX IF NOT EXISTS idx_equipment_reservation_tenant_site_status
+  ON mes.equipment_reservation (tenant_id, site_id, status, start_at);
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'equipment_reservation_no_overlap_excl'
+      AND conrelid = 'mes.equipment_reservation'::regclass
+  ) THEN
+    EXECUTE $sql$
+      ALTER TABLE mes.equipment_reservation
+      ADD CONSTRAINT equipment_reservation_no_overlap_excl
+      EXCLUDE USING gist (
+        equipment_id WITH =,
+        tstzrange(start_at, end_at, '[)') WITH &&
+      )
+      WHERE (
+        exclusive_use
+        AND status IN ('reserved', 'confirmed', 'in_progress')
+      )
+    $sql$;
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_batch_execution_log_tenant_batch
   ON mes.batch_execution_log (tenant_id, batch_id, batch_step_id, event_at DESC);
@@ -751,6 +1029,12 @@ BEFORE INSERT OR UPDATE ON mes.batch_material_actual
 FOR EACH ROW
 EXECUTE FUNCTION mes.trg_assert_batch_step_parent_tenant();
 
+DROP TRIGGER IF EXISTS trg_batch_equipment_assignment_updated_at ON mes.batch_equipment_assignment;
+CREATE TRIGGER trg_batch_equipment_assignment_updated_at
+BEFORE UPDATE ON mes.batch_equipment_assignment
+FOR EACH ROW
+EXECUTE FUNCTION mes.trg_set_updated_at();
+
 DROP TRIGGER IF EXISTS trg_batch_equipment_assignment_assert_batch_tenant ON mes.batch_equipment_assignment;
 CREATE TRIGGER trg_batch_equipment_assignment_assert_batch_tenant
 BEFORE INSERT OR UPDATE ON mes.batch_equipment_assignment
@@ -768,6 +1052,36 @@ CREATE TRIGGER trg_batch_equipment_assignment_assert_equipment_tenant
 BEFORE INSERT OR UPDATE ON mes.batch_equipment_assignment
 FOR EACH ROW
 EXECUTE FUNCTION mes.trg_assert_equipment_parent_tenant();
+
+DROP TRIGGER IF EXISTS trg_batch_equipment_assignment_assert_reservation_tenant ON mes.batch_equipment_assignment;
+CREATE TRIGGER trg_batch_equipment_assignment_assert_reservation_tenant
+BEFORE INSERT OR UPDATE ON mes.batch_equipment_assignment
+FOR EACH ROW
+EXECUTE FUNCTION mes.trg_assert_equipment_reservation_parent();
+
+DROP TRIGGER IF EXISTS trg_equipment_reservation_updated_at ON mes.equipment_reservation;
+CREATE TRIGGER trg_equipment_reservation_updated_at
+BEFORE UPDATE ON mes.equipment_reservation
+FOR EACH ROW
+EXECUTE FUNCTION mes.trg_set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_equipment_reservation_prepare ON mes.equipment_reservation;
+CREATE TRIGGER trg_equipment_reservation_prepare
+BEFORE INSERT OR UPDATE OF tenant_id, site_id, equipment_id ON mes.equipment_reservation
+FOR EACH ROW
+EXECUTE FUNCTION mes.trg_prepare_equipment_reservation();
+
+DROP TRIGGER IF EXISTS trg_equipment_reservation_assert_batch_tenant ON mes.equipment_reservation;
+CREATE TRIGGER trg_equipment_reservation_assert_batch_tenant
+BEFORE INSERT OR UPDATE ON mes.equipment_reservation
+FOR EACH ROW
+EXECUTE FUNCTION mes.trg_assert_optional_batch_parent_tenant();
+
+DROP TRIGGER IF EXISTS trg_equipment_reservation_assert_step_tenant ON mes.equipment_reservation;
+CREATE TRIGGER trg_equipment_reservation_assert_step_tenant
+BEFORE INSERT OR UPDATE ON mes.equipment_reservation
+FOR EACH ROW
+EXECUTE FUNCTION mes.trg_assert_batch_step_parent_tenant();
 
 DROP TRIGGER IF EXISTS trg_batch_execution_log_assert_batch_tenant ON mes.batch_execution_log;
 CREATE TRIGGER trg_batch_execution_log_assert_batch_tenant
@@ -817,6 +1131,7 @@ DECLARE
     'batch_material_plan',
     'batch_material_actual',
     'batch_equipment_assignment',
+    'equipment_reservation',
     'batch_execution_log',
     'batch_deviation'
   ];

@@ -304,6 +304,15 @@ export const tenantRoutes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/equipment-schedule',
+    name: 'equipmentScheduleBoard',
+    component: () => import('@/views/Pages/EquipmentScheduleBoard.vue'),
+    meta: {
+      title: 'Equipment Schedule Board',
+      requiresAuth: true,
+    },
+  },
+  {
     path: '/producedBeerMovement',
     name: 'ProducedBeerMovement',
     component: () => import('@/views/Pages/ProducedBeerMovementEdit.vue'),

@@ -201,15 +201,19 @@
 ### Editable / Maintainable Items
 - equipment
 - assignment role
+- assignment status
 - assigned at
 - released at
 - note
 
 ### Source / Persistence Direction
 - `mes.batch_equipment_assignment`
+- optional link to `mes.equipment_reservation`
 
 ### Rules
 - assignment is step-level only
+- planned occupancy and blocking should live in `mes.equipment_reservation`, not in `mes.batch_equipment_assignment`
+- assignment may reference a reservation, but it must remain the actual execution-side record
 - this page must not act as equipment vacancy planning for the whole batch
 - this page must not change batch-level packing or yield behavior
 

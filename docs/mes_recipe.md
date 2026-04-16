@@ -541,6 +541,7 @@ Suggested execution-side entities:
 - `mes.batch_step`
 - `mes.batch_material_plan`
 - `mes.batch_material_actual`
+- `mes.equipment_reservation`
 - `mes.batch_equipment_assignment`
 - `mes.batch_execution_log`
 - `mes.batch_deviation`
@@ -550,7 +551,8 @@ Minimum meaning:
 - `mes.batch_step`: released step list for the batch under the new recipe architecture
 - `mes.batch_material_plan`: planned material requirements after release/scaling
 - `mes.batch_material_actual`: actual material lots / quantities consumed
-- `mes.batch_equipment_assignment`: actual equipment used
+- `mes.equipment_reservation`: planned equipment occupancy / maintenance / CIP / manual blocks
+- `mes.batch_equipment_assignment`: actual equipment used, optionally linked to a planned reservation
 - `mes.batch_execution_log`: operator/system events, start/stop/hold/resume/value capture
 - `mes.batch_deviation`: deviations and exception handling
 
@@ -558,6 +560,7 @@ Practical repository rule for this project:
 - reuse the existing `public.mes_batches` table as the execution header
 - do not reuse the existing `public.mes_batch_steps` table as the long-term released-step structure for the new recipe architecture
 - create the new released-step and detail traceability model around `mes_batches.id`
+- keep equipment planning (`mes.equipment_reservation`) separate from actual execution assignment (`mes.batch_equipment_assignment`)
 
 ### 5.2 Design-time vs execution-time binding
 

@@ -392,6 +392,7 @@ const menuGroups = computed<MenuGroup[]>(() => [
         subItems: [
           ...(canSeeDevelopmentFeatures.value ? [{ name: t('sidebar.items.recipeList'), path: "/recipeList", pro: false, textClass: developmentMenuTextClass }] : []),
           { name: t('sidebar.items.batchList'), path: "/batches", pro: false },
+          { name: t('sidebar.items.equipmentScheduleBoard'), path: "/equipment-schedule", pro: false },
           { name: t('sidebar.items.fillingReport'), path: "/fillingReport", pro: false },
           // { name: t('sidebar.items.waste'), path: "/waste", pro: false },
         ],

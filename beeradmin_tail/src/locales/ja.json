@@ -313,6 +313,7 @@
       "stepExecutionControlTitle": "工程実行コントロール",
       "stepSaveInputs": "工程入力を保存",
       "stepSaveFailed": "工程入力の保存に失敗しました。",
+      "stepSavedWithBackflush": "工程入力を保存し、原材料のバックフラッシュを確定しました。",
       "stepTransitionFailed": "現在工程は保存されましたが、次工程の準備に失敗しました。{message}",
       "stepParametersTitle": "パラメータ",
       "stepQualityChecksTitle": "品質チェック",
@@ -1197,15 +1198,18 @@
     }
   },
   "rawMaterialInventory": {
-    "title": "原材料在庫一覧",
-    "subtitle": "ロット単位の原材料在庫を確認し、編集・移動・廃棄を行います。",
+    "title": "原材料在庫管理",
+    "subtitle": "原材料在庫を材料単位で確認し、編集・移動・廃棄と履歴確認を行います。",
+    "treeTitle": "原材料種別",
+    "treeHint": "種別を選ぶと右側の在庫一覧が切り替わります。",
+    "selectedType": "選択中の種別",
     "filters": {
       "materialName": "原材料名",
-      "materialType": "原材料種別",
       "location": "保管場所"
     },
     "placeholders": {
-      "materialName": "原材料名で検索"
+      "materialName": "原材料名で検索",
+      "typeSearch": "種別を検索"
     },
     "results": {
       "count": "{count}件"
@@ -1220,6 +1224,7 @@
     },
     "actions": {
       "newInventory": "新規在庫",
+      "viewDetails": "在庫詳細",
       "move": "移動",
       "dispose": "廃棄"
     },
@@ -1227,6 +1232,43 @@
       "title": "原材料在庫を廃棄",
       "confirm": "原材料: {material}\nロット: {lotNo}\n数量: {qty}\n保管場所: {location}\n\nこの在庫を廃棄しますか？",
       "done": "在庫を廃棄しました。"
+    },
+    "empty": {
+      "typeTree": "表示できる原材料種別がありません。"
+    },
+    "messages": {
+      "multipleLotsActionHint": "この原材料には複数ロットの在庫があります。まず在庫詳細で対象在庫を確認してください。"
+    },
+    "detailDialog": {
+      "title": "原材料在庫詳細",
+      "subtitle": "在庫内訳と移動履歴を確認します。",
+      "summary": {
+        "material": "原材料",
+        "totalQty": "合計在庫数量",
+        "locations": "保管場所",
+        "lots": "ロット"
+      },
+      "inventoryByLocationTitle": "保管場所別在庫",
+      "inventoryByLocationSubtitle": "この原材料の現在在庫を保管場所単位で集計しています。",
+      "inventoryByLocationEmpty": "この原材料の現在在庫はありません。",
+      "locationTable": {
+        "location": "保管場所",
+        "qty": "数量",
+        "uom": "単位",
+        "lots": "ロット"
+      },
+      "movementHistoryTitle": "在庫移動履歴",
+      "movementHistorySubtitle": "この原材料に紐づく確定済み在庫移動を表示します。",
+      "movementHistoryEmpty": "表示できる在庫移動履歴はありません。",
+      "historyTable": {
+        "date": "移動日時",
+        "docNo": "伝票番号",
+        "movementType": "移動種別",
+        "lotNo": "ロット",
+        "qty": "数量",
+        "source": "移動元",
+        "destination": "移動先"
+      }
     },
     "errors": {
       "locationRequired": "保管場所が設定されていないため廃棄できません。",
@@ -1251,6 +1293,11 @@
       "currentLocation": "現在の保管場所",
       "destinationLocation": "移動先保管場所"
     },
+    "typeSelector": {
+      "placeholder": "クリックして原材料種別を選択",
+      "hint": "原材料種別を選ぶと、選択できる原材料と追加属性が切り替わります。",
+      "change": "種別を選択"
+    },
     "attributeTitle": "追加属性",
     "attributeSubtitle": "原材料種別に紐づく属性を入力します。",
     "attributeEmpty": "この原材料種別に追加属性はありません。",
@@ -1263,7 +1310,8 @@
     "attributeReference": "{field} の参照先が不正です",
     "errors": {
       "qtyPositive": "数量は0より大きい値を入力してください",
-      "destinationSame": "移動先保管場所は現在の保管場所と別にしてください"
+      "destinationSame": "移動先保管場所は現在の保管場所と別にしてください",
+      "invalidMaterialType": "原材料在庫では原材料配下の種別のみ選択できます"
     },
     "actions": {
       "move": "移動"
@@ -2512,7 +2560,7 @@
       "inventory": "在庫管理",
       "beerInventory": "ビール在庫管理",
       "rawMaterialReceipts": "原材料受入",
-      "rawMaterialInventory": "原材料在庫",
+      "rawMaterialInventory": "原材料在庫管理",
       "producedBeer": "移出登録",
       "waste": "廃棄物管理",
       "masterMaintenance": "マスタ管理",
@@ -3379,12 +3427,12 @@
       "stepParametersHint": "このページでは工程ステップに紐づくパラメータを編集します。",
       "stepQualityHint": "このページでは工程ステップに紐づく品質チェックを編集します。",
       "inputMaterialsTitle": "入力原材料",
-      "outputMaterialsTitle": "出力原材料",
+      "outputMaterialsTitle": "出力材料",
       "addInputMaterial": "入力原材料を追加",
-      "addOutputMaterial": "出力原材料を追加",
+      "addOutputMaterial": "出力材料を追加",
       "addEquipment": "設備を追加",
       "noInputMaterials": "入力原材料はありません。",
-      "noOutputMaterials": "出力原材料はありません。",
+      "noOutputMaterials": "出力材料はありません。",
       "noEquipment": "設備要件はありません。",
       "materialKey": "原材料キー",
       "consumptionMode": "消費モード",

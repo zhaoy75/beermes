@@ -27,10 +27,15 @@
 - type-driven attributes
 
 ## Type / Material Selection
+- In create mode, material type is displayed as a clickable label-style field instead of a native select.
+- Clicking the material-type field in create mode should open the shared type-selection modal.
+- The create page may receive a default material type from the inventory list page through the `materialTypeId` route query.
 - Material type is selected first.
 - Material dropdown is filtered by the selected type subtree.
 - When editing an existing lot, material type and material preload from the lot/material master.
+- Edit and move modes should show a read-only material-type summary block.
 - Move mode should keep material selection read-only.
+- Only types under the `RAW_MATERIAL` tree are valid selections for this page.
 
 ## Quantity Rule
 - The displayed current quantity is derived from posted movement lines for the lot.

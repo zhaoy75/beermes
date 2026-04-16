@@ -1,46 +1,46 @@
-"table name","table description","register raw material type","register raw material","buy raw material and register the movement","use raw material in production and register the movement","return raw material and register the movement","dispose raw material and register the movement","output finished product and register the movement","package the finished product and register the movement","ship the finished product and register the movement","return the finished product and register the movement","dispose the finished product and register the movement","unpacking the finished product and register the movement","maintain the inventory of raw material and finished product","maintain the recipe and link to the raw material","maintain the equipment and link to the raw material","maintain the master data and related links"
-"mes.batch_deviation","16 fields; source: mes_recipe.sql","","","","CRU","","","RU","","","","","","","R","R",""
-"mes.batch_equipment_assignment","11 fields; source: mes_recipe.sql","","","","CRU","","","RU","","","","","","","R","R",""
-"mes.batch_execution_log","10 fields; source: mes_recipe.sql","","","","CRU","","","RU","","","","","","","R","R",""
-"mes.batch_material_actual","13 fields; source: mes_recipe.sql","","","","CRU","","","RU","","","","","","","R","R",""
-"mes.batch_material_plan","13 fields; source: mes_recipe.sql, type_def_uuid_migration.sql","","","","CRU","","","RU","","","","","","","R","R",""
-"mes.batch_step","20 fields; source: mes_recipe.sql","","","","CRU","","","RU","","","","","","","R","R",""
-"mes.mst_equipment_template","15 fields; source: mes_recipe.sql, type_def_uuid_migration.sql","","","","","","","","","","","","","","R","R","CRUD"
-"mes.mst_material","16 fields; source: mes_recipe.sql, type_def_uuid_migration.sql","","CRUD","R","R","R","R","","","","","","","R","R","R","R"
-"mes.mst_material_spec","1 fields; source: type_def_uuid_migration.sql","","","","","","","","","","","","","","","",""
-"mes.mst_parameter_def","14 fields; source: mes_recipe.sql","","","","R","","","R","","","","","","","CRUD","",""
-"mes.mst_quality_check","11 fields; source: mes_recipe.sql","","","","R","","","R","","","","","","","CRUD","",""
-"mes.mst_recipe","12 fields; source: mes_recipe.sql","","","","R","","","R","","","","","","","CRUD","",""
-"mes.mst_recipe_version","20 fields; source: mes_recipe.sql","","","","R","","","R","","","","","","","CRUD","",""
-"mes.mst_step_template","20 fields; source: mes_recipe.sql, type_def_uuid_migration.sql","","","","R","","","R","","","","","","","CRUD","",""
-"mes.recipe_approval_event","13 fields; source: mes_recipe.sql","","","","R","","","R","","","","","","","CRUD","",""
-"mes.recipe_approval_flow_def","13 fields; source: mes_recipe.sql","","","","R","","","R","","","","","","","CRUD","",""
-"mes.recipe_change_history","10 fields; source: mes_recipe.sql","","","","R","","","R","","","","","","","CRUD","",""
-"public.attr_def","25 fields; source: attr_def.sql","R","R","","","","","","","","","","","","R","R","CRUD"
-"public.attr_set","15 fields; source: attr_set.sql","R","R","","","","","","","","","","","","R","R","CRUD"
-"public.attr_set_rule","12 fields; source: attr_set.sql","R","R","","","","","","","","","","","","R","R","CRUD"
-"public.entity_attr","15 fields; source: entity_attr_set.sql, type_def_uuid_migration.sql","","CRU","","","","","","","","","","","","CRU","CRU",""
-"public.entity_attr_set","7 fields; source: entity_attr_set.sql","R","R","","","","","","","","","","","","R","R","CRUD"
-"public.industry","10 fields; source: industory.sql, industry.sql","R","R","","","","","","","","","","","","R","R","CRUD"
-"public.inv_inventory","7 fields; source: inv_inventory.sql","","","CRU","RU","CRU","RU","CRU","CRU","RU","CRU","RU","CRU","CRUD","","",""
-"public.inv_movement_lines","13 fields; source: inv_movement_lines.sql","","","CR","CR","CR","CR","CR","CR","CR","CR","CR","CR","R","","",""
-"public.inv_movements","14 fields; source: inv_movements.sql","","","CR","CR","CR","CR","CR","CR","CR","CR","CR","CR","R","","",""
-"public.lot","18 fields; source: lot.sql","","","CR","RU","CRU","RU","CR","CRU","RU","CRU","RU","CRU","RU","","",""
-"public.lot_edge","12 fields; source: lot_edge.sql","","","CR","CR","CR","CR","CR","CR","CR","CR","CR","CR","R","","",""
-"public.mes_batch_relation","12 fields; source: mes_batch_relation.sql","","","","","","","CRU","CRU","","CRU","","CRU","R","","",""
-"public.mes_batch_steps","9 fields; source: mes_batches.sql","","","","CRU","","","RU","","","","","","","R","R",""
-"public.mes_batches","21 fields; source: mes_batches.sql","","","","RU","","","RU","R","R","R","R","R","R","R","R",""
-"public.mes_recipe_steps","9 fields; source: recipe.sql","","","","R","","","R","","","","","","","CRUD","",""
-"public.mes_recipes","18 fields; source: recipe.sql","","","","R","","","R","","","","","","","CRUD","",""
-"public.mst_equipment","17 fields; source: mst_equipment.sql","","","","R","","","","R","","","","","","","CRUD","R"
-"public.mst_equipment_tank","12 fields; source: mst_equipment.sql","","","","R","","","","R","","","","","","","CRUD","R"
-"public.mst_package","24 fields; source: mst_package.sql","","","","","","","","R","R","R","R","R","R","","","CRUD"
-"public.mst_sites","14 fields; source: mst_site.sql","","R","R","R","R","R","R","R","R","R","R","R","R","R","R","CRUD"
-"public.mst_uom","13 fields; source: mst_uom.sql","","R","R","R","R","R","R","R","R","R","R","R","R","R","R","CRUD"
-"public.registry_def","9 fields; source: registry_def.sql","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","CRUD"
-"public.tax_reports","11 fields; source: taxreport.sql","","","","","","","","","R","R","R","","","","",""
-"public.tenant_invitations","11 fields; source: tenant_invitations.sql","","","","","","","","","","","","","","","",""
-"public.tenant_members","6 fields; source: tenant.sql","","","","","","","","","","","","","","","",""
-"public.tenants","4 fields; source: tenant.sql","","","","","","","","","","","","","","","",""
-"public.type_closure","6 fields; source: type_def.sql","CRD","R","","","","","","","","","","","","R","R","CRD"
-"public.type_def","18 fields; source: type_def.sql","CRUD","R","","","","","","","","","","","","R","R","CRUD"
+table name,table description,register raw material type,register raw material,buy raw material and register the movement,use raw material in production and register the movement,return raw material and register the movement,dispose raw material and register the movement,output finished product and register the movement,package the finished product and register the movement,ship the finished product and register the movement,return the finished product and register the movement,dispose the finished product and register the movement,unpacking the finished product and register the movement,maintain the inventory of raw material and finished product,maintain the recipe and link to the raw material,maintain the equipment and link to the raw material,maintain the master data and related links
+mes.batch_deviation,16 fields; source: mes_recipe.sql,,,,CRU,,,RU,,,,,,,R,R,
+mes.batch_equipment_assignment,11 fields; source: mes_recipe.sql,,,,CRU,,,RU,,,,,,,R,R,
+mes.batch_execution_log,10 fields; source: mes_recipe.sql,,,,CRU,,,RU,,,,,,,R,R,
+mes.batch_material_actual,13 fields; source: mes_recipe.sql,,,,CRU,,,RU,,,,,,,R,R,
+mes.batch_material_plan,"13 fields; source: mes_recipe.sql, type_def_uuid_migration.sql",,,,CRU,,,RU,,,,,,,R,R,
+mes.batch_step,20 fields; source: mes_recipe.sql,,,,CRU,,,RU,,,,,,,R,R,
+mes.mst_equipment_template,"15 fields; source: mes_recipe.sql, type_def_uuid_migration.sql",,,,,,,,,,,,,,R,R,CRUD
+mes.mst_material,"16 fields; source: mes_recipe.sql, type_def_uuid_migration.sql",,CRUD,R,R,R,R,,,,,,,R,R,R,R
+mes.mst_material_spec,1 fields; source: type_def_uuid_migration.sql,,,,,,,,,,,,,,,,
+mes.mst_parameter_def,14 fields; source: mes_recipe.sql,,,,R,,,R,,,,,,,CRUD,,
+mes.mst_quality_check,11 fields; source: mes_recipe.sql,,,,R,,,R,,,,,,,CRUD,,
+mes.mst_recipe,12 fields; source: mes_recipe.sql,,,,R,,,R,,,,,,,CRUD,,
+mes.mst_recipe_version,20 fields; source: mes_recipe.sql,,,,R,,,R,,,,,,,CRUD,,
+mes.mst_step_template,"20 fields; source: mes_recipe.sql, type_def_uuid_migration.sql",,,,R,,,R,,,,,,,CRUD,,
+mes.recipe_approval_event,13 fields; source: mes_recipe.sql,,,,R,,,R,,,,,,,CRUD,,
+mes.recipe_approval_flow_def,13 fields; source: mes_recipe.sql,,,,R,,,R,,,,,,,CRUD,,
+mes.recipe_change_history,10 fields; source: mes_recipe.sql,,,,R,,,R,,,,,,,CRUD,,
+public.attr_def,25 fields; source: attr_def.sql,R,R,,,,,,,,,,,,R,R,CRUD
+public.attr_set,15 fields; source: attr_set.sql,R,R,,,,,,,,,,,,R,R,CRUD
+public.attr_set_rule,12 fields; source: attr_set.sql,R,R,,,,,,,,,,,,R,R,CRUD
+public.entity_attr,"15 fields; source: entity_attr_set.sql, type_def_uuid_migration.sql",,CRU,,,,,,,,,,,,CRU,CRU,
+public.entity_attr_set,7 fields; source: entity_attr_set.sql,R,R,,,,,,,,,,,,R,R,CRUD
+public.industry,"10 fields; source: industory.sql, industry.sql",R,R,,,,,,,,,,,,R,R,CRUD
+public.inv_inventory,7 fields; source: inv_inventory.sql,,,CRU,RU,CRU,RU,CRU,CRU,RU,CRU,RU,CRU,CRUD,,,
+public.inv_movement_lines,13 fields; source: inv_movement_lines.sql,,,CR,CR,CR,CR,CR,CR,CR,CR,CR,CR,R,,,
+public.inv_movements,14 fields; source: inv_movements.sql,,,CR,CR,CR,CR,CR,CR,CR,CR,CR,CR,R,,,
+public.lot,18 fields; source: lot.sql,,,CR,RU,CRU,RU,CR,CRU,RU,CRU,RU,CRU,RU,,,
+public.lot_edge,12 fields; source: lot_edge.sql,,,CR,CR,CR,CR,CR,CR,CR,CR,CR,CR,R,,,
+public.mes_batch_relation,12 fields; source: mes_batch_relation.sql,,,,,,,CRU,CRU,,CRU,,CRU,R,,,
+public.mes_batch_steps,9 fields; source: mes_batches.sql,,,,CRU,,,RU,,,,,,,R,R,
+public.mes_batches,21 fields; source: mes_batches.sql,,,,RU,,,RU,R,R,R,R,R,R,R,R,
+public.mes_recipe_steps,9 fields; source: recipe.sql,,,,R,,,R,,,,,,,CRUD,,
+public.mes_recipes,18 fields; source: recipe.sql,,,,R,,,R,,,,,,,CRUD,,
+public.mst_equipment,17 fields; source: mst_equipment.sql,,,,R,,,,R,,,,,,,CRUD,R
+public.mst_equipment_tank,12 fields; source: mst_equipment.sql,,,,R,,,,R,,,,,,,CRUD,R
+public.mst_package,24 fields; source: mst_package.sql,,,,,,,,R,R,R,R,R,R,,,CRUD
+public.mst_sites,14 fields; source: mst_site.sql,,R,R,R,R,R,R,R,R,R,R,R,R,R,R,CRUD
+public.mst_uom,13 fields; source: mst_uom.sql,,R,R,R,R,R,R,R,R,R,R,R,R,R,R,CRUD
+public.registry_def,9 fields; source: registry_def.sql,R,R,R,R,R,R,R,R,R,R,R,R,R,R,R,CRUD
+public.tax_reports,11 fields; source: taxreport.sql,,,,,,,,,R,R,R,,,,,
+public.tenant_invitations,11 fields; source: tenant_invitations.sql,,,,,,,,,,,,,,,,
+public.tenant_members,6 fields; source: tenant.sql,,,,,,,,,,,,,,,,
+public.tenants,4 fields; source: tenant.sql,,,,,,,,,,,,,,,,
+public.type_closure,6 fields; source: type_def.sql,CRD,R,,,,,,,,,,,,R,R,CRD
+public.type_def,18 fields; source: type_def.sql,CRUD,R,,,,,,,,,,,,R,R,CRUD

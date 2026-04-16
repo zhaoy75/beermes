@@ -313,6 +313,7 @@
       "stepExecutionControlTitle": "Step execution control",
       "stepSaveInputs": "Save step inputs",
       "stepSaveFailed": "Failed to save step inputs.",
+      "stepSavedWithBackflush": "Saved the step inputs and posted backflush raw-material consumption.",
       "stepTransitionFailed": "The current step was saved, but preparing the next step failed. {message}",
       "stepParametersTitle": "Parameters",
       "stepQualityChecksTitle": "Quality checks",
@@ -1197,15 +1198,18 @@
     }
   },
   "rawMaterialInventory": {
-    "title": "Raw Material Inventory",
-    "subtitle": "Review lot-based raw material inventory and perform edit, move, and dispose actions.",
+    "title": "Raw Material Inventory Management",
+    "subtitle": "Review raw material inventory by material and manage edit, move, dispose, and history workflows.",
+    "treeTitle": "Material Types",
+    "treeHint": "Selecting a type filters the inventory list on the right.",
+    "selectedType": "Selected type",
     "filters": {
       "materialName": "Material name",
-      "materialType": "Material type",
       "location": "Location"
     },
     "placeholders": {
-      "materialName": "Search by material name"
+      "materialName": "Search by material name",
+      "typeSearch": "Search material types"
     },
     "results": {
       "count": "{count} records"
@@ -1220,6 +1224,7 @@
     },
     "actions": {
       "newInventory": "New inventory",
+      "viewDetails": "Inventory details",
       "move": "Move",
       "dispose": "Dispose"
     },
@@ -1227,6 +1232,43 @@
       "title": "Dispose raw material inventory",
       "confirm": "Material: {material}\nLot: {lotNo}\nQuantity: {qty}\nLocation: {location}\n\nDo you want to dispose this inventory?",
       "done": "Inventory was disposed."
+    },
+    "empty": {
+      "typeTree": "No material types are available."
+    },
+    "messages": {
+      "multipleLotsActionHint": "This material has multiple lots in stock. Open the detail dialog first to identify the target inventory."
+    },
+    "detailDialog": {
+      "title": "Raw Material Inventory Detail",
+      "subtitle": "Review the current inventory breakdown and movement history.",
+      "summary": {
+        "material": "Material",
+        "totalQty": "Total quantity",
+        "locations": "Locations",
+        "lots": "Lots"
+      },
+      "inventoryByLocationTitle": "Inventory By Location",
+      "inventoryByLocationSubtitle": "Current stock for this material summarized by location.",
+      "inventoryByLocationEmpty": "There is no current inventory for this material.",
+      "locationTable": {
+        "location": "Location",
+        "qty": "Quantity",
+        "uom": "UOM",
+        "lots": "Lots"
+      },
+      "movementHistoryTitle": "Inventory Movement History",
+      "movementHistorySubtitle": "Posted inventory movements related to this material.",
+      "movementHistoryEmpty": "There is no movement history to display.",
+      "historyTable": {
+        "date": "Movement time",
+        "docNo": "Document no.",
+        "movementType": "Movement type",
+        "lotNo": "Lot",
+        "qty": "Quantity",
+        "source": "Source",
+        "destination": "Destination"
+      }
     },
     "errors": {
       "locationRequired": "Location is required before disposing inventory.",
@@ -1251,6 +1293,11 @@
       "currentLocation": "Current location",
       "destinationLocation": "Destination location"
     },
+    "typeSelector": {
+      "placeholder": "Click to choose a material type",
+      "hint": "Changing the material type updates the available materials and type-driven attributes.",
+      "change": "Choose type"
+    },
     "attributeTitle": "Additional attributes",
     "attributeSubtitle": "Enter the attributes linked to the selected material type.",
     "attributeEmpty": "There are no additional attributes for this material type.",
@@ -1263,7 +1310,8 @@
     "attributeReference": "{field} has an invalid reference value",
     "errors": {
       "qtyPositive": "Quantity must be greater than zero",
-      "destinationSame": "Destination location must differ from the current location"
+      "destinationSame": "Destination location must differ from the current location",
+      "invalidMaterialType": "Only types under the raw-material tree can be selected here"
     },
     "actions": {
       "move": "Move"
@@ -2520,7 +2568,7 @@
       "inventory": "Inventory",
       "beerInventory": "Beer Inventory Management",
       "rawMaterialReceipts": "Raw Material Receipts",
-      "rawMaterialInventory": "Raw Material Inventory",
+      "rawMaterialInventory": "Raw Material Inventory Management",
       "producedBeer": "Movement Register",
       "waste": "Waste",
       "masterMaintenance": "Master Maintenance",

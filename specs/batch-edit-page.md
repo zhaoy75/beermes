@@ -199,6 +199,7 @@
   - step status and timestamps
   - step actual parameters
   - step actual material records
+  - step-level raw-material issue posting for execution-side consumption modes such as `backflush`
   - step equipment assignment records
   - step QA input
   - step deviations and execution logs

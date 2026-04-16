@@ -593,6 +593,13 @@ type LotOption = {
   label: string
 }
 
+type PersistActualMaterialsOptions = {
+  clearState?: boolean
+  setSavingState?: boolean
+  showSuccess?: boolean
+  reloadCollections?: boolean
+}
+
 type EquipmentOption = {
   id: string
   code: string
@@ -765,6 +772,10 @@ const selectedStepInstructionsText = computed(() =>
   safeText(step.value?.snapshot_json?.instructions)
   || safeText(step.value?.planned_params?.instructions)
   || '—',
+)
+
+const hasBackflushPlannedMaterials = computed(() =>
+  plannedMaterials.value.some((row) => plannedMaterialConsumptionMode(row) === 'backflush'),
 )
 
 const stepStatusOptions = computed(() => [
@@ -1120,12 +1131,43 @@ async function saveStepInputs() {
 
   stepSaveState.saving = true
   let currentStepSaved = false
+  let usedBackflushCompletion = false
   try {
     await ensureCurrentUser()
-    const mes = mesClient()
-    const actualParamsBase = { ...(step.value.actual_params ?? {}) }
-    delete actualParamsBase.parameters
+    const actualParams = buildActualParamsPayload(step.value)
+    const qualityChecks = buildQualityChecksPayload()
+    const shouldReadyNextStep = Boolean(batch.value) && shouldMoveNextStepToReady(previousStatus, targetStatus)
 
+    if (targetStatus === 'completed' && hasBackflushPlannedMaterials.value) {
+      usedBackflushCompletion = true
+      clearSectionState(actualMaterialsState)
+      await persistActualMaterials({
+        clearState: false,
+        setSavingState: false,
+        showSuccess: false,
+        reloadCollections: true,
+      })
+
+      const { error } = await supabase.rpc('batch_step_complete_backflush', {
+        p_batch_step_id: step.value.id,
+        p_patch: {
+          status: 'completed',
+          started_at: startedAt,
+          ended_at: endedAt,
+          notes: nullableText(stepForm.notes),
+          actual_params: actualParams,
+          quality_checks_json: qualityChecks,
+          auto_ready_next_step: shouldReadyNextStep,
+        },
+      })
+      if (error) throw error
+
+      await loadPage()
+      stepSaveState.success = t('batch.edit.stepSavedWithBackflush')
+      return
+    }
+
+    const mes = mesClient()
     const { error } = await mes
       .from('batch_step')
       .update({
@@ -1133,29 +1175,8 @@ async function saveStepInputs() {
         started_at: startedAt,
         ended_at: endedAt,
         notes: nullableText(stepForm.notes),
-        actual_params: {
-          ...actualParamsBase,
-          parameters: parameterForms.value.map((row) => ({
-            parameter_code: row.parameter_code || null,
-            parameter_name: row.parameter_name || null,
-            uom_code: row.uom_code || null,
-            actual_value: nullableText(row.actual_value),
-            comment: nullableText(row.comment),
-          })),
-        },
-        quality_checks_json: qualityCheckForms.value.map((row) => ({
-          check_code: row.check_code || null,
-          check_name: row.check_name || null,
-          sampling_point: nullableText(row.sampling_point),
-          frequency: nullableText(row.frequency),
-          required: Boolean(row.required),
-          acceptance_criteria: row.acceptance_criteria ?? {},
-          result_status: nullableText(row.result_status),
-          result_value: nullableText(row.result_value),
-          result_note: nullableText(row.result_note),
-          checked_at: toIsoDateTime(row.checked_at),
-          checked_by: nullableText(row.checked_by),
-        })),
+        actual_params: actualParams,
+        quality_checks_json: qualityChecks,
         updated_by: currentUserId.value,
       })
       .eq('id', step.value.id)
@@ -1168,34 +1189,13 @@ async function saveStepInputs() {
       started_at: startedAt,
       ended_at: endedAt,
       notes: nullableText(stepForm.notes),
-      actual_params: {
-        ...actualParamsBase,
-        parameters: parameterForms.value.map((row) => ({
-          parameter_code: row.parameter_code || null,
-          parameter_name: row.parameter_name || null,
-          uom_code: row.uom_code || null,
-          actual_value: nullableText(row.actual_value),
-          comment: nullableText(row.comment),
-        })),
-      },
-      quality_checks_json: qualityCheckForms.value.map((row) => ({
-        check_code: row.check_code || null,
-        check_name: row.check_name || null,
-        sampling_point: nullableText(row.sampling_point),
-        frequency: nullableText(row.frequency),
-        required: Boolean(row.required),
-        acceptance_criteria: row.acceptance_criteria ?? {},
-        result_status: nullableText(row.result_status),
-        result_value: nullableText(row.result_value),
-        result_note: nullableText(row.result_note),
-        checked_at: toIsoDateTime(row.checked_at),
-        checked_by: nullableText(row.checked_by),
-      })),
+      actual_params: actualParams,
+      quality_checks_json: qualityChecks,
     }
     stepForm.status = targetStatus
     stepForm.ended_at = toDateTimeInputValue(endedAt)
 
-    if (batch.value && shouldMoveNextStepToReady(previousStatus, targetStatus)) {
+    if (batch.value && shouldReadyNextStep) {
       await moveNextBatchStepToReady({
         batchId: batch.value.id,
         tenantId: batch.value.tenant_id,
@@ -1206,7 +1206,9 @@ async function saveStepInputs() {
   } catch (err) {
     console.error(err)
     const message = extractErrorMessage(err) || t('common.unknown')
-    stepSaveState.error = currentStepSaved
+    stepSaveState.error = usedBackflushCompletion
+      ? `${t('batch.edit.stepSaveFailed')} (${message})`
+      : currentStepSaved
       ? t('batch.edit.stepTransitionFailed', { message })
       : `${t('batch.edit.stepSaveFailed')} (${message})`
   } finally {
@@ -1293,27 +1295,31 @@ function lotOptionsForMaterial(materialId: string) {
 }
 
 async function saveActualMaterials() {
-  if (!step.value || !batch.value) return
-  clearSectionState(actualMaterialsState)
-
-  const rows = actualMaterialForms.value.filter((row) => !isActualMaterialRowEmpty(row))
-  for (const row of rows) {
-    if (!row.actual_qty || parseNumber(row.actual_qty) == null) {
-      actualMaterialsState.error = t('errors.required', { field: t('batch.edit.stepActualQty') })
-      return
-    }
-    if (!row.uom_id) {
-      actualMaterialsState.error = t('errors.required', { field: t('recipe.materials.uomCode') })
-      return
-    }
-    if (!row.material_id && !row.lot_id) {
-      actualMaterialsState.error = t('batch.edit.stepMaterialOrLotRequired')
-      return
-    }
-  }
-
   actualMaterialsState.saving = true
   try {
+    await persistActualMaterials()
+  } catch {
+    // The helper already populates section-level validation / save errors.
+  } finally {
+    actualMaterialsState.saving = false
+  }
+}
+
+async function persistActualMaterials(options: PersistActualMaterialsOptions = {}) {
+  if (!step.value || !batch.value) return
+  const {
+    clearState = true,
+    setSavingState = false,
+    showSuccess = true,
+    reloadCollections = true,
+  } = options
+
+  if (clearState) clearSectionState(actualMaterialsState)
+  if (setSavingState) actualMaterialsState.saving = true
+
+  try {
+    const rows = actualMaterialForms.value.filter((row) => !isActualMaterialRowEmpty(row))
+    validateActualMaterialRows(rows)
     await ensureCurrentUser()
     const mes = mesClient()
     const existingIds = new Set(loadedActualMaterialIds.value)
@@ -1358,13 +1364,17 @@ async function saveActualMaterials() {
       }
     }
 
-    await loadStepCollections(step.value.id)
-    actualMaterialsState.success = t('common.saved')
+    if (reloadCollections) {
+      await loadStepCollections(step.value.id)
+    }
+    if (showSuccess) {
+      actualMaterialsState.success = t('common.saved')
+    }
   } catch (err) {
-    console.error(err)
-    actualMaterialsState.error = `${t('batch.edit.stepSectionSaveFailed')} (${extractErrorMessage(err) || t('common.unknown')})`
+    actualMaterialsState.error = buildSectionSaveErrorMessage(err)
+    throw err
   } finally {
-    actualMaterialsState.saving = false
+    if (setSavingState) actualMaterialsState.saving = false
   }
 }
 
@@ -1677,6 +1687,43 @@ function buildQualityCheckForms(stepRow: BatchExecutionStepRow) {
   })
 }
 
+function buildActualParamsPayload(stepRow: BatchExecutionStepRow) {
+  const actualParamsBase = { ...(stepRow.actual_params ?? {}) }
+  delete actualParamsBase.parameters
+  return {
+    ...actualParamsBase,
+    parameters: parameterForms.value.map((row) => ({
+      parameter_code: row.parameter_code || null,
+      parameter_name: row.parameter_name || null,
+      uom_code: row.uom_code || null,
+      actual_value: nullableText(row.actual_value),
+      comment: nullableText(row.comment),
+    })),
+  }
+}
+
+function buildQualityChecksPayload() {
+  return qualityCheckForms.value.map((row) => ({
+    check_code: row.check_code || null,
+    check_name: row.check_name || null,
+    sampling_point: nullableText(row.sampling_point),
+    frequency: nullableText(row.frequency),
+    required: Boolean(row.required),
+    acceptance_criteria: row.acceptance_criteria ?? {},
+    result_status: nullableText(row.result_status),
+    result_value: nullableText(row.result_value),
+    result_note: nullableText(row.result_note),
+    checked_at: toIsoDateTime(row.checked_at),
+    checked_by: nullableText(row.checked_by),
+  }))
+}
+
+function plannedMaterialConsumptionMode(row: BatchMaterialPlanRow) {
+  return findNestedStringValueByKey(row.requirement_json, 'consumption_mode')
+    || findNestedStringValueByKey(row.snapshot_json, 'consumption_mode')
+    || 'estimate'
+}
+
 function plannedMaterialLabel(row: BatchMaterialPlanRow) {
   return safeText(row.requirement_json?.material_name)
     || safeText(row.requirement_json?.material_code)
@@ -1697,6 +1744,25 @@ function clearAllStates() {
 function clearSectionState(state: SectionState) {
   state.error = ''
   state.success = ''
+}
+
+function validateActualMaterialRows(rows: ActualMaterialFormRow[]) {
+  for (const row of rows) {
+    if (!row.actual_qty || parseNumber(row.actual_qty) == null) {
+      throw new Error(t('errors.required', { field: t('batch.edit.stepActualQty') }))
+    }
+    if (!row.uom_id) {
+      throw new Error(t('errors.required', { field: t('recipe.materials.uomCode') }))
+    }
+    if (!row.material_id && !row.lot_id) {
+      throw new Error(t('batch.edit.stepMaterialOrLotRequired'))
+    }
+  }
+}
+
+function buildSectionSaveErrorMessage(error: unknown) {
+  const message = extractErrorMessage(error) || t('common.unknown')
+  return `${t('batch.edit.stepSectionSaveFailed')} (${message})`
 }
 
 function resetCollections() {
@@ -1850,6 +1916,27 @@ function asRecord(value: unknown) {
 
 function asArray(value: unknown) {
   return Array.isArray(value) ? value : []
+}
+
+function findNestedStringValueByKey(value: unknown, key: string): string {
+  if (!value || typeof value !== 'object') return ''
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const nested = findNestedStringValueByKey(item, key)
+      if (nested) return nested
+    }
+    return ''
+  }
+
+  const record = value as Record<string, unknown>
+  const direct = safeText(record[key])
+  if (direct) return direct
+
+  for (const nestedValue of Object.values(record)) {
+    const nested = findNestedStringValueByKey(nestedValue, key)
+    if (nested) return nested
+  }
+  return ''
 }
 
 function safeText(value: unknown) {

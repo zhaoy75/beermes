@@ -54,17 +54,40 @@
                 <label class="mb-1 block text-sm text-gray-600">
                   {{ t('rawMaterialInventoryEdit.fields.materialType') }}<span class="text-red-600">*</span>
                 </label>
-                <select
-                  v-model="form.material_type_id"
-                  class="h-[40px] w-full rounded border border-gray-300 bg-white px-3"
-                  :disabled="mode !== 'create'"
-                  @change="handleMaterialTypeChange"
+                <button
+                  v-if="mode === 'create'"
+                  type="button"
+                  class="flex min-h-[76px] w-full items-start justify-between gap-3 rounded border px-3 py-3 text-left transition"
+                  :class="errors.material_type_id ? 'border-red-300 bg-red-50/60' : 'border-gray-300 bg-white hover:border-blue-300 hover:bg-blue-50/40'"
+                  aria-haspopup="dialog"
+                  @click="openMaterialTypePicker"
                 >
-                  <option value="">{{ t('common.select') }}</option>
-                  <option v-for="option in materialTypeOptions" :key="option.value" :value="option.value">
-                    {{ option.label }}
-                  </option>
-                </select>
+                  <div class="min-w-0 flex-1">
+                    <template v-if="formSelectedType">
+                      <div class="truncate font-medium text-gray-900">{{ displayMaterialTypeName(formSelectedType) }}</div>
+                      <div class="mt-1 truncate font-mono text-xs text-gray-500">{{ formSelectedType.code }}</div>
+                      <div class="mt-1 text-xs text-gray-500">{{ formTypePathText }}</div>
+                    </template>
+                    <template v-else>
+                      <div class="text-sm text-gray-400">{{ t('rawMaterialInventoryEdit.typeSelector.placeholder') }}</div>
+                      <div class="mt-1 text-xs text-gray-500">{{ t('rawMaterialInventoryEdit.typeSelector.hint') }}</div>
+                    </template>
+                  </div>
+                  <span class="shrink-0 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">
+                    {{ t('rawMaterialInventoryEdit.typeSelector.change') }}
+                  </span>
+                </button>
+                <div
+                  v-else
+                  class="min-h-[76px] rounded border border-gray-200 bg-gray-50 px-3 py-3"
+                >
+                  <div v-if="formSelectedType">
+                    <div class="font-medium text-gray-900">{{ displayMaterialTypeName(formSelectedType) }}</div>
+                    <div class="mt-1 font-mono text-xs text-gray-500">{{ formSelectedType.code }}</div>
+                    <div class="mt-1 text-xs text-gray-500">{{ formTypePathText }}</div>
+                  </div>
+                  <div v-else class="text-sm text-gray-400">{{ t('common.noData') }}</div>
+                </div>
                 <p v-if="errors.material_type_id" class="mt-1 text-xs text-red-600">{{ errors.material_type_id }}</p>
               </div>
 
@@ -244,6 +267,7 @@ import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import { openTypeDefGraph, type TypeDefGraphSelection } from '@/composables/useTypeDefGraphModal'
 import { supabase } from '@/lib/supabase'
 import { normalizeBatchAttrDataType, validateBatchAttrField } from '@/lib/batchAttrValidation'
 
@@ -471,17 +495,6 @@ const rawMaterialTypeIds = computed(() => {
   return ids
 })
 
-const materialTypeOptions = computed(() => {
-  return materialTypes.value
-    .filter((row) => rawMaterialTypeIds.value.size === 0 || rawMaterialTypeIds.value.has(row.type_id))
-    .slice()
-    .sort((a, b) => materialTypePathText(a.type_id).localeCompare(materialTypePathText(b.type_id)))
-    .map((row) => ({
-      value: row.type_id,
-      label: materialTypePathText(row.type_id),
-    }))
-})
-
 const selectedTypeDescendantIds = computed(() => {
   if (!form.material_type_id) return new Set<string>()
   const ids = new Set<string>()
@@ -495,6 +508,12 @@ const selectedTypeDescendantIds = computed(() => {
   visit(form.material_type_id)
   return ids
 })
+
+const formSelectedType = computed(() => (
+  form.material_type_id ? materialTypeMap.value.get(form.material_type_id) ?? null : null
+))
+
+const formTypePathText = computed(() => materialTypePathText(form.material_type_id))
 
 const filteredMaterialOptions = computed(() => {
   return materialRows.value
@@ -566,6 +585,12 @@ function materialTypePathText(typeId: string | null | undefined) {
     current = current.parent_type_id ? materialTypeMap.value.get(current.parent_type_id) ?? null : null
   }
   return parts.join(' / ')
+}
+
+function isAllowedRawMaterialType(typeId: string | null | undefined) {
+  if (!typeId) return false
+  if (rawMaterialTypeIds.value.size > 0) return rawMaterialTypeIds.value.has(typeId)
+  return materialTypeMap.value.has(typeId)
 }
 
 function clearErrors() {
@@ -1059,14 +1084,44 @@ function updateAttrBoolean(field: AttrField, event: Event) {
   field.value = Boolean(target?.checked)
 }
 
-function handleMaterialTypeChange() {
-  clearErrors()
-  form.material_id = ''
-  form.uom_id = ''
-  attrFields.value = []
-  if (form.material_type_id) {
-    void loadAttrFields(form.material_type_id, mode.value === 'create' ? null : lotId.value)
+async function applyMaterialTypeSelection(typeIdValue: string, options?: { showError?: boolean }) {
+  const normalizedTypeId = typeIdValue.trim()
+  if (!normalizedTypeId) {
+    clearErrors()
+    form.material_type_id = ''
+    form.material_id = ''
+    form.uom_id = ''
+    attrFields.value = []
+    return
   }
+
+  if (!isAllowedRawMaterialType(normalizedTypeId)) {
+    if (options?.showError) {
+      toast.error(t('rawMaterialInventoryEdit.errors.invalidMaterialType'))
+    }
+    return
+  }
+
+  clearErrors()
+  const typeChanged = form.material_type_id !== normalizedTypeId
+  form.material_type_id = normalizedTypeId
+  if (typeChanged) {
+    form.material_id = ''
+    form.uom_id = ''
+  }
+  attrFields.value = []
+  await loadAttrFields(normalizedTypeId, mode.value === 'create' ? null : lotId.value)
+}
+
+function openMaterialTypePicker() {
+  if (mode.value !== 'create') return
+  openTypeDefGraph({
+    preferredDomain: 'material_type',
+    restoreFocusOnClose: false,
+    onSelect: (selectedType: TypeDefGraphSelection) => {
+      void applyMaterialTypeSelection(selectedType.typeId, { showError: true })
+    },
+  })
 }
 
 function handleMaterialChange() {
@@ -1321,6 +1376,11 @@ onMounted(async () => {
     await loadBaseData()
     if (lotId.value) {
       await loadExistingLot()
+    } else {
+      const defaultTypeId = typeof route.query.materialTypeId === 'string' ? route.query.materialTypeId.trim() : ''
+      if (defaultTypeId) {
+        await applyMaterialTypeSelection(defaultTypeId)
+      }
     }
   } catch (error) {
     loadError.value = messageText(error)

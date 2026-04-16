@@ -932,3 +932,11 @@ I want to create an vue page to maintain inventory of raw material. the page sho
 - the inventory edit page should have a form to input material name, material type, quantity, other attr defined in type_def and attr_def tables and location
 - the inventory edit page should have a save button to save the inventory data to database
 - data will stored in lot, movement table and inv_inventory is just projection table, the inventory quantity should be calculated based on the movement in and movement out of the raw material
+
+
+for 原材料在庫一覧 page, please made following modification
+- change the page name to 原材料在庫管理
+- 原材料種別 should be foldable
+- same material should be summarize as one line in the table, and the material type column should show all material type of the same material
+- each line has several actions to save space, the actions should show as a dropdown menu.
+- material name should be a link, when user click the material name, a dialog should be shown to show the inventory detail of the material, including inventory by location and inventory movement history.

@@ -56,6 +56,13 @@
   - `basis`
   - `consumption_mode`
   - `notes`
+- `consumption_mode` semantics:
+  - `exact`
+    - operator records the exact consumed material / lot during execution
+  - `estimate`
+    - planning reference only; no inventory issue is posted from this mode by itself
+  - `backflush`
+    - operator records actual quantity during execution, and inventory issue posting is deferred until step completion
 - output-material editable fields:
   - `output_material_type`
   - `output_name`

@@ -24,6 +24,7 @@
 - step-level execution input
 - step-level execution monitoring
 - step-level actual records
+- raw-material issue posting for step consumption modes handled at execution time
 - step-level QA and deviation handling
 
 ### This Page Does Not Own
@@ -94,6 +95,7 @@
 - state machine rule for this phase:
   - when the current step is saved as `completed` or `skipped`
   - if `ended_at` is blank, auto-set it to now
+  - when the current step is saved as `completed` and it has unresolved `backflush` material inputs, backflush issue posting must succeed before completion is finalized
   - search the next step in the same batch by `step_no`
   - if the next step is `open`, auto-advance it to `ready`
 - do not auto-skip over `hold`, `completed`, `skipped`, or `cancelled` next steps
@@ -140,6 +142,7 @@
 ### Subsection B: Actual Inputs
 - editable / maintainable records for:
   - material or lot
+  - source site context for auto-allocation cases
   - actual qty
   - uom
   - consumed at
@@ -150,12 +153,22 @@
   - `mes.batch_material_plan`
 - actual:
   - `mes.batch_material_actual`
+- inventory issue posting:
+  - `inv_movements`
+  - `inv_movement_lines`
 
 ### Rules
 - planned rows are reference only
 - actual rows belong to the selected `batch_step_id`
+- `mes.batch_material_actual` is an execution record and not the inventory source of truth
+- when the planned recipe input uses `consumption_mode = backflush`, the actual row may remain unresolved to a lot while the step is in progress
+- when a `backflush` step is completed, the page must resolve the actual issue to concrete raw-material lots and create posted inventory issue movements
+- the backflush inventory issue must use `doc_type = 'production_issue'`
+- the backflush movement lines must remain lot-level and carry `meta.lot_id`
+- backflush allocation must not silently consume stock across multiple sites
+- insufficient stock for backflush must block step completion
 - this page must not change filling / packing data
-- this page must not alter batch-level inventory result logic owned by `actual_yield` or packing
+- this page must not alter finished-goods inventory result logic owned by `actual_yield` or packing
 
 ## Section 5: Equipment Execution
 
@@ -244,6 +257,11 @@
   - `mes.batch_material_plan`
 - actual materials:
   - `mes.batch_material_actual`
+- raw-material issue postings:
+  - `inv_movements`
+  - `inv_movement_lines`
+- inventory projection:
+  - `inv_inventory`
 - equipment:
   - `mes.batch_equipment_assignment`
 - logs:

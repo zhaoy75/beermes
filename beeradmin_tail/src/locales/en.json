@@ -137,6 +137,9 @@
       "site": "Site",
       "equipmentType": "Equipment type",
       "equipment": "Equipment",
+      "selectAll": "Select all",
+      "clearAll": "Clear all",
+      "deleteAll": "Delete all",
       "dateFrom": "Start date",
       "dateTo": "End date",
       "viewMode": "View",
@@ -145,7 +148,9 @@
     },
     "views": {
       "day": "Day",
-      "week": "Week"
+      "week": "Week",
+      "twoWeeks": "Two weeks",
+      "month": "Month"
     },
     "legend": {
       "reservation": "Reservation",
@@ -155,6 +160,7 @@
       "conflict": "Conflict"
     },
     "grid": {
+      "equipmentHeader": "Equipment",
       "resourceHeader": "Site / Equipment",
       "taskLabel": "Schedule item"
     },

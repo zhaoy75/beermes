@@ -20,37 +20,143 @@
         </div>
 
         <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
-          <div>
+          <div ref="siteFilterDropdownRef" class="relative">
             <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('equipmentSchedule.filters.site') }}</label>
-            <select
-              v-model="filters.siteIds"
-              multiple
-              class="equipment-schedule-select h-32 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+            <button
+              type="button"
+              class="equipment-schedule-dropdown-trigger flex h-11 w-full items-center justify-between rounded-lg border border-gray-300 bg-white px-3 text-left text-sm text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+              @click="siteFilterOpen = !siteFilterOpen"
             >
-              <option v-for="site in siteOptions" :key="site.value" :value="site.value">{{ site.label }}</option>
-            </select>
+              <span class="truncate">{{ selectedSiteFilterLabel }}</span>
+              <span class="ml-3 text-xs text-gray-500 dark:text-gray-400">{{ siteFilterOpen ? '▲' : '▼' }}</span>
+            </button>
+            <div
+              v-if="siteFilterOpen"
+              class="equipment-schedule-dropdown-panel absolute z-20 mt-2 max-h-64 w-full overflow-auto rounded-xl border border-gray-200 bg-white p-2 shadow-lg dark:border-gray-700 dark:bg-gray-900"
+            >
+              <div class="mb-2 flex items-center gap-2 border-b border-gray-200 px-2 pb-2 dark:border-gray-700">
+                <button
+                  type="button"
+                  class="rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+                  @click="selectAllSites"
+                >
+                  {{ t('equipmentSchedule.filters.selectAll') }}
+                </button>
+                <button
+                  type="button"
+                  class="rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+                  @click="clearAllSites"
+                >
+                  {{ t('equipmentSchedule.filters.deleteAll') }}
+                </button>
+              </div>
+              <label
+                v-for="site in siteOptions"
+                :key="site.value"
+                class="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/[0.03]"
+              >
+                <input
+                  :checked="filters.siteIds.includes(site.value)"
+                  type="checkbox"
+                  class="h-4 w-4 rounded border-gray-300"
+                  @change="toggleSiteFilter(site.value)"
+                />
+                <span class="truncate">{{ site.label }}</span>
+              </label>
+            </div>
           </div>
 
-          <div>
+          <div ref="equipmentTypeFilterDropdownRef" class="relative">
             <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('equipmentSchedule.filters.equipmentType') }}</label>
-            <select
-              v-model="filters.equipmentTypeIds"
-              multiple
-              class="equipment-schedule-select h-32 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+            <button
+              type="button"
+              class="equipment-schedule-dropdown-trigger flex h-11 w-full items-center justify-between rounded-lg border border-gray-300 bg-white px-3 text-left text-sm text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+              @click="equipmentTypeFilterOpen = !equipmentTypeFilterOpen"
             >
-              <option v-for="type in equipmentTypeOptions" :key="type.value" :value="type.value">{{ type.label }}</option>
-            </select>
+              <span class="truncate">{{ selectedEquipmentTypeFilterLabel }}</span>
+              <span class="ml-3 text-xs text-gray-500 dark:text-gray-400">{{ equipmentTypeFilterOpen ? '▲' : '▼' }}</span>
+            </button>
+            <div
+              v-if="equipmentTypeFilterOpen"
+              class="equipment-schedule-dropdown-panel absolute z-20 mt-2 max-h-80 w-full overflow-auto rounded-xl border border-gray-200 bg-white p-2 shadow-lg dark:border-gray-700 dark:bg-gray-900"
+            >
+              <div class="mb-2 flex items-center gap-2 border-b border-gray-200 px-2 pb-2 dark:border-gray-700">
+                <button
+                  type="button"
+                  class="rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+                  @click="selectAllEquipmentTypes"
+                >
+                  {{ t('equipmentSchedule.filters.selectAll') }}
+                </button>
+                <button
+                  type="button"
+                  class="rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+                  @click="clearAllEquipmentTypes"
+                >
+                  {{ t('equipmentSchedule.filters.clearAll') }}
+                </button>
+              </div>
+              <label
+                v-for="type in equipmentTypeTreeOptions"
+                :key="type.value"
+                class="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/[0.03]"
+                :style="{ paddingLeft: `${type.depth * 16 + 12}px` }"
+              >
+                <input
+                  :checked="filters.equipmentTypeIds.includes(type.value)"
+                  type="checkbox"
+                  class="h-4 w-4 rounded border-gray-300"
+                  @change="toggleEquipmentTypeFilter(type.value)"
+                />
+                <span class="truncate">{{ type.label }}</span>
+              </label>
+            </div>
           </div>
 
-          <div>
+          <div ref="equipmentFilterDropdownRef" class="relative">
             <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('equipmentSchedule.filters.equipment') }}</label>
-            <select
-              v-model="filters.equipmentIds"
-              multiple
-              class="equipment-schedule-select h-32 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+            <button
+              type="button"
+              class="equipment-schedule-dropdown-trigger flex h-11 w-full items-center justify-between rounded-lg border border-gray-300 bg-white px-3 text-left text-sm text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+              @click="equipmentFilterOpen = !equipmentFilterOpen"
             >
-              <option v-for="equipment in equipmentOptions" :key="equipment.value" :value="equipment.value">{{ equipment.label }}</option>
-            </select>
+              <span class="truncate">{{ selectedEquipmentFilterLabel }}</span>
+              <span class="ml-3 text-xs text-gray-500 dark:text-gray-400">{{ equipmentFilterOpen ? '▲' : '▼' }}</span>
+            </button>
+            <div
+              v-if="equipmentFilterOpen"
+              class="equipment-schedule-dropdown-panel absolute z-20 mt-2 max-h-64 w-full overflow-auto rounded-xl border border-gray-200 bg-white p-2 shadow-lg dark:border-gray-700 dark:bg-gray-900"
+            >
+              <div class="mb-2 flex items-center gap-2 border-b border-gray-200 px-2 pb-2 dark:border-gray-700">
+                <button
+                  type="button"
+                  class="rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+                  @click="selectAllEquipment"
+                >
+                  {{ t('equipmentSchedule.filters.selectAll') }}
+                </button>
+                <button
+                  type="button"
+                  class="rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+                  @click="clearAllEquipment"
+                >
+                  {{ t('equipmentSchedule.filters.deleteAll') }}
+                </button>
+              </div>
+              <label
+                v-for="equipment in equipmentOptions"
+                :key="equipment.value"
+                class="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/[0.03]"
+              >
+                <input
+                  :checked="filters.equipmentIds.includes(equipment.value)"
+                  type="checkbox"
+                  class="h-4 w-4 rounded border-gray-300"
+                  @change="toggleEquipmentFilter(equipment.value)"
+                />
+                <span class="truncate">{{ equipment.label }}</span>
+              </label>
+            </div>
           </div>
 
           <div>
@@ -76,9 +182,12 @@
             <select
               v-model="filters.viewMode"
               class="h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+              @change="handleViewModeChange"
             >
               <option value="day">{{ t('equipmentSchedule.views.day') }}</option>
               <option value="week">{{ t('equipmentSchedule.views.week') }}</option>
+              <option value="two_weeks">{{ t('equipmentSchedule.views.twoWeeks') }}</option>
+              <option value="month">{{ t('equipmentSchedule.views.month') }}</option>
             </select>
           </div>
         </div>
@@ -114,8 +223,8 @@
         </div>
       </section>
 
-      <section class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-white/[0.03]">
-        <div class="flex flex-wrap items-center gap-3">
+      <section class="equipment-schedule-panel--board rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-white/[0.03]">
+        <div class="equipment-board-legend mb-4 flex flex-wrap items-center gap-3">
           <div
             v-for="item in legendItems"
             :key="item.key"
@@ -125,448 +234,120 @@
             <span>{{ item.label }}</span>
           </div>
         </div>
-      </section>
-
-      <section class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-white/[0.03]">
-        <div v-if="loading" class="py-12 text-center text-sm text-gray-500 dark:text-gray-400">{{ t('common.loading') }}</div>
-        <div v-else-if="loadError" class="rounded-xl border border-error-200 bg-error-50 px-4 py-3 text-sm text-error-700 dark:border-error-800/50 dark:bg-error-500/10 dark:text-error-300">
-          {{ loadError }}
-        </div>
-        <div v-else-if="groupedSiteRows.length === 0" class="py-12 text-center text-sm text-gray-500 dark:text-gray-400">
-          {{ t('equipmentSchedule.empty') }}
-        </div>
-        <div v-else class="space-y-4">
-          <section
-            v-for="siteGroup in groupedSiteRows"
-            :key="siteGroup.siteId"
-            class="rounded-2xl border border-gray-200 bg-gray-50/70 dark:border-gray-700 dark:bg-gray-900/40"
+        <div
+          ref="timelineContainerRef"
+          class="equipment-board-gantt"
+        ></div>
+        <div
+          v-if="loading || loadError || boardEquipmentRows.length === 0"
+          class="equipment-board-overlay"
+          :class="{
+            'equipment-board-overlay--error': !loading && !!loadError,
+          }"
+        >
+          <div
+            v-if="loading"
+            class="py-12 text-center text-sm text-gray-500 dark:text-gray-400"
           >
-            <header class="flex flex-col gap-3 border-b border-gray-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-gray-700">
-              <div>
-                <h2 class="text-lg font-semibold text-gray-800 dark:text-white/90">{{ siteGroup.siteLabel }}</h2>
-                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                  {{ t('equipmentSchedule.siteSummary', { count: siteGroup.rows.length }) }}
-                </p>
-              </div>
-              <button
-                type="button"
-                class="inline-flex items-center justify-center rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-white dark:border-gray-600 dark:text-gray-300 dark:hover:bg-white/[0.03]"
-                @click="toggleSite(siteGroup.siteId)"
-              >
-                {{ isSiteCollapsed(siteGroup.siteId) ? t('common.expand') : t('common.collapse') }}
-              </button>
-            </header>
-
-            <div v-if="!isSiteCollapsed(siteGroup.siteId)" class="overflow-x-auto">
-              <table class="min-w-full divide-y divide-gray-200 text-sm dark:divide-gray-700">
-                <thead class="bg-white/80 dark:bg-gray-900/50">
-                  <tr>
-                    <th class="px-4 py-3 text-left font-semibold text-gray-600 dark:text-gray-300">
-                      {{ t('equipmentSchedule.filters.equipment') }}
-                    </th>
-                    <th class="px-4 py-3 text-left font-semibold text-gray-600 dark:text-gray-300">
-                      {{ t('equipmentSchedule.filters.equipmentType') }}
-                    </th>
-                    <th class="px-4 py-3 text-left font-semibold text-gray-600 dark:text-gray-300">
-                      {{ t('equipmentSchedule.modal.fields.status') }}
-                    </th>
-                    <th class="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-300">
-                      {{ t('equipmentSchedule.legend.reservation') }}
-                    </th>
-                    <th class="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-300">
-                      {{ t('equipmentSchedule.legend.actualUsage') }}
-                    </th>
-                    <th class="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-300">
-                      {{ t('common.actions') }}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-200 bg-white/70 dark:divide-gray-700 dark:bg-transparent">
-                  <tr
-                    v-for="row in siteGroup.rows"
-                    :key="row.equipment.id"
-                    class="align-middle hover:bg-gray-50/80 dark:hover:bg-white/[0.03]"
-                  >
-                    <td class="px-4 py-3">
-                      <div class="text-xs font-mono text-gray-500 dark:text-gray-400">{{ row.equipment.equipment_code }}</div>
-                      <div class="mt-1 text-sm font-semibold text-gray-800 dark:text-white/90">
-                        {{ equipmentDisplayName(row.equipment) || t('equipment.nameFallback') }}
-                      </div>
-                    </td>
-                    <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
-                      {{ equipmentTypeLabel(row.equipment.equipment_type_id) }}
-                    </td>
-                    <td class="px-4 py-3">
-                      <span class="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-300">
-                        {{ equipmentStatusLabel(row.equipment.equipment_status) }}
-                      </span>
-                    </td>
-                    <td class="px-4 py-3 text-right text-sm font-medium text-gray-700 dark:text-gray-200">
-                      {{ row.reservationCount }}
-                    </td>
-                    <td class="px-4 py-3 text-right text-sm font-medium text-gray-700 dark:text-gray-200">
-                      {{ row.actualCount }}
-                    </td>
-                    <td class="px-4 py-3 text-right">
-                      <button
-                        type="button"
-                        class="inline-flex items-center justify-center rounded-lg bg-brand-500 px-3 py-2 text-sm font-medium text-white hover:bg-brand-600"
-                        @click="openCreateModalForRow(row.equipment)"
-                      >
-                        {{ t('equipmentSchedule.actions.newReservation') }}
-                      </button>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </section>
-
-          <section class="equipment-schedule-panel--board rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-white/[0.03]">
-            <div v-if="boardEquipmentRows.length === 0" class="py-12 text-center text-sm text-gray-500 dark:text-gray-400">
-              {{ t('equipmentSchedule.empty') }}
-            </div>
-            <div
-              v-else
-              ref="timelineContainerRef"
-              class="equipment-board-gantt"
-            ></div>
-          </section>
+            {{ t('common.loading') }}
+          </div>
+          <div
+            v-else-if="loadError"
+            class="rounded-xl border border-error-200 bg-error-50 px-4 py-3 text-sm text-error-700 dark:border-error-800/50 dark:bg-error-500/10 dark:text-error-300"
+          >
+            {{ loadError }}
+          </div>
+          <div
+            v-else
+            class="py-12 text-center text-sm text-gray-500 dark:text-gray-400"
+          >
+            {{ t('equipmentSchedule.empty') }}
+          </div>
         </div>
       </section>
     </div>
 
-    <Modal v-if="modalOpen" @close="closeModal">
-      <template #body>
-        <div class="relative mx-4 w-full max-w-3xl overflow-y-auto rounded-3xl bg-white p-6 shadow-xl dark:bg-gray-900 lg:p-8">
-          <div class="mb-6">
-            <h2 class="text-xl font-semibold text-gray-800 dark:text-white/90">
-              {{ modalMode === 'edit' ? t('equipmentSchedule.modal.editTitle') : t('equipmentSchedule.modal.createTitle') }}
-            </h2>
-            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t('equipmentSchedule.modal.subtitle') }}</p>
-          </div>
-
-          <div
-            v-if="formError"
-            class="mb-4 rounded-xl border border-error-200 bg-error-50 px-4 py-3 text-sm text-error-700 dark:border-error-800/50 dark:bg-error-500/10 dark:text-error-300"
-          >
-            {{ formError }}
-          </div>
-
-          <div class="grid gap-4 md:grid-cols-2">
-            <div>
-              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                {{ t('equipmentSchedule.modal.fields.type') }}
-              </label>
-              <select
-                v-model="reservationForm.reservation_type"
-                class="h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-                @change="handleReservationTypeChange"
-              >
-                <option v-for="option in reservationTypeOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-              </select>
-            </div>
-
-            <div>
-              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                {{ t('equipmentSchedule.modal.fields.equipment') }}
-              </label>
-              <div v-if="modalMode === 'edit'" class="flex h-11 items-center rounded-lg border border-gray-300 bg-gray-50 px-3 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200">
-                {{ selectedEquipmentLabel }}
-              </div>
-              <select
-                v-else
-                v-model="reservationForm.equipment_id"
-                class="h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-              >
-                <option value="">{{ t('common.select') }}</option>
-                <option v-for="option in equipmentOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-              </select>
-            </div>
-
-            <div>
-              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                {{ t('equipmentSchedule.modal.fields.site') }}
-              </label>
-              <div class="flex h-11 items-center rounded-lg border border-gray-300 bg-gray-50 px-3 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200">
-                {{ selectedSiteLabel }}
-              </div>
-            </div>
-
-            <div>
-              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                {{ t('equipmentSchedule.modal.fields.status') }}
-              </label>
-              <select
-                v-model="reservationForm.status"
-                class="h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-              >
-                <option v-for="option in reservationStatusOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-              </select>
-            </div>
-
-            <div>
-              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                {{ t('equipmentSchedule.modal.fields.batch') }}
-              </label>
-              <select
-                v-model="reservationForm.batch_id"
-                :disabled="reservationForm.reservation_type !== 'batch'"
-                class="h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 disabled:cursor-not-allowed disabled:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:disabled:bg-gray-800"
-                @change="handleBatchChange"
-              >
-                <option value="">{{ t('common.none') }}</option>
-                <option v-for="option in batchOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-              </select>
-            </div>
-
-            <div>
-              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                {{ t('equipmentSchedule.modal.fields.batchStep') }}
-              </label>
-              <select
-                v-model="reservationForm.batch_step_id"
-                :disabled="reservationForm.reservation_type !== 'batch' || !reservationForm.batch_id || batchStepLoading"
-                class="h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 disabled:cursor-not-allowed disabled:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:disabled:bg-gray-800"
-              >
-                <option value="">{{ t('common.none') }}</option>
-                <option v-for="option in batchStepOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-              </select>
-            </div>
-
-            <div>
-              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                {{ t('equipmentSchedule.modal.fields.startAt') }}
-              </label>
-              <input
-                v-model="reservationForm.start_at"
-                type="datetime-local"
-                class="h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-              />
-            </div>
-
-            <div>
-              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                {{ t('equipmentSchedule.modal.fields.endAt') }}
-              </label>
-              <input
-                v-model="reservationForm.end_at"
-                type="datetime-local"
-                class="h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-              />
-            </div>
-
-            <div class="md:col-span-2">
-              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                {{ t('equipmentSchedule.modal.fields.note') }}
-              </label>
-              <textarea
-                v-model.trim="reservationForm.note"
-                rows="4"
-                class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-              ></textarea>
-            </div>
-          </div>
-
-          <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-            <button
-              type="button"
-              class="inline-flex items-center justify-center rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.03]"
-              @click="closeModal"
-            >
-              {{ t('common.close') }}
-            </button>
-            <button
-              type="button"
-              class="inline-flex items-center justify-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-70"
-              :disabled="saving"
-              @click="saveReservation"
-            >
-              {{ saving ? t('common.saving') : t('common.save') }}
-            </button>
-          </div>
-        </div>
-      </template>
-    </Modal>
+    <EquipmentReservationDialog
+      :open="modalOpen"
+      :mode="modalMode"
+      :form-error="formError"
+      :saving="saving"
+      :batch-step-loading="batchStepLoading"
+      :form="reservationForm"
+      :selected-equipment-label="selectedEquipmentLabel"
+      :selected-site-label="selectedSiteLabel"
+      :equipment-options="equipmentOptions"
+      :reservation-type-options="reservationTypeOptions"
+      :reservation-status-options="reservationStatusOptions"
+      :batch-options="batchOptions"
+      :batch-step-options="batchStepOptions"
+      @close="closeModal"
+      @save="saveReservation"
+      @update:form="Object.assign(reservationForm, $event)"
+      @reservation-type-change="handleReservationTypeChange"
+      @batch-change="handleBatchChange"
+    />
   </AdminLayout>
 </template>
 
 <script setup lang="ts">
 import 'vis-timeline/styles/vis-timeline-graph2d.min.css'
 
-import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { toast } from 'vue3-toastify'
 import { DataSet } from 'vis-data'
 import {
   Timeline,
-  type DataGroup,
-  type DataItem,
+  type TimelineItem,
   type TimelineEventPropertiesResult,
   type TimelineOptions,
 } from 'vis-timeline'
 
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
-import Modal from '@/components/profile/Modal.vue'
 import { supabase } from '@/lib/supabase'
-
-type NameI18n = Record<string, string> | null
-type RowRecord = Record<string, unknown>
-
-interface SiteRow {
-  id: string
-  name: string
-}
-
-interface EquipmentTypeRow {
-  type_id: string
-  code: string | null
-  name: string | null
-  name_i18n: NameI18n
-  sort_order: number | null
-}
-
-interface EquipmentRow {
-  id: string
-  equipment_code: string
-  name_i18n: NameI18n
-  equipment_type_id: string | null
-  equipment_kind: string | null
-  site_id: string
-  equipment_status: string | null
-  is_active: boolean
-  sort_order: number | null
-}
-
-interface ReservationRow {
-  id: string
-  site_id: string
-  equipment_id: string
-  reservation_type: string
-  batch_id: string | null
-  batch_step_id: string | null
-  start_at: string
-  end_at: string
-  status: string
-  note: string | null
-  created_at: string | null
-  updated_at: string | null
-}
-
-interface AssignmentRow {
-  id: string
-  batch_id: string | null
-  batch_step_id: string | null
-  reservation_id: string | null
-  equipment_id: string
-  assignment_role: string | null
-  status: string
-  assigned_at: string | null
-  released_at: string | null
-  note: string | null
-  updated_at: string | null
-}
-
-interface BatchRow {
-  id: string
-  batch_code: string
-  batch_label: string | null
-  status: string | null
-}
-
-interface StepRow {
-  id: string
-  batch_id: string
-  step_no: number | null
-  step_name: string | null
-  step_code: string | null
-}
-
-interface FilterState {
-  siteIds: string[]
-  equipmentTypeIds: string[]
-  equipmentIds: string[]
-  rangeStart: string
-  rangeEnd: string
-  viewMode: 'day' | 'week'
-  showCompleted: boolean
-  showActualUsage: boolean
-}
-
-interface ReservationFormState {
-  id: string | null
-  reservation_type: string
-  equipment_id: string
-  batch_id: string
-  batch_step_id: string
-  start_at: string
-  end_at: string
-  status: string
-  note: string
-}
-
-interface SelectOption {
-  value: string
-  label: string
-}
-
-interface TimelineGroupMeta {
-  equipmentId: string
-  siteId: string
-}
-
-interface BoardTimelineGroup extends DataGroup {
-  id: string
-  content: string
-  title: string
-  className?: string
-  nestedGroups?: string[]
-  treeLevel?: number
-  _meta: TimelineGroupMeta
-}
-
-interface TimelineItemMeta {
-  kind: 'reservation' | 'actual'
-  reservationId?: string
-  reservationType?: string
-  batchId?: string
-  batchStepId?: string
-  equipmentId: string
-  status?: string
-  hasConflict?: boolean
-  label?: string
-}
-
-interface BoardTimelineItem extends DataItem {
-  id: string
-  group: string
-  content: string
-  title: string
-  className?: string
-  start: Date
-  end?: Date
-  type: 'range'
-  _meta: TimelineItemMeta
-}
-
-interface EquipmentScheduleRow {
-  equipment: EquipmentRow
-  reservationCount: number
-  actualCount: number
-}
-
-interface SiteScheduleGroup {
-  siteId: string
-  siteLabel: string
-  rows: EquipmentScheduleRow[]
-}
-
-interface VisibleAssignmentRow {
-  row: AssignmentRow
-  hasConflict: boolean
-}
+import EquipmentReservationDialog from './components/EquipmentReservationDialog.vue'
+import {
+  addDays,
+  addHours,
+  asNameI18n,
+  createDefaultFilters,
+  createEmptyReservationForm,
+  formatDateInput,
+  formatDateTimeInput,
+  intersectsRange,
+  isValidRange,
+  localizeName,
+  normalizeBoardRange,
+  parseBooleanQuery,
+  parseCsvQuery,
+  parseDateInput,
+  parseDateTimeInput,
+  parseStringQuery,
+  rangeDaysForViewMode,
+  resolveAssignmentEnd,
+  resolveAssignmentStart,
+  startOfDay,
+  startOfHour,
+} from './equipment-schedule/utils'
+import type {
+  AssignmentRow,
+  BatchRow,
+  BoardTimelineGroup,
+  BoardTimelineItem,
+  EquipmentRow,
+  EquipmentTypeRow,
+  FilterState,
+  ReservationFormState,
+  ReservationRow,
+  RowRecord,
+  SelectOption,
+  SiteRow,
+  StepRow,
+  VisibleAssignmentRow,
+} from './equipment-schedule/types'
 
 const mesClient = () => supabase.schema('mes')
 const { t, locale } = useI18n()
@@ -588,11 +369,24 @@ const assignmentRows = ref<AssignmentRow[]>([])
 const batchRows = ref<BatchRow[]>([])
 const stepRowsById = ref<Record<string, StepRow>>({})
 const batchStepsByBatch = ref<Record<string, StepRow[]>>({})
-const collapsedSiteIds = ref<string[]>([])
 const timelineContainerRef = ref<HTMLElement | null>(null)
 const timelineInstance = ref<Timeline | null>(null)
+const siteFilterDropdownRef = ref<HTMLElement | null>(null)
+const equipmentTypeFilterDropdownRef = ref<HTMLElement | null>(null)
+const equipmentFilterDropdownRef = ref<HTMLElement | null>(null)
+let timelineGroupsDataSet: DataSet<BoardTimelineGroup, 'id'> | null = null
+let timelineItemsDataSet: DataSet<BoardTimelineItem, 'id'> | null = null
+let dailyMarkerIds: string[] = []
+let weeklyMarkerIds: string[] = []
+const referenceDataLoaded = ref(false)
+const lastSyncedWindowStart = ref<number | null>(null)
+const lastSyncedWindowEnd = ref<number | null>(null)
+const lastTimelineOptionsKey = ref('')
 
 const filters = reactive<FilterState>(createDefaultFilters())
+const siteFilterOpen = ref(false)
+const equipmentTypeFilterOpen = ref(false)
+const equipmentFilterOpen = ref(false)
 
 const modalOpen = ref(false)
 const modalMode = ref<'create' | 'edit'>('create')
@@ -604,6 +398,12 @@ const reservationStatusValues = ['draft', 'reserved', 'confirmed', 'in_progress'
 const assignmentCompletedStatuses = new Set(['done', 'cancelled'])
 const reservationCompletedStatuses = new Set(['completed', 'cancelled'])
 const activeReservationStatuses = new Set(['draft', 'reserved', 'confirmed', 'in_progress'])
+
+type TimelineRangeChangeProperties = {
+  start?: Date | string | number
+  end?: Date | string | number
+  byUser?: boolean
+}
 
 const legendItems = computed(() => [
   { key: 'reservation', label: t('equipmentSchedule.legend.reservation'), dotClass: 'bg-blue-600' },
@@ -625,12 +425,82 @@ const siteOptions = computed<SelectOption[]>(() =>
   })),
 )
 
-const equipmentTypeOptions = computed<SelectOption[]>(() =>
-  equipmentTypeRows.value.map((row) => ({
-    value: row.type_id,
-    label: equipmentTypeLabel(row.type_id),
-  })),
-)
+const selectedSiteFilterLabel = computed(() => {
+  if (filters.siteIds.length === 0) return t('common.all')
+  if (filters.siteIds.length === 1) {
+    return siteOptions.value.find((option) => option.value === filters.siteIds[0])?.label ?? filters.siteIds[0]
+  }
+  const firstLabel = siteOptions.value.find((option) => option.value === filters.siteIds[0])?.label ?? filters.siteIds[0]
+  return `${firstLabel} +${filters.siteIds.length - 1}`
+})
+
+const equipmentTypeChildrenByParent = computed(() => {
+  const map = new Map<string | null, EquipmentTypeRow[]>()
+  for (const row of equipmentTypeRows.value) {
+    const key = row.parent_type_id && equipmentTypeMap.value.has(row.parent_type_id) ? row.parent_type_id : null
+    const list = map.get(key) ?? []
+    list.push(row)
+    map.set(key, list)
+  }
+  for (const list of map.values()) {
+    list.sort((a, b) => {
+      const sortCompare = (a.sort_order ?? 0) - (b.sort_order ?? 0)
+      if (sortCompare !== 0) return sortCompare
+      return equipmentTypeLabel(a.type_id).localeCompare(equipmentTypeLabel(b.type_id))
+    })
+  }
+  return map
+})
+
+const equipmentTypeTreeOptions = computed<Array<SelectOption & { depth: number }>>(() => {
+  const result: Array<SelectOption & { depth: number }> = []
+  const walk = (parentId: string | null, depth: number) => {
+    const children = equipmentTypeChildrenByParent.value.get(parentId) ?? []
+    for (const row of children) {
+      result.push({
+        value: row.type_id,
+        label: equipmentTypeLabel(row.type_id),
+        depth,
+      })
+      walk(row.type_id, depth + 1)
+    }
+  }
+  walk(null, 0)
+  return result
+})
+
+const equipmentTypeDescendantIdsById = computed(() => {
+  const cache = new Map<string, string[]>()
+  const walk = (typeId: string): string[] => {
+    if (cache.has(typeId)) return cache.get(typeId) ?? []
+    const children = equipmentTypeChildrenByParent.value.get(typeId) ?? []
+    const descendantIds = [typeId]
+    for (const child of children) descendantIds.push(...walk(child.type_id))
+    cache.set(typeId, descendantIds)
+    return descendantIds
+  }
+  for (const row of equipmentTypeRows.value) walk(row.type_id)
+  return cache
+})
+
+const selectedEquipmentTypeFilterLabel = computed(() => {
+  if (filters.equipmentTypeIds.length === 0) return t('common.all')
+  if (filters.equipmentTypeIds.length === 1) {
+    return equipmentTypeLabel(filters.equipmentTypeIds[0])
+  }
+  const firstLabel = equipmentTypeLabel(filters.equipmentTypeIds[0])
+  return `${firstLabel} +${filters.equipmentTypeIds.length - 1}`
+})
+
+const effectiveEquipmentTypeFilterIds = computed(() => {
+  if (filters.equipmentTypeIds.length === 0) return []
+  const ids = new Set<string>()
+  for (const typeId of filters.equipmentTypeIds) {
+    const descendants = equipmentTypeDescendantIdsById.value.get(typeId) ?? [typeId]
+    for (const id of descendants) ids.add(id)
+  }
+  return [...ids]
+})
 
 const equipmentOptions = computed<SelectOption[]>(() =>
   boardEquipmentRows.value.map((row) => ({
@@ -638,6 +508,15 @@ const equipmentOptions = computed<SelectOption[]>(() =>
     label: equipmentFullLabel(row),
   })),
 )
+
+const selectedEquipmentFilterLabel = computed(() => {
+  if (filters.equipmentIds.length === 0) return t('common.all')
+  if (filters.equipmentIds.length === 1) {
+    return equipmentOptions.value.find((option) => option.value === filters.equipmentIds[0])?.label ?? filters.equipmentIds[0]
+  }
+  const firstLabel = equipmentOptions.value.find((option) => option.value === filters.equipmentIds[0])?.label ?? filters.equipmentIds[0]
+  return `${firstLabel} +${filters.equipmentIds.length - 1}`
+})
 
 const batchOptions = computed<SelectOption[]>(() =>
   batchRows.value.map((row) => ({
@@ -739,39 +618,6 @@ const visibleAssignments = computed<VisibleAssignmentRow[]>(() => {
   })
 })
 
-const groupedSiteRows = computed<SiteScheduleGroup[]>(() => {
-  const reservationCounts = new Map<string, number>()
-  const actualCounts = new Map<string, number>()
-
-  for (const row of visibleReservations.value) {
-    reservationCounts.set(row.equipment_id, (reservationCounts.get(row.equipment_id) ?? 0) + 1)
-  }
-
-  for (const item of visibleAssignments.value) {
-    actualCounts.set(item.row.equipment_id, (actualCounts.get(item.row.equipment_id) ?? 0) + 1)
-  }
-
-  const groups = new Map<string, SiteScheduleGroup>()
-
-  for (const equipment of boardEquipmentRows.value) {
-    const group = groups.get(equipment.site_id) ?? {
-      siteId: equipment.site_id,
-      siteLabel: siteLabel(equipment.site_id),
-      rows: [],
-    }
-
-    group.rows.push({
-      equipment,
-      reservationCount: reservationCounts.get(equipment.id) ?? 0,
-      actualCount: actualCounts.get(equipment.id) ?? 0,
-    })
-
-    groups.set(equipment.site_id, group)
-  }
-
-  return Array.from(groups.values()).sort((a, b) => a.siteLabel.localeCompare(b.siteLabel))
-})
-
 const equipmentScheduleSummaryById = computed(() => {
   const summary = new Map<string, { reservations: number, actuals: number }>()
 
@@ -794,10 +640,13 @@ const equipmentScheduleSummaryById = computed(() => {
   return summary
 })
 
+const timelineLocale = computed(() => resolveLocaleLang())
+const timelineAxisScale = computed(() => (filters.viewMode === 'day' ? 'hour' : 'day'))
+
 const timelineGroups = computed<BoardTimelineGroup[]>(() =>
   boardEquipmentRows.value.map((equipment) => ({
     id: equipment.id,
-    content: equipmentFullLabel(equipment),
+    content: buildGroupContentMarkup(equipment),
     title: [
       equipmentFullLabel(equipment),
       equipmentTypeLabel(equipment.equipment_type_id),
@@ -834,7 +683,6 @@ const timelineOptions = computed<TimelineOptions>(() => ({
   end: boardRange.value.end,
   stack: true,
   orientation: 'top',
-  groupOrder: (a, b) => String(a.id).localeCompare(String(b.id)),
   verticalScroll: true,
   horizontalScroll: true,
   zoomKey: 'ctrlKey',
@@ -842,10 +690,23 @@ const timelineOptions = computed<TimelineOptions>(() => ({
   zoomMax: 31 * 24 * 60 * 60 * 1000,
   selectable: true,
   multiselect: false,
-  editable: false,
-  locale: resolveLocaleLang(),
+  moveable: true,
+  editable: {
+    add: false,
+    remove: false,
+    updateGroup: false,
+    updateTime: true,
+    overrideItems: false,
+  },
+  itemsAlwaysDraggable: {
+    item: false,
+    range: true,
+  },
+  locale: timelineLocale.value,
+  onMove: handleTimelineMove,
+  onMoving: handleTimelineMoving,
   timeAxis: {
-    scale: filters.viewMode === 'day' ? 'hour' : 'day',
+    scale: timelineAxisScale.value,
     step: 1,
   },
   format: filters.viewMode === 'day'
@@ -853,161 +714,63 @@ const timelineOptions = computed<TimelineOptions>(() => ({
         minorLabels: { hour: 'HH:mm' },
         majorLabels: { hour: 'M月D日 ddd' },
       }
-    : {
+    : filters.viewMode === 'month'
+      ? {
+          minorLabels: { day: 'DD' },
+          majorLabels: { day: 'YYYY年M月' },
+        }
+      : {
         minorLabels: { day: 'DD' },
         majorLabels: { day: 'M月' },
       },
-  groupTemplate: (group?: DataGroup) => {
-    const typedGroup = group as BoardTimelineGroup | undefined
-    const equipment = typedGroup?._meta?.equipmentId
-      ? equipmentMap.value.get(typedGroup._meta.equipmentId)
-      : null
-    const summary = equipment?.id
-      ? equipmentScheduleSummaryById.value.get(equipment.id) ?? { reservations: 0, actuals: 0 }
-      : null
-    const wrapper = document.createElement('div')
-    wrapper.className = 'timeline-group-label'
-    if (equipment) {
-      wrapper.innerHTML = `
-        <div class="timeline-group-code">${equipment.equipment_code}</div>
-        <div class="timeline-group-name">${equipmentDisplayName(equipment) || t('equipment.nameFallback')}</div>
-        <div class="timeline-group-meta">${equipmentTypeLabel(equipment.equipment_type_id)}</div>
-        <div class="timeline-group-summary">${summary ? t('equipmentSchedule.rowSummary', summary) : ''}</div>
-      `
-      return wrapper
-    }
-    wrapper.textContent = typeof group?.content === 'string' ? group.content : ''
-    return wrapper
-  },
 }))
 
 watch(
   () => route.query,
-  () => {
+  async () => {
     applyQueryToFilters(route.query)
-    void loadBoard()
+    await loadBoard()
+    await nextTick()
+    syncTimeline()
   },
   { immediate: true },
 )
 
-watch([timelineGroups, timelineItems, timelineOptions, locale], () => {
-  void nextTick(() => {
-    syncTimeline()
-  })
-}, { deep: true })
-
-onBeforeUnmount(() => {
-  timelineInstance.value?.destroy()
-  timelineInstance.value = null
+watch(locale, async () => {
+  await nextTick()
+  syncTimeline()
 })
 
-function createDefaultFilters(viewMode: 'day' | 'week' = 'week'): FilterState {
-  const start = startOfDay(new Date())
-  const end = addDays(start, viewMode === 'day' ? 1 : 7)
-  return {
-    siteIds: [],
-    equipmentTypeIds: [],
-    equipmentIds: [],
-    rangeStart: formatDateInput(start),
-    rangeEnd: formatDateInput(end),
-    viewMode,
-    showCompleted: false,
-    showActualUsage: true,
+function handleDocumentPointerDown(event: PointerEvent) {
+  const target = event.target
+  if (!(target instanceof Node)) return
+  if (siteFilterOpen.value && !siteFilterDropdownRef.value?.contains(target)) {
+    siteFilterOpen.value = false
+  }
+  if (equipmentTypeFilterOpen.value && !equipmentTypeFilterDropdownRef.value?.contains(target)) {
+    equipmentTypeFilterOpen.value = false
+  }
+  if (equipmentFilterOpen.value && !equipmentFilterDropdownRef.value?.contains(target)) {
+    equipmentFilterOpen.value = false
   }
 }
 
-function createEmptyReservationForm(): ReservationFormState {
-  const start = startOfHour(new Date())
-  const end = addHours(start, 1)
-  return {
-    id: null,
-    reservation_type: 'batch',
-    equipment_id: '',
-    batch_id: '',
-    batch_step_id: '',
-    start_at: formatDateTimeInput(start),
-    end_at: formatDateTimeInput(end),
-    status: 'reserved',
-    note: '',
-  }
-}
+onMounted(() => {
+  document.addEventListener('pointerdown', handleDocumentPointerDown)
+})
 
-function startOfDay(value: Date) {
-  return new Date(value.getFullYear(), value.getMonth(), value.getDate(), 0, 0, 0, 0)
-}
-
-function startOfHour(value: Date) {
-  return new Date(value.getFullYear(), value.getMonth(), value.getDate(), value.getHours(), 0, 0, 0)
-}
-
-function addDays(value: Date, days: number) {
-  const next = new Date(value)
-  next.setDate(next.getDate() + days)
-  return next
-}
-
-function addHours(value: Date, hours: number) {
-  const next = new Date(value)
-  next.setHours(next.getHours() + hours)
-  return next
-}
-
-function parseDateInput(value: string) {
-  if (!value) return startOfDay(new Date())
-  const parsed = new Date(`${value}T00:00:00`)
-  return Number.isNaN(parsed.getTime()) ? startOfDay(new Date()) : parsed
-}
-
-function parseDateTimeInput(value: string) {
-  if (!value) return null
-  const parsed = new Date(value)
-  return Number.isNaN(parsed.getTime()) ? null : parsed
-}
-
-function formatDateInput(value: Date) {
-  const local = new Date(value.getTime() - value.getTimezoneOffset() * 60000)
-  return local.toISOString().slice(0, 10)
-}
-
-function formatDateTimeInput(value: Date) {
-  const local = new Date(value.getTime() - value.getTimezoneOffset() * 60000)
-  return local.toISOString().slice(0, 16)
-}
-
-function normalizeBoardRange(rangeStart: string, rangeEnd: string, viewMode: 'day' | 'week') {
-  const start = parseDateInput(rangeStart)
-  let end = parseDateInput(rangeEnd)
-  if (end.getTime() <= start.getTime()) {
-    end = addDays(start, viewMode === 'day' ? 1 : 7)
-  }
-  return {
-    start,
-    end,
-    startIso: start.toISOString(),
-    endIso: end.toISOString(),
-  }
-}
+onBeforeUnmount(() => {
+  document.removeEventListener('pointerdown', handleDocumentPointerDown)
+  timelineInstance.value?.destroy()
+  timelineInstance.value = null
+  timelineGroupsDataSet = null
+  timelineItemsDataSet = null
+  dailyMarkerIds = []
+  weeklyMarkerIds = []
+})
 
 function resolveLocaleLang() {
   return String(locale.value ?? '').toLowerCase().startsWith('ja') ? 'ja' : 'en'
-}
-
-function localizeName(value: { name_i18n?: NameI18n, name?: string | null, code?: string | null }) {
-  const lang = resolveLocaleLang()
-  const localized = value.name_i18n?.[lang]
-  if (localized) return localized
-  if (value.name) return value.name
-  const fallback = value.name_i18n ? Object.values(value.name_i18n)[0] : ''
-  return fallback || value.code || ''
-}
-
-function asNameI18n(value: unknown): NameI18n {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
-  const result: Record<string, string> = {}
-  for (const [key, item] of Object.entries(value)) {
-    if (typeof item === 'string') result[key] = item
-  }
-  return result
 }
 
 function siteLabel(siteId: string | null | undefined) {
@@ -1027,20 +790,46 @@ function equipmentFullLabel(row: EquipmentRow) {
   return `${row.equipment_code} ${name}`.trim()
 }
 
+function startOfBoardWeek(value: Date) {
+  const next = new Date(value)
+  next.setHours(0, 0, 0, 0)
+  const day = next.getDay()
+  const diff = day === 0 ? -6 : 1 - day
+  next.setDate(next.getDate() + diff)
+  return next
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+function buildGroupContentMarkup(equipment: EquipmentRow) {
+  const summary = equipmentScheduleSummaryById.value.get(equipment.id) ?? { reservations: 0, actuals: 0 }
+  const code = escapeHtml(equipment.equipment_code)
+  const name = escapeHtml(equipmentDisplayName(equipment) || t('equipment.nameFallback'))
+  const type = escapeHtml(equipmentTypeLabel(equipment.equipment_type_id))
+  const summaryText = escapeHtml(t('equipmentSchedule.rowSummary', summary))
+
+  return `
+    <div class="timeline-group-label">
+      <div class="timeline-group-code">${code}</div>
+      <div class="timeline-group-name">${name}</div>
+      <div class="timeline-group-meta">${type}</div>
+      <div class="timeline-group-summary">${summaryText}</div>
+    </div>
+  `
+}
+
 function equipmentTypeLabel(typeId: string | null | undefined) {
   if (!typeId) return t('common.noData')
   const row = equipmentTypeMap.value.get(typeId)
   if (!row) return typeId
-  return localizeName({ name_i18n: row.name_i18n, name: row.name, code: row.code })
-}
-
-function equipmentStatusLabel(status: string | null) {
-  if (status === 'available') return t('equipment.status.available')
-  if (status === 'in_use') return t('equipment.status.inUse')
-  if (status === 'cleaning') return t('equipment.status.cleaning')
-  if (status === 'maintenance') return t('equipment.status.maintenance')
-  if (status === 'retired') return t('equipment.status.retired')
-  return t('common.unknown')
+  return localizeName({ name_i18n: row.name_i18n, name: row.name, code: row.code }, resolveLocaleLang())
 }
 
 function batchLabel(batchId: string | null | undefined) {
@@ -1076,59 +865,6 @@ function actualPrimaryLabel(row: AssignmentRow) {
   return batchLabel(row.batch_id)
 }
 
-function isValidRange(start: Date, end: Date) {
-  return Number.isFinite(start.getTime()) && Number.isFinite(end.getTime()) && end.getTime() > start.getTime()
-}
-
-function intersectsRange(start: Date, end: Date, rangeStart: Date, rangeEnd: Date) {
-  return start.getTime() < rangeEnd.getTime() && end.getTime() > rangeStart.getTime()
-}
-
-function resolveAssignmentStart(row: AssignmentRow) {
-  if (row.assigned_at) {
-    const parsed = new Date(row.assigned_at)
-    if (!Number.isNaN(parsed.getTime())) return parsed
-  }
-  if (row.updated_at) {
-    const parsed = new Date(row.updated_at)
-    if (!Number.isNaN(parsed.getTime())) return parsed
-  }
-  return null
-}
-
-function resolveAssignmentEnd(row: AssignmentRow) {
-  if (row.released_at) {
-    const parsed = new Date(row.released_at)
-    if (!Number.isNaN(parsed.getTime())) return parsed
-  }
-  if (row.status === 'in_use') return new Date()
-  const start = resolveAssignmentStart(row)
-  if (!start) return null
-  return addHours(start, 1)
-}
-
-function parseCsvQuery(value: unknown): string[] {
-  if (Array.isArray(value)) {
-    return value.flatMap((item) => parseCsvQuery(item))
-  }
-  if (typeof value !== 'string') return []
-  return value.split(',').map((item) => item.trim()).filter(Boolean)
-}
-
-function parseBooleanQuery(value: unknown, fallback: boolean) {
-  if (value == null) return fallback
-  if (Array.isArray(value)) return parseBooleanQuery(value[0], fallback)
-  if (typeof value !== 'string') return fallback
-  if (value === 'true') return true
-  if (value === 'false') return false
-  return fallback
-}
-
-function parseStringQuery(value: unknown, fallback: string) {
-  if (Array.isArray(value)) return parseStringQuery(value[0], fallback)
-  return typeof value === 'string' && value.trim() ? value : fallback
-}
-
 function applyQueryToFilters(query: Record<string, unknown>) {
   const defaults = createDefaultFilters()
   filters.siteIds = parseCsvQuery(query.site)
@@ -1136,7 +872,12 @@ function applyQueryToFilters(query: Record<string, unknown>) {
   filters.equipmentIds = parseCsvQuery(query.equipment)
   filters.rangeStart = parseStringQuery(query.start, defaults.rangeStart)
   filters.rangeEnd = parseStringQuery(query.end, defaults.rangeEnd)
-  filters.viewMode = parseStringQuery(query.view, defaults.viewMode) === 'day' ? 'day' : 'week'
+  {
+    const nextView = parseStringQuery(query.view, defaults.viewMode)
+    filters.viewMode = nextView === 'day' || nextView === 'week' || nextView === 'two_weeks' || nextView === 'month'
+      ? nextView
+      : defaults.viewMode
+  }
   filters.showCompleted = parseBooleanQuery(query.showCompleted, defaults.showCompleted)
   filters.showActualUsage = parseBooleanQuery(query.showActual, defaults.showActualUsage)
 }
@@ -1154,17 +895,76 @@ function buildRouteQuery() {
   }
 }
 
+function handleViewModeChange() {
+  const start = parseDateInput(filters.rangeStart)
+  const nextEnd = addDays(start, rangeDaysForViewMode(filters.viewMode))
+  filters.rangeEnd = formatDateInput(nextEnd)
+}
+
 async function handleSearch() {
   await router.replace({ query: buildRouteQuery() })
 }
 
 async function handleReset() {
   Object.assign(filters, createDefaultFilters())
+  siteFilterOpen.value = false
+  equipmentTypeFilterOpen.value = false
+  equipmentFilterOpen.value = false
   await router.replace({ query: buildRouteQuery() })
 }
 
 async function refreshBoard() {
-  await loadBoard()
+  await loadBoard({ refreshReferences: true })
+  await nextTick()
+  syncTimeline()
+}
+
+function toggleSiteFilter(siteId: string) {
+  if (filters.siteIds.includes(siteId)) {
+    filters.siteIds = filters.siteIds.filter((value) => value !== siteId)
+    return
+  }
+  filters.siteIds = [...filters.siteIds, siteId]
+}
+
+function selectAllSites() {
+  filters.siteIds = siteOptions.value.map((option) => option.value)
+}
+
+function clearAllSites() {
+  filters.siteIds = []
+}
+
+function toggleEquipmentTypeFilter(typeId: string) {
+  if (filters.equipmentTypeIds.includes(typeId)) {
+    filters.equipmentTypeIds = filters.equipmentTypeIds.filter((value) => value !== typeId)
+    return
+  }
+  filters.equipmentTypeIds = [...filters.equipmentTypeIds, typeId]
+}
+
+function selectAllEquipmentTypes() {
+  filters.equipmentTypeIds = equipmentTypeRows.value.map((row) => row.type_id)
+}
+
+function clearAllEquipmentTypes() {
+  filters.equipmentTypeIds = []
+}
+
+function toggleEquipmentFilter(equipmentId: string) {
+  if (filters.equipmentIds.includes(equipmentId)) {
+    filters.equipmentIds = filters.equipmentIds.filter((value) => value !== equipmentId)
+    return
+  }
+  filters.equipmentIds = [...filters.equipmentIds, equipmentId]
+}
+
+function selectAllEquipment() {
+  filters.equipmentIds = equipmentOptions.value.map((option) => option.value)
+}
+
+function clearAllEquipment() {
+  filters.equipmentIds = []
 }
 
 function mapSiteRow(row: RowRecord): SiteRow {
@@ -1180,6 +980,7 @@ function mapEquipmentTypeRow(row: RowRecord): EquipmentTypeRow {
     code: typeof row.code === 'string' ? row.code : null,
     name: typeof row.name === 'string' ? row.name : null,
     name_i18n: asNameI18n(row.name_i18n),
+    parent_type_id: typeof row.parent_type_id === 'string' ? row.parent_type_id : null,
     sort_order: typeof row.sort_order === 'number' ? row.sort_order : Number(row.sort_order ?? 0),
   }
 }
@@ -1271,11 +1072,40 @@ function mergeStepRows(rows: StepRow[]) {
   batchStepsByBatch.value = nextByBatch
 }
 
-async function loadBoard() {
+async function loadReferenceData(options?: { force?: boolean }) {
+  if (referenceDataLoaded.value && !options?.force) return
+
+  const [siteResult, typeResult, batchResult] = await Promise.all([
+    supabase.from('mst_sites').select('id, name').order('name', { ascending: true }),
+    supabase
+      .from('type_def')
+      .select('type_id, code, name, name_i18n, parent_type_id, sort_order')
+      .eq('domain', 'equipment_type')
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true })
+      .order('code', { ascending: true }),
+    supabase
+      .from('mes_batches')
+      .select('id, batch_code, batch_label, status')
+      .order('created_at', { ascending: false }),
+  ])
+
+  if (siteResult.error) throw siteResult.error
+  if (typeResult.error) throw typeResult.error
+  if (batchResult.error) throw batchResult.error
+
+  siteRows.value = (siteResult.data ?? []).map(mapSiteRow)
+  equipmentTypeRows.value = (typeResult.data ?? []).map(mapEquipmentTypeRow)
+  batchRows.value = (batchResult.data ?? []).map(mapBatchRow)
+  referenceDataLoaded.value = true
+}
+
+async function loadBoard(options?: { refreshReferences?: boolean }) {
   loading.value = true
   loadError.value = ''
 
   try {
+    await loadReferenceData({ force: options?.refreshReferences })
     const range = boardRange.value
 
     const equipmentQuery = supabase
@@ -1284,43 +1114,22 @@ async function loadBoard() {
       .eq('is_active', true)
 
     if (filters.siteIds.length > 0) equipmentQuery.in('site_id', filters.siteIds)
-    if (filters.equipmentTypeIds.length > 0) equipmentQuery.in('equipment_type_id', filters.equipmentTypeIds)
+    if (effectiveEquipmentTypeFilterIds.value.length > 0) equipmentQuery.in('equipment_type_id', effectiveEquipmentTypeFilterIds.value)
     if (filters.equipmentIds.length > 0) equipmentQuery.in('id', filters.equipmentIds)
 
-    const [siteResult, typeResult, batchResult, equipmentResult] = await Promise.all([
-      supabase.from('mst_sites').select('id, name').order('name', { ascending: true }),
-      supabase
-        .from('type_def')
-        .select('type_id, code, name, name_i18n, sort_order')
-        .eq('domain', 'equipment_type')
-        .eq('is_active', true)
-        .order('sort_order', { ascending: true })
-        .order('code', { ascending: true }),
-      supabase
-        .from('mes_batches')
-        .select('id, batch_code, batch_label, status')
-        .order('created_at', { ascending: false }),
-      equipmentQuery
-        .order('site_id', { ascending: true })
-        .order('sort_order', { ascending: true })
-        .order('equipment_code', { ascending: true }),
-    ])
+    const { data: equipmentData, error: equipmentError } = await equipmentQuery
+      .order('site_id', { ascending: true })
+      .order('sort_order', { ascending: true })
+      .order('equipment_code', { ascending: true })
 
-    if (siteResult.error) throw siteResult.error
-    if (typeResult.error) throw typeResult.error
-    if (batchResult.error) throw batchResult.error
-    if (equipmentResult.error) throw equipmentResult.error
+    if (equipmentError) throw equipmentError
 
-    siteRows.value = (siteResult.data ?? []).map(mapSiteRow)
-    equipmentTypeRows.value = (typeResult.data ?? []).map(mapEquipmentTypeRow)
-    batchRows.value = (batchResult.data ?? []).map(mapBatchRow)
-    equipmentRows.value = (equipmentResult.data ?? []).map(mapEquipmentRow)
+    equipmentRows.value = (equipmentData ?? []).map(mapEquipmentRow)
 
     const equipmentIds = equipmentRows.value.map((row) => row.id)
     if (equipmentIds.length === 0) {
       reservationRows.value = []
       assignmentRows.value = []
-      ensureCollapsedSites()
       return
     }
 
@@ -1370,8 +1179,6 @@ async function loadBoard() {
       if (error) throw error
       mergeStepRows((data ?? []).map(mapStepRow))
     }
-
-    ensureCollapsedSites()
   } catch (err) {
     console.error(err)
     loadError.value = err instanceof Error ? err.message : t('equipmentSchedule.errors.loadBoard')
@@ -1440,6 +1247,11 @@ function buildReservationTimelineItem(row: ReservationRow): BoardTimelineItem {
     start: new Date(row.start_at),
     end: new Date(row.end_at),
     type: 'range',
+    editable: {
+      remove: false,
+      updateGroup: false,
+      updateTime: true,
+    },
     _meta: {
       kind: 'reservation',
       reservationId: row.id,
@@ -1481,6 +1293,7 @@ function buildActualTimelineItem(row: AssignmentRow, hasConflict: boolean): Boar
     start,
     end,
     type: 'range',
+    editable: false,
     _meta: {
       kind: 'actual',
       batchId: row.batch_id ?? undefined,
@@ -1491,36 +1304,6 @@ function buildActualTimelineItem(row: AssignmentRow, hasConflict: boolean): Boar
       hasConflict,
       label: actualPrimaryLabel(row),
     },
-  }
-}
-
-async function handleTimelineItemAction(item: BoardTimelineItem | undefined) {
-  if (!item) return
-
-  if (item._meta.kind === 'reservation' && item._meta.reservationId) {
-    const reservation = reservationRows.value.find((row) => row.id === item._meta.reservationId)
-    if (reservation) {
-      await openEditModal(reservation)
-    }
-    return
-  }
-
-  if (item._meta.kind === 'actual') {
-    const batchId = item._meta.batchId ?? null
-    const batchStepId = item._meta.batchStepId ?? null
-    if (batchId && batchStepId) {
-      await router.push({
-        name: 'batchStepExecution',
-        params: { batchId, stepId: batchStepId },
-      })
-      return
-    }
-    if (batchId) {
-      await router.push({
-        name: 'batchEdit',
-        params: { batchId },
-      })
-    }
   }
 }
 
@@ -1535,49 +1318,264 @@ function resolveCreateWindowFromTimelineEvent(properties?: TimelineEventProperti
   return isValidRange(start, end) ? { start, end } : fallback
 }
 
-function handleTimelineClick(properties?: TimelineEventPropertiesResult) {
-  if (!properties?.item) return
-  void handleTimelineItemAction(timelineItemsById.value.get(String(properties.item)))
-}
-
 function handleTimelineDoubleClick(properties?: TimelineEventPropertiesResult) {
-  if (!properties || properties.item) return
+  if (!properties) return
 
-  const equipmentId = properties.group != null ? String(properties.group) : ''
+  const item = properties.item ? timelineItemsById.value.get(String(properties.item)) : undefined
+  if (item?._meta.kind === 'reservation' && item._meta.reservationId) {
+    const reservation = reservationRows.value.find((row) => row.id === item._meta.reservationId)
+    if (reservation) {
+      void openEditModal(reservation)
+    }
+    return
+  }
+
+  const equipmentId = item?._meta.equipmentId ?? (properties.group != null ? String(properties.group) : '')
   if (!equipmentId || !equipmentMap.value.has(equipmentId)) return
 
   const { start, end } = resolveCreateWindowFromTimelineEvent(properties)
   openCreateModal(equipmentId, start, end)
 }
 
-function syncTimeline() {
-  if (!timelineContainerRef.value) return
+function normalizeTimelineItemDate(value: TimelineItem['start'] | TimelineItem['end']) {
+  if (value instanceof Date) return new Date(value)
+  if (typeof value === 'string' || typeof value === 'number') {
+    const next = new Date(value)
+    return Number.isNaN(next.getTime()) ? null : next
+  }
+  return null
+}
 
-  if (!timelineInstance.value) {
-    const groups = new DataSet<BoardTimelineGroup, 'id'>(timelineGroups.value)
-    const items = new DataSet<BoardTimelineItem, 'id'>(timelineItems.value)
-    const timeline = new Timeline(timelineContainerRef.value, items, groups, timelineOptions.value)
-    timeline.on('click', handleTimelineClick as (properties?: unknown) => void)
-    timeline.on('doubleClick', handleTimelineDoubleClick as (properties?: unknown) => void)
-    timelineInstance.value = timeline
+function validateReservationWindowChange(
+  reservationId: string | null,
+  equipmentId: string,
+  start: Date,
+  end: Date,
+) {
+  if (!isValidRange(start, end)) return t('equipmentSchedule.errors.invalidRange')
+
+  const overlappingReservation = reservationRows.value.find((row) => {
+    if (row.id === reservationId) return false
+    if (row.equipment_id !== equipmentId) return false
+    if (!activeReservationStatuses.has(row.status)) return false
+    return intersectsRange(start, end, new Date(row.start_at), new Date(row.end_at))
+  })
+  if (overlappingReservation) return t('equipmentSchedule.errors.reservationOverlap')
+
+  const overlappingAssignment = assignmentRows.value.find((row) => {
+    if (row.equipment_id !== equipmentId) return false
+    if (row.status !== 'in_use') return false
+    const actualStart = resolveAssignmentStart(row)
+    const actualEnd = resolveAssignmentEnd(row)
+    if (!actualStart || !actualEnd) return false
+    return intersectsRange(start, end, actualStart, actualEnd)
+  })
+  if (overlappingAssignment) return t('equipmentSchedule.errors.actualOverlap')
+
+  return ''
+}
+
+function resolveDraggedReservationWindow(currentItem: BoardTimelineItem, item: TimelineItem) {
+  const originalStart = currentItem.start
+  const originalEnd = currentItem.end ?? currentItem.start
+  const originalDuration = Math.max(1, originalEnd.getTime() - originalStart.getTime())
+
+  let nextStart = normalizeTimelineItemDate(item.start) ?? originalStart
+  let nextEnd = normalizeTimelineItemDate(item.end) ?? originalEnd
+
+  const startChanged = nextStart.getTime() !== originalStart.getTime()
+  const endChanged = nextEnd.getTime() !== originalEnd.getTime()
+  const nextDuration = nextEnd.getTime() - nextStart.getTime()
+
+  if (nextDuration !== originalDuration) {
+    if (!startChanged && endChanged) {
+      nextStart = new Date(nextEnd.getTime() - originalDuration)
+    } else {
+      nextEnd = new Date(nextStart.getTime() + originalDuration)
+    }
+  }
+
+  return { start: nextStart, end: nextEnd }
+}
+
+function handleTimelineMoving(item: TimelineItem, callback: (item: TimelineItem | null) => void) {
+  const currentItem = timelineItemsById.value.get(String(item.id))
+  if (!currentItem || currentItem._meta.kind !== 'reservation') {
+    callback(null)
     return
   }
 
-  timelineInstance.value.setOptions(timelineOptions.value)
-  timelineInstance.value.setGroups(new DataSet<BoardTimelineGroup, 'id'>(timelineGroups.value))
-  timelineInstance.value.setItems(new DataSet<BoardTimelineItem, 'id'>(timelineItems.value))
-  timelineInstance.value.setWindow(boardRange.value.start, boardRange.value.end, { animation: false })
+  const { start, end } = resolveDraggedReservationWindow(currentItem, item)
+
+  callback({
+    ...item,
+    group: currentItem.group,
+    start,
+    end,
+  })
+}
+
+async function handleTimelineMove(item: TimelineItem, callback: (item: TimelineItem | null) => void) {
+  const currentItem = timelineItemsById.value.get(String(item.id))
+  if (!currentItem || currentItem._meta.kind !== 'reservation' || !currentItem._meta.reservationId) {
+    callback(null)
+    return
+  }
+
+  const { start, end } = resolveDraggedReservationWindow(currentItem, item)
+
+  const validationError = validateReservationWindowChange(
+    currentItem._meta.reservationId,
+    currentItem._meta.equipmentId,
+    start,
+    end,
+  )
+  if (validationError) {
+    toast.error(validationError)
+    callback(null)
+    return
+  }
+
+  try {
+    saving.value = true
+    const { error } = await mesClient()
+      .from('equipment_reservation')
+      .update({
+        start_at: start.toISOString(),
+        end_at: end.toISOString(),
+      })
+      .eq('id', currentItem._meta.reservationId)
+    if (error) throw error
+
+    callback({
+      ...item,
+      group: currentItem.group,
+      start,
+      end,
+    })
+
+    await loadBoard()
+    await nextTick()
+    syncTimeline()
+  } catch (err) {
+    console.error(err)
+    toast.error(err instanceof Error ? err.message : t('equipmentSchedule.errors.saveFailed'))
+    callback(null)
+  } finally {
+    saving.value = false
+  }
+}
+
+async function handleTimelineRangeChanged(properties?: TimelineRangeChangeProperties) {
+  if (!properties?.byUser) return
+
+  const start = normalizeTimelineItemDate(properties.start)
+  const end = normalizeTimelineItemDate(properties.end)
+  if (!start || !end || end.getTime() <= start.getTime()) return
+
+  const nextRangeStart = formatDateInput(startOfDay(start))
+  const nextRangeEnd = formatDateInput(startOfDay(end))
+  if (filters.rangeStart === nextRangeStart && filters.rangeEnd === nextRangeEnd) return
+
+  filters.rangeStart = nextRangeStart
+  filters.rangeEnd = nextRangeEnd
+  await router.replace({ query: buildRouteQuery() })
+}
+
+function syncTimeline() {
+  if (!timelineContainerRef.value) return
+  const nextOptions = timelineOptions.value
+  const nextRangeStart = boardRange.value.start.getTime()
+  const nextRangeEnd = boardRange.value.end.getTime()
+  const nextOptionsKey = [timelineLocale.value, filters.viewMode].join('|')
+
+  if (!timelineInstance.value) {
+    timelineGroupsDataSet = new DataSet<BoardTimelineGroup, 'id'>(timelineGroups.value)
+    timelineItemsDataSet = new DataSet<BoardTimelineItem, 'id'>(timelineItems.value)
+    const timeline = new Timeline(timelineContainerRef.value, timelineItemsDataSet, timelineGroupsDataSet, nextOptions)
+    timeline.on('doubleClick', handleTimelineDoubleClick as (properties?: unknown) => void)
+    timeline.on('rangechanged', handleTimelineRangeChanged as (properties?: unknown) => void)
+    timelineInstance.value = timeline
+    lastSyncedWindowStart.value = nextRangeStart
+    lastSyncedWindowEnd.value = nextRangeEnd
+    lastTimelineOptionsKey.value = nextOptionsKey
+    syncTimelineMarkers()
+    return
+  }
+
+  if (lastTimelineOptionsKey.value !== nextOptionsKey) {
+    timelineInstance.value.setOptions(nextOptions)
+    lastTimelineOptionsKey.value = nextOptionsKey
+  }
+
+  if (timelineGroupsDataSet) {
+    timelineGroupsDataSet.clear()
+    timelineGroupsDataSet.add(timelineGroups.value)
+  }
+
+  if (timelineItemsDataSet) {
+    timelineItemsDataSet.clear()
+    timelineItemsDataSet.add(timelineItems.value)
+  }
+
+  syncTimelineMarkers()
+
+  if (lastSyncedWindowStart.value !== nextRangeStart || lastSyncedWindowEnd.value !== nextRangeEnd) {
+    timelineInstance.value.setWindow(boardRange.value.start, boardRange.value.end, { animation: false })
+    lastSyncedWindowStart.value = nextRangeStart
+    lastSyncedWindowEnd.value = nextRangeEnd
+  }
+
+  timelineInstance.value.redraw()
+}
+
+function clearTimelineMarkers(markerIds: string[]) {
+  if (!timelineInstance.value) return
+
+  for (const markerId of markerIds) {
+    try {
+      timelineInstance.value.removeCustomTime(markerId)
+    } catch {
+      // Ignore missing markers during full timeline refresh.
+    }
+  }
+}
+
+function syncTimelineMarkers() {
+  if (!timelineInstance.value) return
+
+  clearTimelineMarkers(dailyMarkerIds)
+  clearTimelineMarkers(weeklyMarkerIds)
+  dailyMarkerIds = []
+  weeklyMarkerIds = []
+
+  for (
+    let cursor = startOfDay(boardRange.value.start);
+    cursor <= boardRange.value.end;
+    cursor = addDays(cursor, 1)
+  ) {
+    const markerDate = new Date(cursor)
+    const markerId = `timeline-day-marker-${markerDate.toISOString().slice(0, 10)}`
+    timelineInstance.value.addCustomTime(markerDate, markerId)
+    dailyMarkerIds.push(markerId)
+  }
+
+  for (
+    let cursor = startOfBoardWeek(boardRange.value.start);
+    cursor <= boardRange.value.end;
+    cursor = addDays(cursor, 7)
+  ) {
+    const markerDate = new Date(cursor)
+    const markerId = `timeline-week-marker-${markerDate.toISOString().slice(0, 10)}`
+    timelineInstance.value.addCustomTime(markerDate, markerId)
+    weeklyMarkerIds.push(markerId)
+  }
 }
 
 function defaultCreateWindow() {
   const start = filters.viewMode === 'day' ? startOfHour(boardRange.value.start) : startOfDay(boardRange.value.start)
   const end = filters.viewMode === 'day' ? addHours(start, 1) : addDays(start, 1)
   return { start, end }
-}
-
-function openCreateModalForRow(equipment: EquipmentRow) {
-  const { start, end } = defaultCreateWindow()
-  openCreateModal(equipment.id, start, end)
 }
 
 function openCreateModal(equipmentId: string, start: Date, end: Date) {
@@ -1650,26 +1648,7 @@ function validateReservationForm() {
       return t('equipmentSchedule.errors.batchStepMismatch')
     }
   }
-
-  const overlappingReservation = reservationRows.value.find((row) => {
-    if (row.id === reservationForm.id) return false
-    if (row.equipment_id !== reservationForm.equipment_id) return false
-    if (!activeReservationStatuses.has(row.status)) return false
-    return intersectsRange(start, end, new Date(row.start_at), new Date(row.end_at))
-  })
-  if (overlappingReservation) return t('equipmentSchedule.errors.reservationOverlap')
-
-  const overlappingAssignment = assignmentRows.value.find((row) => {
-    if (row.equipment_id !== reservationForm.equipment_id) return false
-    if (row.status !== 'in_use') return false
-    const actualStart = resolveAssignmentStart(row)
-    const actualEnd = resolveAssignmentEnd(row)
-    if (!actualStart || !actualEnd) return false
-    return intersectsRange(start, end, actualStart, actualEnd)
-  })
-  if (overlappingAssignment) return t('equipmentSchedule.errors.actualOverlap')
-
-  return ''
+  return validateReservationWindowChange(reservationForm.id, reservationForm.equipment_id, start, end)
 }
 
 async function saveReservation() {
@@ -1718,6 +1697,8 @@ async function saveReservation() {
     toast.success(t('common.saved'))
     closeModal()
     await loadBoard()
+    await nextTick()
+    syncTimeline()
   } catch (err) {
     console.error(err)
     formError.value = err instanceof Error ? err.message : t('equipmentSchedule.errors.saveFailed')
@@ -1726,22 +1707,6 @@ async function saveReservation() {
   }
 }
 
-function ensureCollapsedSites() {
-  const validIds = new Set(groupedSiteRows.value.map((group) => group.siteId))
-  collapsedSiteIds.value = collapsedSiteIds.value.filter((id) => validIds.has(id))
-}
-
-function isSiteCollapsed(siteId: string) {
-  return collapsedSiteIds.value.includes(siteId)
-}
-
-function toggleSite(siteId: string) {
-  if (isSiteCollapsed(siteId)) {
-    collapsedSiteIds.value = collapsedSiteIds.value.filter((id) => id !== siteId)
-  } else {
-    collapsedSiteIds.value = [...collapsedSiteIds.value, siteId]
-  }
-}
 </script>
 
 <style scoped>
@@ -1749,7 +1714,38 @@ function toggleSite(siteId: string) {
   min-height: 8rem;
 }
 
+.equipment-schedule-panel--board {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.equipment-board-legend {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.equipment-board-overlay {
+  grid-column: 1;
+  grid-row: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(2px);
+  z-index: 3;
+}
+
+.equipment-board-overlay--error {
+  align-items: flex-start;
+  padding: 1rem;
+}
+
 .equipment-board-gantt {
+  grid-column: 1;
+  grid-row: 2;
   height: min(72vh, 860px);
   min-height: 560px;
   overflow: hidden;
@@ -1801,30 +1797,59 @@ function toggleSite(siteId: string) {
 }
 
 :deep(.equipment-board-gantt .timeline-group-code) {
-  font-size: 11px;
+  font-size: 8px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
   color: #64748b;
 }
 
 :deep(.equipment-board-gantt .timeline-group-name) {
-  font-size: 13px;
+  font-size: 10px;
   font-weight: 700;
   color: #111827;
 }
 
 :deep(.equipment-board-gantt .timeline-group-meta),
 :deep(.equipment-board-gantt .timeline-group-summary) {
-  font-size: 11px;
+  font-size: 8px;
   color: #6b7280;
 }
 
-:deep(.equipment-board-gantt .vis-panel.vis-center),
 :deep(.equipment-board-gantt .vis-panel.vis-background) {
   background: rgba(255, 255, 255, 0.92);
 }
 
+:deep(.equipment-board-gantt .vis-panel.vis-center) {
+  background: transparent;
+}
+
 :deep(.equipment-board-gantt .vis-grid.vis-vertical) {
-  border-left: 1px solid rgba(226, 232, 240, 0.55);
+  border-left: 1px solid rgba(100, 100, 100, 0.92);
+}
+
+:deep(.equipment-board-gantt .vis-time-axis .vis-grid.vis-minor) {
+  border-left-color: rgba(0, 0, 0, 0.05);
+  border-left-width: 1px;
+}
+
+:deep(.equipment-board-gantt .vis-time-axis .vis-grid.vis-major) {
+  border-left-color: rgba(0, 0, 0, 0.08);
+  border-left-width: 1px;
+}
+
+:deep(.equipment-board-gantt .vis-custom-time[class*='timeline-day-marker-']) {
+  width: 1px;
+  background: rgba(0, 0, 0, 1);
+  cursor: default;
+  pointer-events: none;
+  z-index: 0;
+}
+
+:deep(.equipment-board-gantt .vis-custom-time[class*='timeline-week-marker-']) {
+  width: 1px;
+  background: rgba(71, 85, 105, 0.34);
+  cursor: default;
+  pointer-events: none;
+  z-index: 0;
 }
 
 :deep(.equipment-board-gantt .vis-grid.vis-horizontal) {
@@ -1908,6 +1933,10 @@ function toggleSite(siteId: string) {
   background: linear-gradient(180deg, rgba(15, 23, 42, 0.98) 0%, rgba(17, 24, 39, 0.96) 100%);
 }
 
+:global(html[data-theme='dark'] .equipment-board-overlay) {
+  background: rgba(15, 23, 42, 0.78);
+}
+
 :global(html[data-theme='dark'] .equipment-board-gantt .vis-time-axis) {
   background: linear-gradient(180deg, rgba(30, 41, 59, 0.96) 0%, rgba(15, 23, 42, 0.96) 100%);
 }
@@ -1918,9 +1947,12 @@ function toggleSite(siteId: string) {
 
 :global(html[data-theme='dark'] .equipment-board-gantt .vis-panel.vis-left),
 :global(html[data-theme='dark'] .equipment-board-gantt .vis-labelset .vis-label),
-:global(html[data-theme='dark'] .equipment-board-gantt .vis-panel.vis-center),
 :global(html[data-theme='dark'] .equipment-board-gantt .vis-panel.vis-background) {
   background: rgba(15, 23, 42, 0.9);
+}
+
+:global(html[data-theme='dark'] .equipment-board-gantt .vis-panel.vis-center) {
+  background: transparent;
 }
 
 :global(html[data-theme='dark'] .equipment-board-gantt .vis-labelset .vis-label) {
@@ -1939,7 +1971,23 @@ function toggleSite(siteId: string) {
 }
 
 :global(html[data-theme='dark'] .equipment-board-gantt .vis-grid.vis-vertical) {
-  border-left-color: rgba(51, 65, 85, 0.5);
+  border-left-color: rgba(100, 116, 139, 0.78);
+}
+
+:global(html[data-theme='dark'] .equipment-board-gantt .vis-time-axis .vis-grid.vis-minor) {
+  border-left-color: rgba(255, 255, 255, 0.06);
+}
+
+:global(html[data-theme='dark'] .equipment-board-gantt .vis-time-axis .vis-grid.vis-major) {
+  border-left-color: rgba(255, 255, 255, 0.1);
+}
+
+:global(html[data-theme='dark'] .equipment-board-gantt .vis-custom-time[class*='timeline-day-marker-']) {
+  background: rgba(226, 232, 240, 0.9);
+}
+
+:global(html[data-theme='dark'] .equipment-board-gantt .vis-custom-time[class*='timeline-week-marker-']) {
+  background: rgba(148, 163, 184, 0.42);
 }
 
 :global(html[data-theme='dark'] .equipment-board-gantt .vis-grid.vis-horizontal) {

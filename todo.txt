@@ -940,3 +940,17 @@ for 原材料在庫一覧 page, please made following modification
 - same material should be summarize as one line in the table, and the material type column should show all material type of the same material
 - each line has several actions to save space, the actions should show as a dropdown menu.
 - material name should be a link, when user click the material name, a dialog should be shown to show the inventory detail of the material, including inventory by location and inventory movement history.
+
+
+Final
+	•	1 main screen = Schedule Board
+	•	1 form = Reservation (reuse for repair)
+	•	1 execution UI = Batch Step Assignment
+
+
+for 工程実行 page, i want to implement feature to assign equipment to batch step execution.
+- the feature should be implemented in the batch step assignment dialog
+- the dialog should show a list of available equipment based on the step requirement and the equipment status
+- user can select one or more equipment from the list and assign to the batch step execution
+- the assigned equipment information should be saved in the database and shown in the batch step execution detail
+- the system should check the equipment availability and status before assigning, if the equipment is not available

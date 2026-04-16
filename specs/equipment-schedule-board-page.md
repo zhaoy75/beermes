@@ -61,7 +61,7 @@ This spec reflects the current final board design using `vis-timeline`. Older ga
   - equipment type
   - equipment
   - date range
-  - view mode (`day` / `week`)
+  - view mode (`day` / `week` / `two weeks` / `month`)
 - actions:
   - search
   - reset
@@ -70,7 +70,6 @@ This spec reflects the current final board design using `vis-timeline`. Older ga
   - `show actual usage`
 
 ### Section 2: Schedule Grid
-- the grouped site/equipment table above the chart is required
 - rows:
   - equipment
 - grouping:
@@ -129,7 +128,6 @@ This spec reflects the current final board design using `vis-timeline`. Older ga
   - data loading
   - merged board view model creation
   - modal open/close state
-  - grouped site/equipment summary layout assembly
   - shared timeline group/item assembly
 - filter bar:
   - filter inputs and search/reset actions
@@ -234,18 +232,17 @@ This spec reflects the current final board design using `vis-timeline`. Older ga
   - fallback start/end use the board default create window based on current view
 
 ### Edit Reservation
-- click reservation block
+- double click reservation block
 - open reservation modal in edit mode
+- reservation block drag should move start / end time together directly on the board
+- reservation block drag should keep the original duration fixed
+- drag should persist only after reservation validation passes
 
 ### View Actual Usage
-- click actual usage block
-- navigate to the related step execution page when step context exists
-- fallback navigation:
-  - batch detail
+- actual usage blocks remain read-only
+- double click actual usage block should open reservation create mode for the same equipment/time area
 
 ### Optional Later Enhancements
-- drag to move reservation
-- resize to adjust duration
 - empty-slot create
 
 ## Reservation Modal
@@ -298,7 +295,7 @@ This spec reflects the current final board design using `vis-timeline`. Older ga
 - `equipmentIds: string[]`
 - `rangeStart: string`
 - `rangeEnd: string`
-- `viewMode: 'day' | 'week'`
+- `viewMode: 'day' | 'week' | 'two_weeks' | 'month'`
 - `showCompleted: boolean`
 - `showActualUsage: boolean`
 
@@ -317,6 +314,7 @@ This spec reflects the current final board design using `vis-timeline`. Older ga
   - `[start, end)`
 - the page must use browser timezone for both rendering and query normalization
 - event/range intersection checks must follow the same half-open rule
+- changing `viewMode` should recalculate the visible frame length from the current `rangeStart`
 
 ## Data Loading Shape
 
@@ -420,21 +418,9 @@ This spec reflects the current final board design using `vis-timeline`. Older ga
 - `summaryText`
 
 ### Page Group Model
-- site should be rendered as a collapsible section
-- each section should contain equipment rows
-- each equipment row should contain:
-  - compact table row cells
-  - schedule summary for visible reservations / actual usage
-- this grouped list acts as the table above the chart and should remain visible
-- recommended columns:
-  - equipment
-  - equipment type
-  - status
-  - reservation count
-  - actual usage count
-  - action
-- below the grouped site/equipment context area, the page should render one shared timeline for the full filtered result set
-- site collapse affects the context list only; the shared timeline still renders the filtered equipment groups
+- the page should render one shared timeline for the full filtered result set without a separate grouped table above it
+- equipment rows are represented directly by timeline groups
+- site grouping should be reflected in equipment ordering, labels, and optional future visual separators inside the timeline area
 
 ### Shared Timeline Model
 - group row:
@@ -444,12 +430,18 @@ This spec reflects the current final board design using `vis-timeline`. Older ga
   - one item for each visible reservation block
   - one item for each visible actual usage block
   - linked to the matching equipment group
-- item clicks:
+- item single click:
+  - no modal or navigation action
+- item double click:
   - reservation items open reservation edit
-  - actual items navigate to step execution or batch detail
+  - actual items open reservation create mode using the clicked equipment/time context
 - timeline double click:
   - timeline double click should resolve the equipment group context and open create mode
-  - reservation / actual items keep their normal click ownership and should not create a new reservation
+  - empty timeline space should open reservation create mode
+  - block double click should open reservation edit/create depending on block kind
+- timeline frame drag:
+  - dragging the title/time-axis row should move the visible frame
+  - user-driven frame changes should sync back to page filters and reload board data for the new visible range
 
 ### Schedule Block Model
 - `id`
@@ -471,15 +463,23 @@ This spec reflects the current final board design using `vis-timeline`. Older ga
 
 ## Interaction Rules
 
-### Reservation Block Click
-- open reservation modal
+### Reservation Block Double Click
+- open reservation modal in edit mode
 
-### Actual Block Click
-- do not open reservation modal
-- navigate to step execution when `batch_step_id` exists
-- otherwise navigate to batch detail
+### Reservation Block Drag
+- reservation items are draggable for time adjustment
+- equipment/group change is not allowed from drag
+- drag must preserve the item duration
+- drag must validate overlap rules before save
+- failed validation should revert the block to its previous position
 
-### Empty Slot Click
+### Actual Block Double Click
+- open reservation modal in create mode using the current equipment/time area
+
+### Actual Block Drag / Resize
+- actual usage blocks remain read-only
+
+### Empty Slot Double Click
 - single click on empty timeline space does not create
 - double click on empty timeline space should open create mode
 - create should inherit:
@@ -487,28 +487,29 @@ This spec reflects the current final board design using `vis-timeline`. Older ga
   - clicked board time when derivable from the chart
   - board default create window as fallback
 
+### Timeline Frame Drag
+- dragging the time-axis/title row should move the current visible frame
+- the moved frame should update range filters so the board does not snap back on the next sync
+
 ## Navigation
 - from equipment row:
   - equipment detail
 - from reservation block:
   - reservation edit
-- from actual usage block:
-  - step execution detail
-  - fallback batch detail
 
 ## MVP Scope
 - filter bar
 - multi-site grouped schedule grid
 - day / week switch
 - timeline double click to create reservation
-- click reservation block to edit reservation
-- click actual block to view related execution detail
+- double click reservation block to edit reservation
+- drag reservation block to update time window
+- drag time-axis/title row to change visible frame
 - color-coded blocks
 - overlap validation
 - completed toggle
 
 ## Non-MVP
-- drag and resize
 - advanced capacity search
 - auto-scheduling
 - board-level execution editing

@@ -137,6 +137,9 @@
       "site": "サイト",
       "equipmentType": "設備タイプ",
       "equipment": "設備",
+      "selectAll": "すべて選択",
+      "clearAll": "すべて解除",
+      "deleteAll": "すべて解除",
       "dateFrom": "開始日",
       "dateTo": "終了日",
       "viewMode": "表示単位",
@@ -145,7 +148,9 @@
     },
     "views": {
       "day": "日",
-      "week": "週"
+      "week": "週",
+      "twoWeeks": "2週間",
+      "month": "月"
     },
     "legend": {
       "reservation": "予約",
@@ -155,6 +160,7 @@
       "conflict": "競合"
     },
     "grid": {
+      "equipmentHeader": "設備",
       "resourceHeader": "サイト / 設備",
       "taskLabel": "予定内容"
     },

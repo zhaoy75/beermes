@@ -101,6 +101,10 @@ export interface SelectOption {
   label: string
 }
 
+export interface MultiSelectOption extends SelectOption {
+  depth?: number
+}
+
 export interface TimelineGroupMeta {
   equipmentId: string
   siteId: string
@@ -140,7 +144,25 @@ export interface BoardTimelineItem extends DataItem {
   _meta: TimelineItemMeta
 }
 
+export interface PreparedReservationRow {
+  row: ReservationRow
+  start: Date
+  end: Date
+  isCompleted: boolean
+  isActive: boolean
+}
+
+export interface PreparedAssignmentRow {
+  row: AssignmentRow
+  start: Date
+  end: Date
+  isCompleted: boolean
+  isInUse: boolean
+}
+
 export interface VisibleAssignmentRow {
   row: AssignmentRow
+  start: Date
+  end: Date
   hasConflict: boolean
 }

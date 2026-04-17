@@ -131,22 +131,35 @@
           </div>
         </div>
 
-        <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+        <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
           <button
+            v-if="mode === 'edit'"
             type="button"
-            class="inline-flex items-center justify-center rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.03]"
-            @click="emit('close')"
+            class="inline-flex items-center justify-center rounded-lg border border-error-300 px-4 py-2 text-sm font-medium text-error-700 hover:bg-error-50 disabled:cursor-not-allowed disabled:opacity-70 dark:border-error-800/60 dark:text-error-300 dark:hover:bg-error-500/10"
+            :disabled="saving || deleting"
+            @click="emit('delete')"
           >
-            {{ t('common.close') }}
+            {{ deleting ? t('common.deleting') : t('common.delete') }}
           </button>
-          <button
-            type="button"
-            class="inline-flex items-center justify-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-70"
-            :disabled="saving"
-            @click="emit('save')"
-          >
-            {{ saving ? t('common.saving') : t('common.save') }}
-          </button>
+          <div v-else class="hidden sm:block"></div>
+          <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+            <button
+              type="button"
+              class="inline-flex items-center justify-center rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.03]"
+              :disabled="saving || deleting"
+              @click="emit('close')"
+            >
+              {{ t('common.close') }}
+            </button>
+            <button
+              type="button"
+              class="inline-flex items-center justify-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-70"
+              :disabled="saving || deleting"
+              @click="emit('save')"
+            >
+              {{ saving ? t('common.saving') : t('common.save') }}
+            </button>
+          </div>
         </div>
       </div>
     </template>
@@ -166,6 +179,7 @@ const props = defineProps<{
   mode: 'create' | 'edit'
   formError: string
   saving: boolean
+  deleting: boolean
   batchStepLoading: boolean
   form: ReservationFormState
   selectedEquipmentLabel: string
@@ -180,6 +194,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   close: []
   save: []
+  delete: []
   reservationTypeChange: []
   batchChange: []
   'update:form': [value: ReservationFormState]

@@ -1,44 +1,50 @@
 # Current Task
 
 ## Goal
-- Fix the equipment schedule board so `表示単位` correctly changes the board frame length.
+- Fix step completion for backflush inputs so `工程入力の保存` does not fail with `BSBC011` when the batch is missing site metadata.
 
 ## Scope
-- Make `day / week / two weeks / month` update the visible frame length consistently.
-- Keep the change limited to the board page, related page spec, and this task spec.
+- Update the batch-step execution spec to clarify how backflush source site resolution works.
+- Update `BatchStepExecution.vue` to resolve a backflush source site from available execution context and pass it to the completion RPC.
+- Update `public.batch_step_complete_backflush` to accept an explicit `source_site_id` override before falling back to batch metadata.
+- Preserve the existing backflush inventory issue flow and completion behavior.
 
 ## Non-Goals
-- Do not change database schema.
-- Do not change route/sidebar/locale behavior.
-- Do not redesign the page visually.
-- Do not change reservation form behavior in this turn.
-- Do not change drag/drop behavior in this turn.
+- Do not change table schema or add a new RPC.
+- Do not redesign the `BatchStepExecution` page layout.
+- Do not change non-backflush step save behavior.
+- Do not refactor unrelated equipment-assignment logic.
 
 ## Affected Files
 - [specs/current-task.md](/Users/zhao/dev/other/beer/specs/current-task.md)
-- [specs/equipment-schedule-board-page.md](/Users/zhao/dev/other/beer/specs/equipment-schedule-board-page.md)
-- [beeradmin_tail/src/views/Pages/EquipmentScheduleBoard.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/EquipmentScheduleBoard.vue)
-- [beeradmin_tail/src/views/Pages/equipment-schedule/utils.ts](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/equipment-schedule/utils.ts)
+- [specs/batch-step-execution-page.md](/Users/zhao/dev/other/beer/specs/batch-step-execution-page.md)
+- [beeradmin_tail/src/views/Pages/BatchStepExecution.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/BatchStepExecution.vue)
+- [DB/function/72_public.batch_step_complete_backflush.sql](/Users/zhao/dev/other/beer/DB/function/72_public.batch_step_complete_backflush.sql)
 
 ## Data Model / API Changes
-- No schema or API changes.
+- No schema changes.
+- Extend the existing `batch_step_complete_backflush` patch payload with optional `source_site_id`.
+- Reuse existing batch metadata and equipment context as source-site fallbacks.
 
-## Final State
-- Changing `表示単位` recalculates the board end date from the current start date.
-- `day / week / two weeks / month` each produce a visibly different frame length.
-- The board query and timeline stay aligned to the selected unit after search.
+## Implementation Notes
+- Prefer `batch.meta` site fields first, then fall back to execution-context site inference on the page when completing a backflush step.
+- Keep the source-site decision explicit in the RPC so the DB function does not depend only on historical batch metadata quality.
+- Preserve the existing cross-site safety rule for backflush allocation after source site is resolved.
+
+## Final Decisions
+- Resolve backflush source site on the page by checking batch metadata first, then falling back to a single inferred site from equipment assignments / reservations.
+- Pass the inferred site through `p_patch.source_site_id` when calling `batch_step_complete_backflush`.
+- Keep the RPC fallback to batch metadata so existing callers remain compatible.
 
 ## Validation Plan
-- Run targeted board validation:
-  - eslint on `EquipmentScheduleBoard.vue`
-  - type-check
-  - build-only
-  - repo lint
-  - test script status
+- Review the updated batch-step execution spec against the backflush completion flow.
+- Run targeted ESLint for the touched execution page files.
+- Run project type-check.
+- Run project build-only.
+- Run unit test script status.
 
 ## Validation Results
-- `npx eslint src/views/Pages/EquipmentScheduleBoard.vue src/views/Pages/equipment-schedule/utils.ts --no-fix`: passed
+- `npx eslint src/views/Pages/BatchStepExecution.vue --no-fix`: passed
 - `npm run type-check`: passed
-- `npm run build-only`: passed with the existing CSS minify warnings and chunk-size warnings
-- `npm run lint`: failed with the same pre-existing repo-wide ESLint errors
-- `npm run test`: failed because `package.json` has no `test` script
+- `npm run build-only`: passed with existing CSS minify warnings and existing chunk-size warnings
+- `npm run test`: failed because `package.json` does not define a `test` script

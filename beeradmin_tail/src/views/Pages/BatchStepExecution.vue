@@ -96,137 +96,66 @@
           <div class="border-b px-4 py-2.5">
             <h3 class="text-sm font-semibold text-gray-900">{{ t('batch.edit.stepExecutionControlTitle') }}</h3>
           </div>
-          <div class="grid grid-cols-1 gap-3 p-3 md:grid-cols-2 xl:grid-cols-5">
-            <div>
-              <label class="mb-1 block text-xs font-medium text-gray-600">{{ t('batch.edit.stepStatus') }}</label>
-              <select v-model="stepForm.status" class="h-[36px] w-full rounded border px-2.5 text-sm">
-                <option v-for="option in stepStatusOptions" :key="option.value" :value="option.value">
-                  {{ option.label }}
-                </option>
-              </select>
-            </div>
-            <div>
-              <label class="mb-1 block text-xs font-medium text-gray-600">{{ t('batch.edit.stepStartedAt') }}</label>
-              <input v-model="stepForm.started_at" type="datetime-local" class="h-[36px] w-full rounded border px-2.5 text-sm" />
-            </div>
-            <div>
-              <label class="mb-1 block text-xs font-medium text-gray-600">{{ t('batch.edit.stepEndedAt') }}</label>
-              <input v-model="stepForm.ended_at" type="datetime-local" class="h-[36px] w-full rounded border px-2.5 text-sm" />
-            </div>
-            <div>
-              <label class="mb-1 block text-xs font-medium text-gray-600">{{ t('batch.edit.stepDuration') }}</label>
-              <div class="flex h-[36px] items-center rounded border bg-gray-50 px-2.5 text-sm text-gray-700">
-                {{ formatDurationSeconds(step.planned_duration_sec) }}
+          <div class="grid grid-cols-1 gap-3 p-3 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,0.7fr)]">
+            <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <div>
+                <label class="mb-1 block text-xs font-medium text-gray-600">{{ t('batch.edit.stepStatus') }}</label>
+                <select v-model="stepForm.status" class="h-[36px] w-full rounded border px-2.5 text-sm">
+                  <option v-for="option in stepStatusOptions" :key="option.value" :value="option.value">
+                    {{ option.label }}
+                  </option>
+                </select>
+              </div>
+              <div>
+                <label class="mb-1 block text-xs font-medium text-gray-600">{{ t('batch.edit.stepStartedAt') }}</label>
+                <input v-model="stepForm.started_at" type="datetime-local" class="h-[36px] w-full rounded border px-2.5 text-sm" />
+              </div>
+              <div>
+                <label class="mb-1 block text-xs font-medium text-gray-600">{{ t('batch.edit.stepEndedAt') }}</label>
+                <input v-model="stepForm.ended_at" type="datetime-local" class="h-[36px] w-full rounded border px-2.5 text-sm" />
+              </div>
+              <div>
+                <label class="mb-1 block text-xs font-medium text-gray-600">{{ t('batch.edit.stepDuration') }}</label>
+                <div class="flex h-[36px] items-center rounded border bg-gray-50 px-2.5 text-sm text-gray-700">
+                  {{ formatDurationSeconds(step.planned_duration_sec) }}
+                </div>
+              </div>
+              <div class="md:col-span-2 xl:col-span-4">
+                <label class="mb-1 block text-xs font-medium text-gray-600">{{ t('batch.edit.notes') }}</label>
+                <textarea v-model.trim="stepForm.notes" rows="2" class="w-full rounded border px-2.5 py-2 text-sm" />
               </div>
             </div>
-            <div class="md:col-span-2 xl:col-span-5">
-              <label class="mb-1 block text-xs font-medium text-gray-600">{{ t('batch.edit.notes') }}</label>
-              <textarea v-model.trim="stepForm.notes" rows="2" class="w-full rounded border px-2.5 py-2 text-sm" />
+
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-1">
+              <div class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-3">
+                <div class="text-[11px] uppercase tracking-wide text-gray-500">{{ t('batch.edit.stepCurrentStatusSummary') }}</div>
+                <div class="mt-1 text-sm font-semibold text-gray-900">{{ currentStepStatusSummaryLabel }}</div>
+              </div>
+              <div class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-3">
+                <div class="text-[11px] uppercase tracking-wide text-gray-500">{{ t('batch.edit.stepLatestTimestampSummary') }}</div>
+                <div class="mt-1 text-sm font-semibold text-gray-900">{{ latestExecutionTimestampSummaryLabel }}</div>
+              </div>
             </div>
           </div>
         </section>
 
         <section class="rounded-lg border border-gray-200 bg-white shadow">
-          <div class="border-b px-4 py-3">
-            <h3 class="text-sm font-semibold text-gray-900">{{ t('batch.edit.stepParametersTitle') }}</h3>
-          </div>
-          <div v-if="parameterForms.length === 0" class="p-4 text-sm text-gray-500">{{ t('common.noData') }}</div>
-          <div v-else class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200 text-sm">
-              <thead class="bg-gray-50 text-xs uppercase text-gray-600">
-                <tr>
-                  <th class="px-3 py-2 text-left">{{ t('recipe.parameters.parameterCode') }}</th>
-                  <th class="px-3 py-2 text-right">{{ t('recipe.parameters.target') }}</th>
-                  <th class="px-3 py-2 text-right">{{ t('recipe.parameters.min') }}</th>
-                  <th class="px-3 py-2 text-right">{{ t('recipe.parameters.max') }}</th>
-                  <th class="px-3 py-2 text-left">{{ t('recipe.parameters.uomCode') }}</th>
-                  <th class="px-3 py-2 text-left">{{ t('batch.edit.stepActualValue') }}</th>
-                  <th class="px-3 py-2 text-left">{{ t('batch.edit.stepComment') }}</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-gray-100">
-                <tr v-for="row in parameterForms" :key="row.local_key">
-                  <td class="px-3 py-2 text-gray-700">{{ row.parameter_code || row.parameter_name || '—' }}</td>
-                  <td class="px-3 py-2 text-right text-gray-700">{{ formatDynamicValue(row.target) }}</td>
-                  <td class="px-3 py-2 text-right text-gray-700">{{ formatDynamicValue(row.min) }}</td>
-                  <td class="px-3 py-2 text-right text-gray-700">{{ formatDynamicValue(row.max) }}</td>
-                  <td class="px-3 py-2 text-gray-700">{{ row.uom_code || '—' }}</td>
-                  <td class="px-3 py-2">
-                    <input v-model.trim="row.actual_value" type="text" class="h-[36px] w-full rounded border px-2" />
-                  </td>
-                  <td class="px-3 py-2">
-                    <input v-model.trim="row.comment" type="text" class="h-[36px] w-full rounded border px-2" />
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section class="rounded-lg border border-gray-200 bg-white shadow">
-          <div class="border-b px-4 py-3">
-            <h3 class="text-sm font-semibold text-gray-900">{{ t('batch.edit.stepQualityChecksTitle') }}</h3>
-          </div>
-          <div v-if="qualityCheckForms.length === 0" class="p-4 text-sm text-gray-500">{{ t('common.noData') }}</div>
-          <div v-else class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200 text-sm">
-              <thead class="bg-gray-50 text-xs uppercase text-gray-600">
-                <tr>
-                  <th class="px-3 py-2 text-left">{{ t('recipe.qa.checkCode') }}</th>
-                  <th class="px-3 py-2 text-left">{{ t('recipe.qa.frequency') }}</th>
-                  <th class="px-3 py-2 text-left">{{ t('recipe.qa.required') }}</th>
-                  <th class="px-3 py-2 text-left">{{ t('batch.edit.stepResultStatus') }}</th>
-                  <th class="px-3 py-2 text-left">{{ t('batch.edit.stepResultValue') }}</th>
-                  <th class="px-3 py-2 text-left">{{ t('batch.edit.stepCheckedAt') }}</th>
-                  <th class="px-3 py-2 text-left">{{ t('batch.edit.stepCheckedBy') }}</th>
-                  <th class="px-3 py-2 text-left">{{ t('batch.edit.stepResultNote') }}</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-gray-100">
-                <tr v-for="row in qualityCheckForms" :key="row.local_key">
-                  <td class="px-3 py-2 text-gray-700">{{ row.check_code || row.check_name || '—' }}</td>
-                  <td class="px-3 py-2 text-gray-700">{{ row.frequency || '—' }}</td>
-                  <td class="px-3 py-2 text-gray-700">{{ row.required ? t('common.yes') : t('common.no') }}</td>
-                  <td class="px-3 py-2">
-                    <select v-model="row.result_status" class="h-[36px] w-full rounded border px-2">
-                      <option value="">{{ t('common.select') }}</option>
-                      <option v-for="option in qualityResultStatusOptions" :key="option.value" :value="option.value">
-                        {{ option.label }}
-                      </option>
-                    </select>
-                  </td>
-                  <td class="px-3 py-2">
-                    <input v-model.trim="row.result_value" type="text" class="h-[36px] w-full rounded border px-2" />
-                  </td>
-                  <td class="px-3 py-2">
-                    <input v-model="row.checked_at" type="datetime-local" class="h-[36px] w-full rounded border px-2" />
-                  </td>
-                  <td class="px-3 py-2">
-                    <input v-model.trim="row.checked_by" type="text" class="h-[36px] w-full rounded border px-2" />
-                  </td>
-                  <td class="px-3 py-2">
-                    <input v-model.trim="row.result_note" type="text" class="h-[36px] w-full rounded border px-2" />
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section class="rounded-lg border border-gray-200 bg-white shadow">
-          <div class="flex flex-col gap-3 border-b px-4 py-3 md:flex-row md:items-center md:justify-between">
-            <h3 class="text-sm font-semibold text-gray-900">{{ `${t('batch.edit.stepPlannedMaterialsTitle')} / ${t('batch.edit.stepActualMaterialsTitle')}` }}</h3>
+          <div class="flex flex-col gap-3 border-b px-4 py-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <h3 class="text-sm font-semibold text-gray-900">{{ `${t('batch.edit.stepPlannedMaterialsTitle')} / ${t('batch.edit.stepActualMaterialsTitle')}` }}</h3>
+              <p class="mt-1 text-xs text-gray-500">{{ t('batch.edit.stepMaterialSectionHint') }}</p>
+            </div>
             <div class="flex flex-wrap gap-2">
-              <button class="rounded border border-gray-300 px-3 py-2 text-sm hover:bg-gray-100" type="button" @click="addActualMaterialRow">
-                {{ t('batch.edit.stepAddActualMaterial') }}
-              </button>
               <button
-                class="rounded bg-brand-500 px-3 py-2 text-sm text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60"
+                v-for="tab in materialWorkspaceTabs"
+                :key="tab.value"
+                class="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition"
+                :class="materialWorkspaceTab === tab.value ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-gray-300 text-gray-600 hover:bg-gray-100'"
                 type="button"
-                :disabled="actualMaterialsState.saving"
-                @click="saveActualMaterials"
+                @click="materialWorkspaceTab = tab.value"
               >
-                {{ actualMaterialsState.saving ? t('common.loading') : t('common.save') }}
+                <span>{{ tab.label }}</span>
+                <span class="rounded-full bg-white/80 px-1.5 py-0.5 text-[11px] text-gray-500">{{ tab.count }}</span>
               </button>
             </div>
           </div>
@@ -236,124 +165,174 @@
           <div v-else-if="actualMaterialsState.success" class="border-b border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
             {{ actualMaterialsState.success }}
           </div>
-          <div v-if="materialExecutionRows.length === 0" class="p-4 text-sm text-gray-500">{{ t('common.noData') }}</div>
-          <div v-else class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200 text-sm">
-              <thead class="bg-gray-50 text-xs uppercase text-gray-600">
-                <tr>
-                  <th class="px-3 py-2 text-left">{{ t('recipe.edit.materialTypeFilter') }}</th>
-                  <th class="px-3 py-2 text-right">{{ t('recipe.materials.qty') }}</th>
-                  <th class="px-3 py-2 text-left">{{ t('recipe.materials.uomCode') }}</th>
-                  <th class="px-3 py-2 text-left">{{ t('recipe.itemEditor.consumptionMode') }}</th>
-                  <th class="px-3 py-2 text-left">{{ t('batch.edit.stepMaterial') }}</th>
-                  <th class="px-3 py-2 text-right">{{ t('batch.edit.stepActualQty') }}</th>
-                  <th class="px-3 py-2 text-left">{{ t('common.delete') }}</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-gray-100">
-                <tr v-for="(displayRow, index) in materialExecutionRows" :key="displayRow.row.local_key">
-                  <td class="px-3 py-2 text-gray-700">
-                    <div>{{ displayRow.planTypeLabel }}</div>
-                    <div v-if="displayRow.planRoleLabel" class="text-xs text-gray-500">{{ displayRow.planRoleLabel }}</div>
-                  </td>
-                  <td class="px-3 py-2 text-right text-gray-700">{{ displayRow.planQtyLabel }}</td>
-                  <td class="px-3 py-2 text-gray-700">{{ displayRow.planUomLabel }}</td>
-                  <td class="px-3 py-2 text-gray-700">{{ displayRow.planConsumptionModeLabel }}</td>
-                  <td class="px-3 py-2">
-                    <select v-model="displayRow.row.material_id" class="h-[36px] w-full rounded border px-2" @change="handleActualMaterialChange(index)">
-                      <option value="">{{ t('common.select') }}</option>
-                      <option v-for="option in materialOptionsForActualRow(displayRow.row)" :key="option.id" :value="option.id">{{ option.label }}</option>
-                    </select>
-                  </td>
-                  <td class="px-3 py-2">
-                    <input v-model.trim="displayRow.row.actual_qty" type="number" step="any" min="0" class="h-[36px] w-full rounded border px-2 text-right" />
-                  </td>
-                  <td class="px-3 py-2">
-                    <button class="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-100" type="button" @click="removeActualMaterialRow(index)">
-                      {{ t('common.delete') }}
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+
+          <template v-if="materialWorkspaceTab === 'inputs'">
+            <div class="flex flex-col gap-2 border-b px-4 py-3 md:flex-row md:items-center md:justify-between">
+              <p class="text-xs text-gray-500">{{ t('batch.edit.stepMaterialCompactHint') }}</p>
+              <div class="flex flex-wrap gap-2">
+                <button class="rounded border border-gray-300 px-3 py-2 text-sm hover:bg-gray-100" type="button" @click="addActualMaterialRow">
+                  {{ t('batch.edit.stepAddActualMaterial') }}
+                </button>
+                <button
+                  class="rounded bg-brand-500 px-3 py-2 text-sm text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60"
+                  type="button"
+                  :disabled="actualMaterialsState.saving"
+                  @click="saveActualMaterials"
+                >
+                  {{ actualMaterialsState.saving ? t('common.loading') : t('common.save') }}
+                </button>
+              </div>
+            </div>
+            <div v-if="materialExecutionRows.length === 0" class="p-4 text-sm text-gray-500">{{ t('common.noData') }}</div>
+            <div v-else class="overflow-x-auto">
+              <table class="min-w-full divide-y divide-gray-200 text-sm">
+                <thead class="bg-gray-50 text-xs uppercase text-gray-600">
+                  <tr>
+                    <th class="px-3 py-2 text-left">{{ t('recipe.edit.materialTypeFilter') }}</th>
+                    <th class="px-3 py-2 text-right">{{ t('recipe.materials.qty') }}</th>
+                    <th class="px-3 py-2 text-left">{{ t('recipe.materials.uomCode') }}</th>
+                    <th class="px-3 py-2 text-left">{{ t('recipe.itemEditor.consumptionMode') }}</th>
+                    <th class="px-3 py-2 text-left">{{ t('batch.edit.stepMaterial') }}</th>
+                    <th class="px-3 py-2 text-right">{{ t('batch.edit.stepActualQty') }}</th>
+                    <th class="px-3 py-2 text-left">{{ t('batch.edit.stepDetailToggle') }}</th>
+                    <th class="px-3 py-2 text-left">{{ t('common.delete') }}</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                  <template v-for="(displayRow, index) in materialExecutionRows" :key="displayRow.row.local_key">
+                    <tr>
+                      <td class="px-3 py-2 text-gray-700">
+                        <div>{{ displayRow.planTypeLabel }}</div>
+                        <div v-if="displayRow.planRoleLabel" class="text-xs text-gray-500">{{ displayRow.planRoleLabel }}</div>
+                      </td>
+                      <td class="px-3 py-2 text-right text-gray-700">{{ displayRow.planQtyLabel }}</td>
+                      <td class="px-3 py-2 text-gray-700">{{ displayRow.planUomLabel }}</td>
+                      <td class="px-3 py-2 text-gray-700">{{ displayRow.planConsumptionModeLabel }}</td>
+                      <td class="px-3 py-2">
+                        <select v-model="displayRow.row.material_id" class="h-[36px] w-full rounded border px-2" @change="handleActualMaterialChange(index)">
+                          <option value="">{{ t('common.select') }}</option>
+                          <option v-for="option in materialOptionsForActualRow(displayRow.row)" :key="option.id" :value="option.id">{{ option.label }}</option>
+                        </select>
+                      </td>
+                      <td class="px-3 py-2">
+                        <input v-model.trim="displayRow.row.actual_qty" type="number" step="any" min="0" class="h-[36px] w-full rounded border px-2 text-right" />
+                      </td>
+                      <td class="px-3 py-2">
+                        <button class="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-100" type="button" @click="toggleActualMaterialDetails(displayRow.row.local_key)">
+                          {{ isActualMaterialDetailsOpen(displayRow.row.local_key) ? t('batch.edit.stepHideDetails') : t('batch.edit.stepShowDetails') }}
+                        </button>
+                      </td>
+                      <td class="px-3 py-2">
+                        <button class="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-100" type="button" @click="removeActualMaterialRow(index)">
+                          {{ t('common.delete') }}
+                        </button>
+                      </td>
+                    </tr>
+                    <tr v-if="isActualMaterialDetailsOpen(displayRow.row.local_key)" class="bg-gray-50/70">
+                      <td colspan="8" class="px-3 py-3">
+                        <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
+                          <div>
+                            <label class="mb-1 block text-xs font-medium text-gray-600">{{ t('batch.edit.stepLot') }}</label>
+                            <select v-model="displayRow.row.lot_id" class="h-[36px] w-full rounded border px-2 text-sm" @change="handleActualLotChange(displayRow.row)">
+                              <option value="">{{ t('common.select') }}</option>
+                              <option v-for="option in lotOptionsForActualRow(displayRow.row)" :key="option.id" :value="option.id">{{ option.label }}</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label class="mb-1 block text-xs font-medium text-gray-600">{{ t('batch.edit.stepConsumedAt') }}</label>
+                            <input v-model="displayRow.row.consumed_at" type="datetime-local" class="h-[36px] w-full rounded border px-2 text-sm" />
+                          </div>
+                          <div>
+                            <label class="mb-1 block text-xs font-medium text-gray-600">{{ t('batch.edit.notes') }}</label>
+                            <input v-model.trim="displayRow.row.note" type="text" class="h-[36px] w-full rounded border px-2 text-sm" />
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+          </template>
+
+          <template v-else>
+            <div class="flex flex-col gap-2 border-b px-4 py-3 md:flex-row md:items-center md:justify-between">
+              <p class="text-xs text-gray-500">{{ t('batch.edit.stepSavedWithStepInputsHint') }}</p>
+              <button class="rounded border border-gray-300 px-3 py-2 text-sm hover:bg-gray-100" type="button" @click="addOutputMaterialRow">
+                {{ t('recipe.itemEditor.addOutputMaterial') }}
+              </button>
+            </div>
+            <div v-if="outputMaterialForms.length === 0" class="p-4 text-sm text-gray-500">{{ t('recipe.itemEditor.noOutputMaterials') }}</div>
+            <div v-else class="overflow-x-auto">
+              <table class="min-w-full divide-y divide-gray-200 text-sm">
+                <thead class="bg-gray-50 text-xs uppercase text-gray-600">
+                  <tr>
+                    <th class="px-3 py-2 text-left">{{ t('recipe.itemEditor.outputMaterialType') }}</th>
+                    <th class="px-3 py-2 text-right">{{ t('recipe.materials.qty') }}</th>
+                    <th class="px-3 py-2 text-left">{{ t('recipe.materials.uomCode') }}</th>
+                    <th class="px-3 py-2 text-left">{{ t('recipe.edit.outputType') }}</th>
+                    <th class="px-3 py-2 text-right">{{ t('batch.edit.stepActualQty') }}</th>
+                    <th class="px-3 py-2 text-left">{{ t('common.delete') }}</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                  <tr v-for="(row, index) in outputMaterialForms" :key="row.local_key">
+                    <td class="px-3 py-2 text-gray-700">
+                      <template v-if="row.planned_output_index !== null">
+                        <div>{{ row.output_material_type || '—' }}</div>
+                        <div v-if="row.output_name" class="text-xs text-gray-500">{{ row.output_name }}</div>
+                      </template>
+                      <template v-else>
+                        <input v-model.trim="row.output_material_type" type="text" class="h-[36px] w-full rounded border px-2" />
+                        <input v-model.trim="row.output_name" type="text" class="mt-2 h-[36px] w-full rounded border px-2" />
+                      </template>
+                    </td>
+                    <td class="px-3 py-2 text-right text-gray-700">{{ formatDynamicValue(row.planned_qty) }}</td>
+                    <td class="px-3 py-2 text-gray-700">
+                      <template v-if="row.planned_output_index !== null">
+                        {{ row.uom_code || '—' }}
+                      </template>
+                      <template v-else>
+                        <input v-model.trim="row.uom_code" type="text" class="h-[36px] w-full rounded border px-2" />
+                      </template>
+                    </td>
+                    <td class="px-3 py-2 text-gray-700">
+                      <template v-if="row.planned_output_index !== null">
+                        {{ outputTypeLabel(row.output_type) }}
+                      </template>
+                      <template v-else>
+                        <select v-model="row.output_type" class="h-[36px] w-full rounded border px-2">
+                          <option value="">{{ t('common.select') }}</option>
+                          <option v-for="option in outputTypeOptions" :key="option.value" :value="option.value">
+                            {{ option.label }}
+                          </option>
+                        </select>
+                      </template>
+                    </td>
+                    <td class="px-3 py-2">
+                      <input v-model.trim="row.actual_qty" type="number" step="any" min="0" class="h-[36px] w-full rounded border px-2 text-right" />
+                    </td>
+                    <td class="px-3 py-2">
+                      <button class="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-100" type="button" @click="removeOutputMaterialRow(index)">
+                        {{ t('common.delete') }}
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </template>
         </section>
 
         <section class="rounded-lg border border-gray-200 bg-white shadow">
           <div class="flex flex-col gap-3 border-b px-4 py-3 md:flex-row md:items-center md:justify-between">
-            <h3 class="text-sm font-semibold text-gray-900">{{ t('recipe.itemEditor.outputMaterialsTitle') }}</h3>
-            <button class="rounded border border-gray-300 px-3 py-2 text-sm hover:bg-gray-100" type="button" @click="addOutputMaterialRow">
-              {{ t('recipe.itemEditor.addOutputMaterial') }}
-            </button>
-          </div>
-          <div v-if="outputMaterialForms.length === 0" class="p-4 text-sm text-gray-500">{{ t('recipe.itemEditor.noOutputMaterials') }}</div>
-          <div v-else class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200 text-sm">
-              <thead class="bg-gray-50 text-xs uppercase text-gray-600">
-                <tr>
-                  <th class="px-3 py-2 text-left">{{ t('recipe.itemEditor.outputMaterialType') }}</th>
-                  <th class="px-3 py-2 text-right">{{ t('recipe.materials.qty') }}</th>
-                  <th class="px-3 py-2 text-left">{{ t('recipe.materials.uomCode') }}</th>
-                  <th class="px-3 py-2 text-left">{{ t('recipe.edit.outputType') }}</th>
-                  <th class="px-3 py-2 text-right">{{ t('batch.edit.stepActualQty') }}</th>
-                  <th class="px-3 py-2 text-left">{{ t('common.delete') }}</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-gray-100">
-                <tr v-for="(row, index) in outputMaterialForms" :key="row.local_key">
-                  <td class="px-3 py-2 text-gray-700">
-                    <template v-if="row.planned_output_index !== null">
-                      <div>{{ row.output_material_type || '—' }}</div>
-                      <div v-if="row.output_name" class="text-xs text-gray-500">{{ row.output_name }}</div>
-                    </template>
-                    <template v-else>
-                      <input v-model.trim="row.output_material_type" type="text" class="h-[36px] w-full rounded border px-2" />
-                      <input v-model.trim="row.output_name" type="text" class="mt-2 h-[36px] w-full rounded border px-2" />
-                    </template>
-                  </td>
-                  <td class="px-3 py-2 text-right text-gray-700">{{ formatDynamicValue(row.planned_qty) }}</td>
-                  <td class="px-3 py-2 text-gray-700">
-                    <template v-if="row.planned_output_index !== null">
-                      {{ row.uom_code || '—' }}
-                    </template>
-                    <template v-else>
-                      <input v-model.trim="row.uom_code" type="text" class="h-[36px] w-full rounded border px-2" />
-                    </template>
-                  </td>
-                  <td class="px-3 py-2 text-gray-700">
-                    <template v-if="row.planned_output_index !== null">
-                      {{ row.output_type || '—' }}
-                    </template>
-                    <template v-else>
-                      <select v-model="row.output_type" class="h-[36px] w-full rounded border px-2">
-                        <option value="">{{ t('common.select') }}</option>
-                        <option value="primary">primary</option>
-                        <option value="intermediate">intermediate</option>
-                        <option value="co_product">co_product</option>
-                        <option value="waste">waste</option>
-                      </select>
-                    </template>
-                  </td>
-                  <td class="px-3 py-2">
-                    <input v-model.trim="row.actual_qty" type="number" step="any" min="0" class="h-[36px] w-full rounded border px-2 text-right" />
-                  </td>
-                  <td class="px-3 py-2">
-                    <button class="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-100" type="button" @click="removeOutputMaterialRow(index)">
-                      {{ t('common.delete') }}
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section class="rounded-lg border border-gray-200 bg-white shadow">
-          <div class="flex flex-col gap-3 border-b px-4 py-3 md:flex-row md:items-center md:justify-between">
-            <h3 class="text-sm font-semibold text-gray-900">{{ t('batch.edit.stepEquipmentTitle') }}</h3>
+            <div>
+              <h3 class="text-sm font-semibold text-gray-900">{{ t('batch.edit.stepEquipmentTitle') }}</h3>
+              <p class="mt-1 text-xs text-gray-500">{{ t('batch.edit.stepEquipmentSectionHint') }}</p>
+            </div>
             <div class="flex flex-wrap gap-2">
               <button class="rounded border border-gray-300 px-3 py-2 text-sm hover:bg-gray-100" type="button" @click="addEquipmentAssignmentRow">
-                {{ t('batch.edit.stepAddEquipmentAssignment') }}
+                {{ t('batch.edit.stepStartOtherEquipment') }}
               </button>
               <button
                 class="rounded bg-brand-500 px-3 py-2 text-sm text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60"
@@ -371,184 +350,464 @@
           <div v-else-if="equipmentState.success" class="border-b border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
             {{ equipmentState.success }}
           </div>
-          <div v-if="equipmentAssignmentForms.length === 0" class="p-4 text-sm text-gray-500">{{ t('common.noData') }}</div>
-          <div v-else class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200 text-sm">
-              <thead class="bg-gray-50 text-xs uppercase text-gray-600">
-                <tr>
-                  <th class="px-3 py-2 text-left">{{ t('batch.edit.stepEquipment') }}</th>
-                  <th class="px-3 py-2 text-left">{{ t('batch.edit.stepAssignmentRole') }}</th>
-                  <th class="px-3 py-2 text-left">{{ t('batch.edit.stepAssignedAt') }}</th>
-                  <th class="px-3 py-2 text-left">{{ t('batch.edit.stepReleasedAt') }}</th>
-                  <th class="px-3 py-2 text-left">{{ t('common.delete') }}</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-gray-100">
-                <tr v-for="(row, index) in equipmentAssignmentForms" :key="row.local_key">
-                  <td class="px-3 py-2">
-                    <select v-model="row.equipment_id" class="h-[36px] w-full rounded border px-2">
-                      <option value="">{{ t('common.select') }}</option>
-                      <option v-for="option in equipmentOptions" :key="option.id" :value="option.id">{{ option.label }}</option>
-                    </select>
-                  </td>
-                  <td class="px-3 py-2">
-                    <input v-model.trim="row.assignment_role" type="text" class="h-[36px] w-full rounded border px-2" />
-                  </td>
-                  <td class="px-3 py-2">
-                    <input v-model="row.assigned_at" type="datetime-local" class="h-[36px] w-full rounded border px-2" />
-                  </td>
-                  <td class="px-3 py-2">
-                    <input v-model="row.released_at" type="datetime-local" class="h-[36px] w-full rounded border px-2" />
-                  </td>
-                  <td class="px-3 py-2">
+          <div class="grid grid-cols-2 gap-3 border-b p-3 md:grid-cols-4">
+            <div class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+              <div class="text-[11px] uppercase tracking-wide text-gray-500">{{ t('batch.edit.stepEquipmentRequiredCount') }}</div>
+              <div class="mt-1 text-lg font-semibold text-gray-900">{{ requiredEquipmentCount }}</div>
+            </div>
+            <div class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+              <div class="text-[11px] uppercase tracking-wide text-gray-500">{{ t('batch.edit.stepEquipmentReservedCount') }}</div>
+              <div class="mt-1 text-lg font-semibold text-gray-900">{{ equipmentReservations.length }}</div>
+            </div>
+            <div class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+              <div class="text-[11px] uppercase tracking-wide text-gray-500">{{ t('batch.edit.stepEquipmentInUseCount') }}</div>
+              <div class="mt-1 text-lg font-semibold text-gray-900">{{ activeEquipmentAssignmentCount }}</div>
+            </div>
+            <div class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+              <div class="text-[11px] uppercase tracking-wide text-gray-500">{{ t('batch.edit.stepEquipmentMismatchCount') }}</div>
+              <div class="mt-1 text-lg font-semibold text-gray-900">{{ mismatchedEquipmentAssignmentCount }}</div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 gap-3 p-3 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+            <div class="space-y-3">
+              <section class="rounded-lg border border-gray-200">
+                <div class="border-b bg-gray-50 px-3 py-2">
+                  <h4 class="text-sm font-medium text-gray-900">{{ t('batch.edit.stepEquipmentPlannedTitle') }}</h4>
+                </div>
+                <div v-if="stepEquipmentRequirements.length === 0" class="px-3 py-4 text-sm text-gray-500">{{ t('common.noData') }}</div>
+                <ul v-else class="divide-y divide-gray-100">
+                  <li v-for="requirement in stepEquipmentRequirements" :key="requirement.local_key" class="px-3 py-3">
+                    <div class="flex items-start justify-between gap-3">
+                      <div class="min-w-0">
+                        <div class="text-sm font-medium text-gray-900">{{ equipmentRequirementLabel(requirement) }}</div>
+                        <div v-if="requirement.equipment_template_code" class="mt-1 text-xs text-gray-500">
+                          {{ t('batch.edit.stepEquipmentTemplate') }}: {{ requirement.equipment_template_code }}
+                        </div>
+                        <div v-if="requirement.notes" class="mt-1 text-xs text-gray-500">{{ requirement.notes }}</div>
+                      </div>
+                      <span class="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">
+                        x{{ requirement.quantity }}
+                      </span>
+                    </div>
+                    <div class="mt-2 text-xs text-gray-500">
+                      {{ t('batch.edit.stepEquipmentCoverageSummary', {
+                        reserved: equipmentRequirementReservationCount(requirement),
+                        actual: equipmentRequirementActualCount(requirement),
+                      }) }}
+                    </div>
+                  </li>
+                </ul>
+              </section>
+
+              <section class="rounded-lg border border-gray-200">
+                <div class="border-b bg-gray-50 px-3 py-2">
+                  <h4 class="text-sm font-medium text-gray-900">{{ t('batch.edit.stepEquipmentReservedTitle') }}</h4>
+                </div>
+                <div v-if="equipmentReservations.length === 0" class="px-3 py-4 text-sm text-gray-500">{{ t('common.noData') }}</div>
+                <div v-else class="divide-y divide-gray-100">
+                  <article v-for="reservation in equipmentReservations" :key="reservation.id" class="space-y-2 px-3 py-3">
+                    <div class="flex items-start justify-between gap-3">
+                      <div class="min-w-0">
+                        <div class="text-sm font-medium text-gray-900">{{ equipmentLabel(reservation.equipment_id) }}</div>
+                        <div class="mt-1 flex flex-wrap gap-1.5">
+                          <span class="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
+                            {{ reservationStatusLabel(reservation.status) }}
+                          </span>
+                          <span class="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">
+                            {{ reservationTypeLabel(reservation.reservation_type) }}
+                          </span>
+                          <span
+                            v-if="linkedEquipmentAssignmentByReservationId.has(reservation.id)"
+                            class="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700"
+                          >
+                            {{ t('batch.edit.stepEquipmentReservedLinked') }}
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        class="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
+                        type="button"
+                        :disabled="linkedEquipmentAssignmentByReservationId.has(reservation.id)"
+                        @click="useReservedEquipment(reservation.id)"
+                      >
+                        {{ t('batch.edit.stepUseReservedEquipment') }}
+                      </button>
+                    </div>
+                    <div class="text-xs text-gray-500">{{ formatDateTimeRangeLabel(reservation.start_at, reservation.end_at) }}</div>
+                    <div v-if="reservation.note" class="text-xs text-gray-500">{{ reservation.note }}</div>
+                  </article>
+                </div>
+              </section>
+            </div>
+
+            <section class="rounded-lg border border-gray-200">
+              <div class="border-b bg-gray-50 px-3 py-2">
+                <h4 class="text-sm font-medium text-gray-900">{{ t('batch.edit.stepEquipmentActualTitle') }}</h4>
+              </div>
+              <div v-if="equipmentAssignmentForms.length === 0" class="px-4 py-6 text-sm text-gray-500">
+                {{ t('batch.edit.stepEquipmentEmptyHint') }}
+              </div>
+              <div v-else class="space-y-3 p-3">
+                <article
+                  v-for="(row, index) in equipmentAssignmentForms"
+                  :key="row.local_key"
+                  class="rounded-lg border p-3"
+                  :class="equipmentAssignmentCardClass(row)"
+                >
+                  <div class="flex flex-col gap-3 border-b border-gray-100 pb-3 md:flex-row md:items-start md:justify-between">
+                    <div class="min-w-0">
+                      <div class="text-sm font-semibold text-gray-900">{{ equipmentAssignmentHeading(row, index) }}</div>
+                      <div class="mt-1 flex flex-wrap gap-1.5">
+                        <span class="rounded-full px-2 py-0.5 text-xs font-medium" :class="equipmentAssignmentStatusBadgeClass(row.status)">
+                          {{ equipmentAssignmentStatusLabel(row.status) }}
+                        </span>
+                        <span
+                          v-if="row.reservation_id"
+                          class="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700"
+                        >
+                          {{ t('batch.edit.stepEquipmentReservationLinkedBadge') }}
+                        </span>
+                        <span
+                          v-if="equipmentAssignmentHasReservationMismatch(row)"
+                          class="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700"
+                        >
+                          {{ t('batch.edit.stepEquipmentReservationMismatch') }}
+                        </span>
+                        <span
+                          v-else-if="equipmentAssignmentHasRequirementMismatch(row)"
+                          class="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700"
+                        >
+                          {{ t('batch.edit.stepEquipmentRequirementMismatch') }}
+                        </span>
+                      </div>
+                      <p v-if="row.reservation_id && equipmentReservationById.get(row.reservation_id)" class="mt-1 text-xs text-gray-500">
+                        {{ formatDateTimeRangeLabel(
+                          equipmentReservationById.get(row.reservation_id)?.start_at ?? '',
+                          equipmentReservationById.get(row.reservation_id)?.end_at ?? '',
+                        ) }}
+                      </p>
+                    </div>
                     <button class="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-100" type="button" @click="removeEquipmentAssignmentRow(index)">
                       {{ t('common.delete') }}
                     </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+                  </div>
+
+                  <div class="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    <div>
+                      <label class="mb-1 block text-xs font-medium text-gray-600">{{ t('batch.edit.stepEquipment') }}</label>
+                      <select v-model="row.equipment_id" class="h-[36px] w-full rounded border px-2 text-sm" @change="handleEquipmentSelectionChange(row)">
+                        <option value="">{{ t('common.select') }}</option>
+                        <option v-for="option in equipmentOptionsForAssignmentRow(row)" :key="option.id" :value="option.id">
+                          {{ option.label }}
+                        </option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="mb-1 block text-xs font-medium text-gray-600">{{ t('batch.edit.stepAssignmentRole') }}</label>
+                      <select v-model="row.assignment_role" class="h-[36px] w-full rounded border px-2 text-sm">
+                        <option value="">{{ t('common.select') }}</option>
+                        <option v-for="option in assignmentRoleOptions" :key="option.value" :value="option.value">
+                          {{ option.label }}
+                        </option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="mb-1 block text-xs font-medium text-gray-600">{{ t('batch.edit.stepAssignmentStatus') }}</label>
+                      <select v-model="row.status" class="h-[36px] w-full rounded border px-2 text-sm" @change="handleEquipmentStatusChange(row)">
+                        <option v-for="option in assignmentStatusOptions" :key="option.value" :value="option.value">
+                          {{ option.label }}
+                        </option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="mb-1 block text-xs font-medium text-gray-600">{{ t('batch.edit.stepEquipmentReservation') }}</label>
+                      <select v-model="row.reservation_id" class="h-[36px] w-full rounded border px-2 text-sm" @change="handleEquipmentReservationChange(row)">
+                        <option value="">{{ t('common.select') }}</option>
+                        <option v-for="option in equipmentReservationOptions" :key="option.id" :value="option.id">
+                          {{ option.label }}
+                        </option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="mb-1 block text-xs font-medium text-gray-600">{{ t('batch.edit.stepAssignedAt') }}</label>
+                      <input v-model="row.assigned_at" type="datetime-local" class="h-[36px] w-full rounded border px-2 text-sm" />
+                    </div>
+                    <div>
+                      <label class="mb-1 block text-xs font-medium text-gray-600">{{ t('batch.edit.stepReleasedAt') }}</label>
+                      <input v-model="row.released_at" type="datetime-local" class="h-[36px] w-full rounded border px-2 text-sm" />
+                    </div>
+                    <div class="md:col-span-2 xl:col-span-3">
+                      <label class="mb-1 block text-xs font-medium text-gray-600">{{ t('batch.edit.stepAssignmentNote') }}</label>
+                      <textarea v-model.trim="row.note" rows="2" class="w-full rounded border px-2 py-2 text-sm" />
+                    </div>
+                  </div>
+
+                  <div class="mt-3 flex flex-wrap gap-2">
+                    <button class="rounded border border-emerald-300 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50" type="button" @click="applyEquipmentAssignmentAction(row, 'start')">
+                      {{ t('batch.edit.stepStartUse') }}
+                    </button>
+                    <button class="rounded border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100" type="button" @click="applyEquipmentAssignmentAction(row, 'release')">
+                      {{ t('batch.edit.stepReleaseEquipment') }}
+                    </button>
+                    <button class="rounded border border-blue-300 px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-50" type="button" @click="applyEquipmentAssignmentAction(row, 'complete')">
+                      {{ t('batch.edit.stepCompleteEquipment') }}
+                    </button>
+                    <button class="rounded border border-rose-300 px-2 py-1 text-xs font-medium text-rose-700 hover:bg-rose-50" type="button" @click="applyEquipmentAssignmentAction(row, 'cancel')">
+                      {{ t('batch.edit.stepCancelEquipment') }}
+                    </button>
+                  </div>
+                </article>
+              </div>
+            </section>
           </div>
         </section>
 
         <section class="rounded-lg border border-gray-200 bg-white shadow">
-          <div class="flex flex-col gap-3 border-b px-4 py-3 md:flex-row md:items-center md:justify-between">
-            <h3 class="text-sm font-semibold text-gray-900">{{ t('batch.edit.stepExecutionLogsTitle') }}</h3>
+          <div class="flex flex-col gap-3 border-b px-4 py-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <h3 class="text-sm font-semibold text-gray-900">{{ t('batch.edit.stepExecutionDetailsTitle') }}</h3>
+              <p class="mt-1 text-xs text-gray-500">{{ t('batch.edit.stepExecutionDetailsHint') }}</p>
+            </div>
             <div class="flex flex-wrap gap-2">
-              <button class="rounded border border-gray-300 px-3 py-2 text-sm hover:bg-gray-100" type="button" @click="addExecutionLogRow">
-                {{ t('batch.edit.stepAddLog') }}
-              </button>
               <button
-                class="rounded bg-brand-500 px-3 py-2 text-sm text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60"
+                v-for="tab in secondaryWorkspaceTabs"
+                :key="tab.value"
+                class="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition"
+                :class="secondaryWorkspaceTab === tab.value ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-gray-300 text-gray-600 hover:bg-gray-100'"
                 type="button"
-                :disabled="logState.saving"
-                @click="saveExecutionLogs"
+                @click="secondaryWorkspaceTab = tab.value"
               >
-                {{ logState.saving ? t('common.loading') : t('common.save') }}
+                <span>{{ tab.label }}</span>
+                <span class="rounded-full bg-white/80 px-1.5 py-0.5 text-[11px] text-gray-500">{{ tab.count }}</span>
               </button>
             </div>
           </div>
-          <div v-if="logState.error" class="border-b border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+
+          <div class="flex flex-col gap-2 border-b px-4 py-3 md:flex-row md:items-center md:justify-between">
+            <p v-if="secondaryWorkspaceTab === 'parameters' || secondaryWorkspaceTab === 'qa'" class="text-xs text-gray-500">
+              {{ t('batch.edit.stepSavedWithStepInputsHint') }}
+            </p>
+            <div v-else />
+            <div class="flex flex-wrap gap-2">
+              <template v-if="secondaryWorkspaceTab === 'logs'">
+                <button class="rounded border border-gray-300 px-3 py-2 text-sm hover:bg-gray-100" type="button" @click="addExecutionLogRow">
+                  {{ t('batch.edit.stepAddLog') }}
+                </button>
+                <button
+                  class="rounded bg-brand-500 px-3 py-2 text-sm text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60"
+                  type="button"
+                  :disabled="logState.saving"
+                  @click="saveExecutionLogs"
+                >
+                  {{ logState.saving ? t('common.loading') : t('common.save') }}
+                </button>
+              </template>
+              <template v-else-if="secondaryWorkspaceTab === 'deviations'">
+                <button class="rounded border border-gray-300 px-3 py-2 text-sm hover:bg-gray-100" type="button" @click="addDeviationRow">
+                  {{ t('batch.edit.stepAddDeviation') }}
+                </button>
+                <button
+                  class="rounded bg-brand-500 px-3 py-2 text-sm text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60"
+                  type="button"
+                  :disabled="deviationState.saving"
+                  @click="saveDeviations"
+                >
+                  {{ deviationState.saving ? t('common.loading') : t('common.save') }}
+                </button>
+              </template>
+            </div>
+          </div>
+
+          <div v-if="secondaryWorkspaceTab === 'logs' && logState.error" class="border-b border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             {{ logState.error }}
           </div>
-          <div v-else-if="logState.success" class="border-b border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          <div v-else-if="secondaryWorkspaceTab === 'logs' && logState.success" class="border-b border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
             {{ logState.success }}
           </div>
-          <div v-if="executionLogForms.length === 0" class="p-4 text-sm text-gray-500">{{ t('common.noData') }}</div>
-          <div v-else class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200 text-sm">
-              <thead class="bg-gray-50 text-xs uppercase text-gray-600">
-                <tr>
-                  <th class="px-3 py-2 text-left">{{ t('batch.edit.stepEventType') }}</th>
-                  <th class="px-3 py-2 text-left">{{ t('batch.edit.stepEventAt') }}</th>
-                  <th class="px-3 py-2 text-left">{{ t('batch.edit.stepComment') }}</th>
-                  <th class="px-3 py-2 text-left">{{ t('common.delete') }}</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-gray-100">
-                <tr v-for="(row, index) in executionLogForms" :key="row.local_key">
-                  <td class="px-3 py-2">
-                    <select v-model="row.event_type" class="h-[36px] w-full rounded border px-2">
-                      <option value="">{{ t('common.select') }}</option>
-                      <option v-for="option in executionEventOptions" :key="option.value" :value="option.value">
-                        {{ option.label }}
-                      </option>
-                    </select>
-                  </td>
-                  <td class="px-3 py-2">
-                    <input v-model="row.event_at" type="datetime-local" class="h-[36px] w-full rounded border px-2" />
-                  </td>
-                  <td class="px-3 py-2">
-                    <input v-model.trim="row.comment" type="text" class="h-[36px] w-full rounded border px-2" />
-                  </td>
-                  <td class="px-3 py-2">
-                    <button class="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-100" type="button" @click="removeExecutionLogRow(index)">
-                      {{ t('common.delete') }}
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section class="rounded-lg border border-gray-200 bg-white shadow">
-          <div class="flex flex-col gap-3 border-b px-4 py-3 md:flex-row md:items-center md:justify-between">
-            <h3 class="text-sm font-semibold text-gray-900">{{ t('batch.edit.stepDeviationsTitle') }}</h3>
-            <div class="flex flex-wrap gap-2">
-              <button class="rounded border border-gray-300 px-3 py-2 text-sm hover:bg-gray-100" type="button" @click="addDeviationRow">
-                {{ t('batch.edit.stepAddDeviation') }}
-              </button>
-              <button
-                class="rounded bg-brand-500 px-3 py-2 text-sm text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60"
-                type="button"
-                :disabled="deviationState.saving"
-                @click="saveDeviations"
-              >
-                {{ deviationState.saving ? t('common.loading') : t('common.save') }}
-              </button>
-            </div>
-          </div>
-          <div v-if="deviationState.error" class="border-b border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <div v-if="secondaryWorkspaceTab === 'deviations' && deviationState.error" class="border-b border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             {{ deviationState.error }}
           </div>
-          <div v-else-if="deviationState.success" class="border-b border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          <div v-else-if="secondaryWorkspaceTab === 'deviations' && deviationState.success" class="border-b border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
             {{ deviationState.success }}
           </div>
-          <div v-if="deviationForms.length === 0" class="p-4 text-sm text-gray-500">{{ t('common.noData') }}</div>
-          <div v-else class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200 text-sm">
-              <thead class="bg-gray-50 text-xs uppercase text-gray-600">
-                <tr>
-                  <th class="px-3 py-2 text-left">{{ t('batch.edit.stepDeviationCode') }}</th>
-                  <th class="px-3 py-2 text-left">{{ t('batch.edit.stepDeviationSummary') }}</th>
-                  <th class="px-3 py-2 text-left">{{ t('batch.edit.stepDeviationSeverity') }}</th>
-                  <th class="px-3 py-2 text-left">{{ t('batch.edit.stepDeviationStatus') }}</th>
-                  <th class="px-3 py-2 text-left">{{ t('batch.edit.stepOpenedAt') }}</th>
-                  <th class="px-3 py-2 text-left">{{ t('batch.edit.stepClosedAt') }}</th>
-                  <th class="px-3 py-2 text-left">{{ t('batch.edit.stepComment') }}</th>
-                  <th class="px-3 py-2 text-left">{{ t('common.delete') }}</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-gray-100">
-                <tr v-for="(row, index) in deviationForms" :key="row.local_key">
-                  <td class="px-3 py-2">
-                    <input v-model.trim="row.deviation_code" type="text" class="h-[36px] w-full rounded border px-2" />
-                  </td>
-                  <td class="px-3 py-2">
-                    <input v-model.trim="row.summary" type="text" class="h-[36px] w-full rounded border px-2" />
-                  </td>
-                  <td class="px-3 py-2">
-                    <select v-model="row.severity" class="h-[36px] w-full rounded border px-2">
-                      <option v-for="option in deviationSeverityOptions" :key="option.value" :value="option.value">
-                        {{ option.label }}
-                      </option>
-                    </select>
-                  </td>
-                  <td class="px-3 py-2">
-                    <select v-model="row.status" class="h-[36px] w-full rounded border px-2">
-                      <option v-for="option in deviationStatusOptions" :key="option.value" :value="option.value">
-                        {{ option.label }}
-                      </option>
-                    </select>
-                  </td>
-                  <td class="px-3 py-2">
-                    <input v-model="row.opened_at" type="datetime-local" class="h-[36px] w-full rounded border px-2" />
-                  </td>
-                  <td class="px-3 py-2">
-                    <input v-model="row.closed_at" type="datetime-local" class="h-[36px] w-full rounded border px-2" />
-                  </td>
-                  <td class="px-3 py-2">
-                    <input v-model.trim="row.note" type="text" class="h-[36px] w-full rounded border px-2" />
-                  </td>
-                  <td class="px-3 py-2">
-                    <button class="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-100" type="button" @click="removeDeviationRow(index)">
-                      {{ t('common.delete') }}
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+
+          <div v-if="secondaryWorkspaceTab === 'parameters'">
+            <div v-if="parameterForms.length === 0" class="p-4 text-sm text-gray-500">{{ t('common.noData') }}</div>
+            <div v-else class="overflow-x-auto">
+              <table class="min-w-full divide-y divide-gray-200 text-sm">
+                <thead class="bg-gray-50 text-xs uppercase text-gray-600">
+                  <tr>
+                    <th class="px-3 py-2 text-left">{{ t('recipe.parameters.parameterCode') }}</th>
+                    <th class="px-3 py-2 text-right">{{ t('recipe.parameters.target') }}</th>
+                    <th class="px-3 py-2 text-right">{{ t('recipe.parameters.min') }}</th>
+                    <th class="px-3 py-2 text-right">{{ t('recipe.parameters.max') }}</th>
+                    <th class="px-3 py-2 text-left">{{ t('recipe.parameters.uomCode') }}</th>
+                    <th class="px-3 py-2 text-left">{{ t('batch.edit.stepActualValue') }}</th>
+                    <th class="px-3 py-2 text-left">{{ t('batch.edit.stepComment') }}</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                  <tr v-for="row in parameterForms" :key="row.local_key">
+                    <td class="px-3 py-2 text-gray-700">{{ row.parameter_code || row.parameter_name || '—' }}</td>
+                    <td class="px-3 py-2 text-right text-gray-700">{{ formatDynamicValue(row.target) }}</td>
+                    <td class="px-3 py-2 text-right text-gray-700">{{ formatDynamicValue(row.min) }}</td>
+                    <td class="px-3 py-2 text-right text-gray-700">{{ formatDynamicValue(row.max) }}</td>
+                    <td class="px-3 py-2 text-gray-700">{{ row.uom_code || '—' }}</td>
+                    <td class="px-3 py-2">
+                      <input v-model.trim="row.actual_value" type="text" class="h-[36px] w-full rounded border px-2" />
+                    </td>
+                    <td class="px-3 py-2">
+                      <input v-model.trim="row.comment" type="text" class="h-[36px] w-full rounded border px-2" />
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div v-else-if="secondaryWorkspaceTab === 'qa'">
+            <div v-if="qualityCheckForms.length === 0" class="p-4 text-sm text-gray-500">{{ t('common.noData') }}</div>
+            <div v-else class="overflow-x-auto">
+              <table class="min-w-full divide-y divide-gray-200 text-sm">
+                <thead class="bg-gray-50 text-xs uppercase text-gray-600">
+                  <tr>
+                    <th class="px-3 py-2 text-left">{{ t('recipe.qa.checkCode') }}</th>
+                    <th class="px-3 py-2 text-left">{{ t('recipe.qa.frequency') }}</th>
+                    <th class="px-3 py-2 text-left">{{ t('recipe.qa.required') }}</th>
+                    <th class="px-3 py-2 text-left">{{ t('batch.edit.stepResultStatus') }}</th>
+                    <th class="px-3 py-2 text-left">{{ t('batch.edit.stepResultValue') }}</th>
+                    <th class="px-3 py-2 text-left">{{ t('batch.edit.stepCheckedAt') }}</th>
+                    <th class="px-3 py-2 text-left">{{ t('batch.edit.stepCheckedBy') }}</th>
+                    <th class="px-3 py-2 text-left">{{ t('batch.edit.stepResultNote') }}</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                  <tr v-for="row in qualityCheckForms" :key="row.local_key">
+                    <td class="px-3 py-2 text-gray-700">{{ row.check_code || row.check_name || '—' }}</td>
+                    <td class="px-3 py-2 text-gray-700">{{ row.frequency || '—' }}</td>
+                    <td class="px-3 py-2 text-gray-700">{{ row.required ? t('common.yes') : t('common.no') }}</td>
+                    <td class="px-3 py-2">
+                      <select v-model="row.result_status" class="h-[36px] w-full rounded border px-2">
+                        <option value="">{{ t('common.select') }}</option>
+                        <option v-for="option in qualityResultStatusOptions" :key="option.value" :value="option.value">
+                          {{ option.label }}
+                        </option>
+                      </select>
+                    </td>
+                    <td class="px-3 py-2">
+                      <input v-model.trim="row.result_value" type="text" class="h-[36px] w-full rounded border px-2" />
+                    </td>
+                    <td class="px-3 py-2">
+                      <input v-model="row.checked_at" type="datetime-local" class="h-[36px] w-full rounded border px-2" />
+                    </td>
+                    <td class="px-3 py-2">
+                      <input v-model.trim="row.checked_by" type="text" class="h-[36px] w-full rounded border px-2" />
+                    </td>
+                    <td class="px-3 py-2">
+                      <input v-model.trim="row.result_note" type="text" class="h-[36px] w-full rounded border px-2" />
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div v-else-if="secondaryWorkspaceTab === 'logs'">
+            <div v-if="executionLogForms.length === 0" class="p-4 text-sm text-gray-500">{{ t('common.noData') }}</div>
+            <div v-else class="overflow-x-auto">
+              <table class="min-w-full divide-y divide-gray-200 text-sm">
+                <thead class="bg-gray-50 text-xs uppercase text-gray-600">
+                  <tr>
+                    <th class="px-3 py-2 text-left">{{ t('batch.edit.stepEventType') }}</th>
+                    <th class="px-3 py-2 text-left">{{ t('batch.edit.stepEventAt') }}</th>
+                    <th class="px-3 py-2 text-left">{{ t('batch.edit.stepComment') }}</th>
+                    <th class="px-3 py-2 text-left">{{ t('common.delete') }}</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                  <tr v-for="(row, index) in executionLogForms" :key="row.local_key">
+                    <td class="px-3 py-2">
+                      <select v-model="row.event_type" class="h-[36px] w-full rounded border px-2">
+                        <option value="">{{ t('common.select') }}</option>
+                        <option v-for="option in executionEventOptions" :key="option.value" :value="option.value">
+                          {{ option.label }}
+                        </option>
+                      </select>
+                    </td>
+                    <td class="px-3 py-2">
+                      <input v-model="row.event_at" type="datetime-local" class="h-[36px] w-full rounded border px-2" />
+                    </td>
+                    <td class="px-3 py-2">
+                      <input v-model.trim="row.comment" type="text" class="h-[36px] w-full rounded border px-2" />
+                    </td>
+                    <td class="px-3 py-2">
+                      <button class="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-100" type="button" @click="removeExecutionLogRow(index)">
+                        {{ t('common.delete') }}
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div v-else>
+            <div v-if="deviationForms.length === 0" class="p-4 text-sm text-gray-500">{{ t('common.noData') }}</div>
+            <div v-else class="overflow-x-auto">
+              <table class="min-w-full divide-y divide-gray-200 text-sm">
+                <thead class="bg-gray-50 text-xs uppercase text-gray-600">
+                  <tr>
+                    <th class="px-3 py-2 text-left">{{ t('batch.edit.stepDeviationCode') }}</th>
+                    <th class="px-3 py-2 text-left">{{ t('batch.edit.stepDeviationSummary') }}</th>
+                    <th class="px-3 py-2 text-left">{{ t('batch.edit.stepDeviationSeverity') }}</th>
+                    <th class="px-3 py-2 text-left">{{ t('batch.edit.stepDeviationStatus') }}</th>
+                    <th class="px-3 py-2 text-left">{{ t('batch.edit.stepOpenedAt') }}</th>
+                    <th class="px-3 py-2 text-left">{{ t('batch.edit.stepClosedAt') }}</th>
+                    <th class="px-3 py-2 text-left">{{ t('batch.edit.stepComment') }}</th>
+                    <th class="px-3 py-2 text-left">{{ t('common.delete') }}</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                  <tr v-for="(row, index) in deviationForms" :key="row.local_key">
+                    <td class="px-3 py-2">
+                      <input v-model.trim="row.deviation_code" type="text" class="h-[36px] w-full rounded border px-2" />
+                    </td>
+                    <td class="px-3 py-2">
+                      <input v-model.trim="row.summary" type="text" class="h-[36px] w-full rounded border px-2" />
+                    </td>
+                    <td class="px-3 py-2">
+                      <select v-model="row.severity" class="h-[36px] w-full rounded border px-2">
+                        <option v-for="option in deviationSeverityOptions" :key="option.value" :value="option.value">
+                          {{ option.label }}
+                        </option>
+                      </select>
+                    </td>
+                    <td class="px-3 py-2">
+                      <select v-model="row.status" class="h-[36px] w-full rounded border px-2">
+                        <option v-for="option in deviationStatusOptions" :key="option.value" :value="option.value">
+                          {{ option.label }}
+                        </option>
+                      </select>
+                    </td>
+                    <td class="px-3 py-2">
+                      <input v-model="row.opened_at" type="datetime-local" class="h-[36px] w-full rounded border px-2" />
+                    </td>
+                    <td class="px-3 py-2">
+                      <input v-model="row.closed_at" type="datetime-local" class="h-[36px] w-full rounded border px-2" />
+                    </td>
+                    <td class="px-3 py-2">
+                      <input v-model.trim="row.note" type="text" class="h-[36px] w-full rounded border px-2" />
+                    </td>
+                    <td class="px-3 py-2">
+                      <button class="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-100" type="button" @click="removeDeviationRow(index)">
+                        {{ t('common.delete') }}
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </section>
       </template>
@@ -574,6 +833,7 @@ type BatchHeaderRow = {
   recipe_version_id: string | null
   released_reference_json: Record<string, any>
   recipe_json: Record<string, any>
+  meta: Record<string, any>
 }
 
 type BatchExecutionStepRow = {
@@ -638,6 +898,38 @@ type EquipmentOption = {
   code: string
   name: string
   label: string
+  equipment_type_id: string | null
+  site_id: string | null
+  equipment_status: string | null
+}
+
+type EquipmentTypeOption = {
+  id: string
+  code: string
+  name: string
+  label: string
+}
+
+type EquipmentRequirementRow = {
+  local_key: string
+  equipment_type_code: string
+  equipment_template_code: string
+  quantity: number
+  notes: string
+  type_id: string | null
+}
+
+type EquipmentReservationRow = {
+  id: string
+  site_id: string
+  equipment_id: string
+  reservation_type: string
+  status: string
+  start_at: string
+  end_at: string
+  note: string
+  meta_json: Record<string, any>
+  batch_step_id: string | null
 }
 
 type StepFormState = {
@@ -711,9 +1003,12 @@ type EquipmentAssignmentFormRow = {
   local_key: string
   id: string | null
   equipment_id: string
+  reservation_id: string
   assignment_role: string
+  status: string
   assigned_at: string
   released_at: string
+  note: string
   snapshot_json: Record<string, any>
 }
 
@@ -745,6 +1040,9 @@ type SectionState = {
   success: string
 }
 
+type MaterialWorkspaceTab = 'inputs' | 'outputs'
+type SecondaryWorkspaceTab = 'parameters' | 'qa' | 'logs' | 'deviations'
+
 const route = useRoute()
 const router = useRouter()
 const { t, locale } = useI18n()
@@ -767,6 +1065,9 @@ const stepForm = reactive<StepFormState>({
   ended_at: '',
   notes: '',
 })
+const materialWorkspaceTab = ref<MaterialWorkspaceTab>('inputs')
+const secondaryWorkspaceTab = ref<SecondaryWorkspaceTab>('parameters')
+const expandedActualMaterialRowKeys = ref<string[]>([])
 
 const plannedMaterials = ref<BatchMaterialPlanRow[]>([])
 const parameterForms = ref<ParameterFormRow[]>([])
@@ -777,7 +1078,6 @@ const equipmentAssignmentForms = ref<EquipmentAssignmentFormRow[]>([])
 const executionLogForms = ref<ExecutionLogFormRow[]>([])
 const deviationForms = ref<DeviationFormRow[]>([])
 const loadedActualMaterialIds = ref<string[]>([])
-const loadedEquipmentAssignmentIds = ref<string[]>([])
 const loadedExecutionLogIds = ref<string[]>([])
 const loadedDeviationIds = ref<string[]>([])
 
@@ -785,6 +1085,8 @@ const uomOptions = ref<UomOption[]>([])
 const materialOptions = ref<MaterialOption[]>([])
 const lotOptions = ref<LotOption[]>([])
 const equipmentOptions = ref<EquipmentOption[]>([])
+const equipmentTypeOptions = ref<EquipmentTypeOption[]>([])
+const equipmentReservations = ref<EquipmentReservationRow[]>([])
 
 const stepSaveState = reactive<SectionState>({ saving: false, error: '', success: '' })
 const actualMaterialsState = reactive<SectionState>({ saving: false, error: '', success: '' })
@@ -881,6 +1183,116 @@ const qualityResultStatusOptions = computed(() => [
   { value: 'not_applicable', label: t('batch.edit.stepResultStatusOptions.notApplicable') },
 ])
 
+const outputTypeOptions = computed(() => [
+  { value: 'primary', label: t('recipe.itemEditor.outputTypePrimary') },
+  { value: 'intermediate', label: t('recipe.itemEditor.outputTypeIntermediate') },
+  { value: 'co_product', label: t('recipe.itemEditor.outputTypeCoProduct') },
+  { value: 'waste', label: t('recipe.itemEditor.outputTypeWaste') },
+])
+
+const assignmentRoleOptions = computed(() => [
+  { value: 'main', label: t('batch.edit.stepAssignmentRoleOptions.main') },
+  { value: 'aux', label: t('batch.edit.stepAssignmentRoleOptions.aux') },
+  { value: 'qc', label: t('batch.edit.stepAssignmentRoleOptions.qc') },
+  { value: 'cleaning', label: t('batch.edit.stepAssignmentRoleOptions.cleaning') },
+])
+
+const assignmentStatusOptions = computed(() => [
+  { value: 'assigned', label: t('equipmentSchedule.assignmentStatuses.assigned') },
+  { value: 'in_use', label: t('equipmentSchedule.assignmentStatuses.in_use') },
+  { value: 'done', label: t('equipmentSchedule.assignmentStatuses.done') },
+  { value: 'cancelled', label: t('equipmentSchedule.assignmentStatuses.cancelled') },
+])
+
+const equipmentOptionById = computed(() => {
+  const map = new Map<string, EquipmentOption>()
+  equipmentOptions.value.forEach((row) => {
+    map.set(row.id, row)
+  })
+  return map
+})
+
+const equipmentTypeByCode = computed(() => {
+  const map = new Map<string, EquipmentTypeOption>()
+  equipmentTypeOptions.value.forEach((row) => {
+    map.set(row.code, row)
+  })
+  return map
+})
+
+const equipmentReservationById = computed(() => {
+  const map = new Map<string, EquipmentReservationRow>()
+  equipmentReservations.value.forEach((row) => {
+    map.set(row.id, row)
+  })
+  return map
+})
+
+const linkedEquipmentAssignmentByReservationId = computed(() => {
+  const map = new Map<string, EquipmentAssignmentFormRow>()
+  equipmentAssignmentForms.value.forEach((row) => {
+    if (!row.reservation_id) return
+    map.set(row.reservation_id, row)
+  })
+  return map
+})
+
+const stepEquipmentRequirements = computed<EquipmentRequirementRow[]>(() => {
+  const rows = asArray(step.value?.snapshot_json?.equipment_requirements)
+  return rows.map((value: any, index: number) => {
+    const row = asRecord(value) ?? {}
+    const equipmentTypeCode = safeText(row.equipment_type_code)
+    const equipmentType = equipmentTypeByCode.value.get(equipmentTypeCode)
+    const quantity = Math.max(1, Math.trunc(Number(row.quantity ?? 1) || 1))
+    return {
+      local_key: `equipment-requirement-${index}`,
+      equipment_type_code: equipmentTypeCode,
+      equipment_template_code: safeText(row.equipment_template_code),
+      quantity,
+      notes: safeText(row.notes),
+      type_id: equipmentType?.id ?? null,
+    }
+  })
+})
+
+const requiredEquipmentCount = computed(() =>
+  stepEquipmentRequirements.value.reduce((sum, row) => sum + Math.max(1, row.quantity || 1), 0),
+)
+
+const preferredEquipmentTypeIds = computed(() =>
+  new Set(stepEquipmentRequirements.value.map((row) => row.type_id).filter((value): value is string => Boolean(value))),
+)
+
+const preferredEquipmentSiteIds = computed(() => {
+  const values = new Set<string>()
+  const preferredSiteId = resolveProduceSiteId(batch.value)
+  if (preferredSiteId) values.add(preferredSiteId)
+  equipmentReservations.value.forEach((row) => {
+    if (row.site_id) values.add(row.site_id)
+  })
+  return values
+})
+
+const reservedEquipmentIdSet = computed(() => new Set(equipmentReservations.value.map((row) => row.equipment_id)))
+
+const equipmentReservationOptions = computed(() =>
+  equipmentReservations.value.map((row) => ({
+    id: row.id,
+    label: `${equipmentLabel(row.equipment_id)} / ${formatDateTimeRangeLabel(row.start_at, row.end_at)}`,
+  })),
+)
+
+const activeEquipmentAssignmentCount = computed(() =>
+  equipmentAssignmentForms.value.filter((row) => {
+    if (safeText(row.status) !== 'in_use') return false
+    return !safeText(row.released_at)
+  }).length,
+)
+
+const mismatchedEquipmentAssignmentCount = computed(() =>
+  equipmentAssignmentForms.value.filter((row) => !isEquipmentAssignmentRowEmpty(row) && equipmentAssignmentHasMismatch(row)).length,
+)
+
 const plannedMaterialMap = computed(() => {
   const map = new Map<string, BatchMaterialPlanRow>()
   plannedMaterials.value.forEach((row) => {
@@ -902,6 +1314,29 @@ const materialExecutionRows = computed<MaterialExecutionDisplayRow[]>(() =>
     }
   }),
 )
+
+const materialWorkspaceTabs = computed(() => [
+  { value: 'inputs' as MaterialWorkspaceTab, label: t('batch.edit.stepMaterialInputsTab'), count: materialExecutionRows.value.length },
+  { value: 'outputs' as MaterialWorkspaceTab, label: t('batch.edit.stepMaterialOutputsTab'), count: outputMaterialForms.value.length },
+])
+
+const secondaryWorkspaceTabs = computed(() => [
+  { value: 'parameters' as SecondaryWorkspaceTab, label: t('batch.edit.stepParametersTitle'), count: parameterForms.value.length },
+  { value: 'qa' as SecondaryWorkspaceTab, label: t('batch.edit.stepQualityChecksTitle'), count: qualityCheckForms.value.length },
+  { value: 'logs' as SecondaryWorkspaceTab, label: t('batch.edit.stepExecutionLogsTitle'), count: executionLogForms.value.length },
+  { value: 'deviations' as SecondaryWorkspaceTab, label: t('batch.edit.stepDeviationsTitle'), count: deviationForms.value.length },
+])
+
+const currentStepStatusSummaryLabel = computed(() => {
+  const normalized = safeText(stepForm.status) || safeText(step.value?.status) || 'open'
+  return stepStatusOptions.value.find((option) => option.value === normalized)?.label ?? humanizeToken(normalized)
+})
+
+const latestExecutionTimestampSummaryLabel = computed(() => {
+  if (stepForm.ended_at) return formatDateTimeLabel(stepForm.ended_at)
+  if (stepForm.started_at) return formatDateTimeLabel(stepForm.started_at)
+  return '—'
+})
 
 const durationUnits = computed(() => ({
   hour: t('batch.edit.timeUnits.hour'),
@@ -955,7 +1390,7 @@ async function loadPage() {
   try {
     await ensureCurrentUser()
     const mes = mesClient()
-    const [batchResult, stepResult, uomResult, materialResult, equipmentResult, lotResult] = await Promise.all([
+    const [batchResult, stepResult, uomResult, materialResult, equipmentResult, equipmentTypeResult, lotResult] = await Promise.all([
       supabase.rpc('batch_get_detail', { p_batch_id: batchId.value }),
       mes
         .from('batch_step')
@@ -974,9 +1409,14 @@ async function loadPage() {
         .order('material_code'),
       supabase
         .from('mst_equipment')
-        .select('id, equipment_code, name_i18n, is_active')
+        .select('id, equipment_code, name_i18n, equipment_type_id, site_id, equipment_status, is_active')
         .eq('is_active', true)
         .order('equipment_code'),
+      supabase
+        .from('type_def')
+        .select('type_id, code, name, name_i18n, sort_order')
+        .eq('domain', 'equipment_type')
+        .order('sort_order', { ascending: true }),
       supabase
         .from('lot')
         .select('id, lot_no, material_id, uom_id, status')
@@ -989,6 +1429,7 @@ async function loadPage() {
     if (uomResult.error) throw uomResult.error
     if (materialResult.error) throw materialResult.error
     if (equipmentResult.error) throw equipmentResult.error
+    if (equipmentTypeResult.error) throw equipmentTypeResult.error
     if (lotResult.error) throw lotResult.error
 
     const detail = asRecord(batchResult.data)
@@ -1009,6 +1450,7 @@ async function loadPage() {
       recipe_version_id: safeNullableText(batchHeader.recipe_version_id),
       released_reference_json: asRecord(batchHeader.released_reference_json) ?? {},
       recipe_json: asRecord(batchHeader.recipe_json) ?? {},
+      meta: asRecord(batchHeader.meta) ?? {},
     }
 
     if (!stepResult.data) {
@@ -1040,6 +1482,20 @@ async function loadPage() {
         code,
         name,
         label: name ? `${code} - ${name}` : code,
+        equipment_type_id: safeNullableText(row.equipment_type_id),
+        site_id: safeNullableText(row.site_id),
+        equipment_status: safeNullableText(row.equipment_status),
+      }
+    })
+
+    equipmentTypeOptions.value = (equipmentTypeResult.data ?? []).map((row: any) => {
+      const name = resolveNameI18n(row.name_i18n ?? null) || safeText(row.name) || safeText(row.code)
+      const code = safeText(row.code)
+      return {
+        id: String(row.type_id ?? ''),
+        code,
+        name,
+        label: code && name && code !== name ? `${code} - ${name}` : (name || code),
       }
     })
 
@@ -1094,7 +1550,8 @@ function initializeStepForms() {
 
 async function loadStepCollections(currentStepId: string) {
   const mes = mesClient()
-  const [plannedResult, actualResult, equipmentResult, logResult, deviationResult] = await Promise.all([
+  const currentBatchId = batch.value?.id ?? ''
+  const [plannedResult, actualResult, equipmentResult, reservationResult, logResult, deviationResult] = await Promise.all([
     mes
       .from('batch_material_plan')
       .select('id, material_role, material_type_id, planned_qty, uom_id, requirement_json, snapshot_json')
@@ -1107,9 +1564,17 @@ async function loadStepCollections(currentStepId: string) {
       .order('consumed_at', { ascending: true }),
     mes
       .from('batch_equipment_assignment')
-      .select('id, equipment_id, assignment_role, assigned_at, released_at, snapshot_json')
+      .select('id, equipment_id, reservation_id, assignment_role, status, assigned_at, released_at, note, snapshot_json')
       .eq('batch_step_id', currentStepId)
       .order('assigned_at', { ascending: true }),
+    currentBatchId
+      ? mes
+          .from('equipment_reservation')
+          .select('id, site_id, equipment_id, reservation_type, batch_step_id, start_at, end_at, status, note, meta_json')
+          .eq('batch_id', currentBatchId)
+          .or(`batch_step_id.eq.${currentStepId},batch_step_id.is.null`)
+          .order('start_at', { ascending: true })
+      : Promise.resolve({ data: [], error: null }),
     mes
       .from('batch_execution_log')
       .select('id, event_type, event_at, comment, event_data')
@@ -1125,6 +1590,7 @@ async function loadStepCollections(currentStepId: string) {
   if (plannedResult.error) throw plannedResult.error
   if (actualResult.error) throw actualResult.error
   if (equipmentResult.error) throw equipmentResult.error
+  if (reservationResult.error) throw reservationResult.error
   if (logResult.error) throw logResult.error
   if (deviationResult.error) throw deviationResult.error
 
@@ -1160,14 +1626,26 @@ async function loadStepCollections(currentStepId: string) {
     local_key: nextLocalKey('equipment'),
     id: String(row.id ?? ''),
     equipment_id: safeText(row.equipment_id),
+    reservation_id: safeText(row.reservation_id),
     assignment_role: safeText(row.assignment_role),
+    status: safeText(row.status) || 'assigned',
     assigned_at: toDateTimeInputValue(row.assigned_at),
     released_at: toDateTimeInputValue(row.released_at),
+    note: safeText(row.note),
     snapshot_json: asRecord(row.snapshot_json) ?? {},
   }))
-  loadedEquipmentAssignmentIds.value = equipmentAssignmentForms.value
-    .map((row) => row.id)
-    .filter((value): value is string => Boolean(value))
+  equipmentReservations.value = (reservationResult.data ?? []).map((row: any) => ({
+    id: String(row.id ?? ''),
+    site_id: String(row.site_id ?? ''),
+    equipment_id: String(row.equipment_id ?? ''),
+    reservation_type: safeText(row.reservation_type) || 'batch',
+    batch_step_id: safeNullableText(row.batch_step_id),
+    status: safeText(row.status) || 'reserved',
+    start_at: safeText(row.start_at),
+    end_at: safeText(row.end_at),
+    note: safeText(row.note),
+    meta_json: asRecord(row.meta_json) ?? {},
+  }))
 
   executionLogForms.value = (logResult.data ?? []).map((row: any) => ({
     local_key: nextLocalKey('log'),
@@ -1220,6 +1698,7 @@ async function saveStepInputs() {
     const actualParams = buildActualParamsPayload(step.value)
     const qualityChecks = buildQualityChecksPayload()
     const shouldReadyNextStep = Boolean(batch.value) && shouldMoveNextStepToReady(previousStatus, targetStatus)
+    const backflushSourceSiteId = resolveBackflushSourceSiteId()
 
     if (targetStatus === 'completed' && hasBackflushPlannedMaterials.value) {
       usedBackflushCompletion = true
@@ -1237,6 +1716,7 @@ async function saveStepInputs() {
           status: 'completed',
           started_at: startedAt,
           ended_at: endedAt,
+          source_site_id: backflushSourceSiteId,
           notes: nullableText(stepForm.notes),
           actual_params: actualParams,
           quality_checks_json: qualityChecks,
@@ -1365,6 +1845,20 @@ function handleActualMaterialChange(index: number) {
   }
 }
 
+function handleActualLotChange(row: ActualMaterialFormRow) {
+  if (!row.lot_id) {
+    const material = materialOptions.value.find((option) => option.id === row.material_id)
+    if (material?.base_uom_id) row.uom_id = material.base_uom_id
+    else if (row.planned_plan_id) row.uom_id = plannedMaterialMap.value.get(row.planned_plan_id)?.uom_id ?? row.uom_id
+    return
+  }
+
+  const lot = lotOptions.value.find((option) => option.id === row.lot_id)
+  if (!lot) return
+  if (lot.material_id) row.material_id = lot.material_id
+  if (lot.uom_id) row.uom_id = lot.uom_id
+}
+
 async function saveActualMaterials() {
   actualMaterialsState.saving = true
   try {
@@ -1453,19 +1947,91 @@ async function persistActualMaterials(options: PersistActualMaterialsOptions = {
 }
 
 function addEquipmentAssignmentRow() {
-  equipmentAssignmentForms.value.push({
-    local_key: nextLocalKey('equipment'),
-    id: null,
-    equipment_id: '',
-    assignment_role: '',
-    assigned_at: toDateTimeInputValue(new Date().toISOString()),
-    released_at: '',
-    snapshot_json: {},
-  })
+  equipmentAssignmentForms.value.push(createEquipmentAssignmentRow({
+    assignmentRole: defaultEquipmentAssignmentRole(),
+    status: 'assigned',
+    assignedAt: toDateTimeInputValue(new Date().toISOString()),
+  }))
 }
 
 function removeEquipmentAssignmentRow(index: number) {
   equipmentAssignmentForms.value.splice(index, 1)
+}
+
+function useReservedEquipment(reservationId: string) {
+  const reservation = equipmentReservationById.value.get(reservationId)
+  if (!reservation) return
+  const linkedRow = linkedEquipmentAssignmentByReservationId.value.get(reservationId)
+  if (linkedRow) {
+    handleEquipmentReservationChange(linkedRow)
+    return
+  }
+
+  equipmentAssignmentForms.value.push(createEquipmentAssignmentRow({
+    equipmentId: reservation.equipment_id,
+    reservationId: reservation.id,
+    assignmentRole: safeText(reservation.meta_json?.assignment_role) || defaultEquipmentAssignmentRole(),
+    status: 'assigned',
+    assignedAt: toDateTimeInputValue(reservation.start_at) || toDateTimeInputValue(new Date().toISOString()),
+    note: reservation.note,
+  }))
+}
+
+function handleEquipmentSelectionChange(row: EquipmentAssignmentFormRow) {
+  if (!row.equipment_id) return
+  if (!row.assignment_role) row.assignment_role = defaultEquipmentAssignmentRole()
+}
+
+function handleEquipmentReservationChange(row: EquipmentAssignmentFormRow) {
+  if (!row.reservation_id) return
+  const reservation = equipmentReservationById.value.get(row.reservation_id)
+  if (!reservation) return
+  row.equipment_id = reservation.equipment_id
+  if (!row.assignment_role) {
+    row.assignment_role = safeText(reservation.meta_json?.assignment_role) || defaultEquipmentAssignmentRole()
+  }
+  if (!row.assigned_at) {
+    row.assigned_at = toDateTimeInputValue(reservation.start_at) || toDateTimeInputValue(new Date().toISOString())
+  }
+  if (!row.note && reservation.note) row.note = reservation.note
+}
+
+function handleEquipmentStatusChange(row: EquipmentAssignmentFormRow) {
+  const normalized = safeText(row.status) || 'assigned'
+  const nowValue = toDateTimeInputValue(new Date().toISOString())
+  if (normalized === 'in_use') {
+    if (!row.assigned_at) row.assigned_at = nowValue
+    row.released_at = ''
+    return
+  }
+  if ((normalized === 'done' || normalized === 'cancelled') && !row.released_at) {
+    row.released_at = nowValue
+  }
+}
+
+function applyEquipmentAssignmentAction(row: EquipmentAssignmentFormRow, action: 'start' | 'release' | 'complete' | 'cancel') {
+  const nowValue = toDateTimeInputValue(new Date().toISOString())
+  if (action === 'start') {
+    row.status = 'in_use'
+    if (!row.assigned_at) row.assigned_at = nowValue
+    row.released_at = ''
+    return
+  }
+  if (action === 'release') {
+    row.status = 'assigned'
+    if (!row.assigned_at) row.assigned_at = nowValue
+    row.released_at = nowValue
+    return
+  }
+  if (action === 'complete') {
+    row.status = 'done'
+    if (!row.assigned_at) row.assigned_at = nowValue
+    row.released_at = nowValue
+    return
+  }
+  row.status = 'cancelled'
+  if (!row.assigned_at) row.assigned_at = nowValue
+  row.released_at = nowValue
 }
 
 async function saveEquipmentAssignments() {
@@ -1473,62 +2039,22 @@ async function saveEquipmentAssignments() {
   clearSectionState(equipmentState)
 
   const rows = equipmentAssignmentForms.value.filter((row) => !isEquipmentAssignmentRowEmpty(row))
-  for (const row of rows) {
-    if (!row.equipment_id) {
-      equipmentState.error = t('errors.required', { field: t('batch.edit.stepEquipment') })
-      return
-    }
-    if (!row.assigned_at) {
-      equipmentState.error = t('errors.required', { field: t('batch.edit.stepAssignedAt') })
-      return
-    }
-    if (row.assigned_at && row.released_at && new Date(row.assigned_at).getTime() > new Date(row.released_at).getTime()) {
-      equipmentState.error = t('batch.edit.stepTimeRangeError')
-      return
-    }
+  try {
+    validateEquipmentAssignmentRows(rows)
+  } catch (err) {
+    equipmentState.error = buildSectionSaveErrorMessage(err)
+    return
   }
 
   equipmentState.saving = true
   try {
     await ensureCurrentUser()
-    const mes = mesClient()
-    const existingIds = new Set(loadedEquipmentAssignmentIds.value)
-    const keptIds = new Set(rows.map((row) => row.id).filter((value): value is string => Boolean(value)))
-    const deleteIds = [...existingIds].filter((id) => !keptIds.has(id))
-
-    if (deleteIds.length) {
-      const { error } = await mes.from('batch_equipment_assignment').delete().in('id', deleteIds)
-      if (error) throw error
-    }
-
-    for (const row of rows) {
-      const equipment = equipmentOptions.value.find((option) => option.id === row.equipment_id)
-      const payload = {
-        tenant_id: batch.value.tenant_id,
-        batch_id: batch.value.id,
-        batch_step_id: step.value.id,
-        equipment_id: row.equipment_id,
-        assignment_role: nullableText(row.assignment_role),
-        assigned_at: toIsoDateTime(row.assigned_at) ?? new Date().toISOString(),
-        released_at: toIsoDateTime(row.released_at),
-        snapshot_json: {
-          ...(row.snapshot_json ?? {}),
-          equipment_code: equipment?.code ?? null,
-          equipment_name: equipment?.name ?? null,
-        },
-      }
-
-      if (row.id) {
-        const { error } = await mes.from('batch_equipment_assignment').update(payload).eq('id', row.id)
-        if (error) throw error
-      } else {
-        const { error } = await mes.from('batch_equipment_assignment').insert({
-          ...payload,
-          created_by: currentUserId.value,
-        })
-        if (error) throw error
-      }
-    }
+    const payloadRows = rows.map((row) => buildEquipmentAssignmentSaveRow(row))
+    const { error } = await supabase.rpc('batch_step_save_equipment_assignments', {
+      p_batch_step_id: step.value.id,
+      p_rows: payloadRows,
+    })
+    if (error) throw error
 
     await loadStepCollections(step.value.id)
     equipmentState.success = t('common.saved')
@@ -1915,6 +2441,60 @@ function createActualMaterialRow(initial: {
   }
 }
 
+function createEquipmentAssignmentRow(initial: {
+  id?: string | null
+  equipmentId?: string
+  reservationId?: string
+  assignmentRole?: string
+  status?: string
+  assignedAt?: string
+  releasedAt?: string
+  note?: string
+  snapshotJson?: Record<string, any>
+} = {}): EquipmentAssignmentFormRow {
+  return {
+    local_key: nextLocalKey('equipment'),
+    id: initial.id ?? null,
+    equipment_id: initial.equipmentId ?? '',
+    reservation_id: initial.reservationId ?? '',
+    assignment_role: initial.assignmentRole ?? '',
+    status: initial.status ?? 'assigned',
+    assigned_at: initial.assignedAt ?? '',
+    released_at: initial.releasedAt ?? '',
+    note: initial.note ?? '',
+    snapshot_json: initial.snapshotJson ?? {},
+  }
+}
+
+function defaultEquipmentAssignmentRole() {
+  return equipmentAssignmentForms.value.length > 0 ? 'aux' : 'main'
+}
+
+function buildEquipmentAssignmentSaveRow(row: EquipmentAssignmentFormRow) {
+  const equipment = equipmentOptionById.value.get(row.equipment_id)
+  const reservation = row.reservation_id ? equipmentReservationById.value.get(row.reservation_id) ?? null : null
+  return {
+    id: row.id,
+    equipment_id: row.equipment_id,
+    reservation_id: nullableText(row.reservation_id),
+    assignment_role: nullableText(row.assignment_role),
+    status: safeText(row.status) || 'assigned',
+    assigned_at: toIsoDateTime(row.assigned_at),
+    released_at: toIsoDateTime(row.released_at),
+    note: nullableText(row.note),
+    snapshot_json: {
+      ...(row.snapshot_json ?? {}),
+      equipment_code: equipment?.code ?? null,
+      equipment_name: equipment?.name ?? null,
+      equipment_type_id: equipment?.equipment_type_id ?? null,
+      reservation_status: reservation?.status ?? null,
+      reservation_type: reservation?.reservation_type ?? null,
+      reservation_start_at: reservation?.start_at ?? null,
+      reservation_end_at: reservation?.end_at ?? null,
+    },
+  }
+}
+
 function synchronizeActualMaterialRows() {
   const validPlannedIds = new Set(plannedMaterials.value.map((row) => row.id))
   const linkedByPlan = new Map<string, ActualMaterialFormRow[]>()
@@ -1979,6 +2559,185 @@ function materialOptionsForActualRow(row: ActualMaterialFormRow) {
   return materialOptions.value.filter((option) => option.material_type_id === planned.material_type_id || option.id === row.material_id)
 }
 
+function lotOptionsForActualRow(row: ActualMaterialFormRow) {
+  if (row.material_id) {
+    return lotOptions.value.filter((option) => option.material_id === row.material_id || option.id === row.lot_id)
+  }
+
+  const candidateMaterialIds = new Set(materialOptionsForActualRow(row).map((option) => option.id))
+  if (candidateMaterialIds.size === 0) return lotOptions.value
+  return lotOptions.value.filter((option) => !option.material_id || candidateMaterialIds.has(option.material_id) || option.id === row.lot_id)
+}
+
+function outputTypeLabel(value: string | null | undefined) {
+  const normalized = safeText(value)
+  if (!normalized) return '—'
+  return outputTypeOptions.value.find((option) => option.value === normalized)?.label ?? humanizeToken(normalized)
+}
+
+function isActualMaterialDetailsOpen(localKey: string) {
+  return expandedActualMaterialRowKeys.value.includes(localKey)
+}
+
+function toggleActualMaterialDetails(localKey: string) {
+  if (isActualMaterialDetailsOpen(localKey)) {
+    expandedActualMaterialRowKeys.value = expandedActualMaterialRowKeys.value.filter((value) => value !== localKey)
+    return
+  }
+  expandedActualMaterialRowKeys.value = [...expandedActualMaterialRowKeys.value, localKey]
+}
+
+function equipmentLabel(equipmentId: string | null | undefined) {
+  if (!equipmentId) return '—'
+  return equipmentOptionById.value.get(equipmentId)?.label ?? equipmentId
+}
+
+function equipmentRequirementLabel(row: EquipmentRequirementRow) {
+  const equipmentType = row.equipment_type_code ? equipmentTypeByCode.value.get(row.equipment_type_code) : null
+  return equipmentType?.label || row.equipment_type_code || row.equipment_template_code || '—'
+}
+
+function equipmentMatchesRequirement(equipmentId: string, requirement: EquipmentRequirementRow) {
+  const equipment = equipmentOptionById.value.get(equipmentId)
+  if (!equipment) return false
+  if (requirement.type_id) return equipment.equipment_type_id === requirement.type_id
+  return true
+}
+
+function equipmentRequirementReservationCount(requirement: EquipmentRequirementRow) {
+  return equipmentReservations.value.filter((row) => equipmentMatchesRequirement(row.equipment_id, requirement)).length
+}
+
+function equipmentRequirementActualCount(requirement: EquipmentRequirementRow) {
+  return equipmentAssignmentForms.value.filter((row) =>
+    safeText(row.status) !== 'cancelled' && row.equipment_id && equipmentMatchesRequirement(row.equipment_id, requirement)).length
+}
+
+function reservationStatusLabel(value: string | null | undefined) {
+  const normalized = safeText(value) || 'reserved'
+  const key = `equipmentSchedule.reservationStatuses.${normalized}`
+  const translated = t(key)
+  return translated === key ? humanizeToken(normalized) : translated
+}
+
+function reservationTypeLabel(value: string | null | undefined) {
+  const normalized = safeText(value) || 'batch'
+  const key = `equipmentSchedule.reservationTypes.${normalized}`
+  const translated = t(key)
+  return translated === key ? humanizeToken(normalized) : translated
+}
+
+function equipmentAssignmentStatusLabel(value: string | null | undefined) {
+  const normalized = safeText(value) || 'assigned'
+  const key = `equipmentSchedule.assignmentStatuses.${normalized}`
+  const translated = t(key)
+  return translated === key ? humanizeToken(normalized) : translated
+}
+
+function equipmentAssignmentStatusBadgeClass(value: string | null | undefined) {
+  const normalized = safeText(value) || 'assigned'
+  if (normalized === 'in_use') return 'bg-emerald-50 text-emerald-700'
+  if (normalized === 'done') return 'bg-blue-50 text-blue-700'
+  if (normalized === 'cancelled') return 'bg-rose-50 text-rose-700'
+  return 'bg-gray-100 text-gray-700'
+}
+
+function equipmentAssignmentHeading(row: EquipmentAssignmentFormRow, index: number) {
+  if (row.equipment_id) return equipmentLabel(row.equipment_id)
+  return `${t('batch.edit.stepEquipmentTitle')} #${index + 1}`
+}
+
+function equipmentAssignmentHasReservationMismatch(row: EquipmentAssignmentFormRow) {
+  if (safeText(row.status) === 'cancelled') return false
+  if (!row.reservation_id || !row.equipment_id) return false
+  const reservation = equipmentReservationById.value.get(row.reservation_id)
+  if (!reservation) return false
+  return reservation.equipment_id !== row.equipment_id
+}
+
+function equipmentAssignmentHasRequirementMismatch(row: EquipmentAssignmentFormRow) {
+  if (safeText(row.status) === 'cancelled') return false
+  if (!row.equipment_id || stepEquipmentRequirements.value.length === 0) return false
+  return !stepEquipmentRequirements.value.some((requirement) => equipmentMatchesRequirement(row.equipment_id, requirement))
+}
+
+function equipmentAssignmentHasMismatch(row: EquipmentAssignmentFormRow) {
+  return equipmentAssignmentHasReservationMismatch(row) || equipmentAssignmentHasRequirementMismatch(row)
+}
+
+function equipmentAssignmentCardClass(row: EquipmentAssignmentFormRow) {
+  if (equipmentAssignmentHasMismatch(row)) return 'border-amber-300 bg-amber-50/40'
+  if (safeText(row.status) === 'in_use' && !safeText(row.released_at)) return 'border-emerald-300 bg-emerald-50/40'
+  return 'border-gray-200 bg-white'
+}
+
+function equipmentOptionRankingScore(option: EquipmentOption, row: EquipmentAssignmentFormRow) {
+  let score = 0
+  if (row.equipment_id === option.id) score += 1000
+  const reservation = row.reservation_id ? equipmentReservationById.value.get(row.reservation_id) ?? null : null
+  if (reservation?.equipment_id === option.id) score += 400
+  else if (reservedEquipmentIdSet.value.has(option.id)) score += 250
+  if (option.equipment_type_id && preferredEquipmentTypeIds.value.has(option.equipment_type_id)) score += 150
+  if (option.site_id && preferredEquipmentSiteIds.value.has(option.site_id)) score += 50
+  if (option.equipment_status === 'available') score += 25
+  return score
+}
+
+function equipmentOptionsForAssignmentRow(row: EquipmentAssignmentFormRow) {
+  return [...equipmentOptions.value].sort((left, right) => {
+    const scoreDelta = equipmentOptionRankingScore(right, row) - equipmentOptionRankingScore(left, row)
+    if (scoreDelta !== 0) return scoreDelta
+    return left.label.localeCompare(right.label)
+  })
+}
+
+function validateEquipmentAssignmentRows(rows: EquipmentAssignmentFormRow[]) {
+  const effectiveRows = rows.filter((row) => safeText(row.status) !== 'cancelled')
+  if (requiredEquipmentCount.value > 0 && effectiveRows.length < requiredEquipmentCount.value) {
+    throw new Error(t('batch.edit.stepEquipmentRequiredAssignmentsError', { count: requiredEquipmentCount.value }))
+  }
+
+  const reservationIds = new Set<string>()
+  for (const row of rows) {
+    if (!row.equipment_id) {
+      throw new Error(t('errors.required', { field: t('batch.edit.stepEquipment') }))
+    }
+    if (!row.assigned_at) {
+      throw new Error(t('errors.required', { field: t('batch.edit.stepAssignedAt') }))
+    }
+    if (row.assigned_at && row.released_at && new Date(row.assigned_at).getTime() > new Date(row.released_at).getTime()) {
+      throw new Error(t('batch.edit.stepTimeRangeError'))
+    }
+    if (row.reservation_id) {
+      if (reservationIds.has(row.reservation_id)) {
+        throw new Error(t('batch.edit.stepEquipmentDuplicateReservationError'))
+      }
+      reservationIds.add(row.reservation_id)
+    }
+  }
+
+  for (let index = 0; index < rows.length; index += 1) {
+    const current = rows[index]
+    if (safeText(current.status) === 'cancelled') continue
+    for (let compareIndex = index + 1; compareIndex < rows.length; compareIndex += 1) {
+      const candidate = rows[compareIndex]
+      if (current.equipment_id !== candidate.equipment_id) continue
+      if (safeText(candidate.status) === 'cancelled') continue
+      if (!equipmentAssignmentRowsOverlap(current, candidate)) continue
+      throw new Error(t('batch.edit.stepEquipmentOverlapError', { equipment: equipmentLabel(current.equipment_id) }))
+    }
+  }
+}
+
+function equipmentAssignmentRowsOverlap(left: EquipmentAssignmentFormRow, right: EquipmentAssignmentFormRow) {
+  const leftStart = new Date(left.assigned_at).getTime()
+  const rightStart = new Date(right.assigned_at).getTime()
+  const leftEnd = left.released_at ? new Date(left.released_at).getTime() : Number.POSITIVE_INFINITY
+  const rightEnd = right.released_at ? new Date(right.released_at).getTime() : Number.POSITIVE_INFINITY
+  if (Number.isNaN(leftStart) || Number.isNaN(rightStart)) return false
+  return leftStart <= rightEnd && rightStart <= leftEnd
+}
+
 function clearAllStates() {
   clearSectionState(stepSaveState)
   clearSectionState(actualMaterialsState)
@@ -2018,12 +2777,15 @@ function resetCollections() {
   actualMaterialForms.value = []
   outputMaterialForms.value = []
   equipmentAssignmentForms.value = []
+  equipmentReservations.value = []
   executionLogForms.value = []
   deviationForms.value = []
   loadedActualMaterialIds.value = []
-  loadedEquipmentAssignmentIds.value = []
   loadedExecutionLogIds.value = []
   loadedDeviationIds.value = []
+  materialWorkspaceTab.value = 'inputs'
+  secondaryWorkspaceTab.value = 'parameters'
+  expandedActualMaterialRowKeys.value = []
 }
 
 function isActualMaterialRowEmpty(row: ActualMaterialFormRow) {
@@ -2031,7 +2793,7 @@ function isActualMaterialRowEmpty(row: ActualMaterialFormRow) {
 }
 
 function isEquipmentAssignmentRowEmpty(row: EquipmentAssignmentFormRow) {
-  return !row.equipment_id && !row.assignment_role && !row.assigned_at && !row.released_at
+  return !row.equipment_id && !row.reservation_id && !row.assignment_role && !row.assigned_at && !row.released_at && !row.note
 }
 
 function isExecutionLogRowEmpty(row: ExecutionLogFormRow) {
@@ -2107,6 +2869,29 @@ function formatDurationSeconds(value: number | null | undefined) {
   if (hours > 0) return `${hours}${durationUnits.value.hour} ${minutes}${durationUnits.value.minute}`
   if (minutes > 0) return `${minutes}${durationUnits.value.minute} ${seconds}${durationUnits.value.second}`
   return `${seconds}${durationUnits.value.second}`
+}
+
+function formatDateTimeLabel(value: unknown) {
+  const text = safeText(value)
+  if (!text) return '—'
+  const date = new Date(text)
+  if (Number.isNaN(date.getTime())) return '—'
+  return new Intl.DateTimeFormat(locale.value.startsWith('ja') ? 'ja-JP' : 'en-US', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date)
+}
+
+function formatDateTimeRangeLabel(startAt: unknown, endAt: unknown) {
+  const startLabel = formatDateTimeLabel(startAt)
+  const endLabel = formatDateTimeLabel(endAt)
+  if (startLabel === '—' && endLabel === '—') return '—'
+  if (endLabel === '—') return startLabel
+  if (startLabel === '—') return endLabel
+  return `${startLabel} - ${endLabel}`
 }
 
 function isStepCompletionStatus(status: string | null | undefined) {
@@ -2208,6 +2993,52 @@ function extractErrorMessage(error: unknown) {
   }
   if (typeof error === 'string') return error
   return ''
+}
+
+function resolveProduceSiteId(source: BatchHeaderRow | null | undefined) {
+  if (!source) return null
+  const meta = (source.meta && typeof source.meta === 'object' && !Array.isArray(source.meta))
+    ? source.meta as Record<string, any>
+    : {}
+  const candidates = [
+    meta.manufacturing_site_id,
+    meta.manufacture_site_id,
+    meta.brew_site_id,
+    meta.site_id,
+    meta.dest_site_id,
+    meta.movement_site_id,
+  ]
+  for (const value of candidates) {
+    if (typeof value === 'string' && value.trim()) return value.trim()
+  }
+  return null
+}
+
+function resolveBackflushSourceSiteId() {
+  const batchSiteId = resolveProduceSiteId(batch.value)
+  if (batchSiteId) return batchSiteId
+
+  const assignmentSiteIds = new Set<string>()
+  equipmentAssignmentForms.value.forEach((row) => {
+    if (safeText(row.status) === 'cancelled') return
+    const siteId = row.equipment_id ? equipmentOptionById.value.get(row.equipment_id)?.site_id : null
+    if (siteId) assignmentSiteIds.add(siteId)
+  })
+  if (assignmentSiteIds.size === 1) return [...assignmentSiteIds][0]
+
+  const reservationSiteIds = new Set<string>()
+  equipmentReservations.value.forEach((row) => {
+    if (row.site_id) reservationSiteIds.add(row.site_id)
+  })
+  if (reservationSiteIds.size === 1) return [...reservationSiteIds][0]
+
+  const combinedSiteIds = new Set<string>([
+    ...assignmentSiteIds,
+    ...reservationSiteIds,
+  ])
+  if (combinedSiteIds.size === 1) return [...combinedSiteIds][0]
+
+  return null
 }
 
 watch([batchId, stepId], () => {

@@ -37,13 +37,15 @@
 - batch relation editing
 
 ## Page Layout
-- Section 1: Batch / Step Context
-- Section 2: Step Execution Control
-- Section 3: Parameters
-- Section 4: Material Execution
-- Section 5: Equipment Execution
-- Section 6: QA
-- Section 7: Deviations and Logs
+- Primary workspace:
+  - Section 1: Batch / Step Context
+  - Section 2: Step Execution Control
+  - Section 3: Material Execution
+  - Section 4: Equipment Execution
+- Secondary workspace:
+  - Section 5: Execution Details
+  - the secondary workspace may render `Parameters`, `QA`, `Execution Logs`, and `Deviations` as tabs inside one shared section instead of four full-width sections
+- the page should keep the most common operator flow above the fold and move lower-frequency detail capture into the secondary workspace
 
 ## Section 1: Batch / Step Context
 
@@ -103,40 +105,17 @@
   - if the next step is `open`, auto-advance it to `ready`
 - do not auto-skip over `hold`, `completed`, `skipped`, or `cancelled` next steps
 - do not change batch header fields or filling / yield logic as part of this transition
+- companion summary items may render as dense readonly badges or cards inside the same section rather than a separate summary block
 
-## Section 3: Parameters
-
-### Purpose
-- Show planned step parameters and capture actual parameter results.
-
-### Show
-- parameter code / name
-- planned target
-- planned min
-- planned max
-- uom
-- actual value
-- operator comment when needed
-
-### Source / Persistence Direction
-- planned values:
-  - `mes.batch_step.planned_params.parameters`
-  - fallback `mes.batch_step.snapshot_json.parameters`
-- actual values:
-  - must stay in execution-side storage only
-
-### Rules
-- planned values remain readonly
-- only actual result input is editable
-- this page must not rewrite released recipe planning data
-
-## Section 4: Material Execution
+## Section 3: Material Execution
 
 ### Purpose
 - Capture what was actually consumed or issued for this step.
 
 ### Subsection A: Merged Plan / Actual Table
-- show in one table:
+- keep planned and actual material input capture in one main section
+- the section may render `Inputs` and `Outputs` as tabs inside the same card instead of separate full-width blocks
+- show in the input view:
   - planned material type / label
   - planned qty
   - planned uom
@@ -166,17 +145,20 @@
 - planned and actual material inputs should be shown together instead of in separate sections
 - when an actual row is tied to a planned row, the actual material selector should default to materials matching the planned material type
 - the operator must still be able to add extra actual rows that are not tied to a planned row
+- lot, consumed at, and note may be shown in a compact row detail area so the default table stays narrow
 - when the planned recipe input uses `consumption_mode = backflush`, the actual row may remain unresolved to a lot while the step is in progress
 - when a `backflush` step is completed, the page must resolve the actual issue to concrete raw-material lots and create posted inventory issue movements
 - the backflush inventory issue must use `doc_type = 'production_issue'`
 - the backflush movement lines must remain lot-level and carry `meta.lot_id`
+- backflush completion should resolve the source site from batch metadata when available, and may pass an explicit execution-context site fallback when batch metadata is incomplete
 - backflush allocation must not silently consume stock across multiple sites
 - insufficient stock for backflush must block step completion
 - this page must not change filling / packing data
 - this page must not alter finished-goods inventory result logic owned by `actual_yield` or packing
 
 ### Subsection B: Output Materials
-- show a separate output-material section on the same page
+- show output-material actual capture on the same page
+- this may render inside the same material execution section as a secondary tab
 - show:
   - output material type / name
   - planned qty
@@ -193,10 +175,23 @@
   - actual qty
 - this section is step-level execution reference and actual capture, not finished-goods inventory posting
 
-## Section 5: Equipment Execution
+## Section 4: Equipment Execution
 
 ### Purpose
 - Record which actual equipment was assigned to the step and for how long.
+- Make the common operator path fast while keeping plan vs actual mismatch visible.
+
+### Operator View
+- show three aligned layers in one section:
+  - planned equipment requirement
+  - reserved equipment candidate
+  - actual assignment
+- show a compact summary before the detail rows, including:
+  - required count
+  - reserved count
+  - in-use count
+  - mismatch count
+- keep the default view dense and execution-oriented rather than using a large free-form table as the only interaction pattern
 
 ### Editable / Maintainable Items
 - equipment
@@ -204,52 +199,100 @@
 - assignment status
 - assigned at
 - released at
+- reservation link
 - note
 
 ### Source / Persistence Direction
 - `mes.batch_equipment_assignment`
 - optional link to `mes.equipment_reservation`
 
+### Operator Actions
+- `Use Reserved Equipment`
+- `Start With Other Equipment`
+- `Start Use`
+- `Release`
+- `Complete`
+- `Cancel`
+
 ### Rules
 - assignment is step-level only
 - planned occupancy and blocking should live in `mes.equipment_reservation`, not in `mes.batch_equipment_assignment`
 - assignment may reference a reservation, but it must remain the actual execution-side record
+- the page should show planned, reserved, and actual equipment together rather than isolating actual rows from their planning context
+- action buttons should be the primary path for common operator work; raw timestamp editing remains available as a fallback
+- `assignment_role` should use constrained option values rather than free text
+- `assignment status` should use controlled values aligned to execution flow:
+  - `assigned`
+  - `in_use`
+  - `done`
+  - `cancelled`
+- `Use Reserved Equipment` should prefill equipment, role, and reservation link from the selected reservation when available
+- `Start Use` should auto-fill `assigned_at` with now when it is blank
+- `Release` and `Complete` should auto-fill `released_at` with now when it is blank
+- changing the actual equipment away from a linked reservation should show a visible mismatch warning rather than silently hiding the difference
+- candidate equipment should rank in this order:
+  - matching reserved equipment
+  - active equipment matching the step requirement and site context
+  - other active equipment as an explicit override path
+- save should be handled as one step-level transaction rather than a per-row client save loop
+- save validation should cover:
+  - required equipment presence when the step requirement demands it
+  - `assigned_at <= released_at`
+  - conflicting active assignment on the same equipment
+  - reservation linkage consistency with tenant / batch / step / equipment
+- mismatch with planned requirement or reserved equipment should be visible and confirmable by the operator when override is allowed
 - this page must not act as equipment vacancy planning for the whole batch
 - this page must not change batch-level packing or yield behavior
 
-## Section 6: QA
+## Section 5: Execution Details
 
 ### Purpose
-- Capture step-level quality execution and result input.
+- Keep lower-frequency execution details close to the step without forcing every operator to scroll through all detail sections on every visit.
+- Allow `Parameters`, `QA`, `Execution Logs`, and `Deviations` to share one denser workspace.
 
-### Show
-- planned checks
-- check code / name
-- planned acceptance rule summary
+### Tab A: Parameters
+- show:
+  - parameter code / name
+  - planned target
+  - planned min
+  - planned max
+  - uom
+  - actual value
+  - operator comment when needed
+- source / persistence direction:
+  - planned values:
+    - `mes.batch_step.planned_params.parameters`
+    - fallback `mes.batch_step.snapshot_json.parameters`
+  - actual values:
+    - must stay in execution-side storage only
+- rules:
+  - planned values remain readonly
+  - only actual result input is editable
+  - this page must not rewrite released recipe planning data
 
-### Editable / Maintainable Items
-- result value or result note
-- checked at
-- checked by
-- pass / fail / required handling
+### Tab B: QA
+- show:
+  - planned checks
+  - check code / name
+  - planned acceptance rule summary
+- editable / maintainable items:
+  - result value or result note
+  - checked at
+  - checked by
+  - pass / fail / required handling
 
-### Source / Persistence Direction
+### Tab B Source / Persistence Direction
 - planned checks:
   - `mes.batch_step.quality_checks_json`
   - fallback `mes.batch_step.snapshot_json.quality_checks`
 - actual result storage:
   - must remain step-level execution data, not batch header data
 
-### Rules
+### Tab B Rules
 - QA input on this page must not modify recipe master data
 - global release / product yield logic remains outside this page
 
-## Section 7: Deviations and Logs
-
-### Purpose
-- Keep execution exceptions and event history close to the step where they happen.
-
-### Subsection A: Deviations
+### Tab C: Deviations
 - maintain:
   - deviation code
   - summary
@@ -259,21 +302,22 @@
   - closed at
   - note
 
-### Subsection B: Execution Logs
+### Tab D: Execution Logs
 - maintain or show:
   - event type
   - event at
   - note
 
-### Source / Persistence Direction
+### Tab C / D Source / Persistence Direction
 - deviations:
   - `mes.batch_deviation`
 - logs:
   - `mes.batch_execution_log`
 
-### Rules
+### Tab C / D Rules
 - deviation handling here must remain step-scoped as much as possible
 - this page must not be used to replace batch relation history or packing history
+- lower-priority detail tabs may be collapsed behind one shared tabbed card to keep the page visually slimmer
 
 ## Data Sources
 - batch header context:
@@ -291,6 +335,8 @@
   - `inv_inventory`
 - equipment:
   - `mes.batch_equipment_assignment`
+- equipment reservations:
+  - `mes.equipment_reservation`
 - logs:
   - `mes.batch_execution_log`
 - deviations:

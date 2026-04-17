@@ -1,6 +1,6 @@
 # Equipment Schedule Board Page
 
-This spec reflects the current final board design using `vis-timeline`. Older gantt experiments are not part of this spec.
+This spec reflects the current board implementation using `vis-timeline`.
 
 ## Goal
 - Provide a single page to review equipment availability, manage planned reservations, and visualize actual usage across multiple sites.
@@ -112,15 +112,12 @@ This spec reflects the current final board design using `vis-timeline`. Older ga
 - equipment rows should be modeled as native timeline groups
 - schedule blocks should be modeled as timeline items attached to the matching equipment group
 - the board should not use a separate left-side task table model
+- prepared reservation / assignment windows should be reused across filtering, validation, and timeline item assembly instead of reparsing dates in each pass
+- timeline dataset updates should prefer incremental refreshes over full clear-and-rebuild when the visible board is already mounted
 
 ### Suggested Child Components
-- `components/EquipmentSchedule/EquipmentScheduleFilterBar.vue`
-- `components/EquipmentSchedule/EquipmentScheduleLegend.vue`
-- `components/EquipmentSchedule/EquipmentScheduleGrid.vue`
-- `components/EquipmentSchedule/EquipmentScheduleSiteGroup.vue`
-- `components/EquipmentSchedule/EquipmentScheduleRow.vue`
-- `components/EquipmentSchedule/EquipmentScheduleBlock.vue`
-- `components/EquipmentSchedule/EquipmentReservationDialog.vue`
+- `components/EquipmentScheduleMultiSelectFilter.vue`
+- `components/EquipmentReservationDialog.vue`
 
 ### Responsibility Split
 - page component:
@@ -131,6 +128,7 @@ This spec reflects the current final board design using `vis-timeline`. Older ga
   - shared timeline group/item assembly
 - filter bar:
   - filter inputs and search/reset actions
+  - shared multi-select dropdown behavior for site / equipment type / equipment filters
 - grid/site group/row:
   - board context layout only
 - timeline group/item rendering:
@@ -164,6 +162,7 @@ This spec reflects the current final board design using `vis-timeline`. Older ga
 ## Block Render Priority
 - if a `batch_equipment_assignment` row links to a reservation via `reservation_id`, the board should render the actual block as the primary visible block for the overlapping time range
 - linked reservation context may still be shown inside the block tooltip/detail panel
+- linked reservation hiding should only happen when the linked actual row is itself visible under the current board filters
 - if there is an unlinked actual assignment, render it as an independent actual block
 - if reservation and actual overlap but are not linked, mark as mismatch/conflict candidate
 
@@ -234,6 +233,7 @@ This spec reflects the current final board design using `vis-timeline`. Older ga
 ### Edit Reservation
 - double click reservation block
 - open reservation modal in edit mode
+- reservation modal in edit mode should provide a delete action for the current reservation
 - reservation block drag should move start / end time together directly on the board
 - reservation block drag should keep the original duration fixed
 - drag should persist only after reservation validation passes
@@ -278,6 +278,9 @@ This spec reflects the current final board design using `vis-timeline`. Older ga
   - `completed`
   - `cancelled`
 - `batch step` should be nullable for non-batch reservation types
+- delete action should be shown only in edit mode
+- delete should require explicit user confirmation before removing the reservation
+- after delete succeeds, close the modal and refresh the board
 
 ### Validation
 - check overlapping reservation window
@@ -384,6 +387,8 @@ This spec reflects the current final board design using `vis-timeline`. Older ga
   - `updated_at`
 - range rule:
   - load rows whose actual time range intersects the visible board range
+- legacy compatibility:
+  - if an older row has no `assigned_at`, the page may fall back to `updated_at` to decide whether the row should still be loaded and rendered
 - ongoing rule:
   - if `released_at` is null and status is `in_use`, use `now` as the display end
 - hide by default:

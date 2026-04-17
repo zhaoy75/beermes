@@ -20,144 +20,33 @@
         </div>
 
         <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
-          <div ref="siteFilterDropdownRef" class="relative">
-            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('equipmentSchedule.filters.site') }}</label>
-            <button
-              type="button"
-              class="equipment-schedule-dropdown-trigger flex h-11 w-full items-center justify-between rounded-lg border border-gray-300 bg-white px-3 text-left text-sm text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-              @click="siteFilterOpen = !siteFilterOpen"
-            >
-              <span class="truncate">{{ selectedSiteFilterLabel }}</span>
-              <span class="ml-3 text-xs text-gray-500 dark:text-gray-400">{{ siteFilterOpen ? '▲' : '▼' }}</span>
-            </button>
-            <div
-              v-if="siteFilterOpen"
-              class="equipment-schedule-dropdown-panel absolute z-20 mt-2 max-h-64 w-full overflow-auto rounded-xl border border-gray-200 bg-white p-2 shadow-lg dark:border-gray-700 dark:bg-gray-900"
-            >
-              <div class="mb-2 flex items-center gap-2 border-b border-gray-200 px-2 pb-2 dark:border-gray-700">
-                <button
-                  type="button"
-                  class="rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
-                  @click="selectAllSites"
-                >
-                  {{ t('equipmentSchedule.filters.selectAll') }}
-                </button>
-                <button
-                  type="button"
-                  class="rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
-                  @click="clearAllSites"
-                >
-                  {{ t('equipmentSchedule.filters.deleteAll') }}
-                </button>
-              </div>
-              <label
-                v-for="site in siteOptions"
-                :key="site.value"
-                class="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/[0.03]"
-              >
-                <input
-                  :checked="filters.siteIds.includes(site.value)"
-                  type="checkbox"
-                  class="h-4 w-4 rounded border-gray-300"
-                  @change="toggleSiteFilter(site.value)"
-                />
-                <span class="truncate">{{ site.label }}</span>
-              </label>
-            </div>
-          </div>
+          <EquipmentScheduleMultiSelectFilter
+            v-model="filters.siteIds"
+            :label="t('equipmentSchedule.filters.site')"
+            :options="siteOptions"
+            :all-label="t('common.all')"
+            :select-all-label="t('equipmentSchedule.filters.selectAll')"
+            :clear-all-label="t('equipmentSchedule.filters.deleteAll')"
+          />
 
-          <div ref="equipmentTypeFilterDropdownRef" class="relative">
-            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('equipmentSchedule.filters.equipmentType') }}</label>
-            <button
-              type="button"
-              class="equipment-schedule-dropdown-trigger flex h-11 w-full items-center justify-between rounded-lg border border-gray-300 bg-white px-3 text-left text-sm text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-              @click="equipmentTypeFilterOpen = !equipmentTypeFilterOpen"
-            >
-              <span class="truncate">{{ selectedEquipmentTypeFilterLabel }}</span>
-              <span class="ml-3 text-xs text-gray-500 dark:text-gray-400">{{ equipmentTypeFilterOpen ? '▲' : '▼' }}</span>
-            </button>
-            <div
-              v-if="equipmentTypeFilterOpen"
-              class="equipment-schedule-dropdown-panel absolute z-20 mt-2 max-h-80 w-full overflow-auto rounded-xl border border-gray-200 bg-white p-2 shadow-lg dark:border-gray-700 dark:bg-gray-900"
-            >
-              <div class="mb-2 flex items-center gap-2 border-b border-gray-200 px-2 pb-2 dark:border-gray-700">
-                <button
-                  type="button"
-                  class="rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
-                  @click="selectAllEquipmentTypes"
-                >
-                  {{ t('equipmentSchedule.filters.selectAll') }}
-                </button>
-                <button
-                  type="button"
-                  class="rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
-                  @click="clearAllEquipmentTypes"
-                >
-                  {{ t('equipmentSchedule.filters.clearAll') }}
-                </button>
-              </div>
-              <label
-                v-for="type in equipmentTypeTreeOptions"
-                :key="type.value"
-                class="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/[0.03]"
-                :style="{ paddingLeft: `${type.depth * 16 + 12}px` }"
-              >
-                <input
-                  :checked="filters.equipmentTypeIds.includes(type.value)"
-                  type="checkbox"
-                  class="h-4 w-4 rounded border-gray-300"
-                  @change="toggleEquipmentTypeFilter(type.value)"
-                />
-                <span class="truncate">{{ type.label }}</span>
-              </label>
-            </div>
-          </div>
+          <EquipmentScheduleMultiSelectFilter
+            v-model="filters.equipmentTypeIds"
+            :label="t('equipmentSchedule.filters.equipmentType')"
+            :options="equipmentTypeTreeOptions"
+            :all-label="t('common.all')"
+            :select-all-label="t('equipmentSchedule.filters.selectAll')"
+            :clear-all-label="t('equipmentSchedule.filters.clearAll')"
+            panel-class="max-h-80"
+          />
 
-          <div ref="equipmentFilterDropdownRef" class="relative">
-            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('equipmentSchedule.filters.equipment') }}</label>
-            <button
-              type="button"
-              class="equipment-schedule-dropdown-trigger flex h-11 w-full items-center justify-between rounded-lg border border-gray-300 bg-white px-3 text-left text-sm text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-              @click="equipmentFilterOpen = !equipmentFilterOpen"
-            >
-              <span class="truncate">{{ selectedEquipmentFilterLabel }}</span>
-              <span class="ml-3 text-xs text-gray-500 dark:text-gray-400">{{ equipmentFilterOpen ? '▲' : '▼' }}</span>
-            </button>
-            <div
-              v-if="equipmentFilterOpen"
-              class="equipment-schedule-dropdown-panel absolute z-20 mt-2 max-h-64 w-full overflow-auto rounded-xl border border-gray-200 bg-white p-2 shadow-lg dark:border-gray-700 dark:bg-gray-900"
-            >
-              <div class="mb-2 flex items-center gap-2 border-b border-gray-200 px-2 pb-2 dark:border-gray-700">
-                <button
-                  type="button"
-                  class="rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
-                  @click="selectAllEquipment"
-                >
-                  {{ t('equipmentSchedule.filters.selectAll') }}
-                </button>
-                <button
-                  type="button"
-                  class="rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
-                  @click="clearAllEquipment"
-                >
-                  {{ t('equipmentSchedule.filters.deleteAll') }}
-                </button>
-              </div>
-              <label
-                v-for="equipment in equipmentOptions"
-                :key="equipment.value"
-                class="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/[0.03]"
-              >
-                <input
-                  :checked="filters.equipmentIds.includes(equipment.value)"
-                  type="checkbox"
-                  class="h-4 w-4 rounded border-gray-300"
-                  @change="toggleEquipmentFilter(equipment.value)"
-                />
-                <span class="truncate">{{ equipment.label }}</span>
-              </label>
-            </div>
-          </div>
+          <EquipmentScheduleMultiSelectFilter
+            v-model="filters.equipmentIds"
+            :label="t('equipmentSchedule.filters.equipment')"
+            :options="equipmentOptions"
+            :all-label="t('common.all')"
+            :select-all-label="t('equipmentSchedule.filters.selectAll')"
+            :clear-all-label="t('equipmentSchedule.filters.deleteAll')"
+          />
 
           <div>
             <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('equipmentSchedule.filters.dateFrom') }}</label>
@@ -236,7 +125,7 @@
         </div>
         <div
           ref="timelineContainerRef"
-          class="equipment-board-gantt"
+          class="equipment-board-timeline"
         ></div>
         <div
           v-if="loading || loadError || boardEquipmentRows.length === 0"
@@ -272,6 +161,7 @@
       :mode="modalMode"
       :form-error="formError"
       :saving="saving"
+      :deleting="deleting"
       :batch-step-loading="batchStepLoading"
       :form="reservationForm"
       :selected-equipment-label="selectedEquipmentLabel"
@@ -283,6 +173,7 @@
       :batch-step-options="batchStepOptions"
       @close="closeModal"
       @save="saveReservation"
+      @delete="deleteReservation"
       @update:form="Object.assign(reservationForm, $event)"
       @reservation-type-change="handleReservationTypeChange"
       @batch-change="handleBatchChange"
@@ -293,7 +184,7 @@
 <script setup lang="ts">
 import 'vis-timeline/styles/vis-timeline-graph2d.min.css'
 
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { toast } from 'vue3-toastify'
@@ -309,6 +200,7 @@ import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import { supabase } from '@/lib/supabase'
 import EquipmentReservationDialog from './components/EquipmentReservationDialog.vue'
+import EquipmentScheduleMultiSelectFilter from './components/EquipmentScheduleMultiSelectFilter.vue'
 import {
   addDays,
   addHours,
@@ -340,6 +232,9 @@ import type {
   EquipmentRow,
   EquipmentTypeRow,
   FilterState,
+  MultiSelectOption,
+  PreparedAssignmentRow,
+  PreparedReservationRow,
   ReservationFormState,
   ReservationRow,
   RowRecord,
@@ -359,6 +254,7 @@ const pageTitle = computed(() => t('equipmentSchedule.title'))
 const loading = ref(false)
 const loadError = ref('')
 const saving = ref(false)
+const deleting = ref(false)
 const batchStepLoading = ref(false)
 
 const siteRows = ref<SiteRow[]>([])
@@ -371,22 +267,17 @@ const stepRowsById = ref<Record<string, StepRow>>({})
 const batchStepsByBatch = ref<Record<string, StepRow[]>>({})
 const timelineContainerRef = ref<HTMLElement | null>(null)
 const timelineInstance = ref<Timeline | null>(null)
-const siteFilterDropdownRef = ref<HTMLElement | null>(null)
-const equipmentTypeFilterDropdownRef = ref<HTMLElement | null>(null)
-const equipmentFilterDropdownRef = ref<HTMLElement | null>(null)
 let timelineGroupsDataSet: DataSet<BoardTimelineGroup, 'id'> | null = null
 let timelineItemsDataSet: DataSet<BoardTimelineItem, 'id'> | null = null
 let dailyMarkerIds: string[] = []
 let weeklyMarkerIds: string[] = []
 const referenceDataLoaded = ref(false)
+const lastMarkerRangeKey = ref('')
 const lastSyncedWindowStart = ref<number | null>(null)
 const lastSyncedWindowEnd = ref<number | null>(null)
 const lastTimelineOptionsKey = ref('')
 
 const filters = reactive<FilterState>(createDefaultFilters())
-const siteFilterOpen = ref(false)
-const equipmentTypeFilterOpen = ref(false)
-const equipmentFilterOpen = ref(false)
 
 const modalOpen = ref(false)
 const modalMode = ref<'create' | 'edit'>('create')
@@ -418,21 +309,12 @@ const equipmentTypeMap = computed(() => new Map(equipmentTypeRows.value.map((row
 const equipmentMap = computed(() => new Map(equipmentRows.value.map((row) => [row.id, row])))
 const batchMap = computed(() => new Map(batchRows.value.map((row) => [row.id, row])))
 
-const siteOptions = computed<SelectOption[]>(() =>
+const siteOptions = computed<MultiSelectOption[]>(() =>
   siteRows.value.map((row) => ({
     value: row.id,
     label: row.name || row.id,
   })),
 )
-
-const selectedSiteFilterLabel = computed(() => {
-  if (filters.siteIds.length === 0) return t('common.all')
-  if (filters.siteIds.length === 1) {
-    return siteOptions.value.find((option) => option.value === filters.siteIds[0])?.label ?? filters.siteIds[0]
-  }
-  const firstLabel = siteOptions.value.find((option) => option.value === filters.siteIds[0])?.label ?? filters.siteIds[0]
-  return `${firstLabel} +${filters.siteIds.length - 1}`
-})
 
 const equipmentTypeChildrenByParent = computed(() => {
   const map = new Map<string | null, EquipmentTypeRow[]>()
@@ -452,8 +334,8 @@ const equipmentTypeChildrenByParent = computed(() => {
   return map
 })
 
-const equipmentTypeTreeOptions = computed<Array<SelectOption & { depth: number }>>(() => {
-  const result: Array<SelectOption & { depth: number }> = []
+const equipmentTypeTreeOptions = computed<MultiSelectOption[]>(() => {
+  const result: MultiSelectOption[] = []
   const walk = (parentId: string | null, depth: number) => {
     const children = equipmentTypeChildrenByParent.value.get(parentId) ?? []
     for (const row of children) {
@@ -483,15 +365,6 @@ const equipmentTypeDescendantIdsById = computed(() => {
   return cache
 })
 
-const selectedEquipmentTypeFilterLabel = computed(() => {
-  if (filters.equipmentTypeIds.length === 0) return t('common.all')
-  if (filters.equipmentTypeIds.length === 1) {
-    return equipmentTypeLabel(filters.equipmentTypeIds[0])
-  }
-  const firstLabel = equipmentTypeLabel(filters.equipmentTypeIds[0])
-  return `${firstLabel} +${filters.equipmentTypeIds.length - 1}`
-})
-
 const effectiveEquipmentTypeFilterIds = computed(() => {
   if (filters.equipmentTypeIds.length === 0) return []
   const ids = new Set<string>()
@@ -502,21 +375,12 @@ const effectiveEquipmentTypeFilterIds = computed(() => {
   return [...ids]
 })
 
-const equipmentOptions = computed<SelectOption[]>(() =>
+const equipmentOptions = computed<MultiSelectOption[]>(() =>
   boardEquipmentRows.value.map((row) => ({
     value: row.id,
     label: equipmentFullLabel(row),
   })),
 )
-
-const selectedEquipmentFilterLabel = computed(() => {
-  if (filters.equipmentIds.length === 0) return t('common.all')
-  if (filters.equipmentIds.length === 1) {
-    return equipmentOptions.value.find((option) => option.value === filters.equipmentIds[0])?.label ?? filters.equipmentIds[0]
-  }
-  const firstLabel = equipmentOptions.value.find((option) => option.value === filters.equipmentIds[0])?.label ?? filters.equipmentIds[0]
-  return `${firstLabel} +${filters.equipmentIds.length - 1}`
-})
 
 const batchOptions = computed<SelectOption[]>(() =>
   batchRows.value.map((row) => ({
@@ -566,57 +430,97 @@ const boardEquipmentRows = computed(() => {
   return rows
 })
 
-const visibleReservations = computed<ReservationRow[]>(() => {
-  const range = boardRange.value
-  const equipmentIds = new Set(boardEquipmentRows.value.map((row) => row.id))
-  const linkedReservationIds = filters.showActualUsage
-    ? new Set(
-      assignmentRows.value
-        .map((row) => row.reservation_id)
-        .filter((value): value is string => Boolean(value)),
-    )
-    : new Set<string>()
+const boardEquipmentIdSet = computed(() => new Set(boardEquipmentRows.value.map((row) => row.id)))
 
-  return reservationRows.value.filter((row) => {
-    if (!equipmentIds.has(row.equipment_id)) return false
-    if (!filters.showCompleted && reservationCompletedStatuses.has(row.status)) return false
-    if (linkedReservationIds.has(row.id)) return false
-
+const preparedReservationRows = computed<PreparedReservationRow[]>(() =>
+  reservationRows.value.flatMap((row) => {
     const start = new Date(row.start_at)
     const end = new Date(row.end_at)
-    return isValidRange(start, end) && intersectsRange(start, end, range.start, range.end)
+    if (!isValidRange(start, end)) return []
+
+    return [{
+      row,
+      start,
+      end,
+      isCompleted: reservationCompletedStatuses.has(row.status),
+      isActive: activeReservationStatuses.has(row.status),
+    }]
+  }),
+)
+
+const preparedAssignmentRows = computed<PreparedAssignmentRow[]>(() =>
+  assignmentRows.value.flatMap((row) => {
+    const start = resolveAssignmentStart(row)
+    const end = resolveAssignmentEnd(row)
+    if (!start || !end || !isValidRange(start, end)) return []
+
+    return [{
+      row,
+      start,
+      end,
+      isCompleted: assignmentCompletedStatuses.has(row.status),
+      isInUse: row.status === 'in_use',
+    }]
+  }),
+)
+
+const visibleReservations = computed<PreparedReservationRow[]>(() => {
+  const range = boardRange.value
+  const equipmentIds = boardEquipmentIdSet.value
+
+  return preparedReservationRows.value.filter((entry) => {
+    if (!equipmentIds.has(entry.row.equipment_id)) return false
+    if (!filters.showCompleted && entry.isCompleted) return false
+    if (filters.showActualUsage && visibleAssignmentReservationIds.value.has(entry.row.id)) return false
+
+    return intersectsRange(entry.start, entry.end, range.start, range.end)
   })
+})
+
+const activeReservationWindowsByEquipment = computed(() => {
+  const activeReservationsByEquipment = new Map<string, PreparedReservationRow[]>()
+  const equipmentIds = boardEquipmentIdSet.value
+
+  for (const entry of preparedReservationRows.value) {
+    if (!entry.isActive || !equipmentIds.has(entry.row.equipment_id)) continue
+
+    const rows = activeReservationsByEquipment.get(entry.row.equipment_id) ?? []
+    rows.push(entry)
+    activeReservationsByEquipment.set(entry.row.equipment_id, rows)
+  }
+
+  return activeReservationsByEquipment
 })
 
 const visibleAssignments = computed<VisibleAssignmentRow[]>(() => {
   if (!filters.showActualUsage) return []
 
   const range = boardRange.value
-  const equipmentIds = new Set(boardEquipmentRows.value.map((row) => row.id))
-  const reservationIntervals = reservationRows.value
-    .filter((row) => equipmentIds.has(row.equipment_id))
-    .filter((row) => activeReservationStatuses.has(row.status))
-    .map((row) => ({
-      equipmentId: row.equipment_id,
-      start: new Date(row.start_at),
-      end: new Date(row.end_at),
-    }))
+  const equipmentIds = boardEquipmentIdSet.value
 
-  return assignmentRows.value.flatMap((row) => {
-    if (!equipmentIds.has(row.equipment_id)) return []
-    if (!filters.showCompleted && assignmentCompletedStatuses.has(row.status)) return []
+  return preparedAssignmentRows.value.flatMap((entry) => {
+    if (!equipmentIds.has(entry.row.equipment_id)) return []
+    if (!filters.showCompleted && entry.isCompleted) return []
+    if (!intersectsRange(entry.start, entry.end, range.start, range.end)) return []
 
-    const start = resolveAssignmentStart(row)
-    const end = resolveAssignmentEnd(row)
-    if (!start || !end || !isValidRange(start, end) || !intersectsRange(start, end, range.start, range.end)) return []
-
-    const hasConflict = !row.reservation_id && reservationIntervals.some((reservation) =>
-      reservation.equipmentId === row.equipment_id && intersectsRange(start, end, reservation.start, reservation.end),
+    const hasConflict = !entry.row.reservation_id && (activeReservationWindowsByEquipment.value.get(entry.row.equipment_id) ?? []).some(
+      (reservation) => intersectsRange(entry.start, entry.end, reservation.start, reservation.end),
     )
 
-    return [{ row, hasConflict }]
+    return [{
+      row: entry.row,
+      start: entry.start,
+      end: entry.end,
+      hasConflict,
+    }]
   })
 })
+
+const visibleAssignmentReservationIds = computed(() => new Set(
+  visibleAssignments.value
+    .map((entry) => entry.row.reservation_id)
+    .filter((value): value is string => Boolean(value)),
+))
 
 const equipmentScheduleSummaryById = computed(() => {
   const summary = new Map<string, { reservations: number, actuals: number }>()
@@ -625,10 +529,10 @@ const equipmentScheduleSummaryById = computed(() => {
     summary.set(equipment.id, { reservations: 0, actuals: 0 })
   }
 
-  for (const row of visibleReservations.value) {
-    const current = summary.get(row.equipment_id) ?? { reservations: 0, actuals: 0 }
+  for (const reservation of visibleReservations.value) {
+    const current = summary.get(reservation.row.equipment_id) ?? { reservations: 0, actuals: 0 }
     current.reservations += 1
-    summary.set(row.equipment_id, current)
+    summary.set(reservation.row.equipment_id, current)
   }
 
   for (const item of visibleAssignments.value) {
@@ -663,8 +567,8 @@ const timelineGroups = computed<BoardTimelineGroup[]>(() =>
 
 const timelineItems = computed<BoardTimelineItem[]>(() =>
   [
-    ...visibleReservations.value.map((row) => buildReservationTimelineItem(row)),
-    ...visibleAssignments.value.map((item) => buildActualTimelineItem(item.row, item.hasConflict)),
+    ...visibleReservations.value.map((entry) => buildReservationTimelineItem(entry)),
+    ...visibleAssignments.value.map((entry) => buildActualTimelineItem(entry)),
   ].sort((a, b) => {
     const groupCompare = String(a.group).localeCompare(String(b.group))
     if (groupCompare !== 0) return groupCompare
@@ -741,32 +645,14 @@ watch(locale, async () => {
   syncTimeline()
 })
 
-function handleDocumentPointerDown(event: PointerEvent) {
-  const target = event.target
-  if (!(target instanceof Node)) return
-  if (siteFilterOpen.value && !siteFilterDropdownRef.value?.contains(target)) {
-    siteFilterOpen.value = false
-  }
-  if (equipmentTypeFilterOpen.value && !equipmentTypeFilterDropdownRef.value?.contains(target)) {
-    equipmentTypeFilterOpen.value = false
-  }
-  if (equipmentFilterOpen.value && !equipmentFilterDropdownRef.value?.contains(target)) {
-    equipmentFilterOpen.value = false
-  }
-}
-
-onMounted(() => {
-  document.addEventListener('pointerdown', handleDocumentPointerDown)
-})
-
 onBeforeUnmount(() => {
-  document.removeEventListener('pointerdown', handleDocumentPointerDown)
   timelineInstance.value?.destroy()
   timelineInstance.value = null
   timelineGroupsDataSet = null
   timelineItemsDataSet = null
   dailyMarkerIds = []
   weeklyMarkerIds = []
+  lastMarkerRangeKey.value = ''
 })
 
 function resolveLocaleLang() {
@@ -907,9 +793,6 @@ async function handleSearch() {
 
 async function handleReset() {
   Object.assign(filters, createDefaultFilters())
-  siteFilterOpen.value = false
-  equipmentTypeFilterOpen.value = false
-  equipmentFilterOpen.value = false
   await router.replace({ query: buildRouteQuery() })
 }
 
@@ -917,54 +800,6 @@ async function refreshBoard() {
   await loadBoard({ refreshReferences: true })
   await nextTick()
   syncTimeline()
-}
-
-function toggleSiteFilter(siteId: string) {
-  if (filters.siteIds.includes(siteId)) {
-    filters.siteIds = filters.siteIds.filter((value) => value !== siteId)
-    return
-  }
-  filters.siteIds = [...filters.siteIds, siteId]
-}
-
-function selectAllSites() {
-  filters.siteIds = siteOptions.value.map((option) => option.value)
-}
-
-function clearAllSites() {
-  filters.siteIds = []
-}
-
-function toggleEquipmentTypeFilter(typeId: string) {
-  if (filters.equipmentTypeIds.includes(typeId)) {
-    filters.equipmentTypeIds = filters.equipmentTypeIds.filter((value) => value !== typeId)
-    return
-  }
-  filters.equipmentTypeIds = [...filters.equipmentTypeIds, typeId]
-}
-
-function selectAllEquipmentTypes() {
-  filters.equipmentTypeIds = equipmentTypeRows.value.map((row) => row.type_id)
-}
-
-function clearAllEquipmentTypes() {
-  filters.equipmentTypeIds = []
-}
-
-function toggleEquipmentFilter(equipmentId: string) {
-  if (filters.equipmentIds.includes(equipmentId)) {
-    filters.equipmentIds = filters.equipmentIds.filter((value) => value !== equipmentId)
-    return
-  }
-  filters.equipmentIds = [...filters.equipmentIds, equipmentId]
-}
-
-function selectAllEquipment() {
-  filters.equipmentIds = equipmentOptions.value.map((option) => option.value)
-}
-
-function clearAllEquipment() {
-  filters.equipmentIds = []
 }
 
 function mapSiteRow(row: RowRecord): SiteRow {
@@ -1133,7 +968,9 @@ async function loadBoard(options?: { refreshReferences?: boolean }) {
       return
     }
 
-    const [reservationResult, assignmentResult] = await Promise.all([
+    const assignmentSelect = 'id, batch_id, batch_step_id, reservation_id, equipment_id, assignment_role, status, assigned_at, released_at, note, updated_at'
+
+    const [reservationResult, assignmentResult, legacyAssignmentResult] = await Promise.all([
       mesClient()
         .from('equipment_reservation')
         .select('id, site_id, equipment_id, reservation_type, batch_id, batch_step_id, start_at, end_at, status, note, created_at, updated_at')
@@ -1143,25 +980,45 @@ async function loadBoard(options?: { refreshReferences?: boolean }) {
         .order('start_at', { ascending: true }),
       mesClient()
         .from('batch_equipment_assignment')
-        .select('id, batch_id, batch_step_id, reservation_id, equipment_id, assignment_role, status, assigned_at, released_at, note, updated_at')
+        .select(assignmentSelect)
         .in('equipment_id', equipmentIds)
+        .not('assigned_at', 'is', null)
         .lt('assigned_at', range.endIso)
         .order('assigned_at', { ascending: true }),
+      mesClient()
+        .from('batch_equipment_assignment')
+        .select(assignmentSelect)
+        .in('equipment_id', equipmentIds)
+        .is('assigned_at', null)
+        .lt('updated_at', range.endIso)
+        .order('updated_at', { ascending: true }),
     ])
 
     if (reservationResult.error) throw reservationResult.error
     if (assignmentResult.error) throw assignmentResult.error
+    if (legacyAssignmentResult.error) throw legacyAssignmentResult.error
 
     reservationRows.value = (reservationResult.data ?? [])
       .map(mapReservationRow)
       .filter((row) => intersectsRange(new Date(row.start_at), new Date(row.end_at), range.start, range.end))
 
-    assignmentRows.value = (assignmentResult.data ?? [])
-      .map(mapAssignmentRow)
+    const assignmentMap = new Map<string, AssignmentRow>()
+    for (const row of [...(assignmentResult.data ?? []), ...(legacyAssignmentResult.data ?? [])]) {
+      const mappedRow = mapAssignmentRow(row)
+      assignmentMap.set(mappedRow.id, mappedRow)
+    }
+
+    assignmentRows.value = [...assignmentMap.values()]
       .filter((row) => {
         const start = resolveAssignmentStart(row)
         const end = resolveAssignmentEnd(row)
         return !!start && !!end && intersectsRange(start, end, range.start, range.end)
+      })
+      .sort((left, right) => {
+        const leftStart = resolveAssignmentStart(left)?.getTime() ?? Number.POSITIVE_INFINITY
+        const rightStart = resolveAssignmentStart(right)?.getTime() ?? Number.POSITIVE_INFINITY
+        if (leftStart !== rightStart) return leftStart - rightStart
+        return left.id.localeCompare(right.id)
       })
 
     const stepIds = Array.from(new Set(
@@ -1218,11 +1075,12 @@ function buildBoardTaskLabel(primaryLabel: string, batchStepId: string | null | 
   return `${primaryLabel} / ${step}`
 }
 
-function buildReservationTimelineItem(row: ReservationRow): BoardTimelineItem {
+function buildReservationTimelineItem(entry: PreparedReservationRow): BoardTimelineItem {
+  const { row, start, end } = entry
   const equipment = equipmentMap.value.get(row.equipment_id)
   const classNames = ['timeline-item', 'timeline-item--reservation']
 
-  if (reservationCompletedStatuses.has(row.status)) classNames.push('timeline-item--completed')
+  if (entry.isCompleted) classNames.push('timeline-item--completed')
   else if (row.status === 'in_progress') classNames.push('timeline-item--active')
   else classNames.push('timeline-item--planned')
 
@@ -1240,12 +1098,12 @@ function buildReservationTimelineItem(row: ReservationRow): BoardTimelineItem {
       equipment ? equipmentFullLabel(equipment) : row.equipment_id,
       reservationTypeLabel(row.reservation_type),
       reservationStatusLabel(row.status),
-      formatDateTimeInput(new Date(row.start_at)),
-      formatDateTimeInput(new Date(row.end_at)),
+      formatDateTimeInput(start),
+      formatDateTimeInput(end),
     ].join(' / '),
     className: classNames.join(' '),
-    start: new Date(row.start_at),
-    end: new Date(row.end_at),
+    start,
+    end,
     type: 'range',
     editable: {
       remove: false,
@@ -1265,9 +1123,8 @@ function buildReservationTimelineItem(row: ReservationRow): BoardTimelineItem {
   }
 }
 
-function buildActualTimelineItem(row: AssignmentRow, hasConflict: boolean): BoardTimelineItem {
-  const start = resolveAssignmentStart(row) ?? new Date()
-  const end = resolveAssignmentEnd(row) ?? addHours(start, 1)
+function buildActualTimelineItem(entry: VisibleAssignmentRow): BoardTimelineItem {
+  const { row, start, end, hasConflict } = entry
   const equipment = equipmentMap.value.get(row.equipment_id)
   const classNames = ['timeline-item', 'timeline-item--actual']
 
@@ -1354,21 +1211,18 @@ function validateReservationWindowChange(
 ) {
   if (!isValidRange(start, end)) return t('equipmentSchedule.errors.invalidRange')
 
-  const overlappingReservation = reservationRows.value.find((row) => {
-    if (row.id === reservationId) return false
-    if (row.equipment_id !== equipmentId) return false
-    if (!activeReservationStatuses.has(row.status)) return false
-    return intersectsRange(start, end, new Date(row.start_at), new Date(row.end_at))
+  const overlappingReservation = preparedReservationRows.value.find((entry) => {
+    if (entry.row.id === reservationId) return false
+    if (entry.row.equipment_id !== equipmentId) return false
+    if (!entry.isActive) return false
+    return intersectsRange(start, end, entry.start, entry.end)
   })
   if (overlappingReservation) return t('equipmentSchedule.errors.reservationOverlap')
 
-  const overlappingAssignment = assignmentRows.value.find((row) => {
-    if (row.equipment_id !== equipmentId) return false
-    if (row.status !== 'in_use') return false
-    const actualStart = resolveAssignmentStart(row)
-    const actualEnd = resolveAssignmentEnd(row)
-    if (!actualStart || !actualEnd) return false
-    return intersectsRange(start, end, actualStart, actualEnd)
+  const overlappingAssignment = preparedAssignmentRows.value.find((entry) => {
+    if (entry.row.equipment_id !== equipmentId) return false
+    if (!entry.isInUse) return false
+    return intersectsRange(start, end, entry.start, entry.end)
   })
   if (overlappingAssignment) return t('equipmentSchedule.errors.actualOverlap')
 
@@ -1499,7 +1353,7 @@ function syncTimeline() {
     lastSyncedWindowStart.value = nextRangeStart
     lastSyncedWindowEnd.value = nextRangeEnd
     lastTimelineOptionsKey.value = nextOptionsKey
-    syncTimelineMarkers()
+    syncTimelineMarkers(true)
     return
   }
 
@@ -1509,13 +1363,11 @@ function syncTimeline() {
   }
 
   if (timelineGroupsDataSet) {
-    timelineGroupsDataSet.clear()
-    timelineGroupsDataSet.add(timelineGroups.value)
+    syncDataSetEntries(timelineGroupsDataSet, timelineGroups.value)
   }
 
   if (timelineItemsDataSet) {
-    timelineItemsDataSet.clear()
-    timelineItemsDataSet.add(timelineItems.value)
+    syncDataSetEntries(timelineItemsDataSet, timelineItems.value)
   }
 
   syncTimelineMarkers()
@@ -1541,8 +1393,23 @@ function clearTimelineMarkers(markerIds: string[]) {
   }
 }
 
-function syncTimelineMarkers() {
+function syncDataSetEntries<T extends { id: string }>(dataSet: DataSet<T, 'id'>, nextEntries: T[]) {
+  const nextIds = new Set(nextEntries.map((entry) => entry.id))
+  const staleIds = (dataSet.getIds() as string[]).filter((id) => !nextIds.has(id))
+
+  if (staleIds.length > 0) {
+    dataSet.remove(staleIds)
+  }
+
+  if (nextEntries.length > 0) {
+    dataSet.update(nextEntries as Parameters<typeof dataSet.update>[0])
+  }
+}
+
+function syncTimelineMarkers(force = false) {
   if (!timelineInstance.value) return
+  const nextMarkerRangeKey = `${boardRange.value.start.toISOString()}|${boardRange.value.end.toISOString()}`
+  if (!force && lastMarkerRangeKey.value === nextMarkerRangeKey) return
 
   clearTimelineMarkers(dailyMarkerIds)
   clearTimelineMarkers(weeklyMarkerIds)
@@ -1570,6 +1437,8 @@ function syncTimelineMarkers() {
     timelineInstance.value.addCustomTime(markerDate, markerId)
     weeklyMarkerIds.push(markerId)
   }
+
+  lastMarkerRangeKey.value = nextMarkerRangeKey
 }
 
 function defaultCreateWindow() {
@@ -1611,6 +1480,7 @@ async function openEditModal(row: ReservationRow) {
 
 function closeModal() {
   modalOpen.value = false
+  deleting.value = false
   formError.value = ''
   Object.assign(reservationForm, createEmptyReservationForm())
 }
@@ -1707,13 +1577,40 @@ async function saveReservation() {
   }
 }
 
+async function deleteReservation() {
+  if (modalMode.value !== 'edit' || !reservationForm.id) return
+
+  const confirmed = window.confirm(t('equipmentSchedule.modal.deleteConfirm', {
+    equipment: selectedEquipmentLabel.value,
+  }))
+  if (!confirmed) return
+
+  formError.value = ''
+
+  try {
+    deleting.value = true
+    const { error } = await mesClient()
+      .from('equipment_reservation')
+      .delete()
+      .eq('id', reservationForm.id)
+    if (error) throw error
+
+    toast.success(t('common.deleted'))
+    closeModal()
+    await loadBoard()
+    await nextTick()
+    syncTimeline()
+  } catch (err) {
+    console.error(err)
+    formError.value = err instanceof Error ? err.message : t('equipmentSchedule.errors.deleteFailed')
+  } finally {
+    deleting.value = false
+  }
+}
+
 </script>
 
 <style scoped>
-.equipment-schedule-select {
-  min-height: 8rem;
-}
-
 .equipment-schedule-panel--board {
   position: relative;
   display: grid;
@@ -1743,7 +1640,7 @@ async function saveReservation() {
   padding: 1rem;
 }
 
-.equipment-board-gantt {
+.equipment-board-timeline {
   grid-column: 1;
   grid-row: 2;
   height: min(72vh, 860px);
@@ -1756,38 +1653,38 @@ async function saveReservation() {
   font-family: 'Noto Sans JP', 'Segoe UI', sans-serif;
 }
 
-:deep(.equipment-board-gantt .vis-timeline) {
+:deep(.equipment-board-timeline .vis-timeline) {
   border: none;
   background: transparent;
   height: 100%;
 }
 
-:deep(.equipment-board-gantt .vis-panel) {
+:deep(.equipment-board-timeline .vis-panel) {
   border-color: #e5e7eb;
   background: transparent;
 }
 
-:deep(.equipment-board-gantt .vis-time-axis) {
+:deep(.equipment-board-timeline .vis-time-axis) {
   background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
 }
 
-:deep(.equipment-board-gantt .vis-time-axis .vis-text) {
+:deep(.equipment-board-timeline .vis-time-axis .vis-text) {
   color: #64748b;
   font-size: 12px;
   font-weight: 600;
 }
 
-:deep(.equipment-board-gantt .vis-panel.vis-left),
-:deep(.equipment-board-gantt .vis-labelset .vis-label) {
+:deep(.equipment-board-timeline .vis-panel.vis-left),
+:deep(.equipment-board-timeline .vis-labelset .vis-label) {
   background: rgba(255, 255, 255, 0.96);
 }
 
-:deep(.equipment-board-gantt .vis-labelset .vis-label) {
+:deep(.equipment-board-timeline .vis-labelset .vis-label) {
   border-bottom: 1px solid #eef2f7;
   padding: 0;
 }
 
-:deep(.equipment-board-gantt .timeline-group-label) {
+:deep(.equipment-board-timeline .timeline-group-label) {
   display: flex;
   min-height: 58px;
   flex-direction: column;
@@ -1796,47 +1693,47 @@ async function saveReservation() {
   padding: 10px 12px;
 }
 
-:deep(.equipment-board-gantt .timeline-group-code) {
+:deep(.equipment-board-timeline .timeline-group-code) {
   font-size: 8px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
   color: #64748b;
 }
 
-:deep(.equipment-board-gantt .timeline-group-name) {
+:deep(.equipment-board-timeline .timeline-group-name) {
   font-size: 10px;
   font-weight: 700;
   color: #111827;
 }
 
-:deep(.equipment-board-gantt .timeline-group-meta),
-:deep(.equipment-board-gantt .timeline-group-summary) {
+:deep(.equipment-board-timeline .timeline-group-meta),
+:deep(.equipment-board-timeline .timeline-group-summary) {
   font-size: 8px;
   color: #6b7280;
 }
 
-:deep(.equipment-board-gantt .vis-panel.vis-background) {
+:deep(.equipment-board-timeline .vis-panel.vis-background) {
   background: rgba(255, 255, 255, 0.92);
 }
 
-:deep(.equipment-board-gantt .vis-panel.vis-center) {
+:deep(.equipment-board-timeline .vis-panel.vis-center) {
   background: transparent;
 }
 
-:deep(.equipment-board-gantt .vis-grid.vis-vertical) {
+:deep(.equipment-board-timeline .vis-grid.vis-vertical) {
   border-left: 1px solid rgba(100, 100, 100, 0.92);
 }
 
-:deep(.equipment-board-gantt .vis-time-axis .vis-grid.vis-minor) {
+:deep(.equipment-board-timeline .vis-time-axis .vis-grid.vis-minor) {
   border-left-color: rgba(0, 0, 0, 0.05);
   border-left-width: 1px;
 }
 
-:deep(.equipment-board-gantt .vis-time-axis .vis-grid.vis-major) {
+:deep(.equipment-board-timeline .vis-time-axis .vis-grid.vis-major) {
   border-left-color: rgba(0, 0, 0, 0.08);
   border-left-width: 1px;
 }
 
-:deep(.equipment-board-gantt .vis-custom-time[class*='timeline-day-marker-']) {
+:deep(.equipment-board-timeline .vis-custom-time[class*='timeline-day-marker-']) {
   width: 1px;
   background: rgba(0, 0, 0, 1);
   cursor: default;
@@ -1844,7 +1741,7 @@ async function saveReservation() {
   z-index: 0;
 }
 
-:deep(.equipment-board-gantt .vis-custom-time[class*='timeline-week-marker-']) {
+:deep(.equipment-board-timeline .vis-custom-time[class*='timeline-week-marker-']) {
   width: 1px;
   background: rgba(71, 85, 105, 0.34);
   cursor: default;
@@ -1852,16 +1749,16 @@ async function saveReservation() {
   z-index: 0;
 }
 
-:deep(.equipment-board-gantt .vis-grid.vis-horizontal) {
+:deep(.equipment-board-timeline .vis-grid.vis-horizontal) {
   border-bottom: 1px solid rgba(226, 232, 240, 0.55);
 }
 
-:deep(.equipment-board-gantt .vis-current-time) {
+:deep(.equipment-board-timeline .vis-current-time) {
   background: #2563eb;
   width: 2px;
 }
 
-:deep(.equipment-board-gantt .vis-item) {
+:deep(.equipment-board-timeline .vis-item) {
   border-width: 1px;
   border-radius: 999px;
   box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
@@ -1870,65 +1767,65 @@ async function saveReservation() {
   font-weight: 600;
 }
 
-:deep(.equipment-board-gantt .vis-item .vis-item-content) {
+:deep(.equipment-board-timeline .vis-item .vis-item-content) {
   padding: 6px 10px;
 }
 
-:deep(.equipment-board-gantt .timeline-item--reservation.timeline-item--planned) {
+:deep(.equipment-board-timeline .timeline-item--reservation.timeline-item--planned) {
   background: #dbeafe;
   border-color: #60a5fa;
 }
 
-:deep(.equipment-board-gantt .timeline-item--reservation.timeline-item--active) {
+:deep(.equipment-board-timeline .timeline-item--reservation.timeline-item--active) {
   background: #bfdbfe;
   border-color: #2563eb;
 }
 
-:deep(.equipment-board-gantt .timeline-item--reservation.timeline-item--maintenance) {
+:deep(.equipment-board-timeline .timeline-item--reservation.timeline-item--maintenance) {
   background: #fee2e2;
   border-color: #ef4444;
 }
 
-:deep(.equipment-board-gantt .timeline-item--reservation.timeline-item--cip) {
+:deep(.equipment-board-timeline .timeline-item--reservation.timeline-item--cip) {
   background: #dbeafe;
   border-color: #0284c7;
 }
 
-:deep(.equipment-board-gantt .timeline-item--reservation.timeline-item--manual) {
+:deep(.equipment-board-timeline .timeline-item--reservation.timeline-item--manual) {
   background: #e2e8f0;
   border-color: #64748b;
 }
 
-:deep(.equipment-board-gantt .timeline-item--actual.timeline-item--planned) {
+:deep(.equipment-board-timeline .timeline-item--actual.timeline-item--planned) {
   background: #ccfbf1;
   border-color: #14b8a6;
 }
 
-:deep(.equipment-board-gantt .timeline-item--actual.timeline-item--active) {
+:deep(.equipment-board-timeline .timeline-item--actual.timeline-item--active) {
   background: #dcfce7;
   border-color: #16a34a;
 }
 
-:deep(.equipment-board-gantt .timeline-item--conflict) {
+:deep(.equipment-board-timeline .timeline-item--conflict) {
   background: #fef3c7;
   border-color: #f59e0b;
 }
 
-:deep(.equipment-board-gantt .timeline-item--completed) {
+:deep(.equipment-board-timeline .timeline-item--completed) {
   background: #e5e7eb;
   border-color: #9ca3af;
   color: #4b5563;
 }
 
-:deep(.equipment-board-gantt .vis-item.vis-selected) {
+:deep(.equipment-board-timeline .vis-item.vis-selected) {
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.18);
 }
 
-:deep(.equipment-board-gantt .vis-item.vis-range) {
+:deep(.equipment-board-timeline .vis-item.vis-range) {
   cursor: pointer;
 }
 
-:global(html[data-theme='dark'] .equipment-board-gantt) {
+:global(html[data-theme='dark'] .equipment-board-timeline) {
   border-color: rgba(71, 85, 105, 0.72);
   background: linear-gradient(180deg, rgba(15, 23, 42, 0.98) 0%, rgba(17, 24, 39, 0.96) 100%);
 }
@@ -1937,113 +1834,113 @@ async function saveReservation() {
   background: rgba(15, 23, 42, 0.78);
 }
 
-:global(html[data-theme='dark'] .equipment-board-gantt .vis-time-axis) {
+:global(html[data-theme='dark'] .equipment-board-timeline .vis-time-axis) {
   background: linear-gradient(180deg, rgba(30, 41, 59, 0.96) 0%, rgba(15, 23, 42, 0.96) 100%);
 }
 
-:global(html[data-theme='dark'] .equipment-board-gantt .vis-panel) {
+:global(html[data-theme='dark'] .equipment-board-timeline .vis-panel) {
   border-color: #334155;
 }
 
-:global(html[data-theme='dark'] .equipment-board-gantt .vis-panel.vis-left),
-:global(html[data-theme='dark'] .equipment-board-gantt .vis-labelset .vis-label),
-:global(html[data-theme='dark'] .equipment-board-gantt .vis-panel.vis-background) {
+:global(html[data-theme='dark'] .equipment-board-timeline .vis-panel.vis-left),
+:global(html[data-theme='dark'] .equipment-board-timeline .vis-labelset .vis-label),
+:global(html[data-theme='dark'] .equipment-board-timeline .vis-panel.vis-background) {
   background: rgba(15, 23, 42, 0.9);
 }
 
-:global(html[data-theme='dark'] .equipment-board-gantt .vis-panel.vis-center) {
+:global(html[data-theme='dark'] .equipment-board-timeline .vis-panel.vis-center) {
   background: transparent;
 }
 
-:global(html[data-theme='dark'] .equipment-board-gantt .vis-labelset .vis-label) {
+:global(html[data-theme='dark'] .equipment-board-timeline .vis-labelset .vis-label) {
   border-bottom-color: rgba(51, 65, 85, 0.72);
 }
 
-:global(html[data-theme='dark'] .equipment-board-gantt .vis-time-axis .vis-text),
-:global(html[data-theme='dark'] .equipment-board-gantt .timeline-group-name) {
+:global(html[data-theme='dark'] .equipment-board-timeline .vis-time-axis .vis-text),
+:global(html[data-theme='dark'] .equipment-board-timeline .timeline-group-name) {
   color: #e2e8f0;
 }
 
-:global(html[data-theme='dark'] .equipment-board-gantt .timeline-group-code),
-:global(html[data-theme='dark'] .equipment-board-gantt .timeline-group-meta),
-:global(html[data-theme='dark'] .equipment-board-gantt .timeline-group-summary) {
+:global(html[data-theme='dark'] .equipment-board-timeline .timeline-group-code),
+:global(html[data-theme='dark'] .equipment-board-timeline .timeline-group-meta),
+:global(html[data-theme='dark'] .equipment-board-timeline .timeline-group-summary) {
   color: #94a3b8;
 }
 
-:global(html[data-theme='dark'] .equipment-board-gantt .vis-grid.vis-vertical) {
+:global(html[data-theme='dark'] .equipment-board-timeline .vis-grid.vis-vertical) {
   border-left-color: rgba(100, 116, 139, 0.78);
 }
 
-:global(html[data-theme='dark'] .equipment-board-gantt .vis-time-axis .vis-grid.vis-minor) {
+:global(html[data-theme='dark'] .equipment-board-timeline .vis-time-axis .vis-grid.vis-minor) {
   border-left-color: rgba(255, 255, 255, 0.06);
 }
 
-:global(html[data-theme='dark'] .equipment-board-gantt .vis-time-axis .vis-grid.vis-major) {
+:global(html[data-theme='dark'] .equipment-board-timeline .vis-time-axis .vis-grid.vis-major) {
   border-left-color: rgba(255, 255, 255, 0.1);
 }
 
-:global(html[data-theme='dark'] .equipment-board-gantt .vis-custom-time[class*='timeline-day-marker-']) {
+:global(html[data-theme='dark'] .equipment-board-timeline .vis-custom-time[class*='timeline-day-marker-']) {
   background: rgba(226, 232, 240, 0.9);
 }
 
-:global(html[data-theme='dark'] .equipment-board-gantt .vis-custom-time[class*='timeline-week-marker-']) {
+:global(html[data-theme='dark'] .equipment-board-timeline .vis-custom-time[class*='timeline-week-marker-']) {
   background: rgba(148, 163, 184, 0.42);
 }
 
-:global(html[data-theme='dark'] .equipment-board-gantt .vis-grid.vis-horizontal) {
+:global(html[data-theme='dark'] .equipment-board-timeline .vis-grid.vis-horizontal) {
   border-bottom-color: rgba(51, 65, 85, 0.44);
 }
 
-:global(html[data-theme='dark'] .equipment-board-gantt .vis-current-time) {
+:global(html[data-theme='dark'] .equipment-board-timeline .vis-current-time) {
   background: #60a5fa;
 }
 
-:global(html[data-theme='dark'] .equipment-board-gantt .vis-item) {
+:global(html[data-theme='dark'] .equipment-board-timeline .vis-item) {
   color: #e5e7eb;
   box-shadow: 0 10px 22px rgba(2, 6, 23, 0.28);
 }
 
-:global(html[data-theme='dark'] .equipment-board-gantt .timeline-item--reservation.timeline-item--planned) {
+:global(html[data-theme='dark'] .equipment-board-timeline .timeline-item--reservation.timeline-item--planned) {
   background: rgba(37, 99, 235, 0.3);
   border-color: rgba(96, 165, 250, 0.7);
 }
 
-:global(html[data-theme='dark'] .equipment-board-gantt .timeline-item--reservation.timeline-item--active) {
+:global(html[data-theme='dark'] .equipment-board-timeline .timeline-item--reservation.timeline-item--active) {
   background: rgba(29, 78, 216, 0.38);
   border-color: rgba(96, 165, 250, 0.8);
 }
 
-:global(html[data-theme='dark'] .equipment-board-gantt .timeline-item--reservation.timeline-item--maintenance) {
+:global(html[data-theme='dark'] .equipment-board-timeline .timeline-item--reservation.timeline-item--maintenance) {
   background: rgba(127, 29, 29, 0.42);
   border-color: rgba(248, 113, 113, 0.78);
 }
 
-:global(html[data-theme='dark'] .equipment-board-gantt .timeline-item--reservation.timeline-item--cip) {
+:global(html[data-theme='dark'] .equipment-board-timeline .timeline-item--reservation.timeline-item--cip) {
   background: rgba(12, 74, 110, 0.38);
   border-color: rgba(56, 189, 248, 0.76);
 }
 
-:global(html[data-theme='dark'] .equipment-board-gantt .timeline-item--reservation.timeline-item--manual) {
+:global(html[data-theme='dark'] .equipment-board-timeline .timeline-item--reservation.timeline-item--manual) {
   background: rgba(51, 65, 85, 0.7);
   border-color: rgba(148, 163, 184, 0.76);
 }
 
-:global(html[data-theme='dark'] .equipment-board-gantt .timeline-item--actual.timeline-item--planned) {
+:global(html[data-theme='dark'] .equipment-board-timeline .timeline-item--actual.timeline-item--planned) {
   background: rgba(15, 118, 110, 0.42);
   border-color: rgba(45, 212, 191, 0.75);
 }
 
-:global(html[data-theme='dark'] .equipment-board-gantt .timeline-item--actual.timeline-item--active) {
+:global(html[data-theme='dark'] .equipment-board-timeline .timeline-item--actual.timeline-item--active) {
   background: rgba(20, 83, 45, 0.52);
   border-color: rgba(74, 222, 128, 0.72);
 }
 
-:global(html[data-theme='dark'] .equipment-board-gantt .timeline-item--conflict) {
+:global(html[data-theme='dark'] .equipment-board-timeline .timeline-item--conflict) {
   background: rgba(146, 64, 14, 0.5);
   border-color: rgba(251, 191, 36, 0.76);
 }
 
-:global(html[data-theme='dark'] .equipment-board-gantt .timeline-item--completed) {
+:global(html[data-theme='dark'] .equipment-board-timeline .timeline-item--completed) {
   background: rgba(55, 65, 81, 0.8);
   border-color: rgba(156, 163, 175, 0.68);
   color: #cbd5e1;

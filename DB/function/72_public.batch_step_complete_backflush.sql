@@ -24,6 +24,8 @@ declare
   v_step_no integer;
   v_step_code text;
   v_step_status text;
+  v_patch_source_site_text text;
+  v_patch_source_site_id uuid;
   v_source_site_id uuid;
   v_source_site_text text;
   v_existing_movement_id uuid;
@@ -135,6 +137,14 @@ begin
     v_notes := nullif(v_patch ->> 'notes', '');
   end if;
 
+  if v_patch ? 'source_site_id' then
+    v_patch_source_site_text := nullif(btrim(coalesce(v_patch ->> 'source_site_id', '')), '');
+    v_patch_source_site_id := case
+      when v_patch_source_site_text is null then null
+      else v_patch_source_site_text::uuid
+    end;
+  end if;
+
   if v_patch ? 'actual_params' then
     if coalesce(jsonb_typeof(v_patch -> 'actual_params'), 'null') not in ('object', 'null') then
       raise exception 'BSBC006: actual_params must be a JSON object';
@@ -225,6 +235,7 @@ begin
 
   if v_existing_movement_id is null then
     v_source_site_id := coalesce(
+      v_patch_source_site_id,
       nullif(btrim(coalesce(v_batch_meta ->> 'manufacturing_site_id', '')), '')::uuid,
       nullif(btrim(coalesce(v_batch_meta ->> 'manufacture_site_id', '')), '')::uuid,
       nullif(btrim(coalesce(v_batch_meta ->> 'brew_site_id', '')), '')::uuid,

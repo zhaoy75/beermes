@@ -1,50 +1,45 @@
 # Current Task
 
 ## Goal
-- Fix step completion for backflush inputs so `工程入力の保存` does not fail with `BSBC011` when the batch is missing site metadata.
+- Hide the `工程実行一覧` section on the `バッチ実績入力` page when `VITE_DEVELOPMENT_MODE` is false.
 
 ## Scope
-- Update the batch-step execution spec to clarify how backflush source site resolution works.
-- Update `BatchStepExecution.vue` to resolve a backflush source site from available execution context and pass it to the completion RPC.
-- Update `public.batch_step_complete_backflush` to accept an explicit `source_site_id` override before falling back to batch metadata.
-- Preserve the existing backflush inventory issue flow and completion behavior.
+- Update the batch edit page to conditionally hide the step execution section by the existing development-mode flag.
+- Prevent the under-development step execution detail page from being directly reachable when development mode is disabled.
+- Keep the rest of the batch edit page behavior unchanged.
 
 ## Non-Goals
-- Do not change table schema or add a new RPC.
-- Do not redesign the `BatchStepExecution` page layout.
-- Do not change non-backflush step save behavior.
-- Do not refactor unrelated equipment-assignment logic.
+- Do not redesign the `バッチ実績入力` page layout.
+- Do not change the `工程実行一覧` implementation itself.
+- Do not change unrelated routing, packing, lot DAG, or batch save behavior.
 
 ## Affected Files
 - [specs/current-task.md](/Users/zhao/dev/other/beer/specs/current-task.md)
-- [specs/batch-step-execution-page.md](/Users/zhao/dev/other/beer/specs/batch-step-execution-page.md)
-- [beeradmin_tail/src/views/Pages/BatchStepExecution.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/BatchStepExecution.vue)
-- [DB/function/72_public.batch_step_complete_backflush.sql](/Users/zhao/dev/other/beer/DB/function/72_public.batch_step_complete_backflush.sql)
+- [beeradmin_tail/src/views/Pages/BatchEdit.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/BatchEdit.vue)
+- [beeradmin_tail/src/router/tenant-routes.ts](/Users/zhao/dev/other/beer/beeradmin_tail/src/router/tenant-routes.ts)
 
 ## Data Model / API Changes
-- No schema changes.
-- Extend the existing `batch_step_complete_backflush` patch payload with optional `source_site_id`.
-- Reuse existing batch metadata and equipment context as source-site fallbacks.
+- No data model changes.
+- No API changes.
+- Route metadata will mark the step execution detail page as development-only.
 
 ## Implementation Notes
-- Prefer `batch.meta` site fields first, then fall back to execution-context site inference on the page when completing a backflush step.
-- Keep the source-site decision explicit in the RPC so the DB function does not depend only on historical batch metadata quality.
-- Preserve the existing cross-site safety rule for backflush allocation after source site is resolved.
+- Reuse the existing `DEVELOPMENT_MODE_ENABLED` helper in `src/lib/devMode.ts`.
+- Hide the `工程実行一覧` section entirely when development mode is off.
+- Skip loading step execution summary data on the batch edit page when the section is hidden.
+- Add `requiresDevelopmentMode: true` to the batch step execution detail route so the existing router guard blocks direct access when development mode is off.
 
 ## Final Decisions
-- Resolve backflush source site on the page by checking batch metadata first, then falling back to a single inferred site from equipment assignments / reservations.
-- Pass the inferred site through `p_patch.source_site_id` when calling `batch_step_complete_backflush`.
-- Keep the RPC fallback to batch metadata so existing callers remain compatible.
+- Hide the `工程実行一覧` section on `BatchEdit` by checking the existing `DEVELOPMENT_MODE_ENABLED` flag.
+- Skip loading execution summary data when that section is hidden so the page does not make unnecessary MES execution queries in non-development mode.
+- Mark the `batchStepExecution` route as `requiresDevelopmentMode: true` so direct access is blocked by the existing router guard when development mode is disabled.
 
 ## Validation Plan
-- Review the updated batch-step execution spec against the backflush completion flow.
-- Run targeted ESLint for the touched execution page files.
-- Run project type-check.
-- Run project build-only.
-- Run unit test script status.
+- Run targeted ESLint for the touched frontend files.
+- Run frontend type-check.
+- Run the frontend unit test command if available; otherwise document that no test script exists.
 
 ## Validation Results
-- `npx eslint src/views/Pages/BatchStepExecution.vue --no-fix`: passed
-- `npm run type-check`: passed
-- `npm run build-only`: passed with existing CSS minify warnings and existing chunk-size warnings
-- `npm run test`: failed because `package.json` does not define a `test` script
+- `npx eslint src/views/Pages/BatchEdit.vue src/router/tenant-routes.ts --no-fix` in `beeradmin_tail`: passed.
+- `npm run type-check` in `beeradmin_tail`: passed.
+- `npm run test` in `beeradmin_tail`: failed because `package.json` does not define a `test` script.

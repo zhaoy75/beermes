@@ -75,6 +75,7 @@ export const tenantRoutes: RouteRecordRaw[] = [
     meta: {
       title: 'Batch Step Execution Detail',
       requiresAuth: true,
+      requiresDevelopmentMode: true,
     },
   },
   {

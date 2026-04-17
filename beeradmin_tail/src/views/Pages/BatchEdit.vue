@@ -162,7 +162,7 @@
         </div>
       </section>
 
-      <section class="bg-white rounded-xl shadow border border-gray-200 px-4 py-5">
+      <section v-if="showStepExecutionSection" class="bg-white rounded-xl shadow border border-gray-200 px-4 py-5">
         <header class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
           <div>
             <h2 class="text-lg font-semibold text-gray-800">{{ t('batch.edit.stepExecutionTitle') }}</h2>
@@ -545,6 +545,7 @@ import {
   normalizeBatchAttrDataType,
   validateBatchAttrField,
 } from '@/lib/batchAttrValidation'
+import { DEVELOPMENT_MODE_ENABLED } from '@/lib/devMode'
 import { supabase } from '@/lib/supabase'
 import { formatVolume } from '@/lib/volumeFormat'
 
@@ -559,6 +560,7 @@ const pageTitle = computed(() => t('batch.edit.title'))
 const ZERO_UUID = '00000000-0000-0000-0000-000000000000'
 const MAX_BATCH_ACTUAL_YIELD = 1000000
 const ACTUAL_YIELD_ALLOWED_STATUSES = new Set(['in_progress', 'finished', 'completed'])
+const showStepExecutionSection = DEVELOPMENT_MODE_ENABLED
 
 const tenantId = ref<string | null>(null)
 const batch = ref<any>(null)
@@ -1076,11 +1078,19 @@ async function fetchBatch() {
         ratio: row.ratio != null ? Number(row.ratio) : null,
         effective_at: row.effective_at ?? null,
       }))
-      await Promise.all([
+      if (!showStepExecutionSection) {
+        executionSteps.value = []
+        executionDeviations.value = []
+        executionError.value = ''
+      }
+      const detailLoaders = [
         loadPackingEvents(),
         loadBatchAttributes(header.id),
-        loadBatchExecution(header.id),
-      ])
+      ]
+      if (showStepExecutionSection) {
+        detailLoaders.push(loadBatchExecution(header.id))
+      }
+      await Promise.all(detailLoaders)
     } else {
       attrFields.value = []
       recipeCategoryId.value = null
@@ -1531,6 +1541,13 @@ async function loadBatchRelations() {
 }
 
 async function loadBatchExecution(batchUuid: string) {
+  if (!showStepExecutionSection) {
+    executionSteps.value = []
+    executionDeviations.value = []
+    executionError.value = ''
+    executionLoading.value = false
+    return
+  }
   try {
     executionLoading.value = true
     executionError.value = ''

@@ -149,7 +149,8 @@ docker exec -i supabase-db psql -U postgres -d postgres < data.sql
 
 ### Fix Supabase role grants after restore
 
-If you see `{"error":"permission denied for schema public"}` after importing
+If you see `{"error":"permission denied for schema public"}` or
+`{"error":"permission denied for schema mes"}` after importing
 schema/data, restore the schema grants for the Supabase API roles.
 
 ``` bash
@@ -159,11 +160,23 @@ GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
 GRANT ALL ON ALL ROUTINES IN SCHEMA public TO anon, authenticated, service_role;
 
+GRANT USAGE ON SCHEMA mes TO anon, authenticated, service_role;
+GRANT ALL ON ALL TABLES IN SCHEMA mes TO anon, authenticated, service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA mes TO anon, authenticated, service_role;
+GRANT ALL ON ALL ROUTINES IN SCHEMA mes TO anon, authenticated, service_role;
+
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
 GRANT ALL ON TABLES TO anon, authenticated, service_role;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
 GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
+GRANT ALL ON ROUTINES TO anon, authenticated, service_role;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA mes
+GRANT ALL ON TABLES TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA mes
+GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA mes
 GRANT ALL ON ROUTINES TO anon, authenticated, service_role;
 SQL
 ```
@@ -173,9 +186,14 @@ Verify:
 ``` bash
 docker exec -i <EC2_DB_CONTAINER> psql -U postgres -d postgres -c "
 select
-  has_schema_privilege('anon', 'public', 'USAGE') as anon_usage,
-  has_schema_privilege('authenticated', 'public', 'USAGE') as authenticated_usage,
-  has_schema_privilege('service_role', 'public', 'USAGE') as service_role_usage;
+  role_name,
+  has_schema_privilege(role_name, 'public', 'USAGE') as public_usage,
+  has_schema_privilege(role_name, 'mes', 'USAGE') as mes_usage
+from (values
+  ('anon'),
+  ('authenticated'),
+  ('service_role')
+) as roles(role_name);
 "
 ```
 

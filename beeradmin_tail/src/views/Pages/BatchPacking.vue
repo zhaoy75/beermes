@@ -453,7 +453,12 @@
             <hr class="border-gray-200" />
             <div v-if="packingDialog.errors.filling_lines" class="text-xs text-red-600">{{ packingDialog.errors.filling_lines }}</div>
             <div class="flex items-center justify-end">
-              <button class="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-100" type="button" @click="addFillingLine">
+              <button
+                class="inline-flex items-center gap-2 rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                type="button"
+                @click="addFillingLine"
+              >
+                <span aria-hidden="true" class="text-base leading-none">+</span>
                 {{ t('batch.packaging.dialog.addFilling') }}
               </button>
             </div>

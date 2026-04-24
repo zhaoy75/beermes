@@ -82,7 +82,7 @@
                 </button>
               </div>
             </div>
-            <div class="flex justify-end">
+            <div class="flex flex-wrap justify-end gap-2">
               <div class="inline-flex w-fit rounded-full border border-gray-300 bg-gray-50 p-1">
                 <button
                   v-for="mode in editorModes"
@@ -95,6 +95,17 @@
                   {{ mode.label }}
                 </button>
               </div>
+              <button
+                type="button"
+                class="rounded border px-3 py-2 hover:bg-gray-50 disabled:opacity-50"
+                :disabled="generating"
+                @click="createXmlForSummary"
+              >
+                {{ t('taxReport.actions.createXml') }}
+              </button>
+              <a v-if="summaryXmlUrl" :href="summaryXmlUrl" :download="summaryXmlName" class="self-center text-xs text-blue-600">
+                {{ t('taxReport.actions.downloadXml') }}
+              </a>
             </div>
           </section>
 
@@ -132,18 +143,6 @@
               <div>
                 <h2 class="text-base font-semibold">{{ t('taxReportEditor.sections.movement.title') }}</h2>
                 <p class="text-xs text-gray-500">{{ t('taxReportEditor.sections.movement.subtitle') }}</p>
-              </div>
-              <div class="flex flex-wrap items-center gap-2">
-                <button
-                  class="rounded border px-3 py-2 hover:bg-gray-50 disabled:opacity-50"
-                  :disabled="generating"
-                  @click="createXmlForSummary"
-                >
-                  {{ t('taxReport.actions.createXml') }}
-                </button>
-                <a v-if="summaryXmlUrl" :href="summaryXmlUrl" :download="summaryXmlName" class="text-xs text-blue-600">
-                  {{ t('taxReport.actions.downloadXml') }}
-                </a>
               </div>
             </div>
             <div class="overflow-x-auto rounded border bg-gray-50">
@@ -951,7 +950,7 @@
             </div>
           </section>
 
-          <section class="space-y-3">
+          <section v-if="showDisposeSection" class="space-y-3">
             <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
               <div>
                 <h2 class="text-base font-semibold">{{ t('taxReport.sections.dispose.title') }}</h2>
@@ -1081,7 +1080,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { toast } from 'vue3-toastify'
@@ -1229,6 +1228,7 @@ const PREVIEW_MIN_ZOOM = 0.4
 const PREVIEW_MAX_ZOOM = 2
 const PREVIEW_ZOOM_STEP = 0.1
 const CSS_PIXELS_PER_MM = 96 / 25.4
+const showDisposeSection = false
 
 const { t, tm, locale } = useI18n()
 const route = useRoute()
@@ -1284,7 +1284,7 @@ const movementSort = reactive<{
   key: 'category',
   direction: 'asc',
 })
-const editorMode = ref<EditorMode>('edit')
+const editorMode = ref<EditorMode>('preview')
 const activeFormTab = ref<TaxReportFormTab>('LIA010')
 
 const editing = computed(() => typeof route.params.id === 'string' && route.params.id.length > 0)
@@ -1750,6 +1750,12 @@ function fitPreviewToWidth() {
   const availableWidth = Math.max(320, viewport.clientWidth - 48)
   setPreviewZoom(availableWidth / pageWidthPx)
   viewport.scrollLeft = 0
+}
+
+async function fitPreviewToWidthWhenVisible() {
+  if (editorMode.value !== 'preview') return
+  await nextTick()
+  fitPreviewToWidth()
 }
 
 function startPreviewPan(event: PointerEvent) {
@@ -2656,6 +2662,14 @@ function queryNumber(value: unknown, fallback: number) {
   return Number.isFinite(numeric) ? numeric : fallback
 }
 
+watch(editorMode, (mode) => {
+  if (mode === 'preview') void fitPreviewToWidthWhenVisible()
+})
+
+watch(activeFormTab, () => {
+  void fitPreviewToWidthWhenVisible()
+})
+
 async function initializeNewReport() {
   form.tax_type = typeof route.query.taxType === 'string' ? route.query.taxType : 'monthly'
   form.tax_year = queryNumber(route.query.taxYear, new Date().getFullYear())
@@ -2686,6 +2700,7 @@ onMounted(async () => {
       await initializeNewReport()
     }
     await refreshReductionPreview()
+    await fitPreviewToWidthWhenVisible()
   } catch (err) {
     console.error(err)
     toast.error(err instanceof Error ? err.message : String(err))

@@ -178,6 +178,8 @@ Components:
 - Tank Loss Volume (欠減)
 - horizontal line
 - Add Filling button
+  - must be visually prominent as the primary action for the filling-line table
+  - use a filled primary button style and enough padding so users can find it quickly
 - Filling lines table
 
 Filling line fields:

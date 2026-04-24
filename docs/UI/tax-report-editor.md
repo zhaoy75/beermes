@@ -73,6 +73,7 @@
 - A segmented control is shown on the right side of the form tab toolbar:
   - `編集`
   - `帳票プレビュー`
+- The default mode is `帳票プレビュー`.
 - The selected mode controls the selected form tab content only.
 - The selected form tab remains unchanged when the user switches modes.
 - `編集` mode:
@@ -98,6 +99,7 @@
 - Tabs should not show XML form codes such as `LIA010`; those codes can remain internal or appear only in developer/spec documentation.
 - Tabs should use a rounded segmented-control treatment so the panel switch reads as one compact control instead of separate card buttons.
 - The active form panel should start directly below the tab/mode toolbar; avoid extra vertical whitespace between the two.
+- The `納税申告XML作成` action should sit to the right of the mode switch in the same toolbar so it is available from both edit and preview modes.
 - Edit-mode field-list panels should use compact rows and internal scrolling when the field list is long, so the panel does not consume excessive vertical space.
 - Tabs for optional forms should remain visible when the form is relevant to the current report.
 - Empty optional forms should show a clear empty state in edit mode and a blank/empty official-style form in preview mode only when that helps review.
@@ -500,6 +502,7 @@
 - Preview canvas controls:
   - provide zoom out, zoom in, reset to 100%, and fit-to-width controls
   - show the current zoom percentage
+  - fit the page to the available panel width by default when the editor opens in preview mode
   - keep scrollbars available when the page is larger than the viewport
   - allow drag-to-pan inside the preview canvas so users can slide the page around without using only scrollbars
 - First-pass preview fidelity targets:
@@ -569,12 +572,8 @@
   - after save, the canonical file is downloaded from storage metadata
 
 ### Disposal XML
-- Uses disposal rows only.
-- File name format:
-  - summary XML file name plus `_廃棄.xtx`
-- Save behavior:
-  - upload file to Supabase Storage during save
-  - save metadata object to `report_files`
+- The standalone on-page `廃棄` editor section is hidden in this layout pass.
+- Disposal XML generation/persistence behavior may remain available internally while disposal page design is revisited.
 
 ## 課税移出一覧表 Excel Generation
 - New monthly draft flow automatically generates the month-scoped workbook once after the initial report breakdown is created.

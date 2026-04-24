@@ -1,66 +1,47 @@
 # Current Task
 
 ## Active Goal
-- Fix `移送詰口管理` save timeout after filling rollback / lot lineage changes.
-- Prevent `product_filling` root-lot lookup from looping through rollback lineage.
-- Add endpoint indexes needed by lot chronology and lot graph traversal queries.
-- Fix actual-yield reinput after rollback so `product_produce` creates a new active source lot instead of returning a voided idempotent movement.
+- Make the `詰口を追加` button easier to see on the `移送詰口管理` page.
 
 ## Active Scope
-- Update the `product_filling` recursive upstream lot lookup to be cycle-safe.
-- Keep generated filled lot numbering based on the original root lot number when possible.
-- Add indexes for common `lot_edge` endpoint lookups used by filling, rollback, source-lot selection, and chronology checks.
-- Update product create RPC idempotency so only posted/non-void movements are reused.
+- Update the Batch Packing filling section button styling.
+- Update the Batch Packing UI spec to document that the add-filling action should be visually prominent.
 
 ## Active Non-Goals
-- Do not redesign filling UI behavior.
-- Do not change rollback business semantics.
-- Do not rewrite existing lot graph data in this pass.
-- Do not change tax/reporting behavior.
+- Do not change filling-line behavior or validation.
+- Do not change save payloads or database behavior.
+- Do not redesign the full page.
 
 ## Active Affected Files
-- [DB/function/43_public.product_filling.sql](/Users/zhao/dev/other/beer/DB/function/43_public.product_filling.sql)
-- [DB/function/42_public.product_produce.sql](/Users/zhao/dev/other/beer/DB/function/42_public.product_produce.sql)
-- [DB/ddl/lot_edge.sql](/Users/zhao/dev/other/beer/DB/ddl/lot_edge.sql)
-- [docs/db/function/ProductProduce.md](/Users/zhao/dev/other/beer/docs/db/function/ProductProduce.md)
-- [docs/db/function/ProductFilling.md](/Users/zhao/dev/other/beer/docs/db/function/ProductFilling.md)
+- [beeradmin_tail/src/views/Pages/BatchPacking.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/BatchPacking.vue)
 - [docs/UI/batchpacking.md](/Users/zhao/dev/other/beer/docs/UI/batchpacking.md)
 - [specs/current-task.md](/Users/zhao/dev/other/beer/specs/current-task.md)
 
 ## Active Data Model / API Changes
 - No API changes.
-- Add non-unique database indexes only.
+- No data model changes.
 
 ## Active Validation Plan
 - Run `git diff --check` for the touched files.
-- Review SQL syntax locally.
-- Runtime validation must be applied in Postgres/Supabase because this workspace does not have `psql`.
+- Run targeted ESLint for `BatchPacking.vue`.
+- Run frontend type-check.
+- Run `npm run build:test`.
 
 ## Active Findings
-- `product_filling` walks upstream lot lineage to derive the root lot number used for generated child lot numbers.
-- `product_filling_rollback` writes a rollback `MERGE` edge from the filled child lot back to the source lot.
-- After rollback, the current recursive query can traverse source lot -> rollback child -> source lot through `lot_edge.to_lot_id/from_lot_id`, which can loop until `statement_timeout`.
-- `lot_edge` currently has no direct endpoint indexes for `(tenant_id, to_lot_id)` or `(tenant_id, from_lot_id)`, so chronology and source-lot lookup queries can also become expensive as data grows.
-- `product_produce` idempotency currently returns a matching movement even if it was voided by `product_produce_rollback`; reinputting the same actual yield can therefore create no new lot, leaving `get_packing_source_lotid` with no positive source candidate.
+- The `詰口を追加` button is currently a small gray-outline text button placed above the filling-line table.
+- It has low visual contrast compared with primary page actions, so it is easy to miss.
 
 ## Active Final Decisions
-- `product_filling` upstream root-lot lookup now excludes rollback/merge lineage by ignoring `MERGE` edges.
-- The recursive lookup now tracks visited lot ids and stops at depth 50 to prevent cycles from causing statement timeout.
-- Added direct `lot_edge` indexes for:
-  - `(tenant_id, movement_id)`
-  - `(tenant_id, from_lot_id)` where `from_lot_id is not null`
-  - `(tenant_id, to_lot_id)` where `to_lot_id is not null`
-- These indexes support filling source lookup, chronology checks, rollback downstream checks, and graph traversal.
-- Updated product filling specs to document cycle-safe root-lot lookup, rollback `MERGE` edge semantics, chronology validation, and source inventory validation.
-- Updated Batch Packing UI spec to require `product_filling_rollback` for filling deletes and to keep rollback lineage handling inside the database function.
-- `product_produce` and `product_filling` idempotency checks now only reuse `posted` movements. Voided movements from rollback no longer block re-creation.
-- Updated product produce/filling specs to state that idempotency must not return voided/reversed movements.
+- The `詰口を追加` button is now a filled primary blue action with larger padding, stronger font weight, shadow, and keyboard focus ring.
+- Added a visible `+` symbol before the label.
+- Updated the Batch Packing spec to require this add-filling action to be visually prominent.
 
 ## Active Validation Results
-- `git diff --check -- specs/current-task.md DB/function/43_public.product_filling.sql DB/ddl/lot_edge.sql`: passed.
-- `git diff --check -- docs/db/function/ProductFilling.md docs/UI/batchpacking.md specs/current-task.md`: passed.
-- `git diff --check -- specs/current-task.md DB/function/42_public.product_produce.sql DB/function/43_public.product_filling.sql docs/db/function/ProductProduce.md docs/db/function/ProductFilling.md`: passed.
-- SQL runtime validation was not executed locally because `psql` is not installed in this workspace.
+- `git diff --check -- specs/current-task.md docs/UI/batchpacking.md beeradmin_tail/src/views/Pages/BatchPacking.vue`: passed.
+- `npx eslint src/views/Pages/BatchPacking.vue --no-fix`: failed on existing `@typescript-eslint/no-explicit-any` lint debt in `BatchPacking.vue`; this button-only change did not introduce those errors.
+- `npm run type-check` in `beeradmin_tail`: passed.
+- `npm run test --if-present` in `beeradmin_tail`: passed with no test script configured.
+- `npm run build:test` in `beeradmin_tail`: passed with existing CSS minifier warnings for `::-webkit-scrollbar-thumb:is()`.
 
 ## Previous Task: Source-Lot Chronology And Filling Rollback
 

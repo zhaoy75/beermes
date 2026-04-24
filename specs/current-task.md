@@ -3,6 +3,9 @@
 ## Goal
 - Analyze and specify validation to prevent a movement/transaction date from being earlier than the source lot's business creation date.
 - Protect user-editable movement dates in UI flows from producing impossible lot chronology.
+- Fix `product_produce_rollback` so a produced lot that already has downstream usage reports the downstream dependency error before balance errors.
+- Fix batch filling delete so deleting a `詰口` packing event reverses the related `product_filling` movement effects instead of only hiding the movement header.
+- Align source-lot chronology checks with UI minute precision so a movement in the same displayed minute as source lot creation is allowed.
 
 ## Scope
 - Identify the canonical source-lot creation timestamp for validation.
@@ -11,6 +14,9 @@
 - Recommend the safest implementation layer and edge-case behavior.
 - Add frontend early-warning checks on pages that expose user-editable movement/event timestamps.
 - Keep backend validation as the final authority.
+- Keep rollback behavior aligned with `docs/db/function/ProductProduceRollback.md`.
+- Keep filling delete atomic in the database; the UI must not manually repair movement lines, lot edges, inventory, and lots.
+- Treat source-lot chronology comparisons as minute-precision checks because `datetime-local` inputs currently do not capture seconds.
 
 ## Findings
 - `inv_movements.movement_at` is user-controlled in several flows and is the business effective timestamp used by tax/reporting and lot trace.
@@ -27,6 +33,9 @@
   - raw material inventory create/edit/move writes `inv_movements` and stores lot id in line `meta.lot_id`
   - batch-step backflush consumes material lots and stores lot id in line `meta.lot_id`
 - `public.movement_save(p_movement_id, p_doc)` can update `inv_movements.movement_at` after posting. This can invalidate chronology unless it validates both source lots used by that movement and downstream movements that already use lots created by that movement.
+- `public.product_produce_rollback(p_doc)` checked produced lot quantity before downstream lot usage, so a fully consumed/filled produced lot raised `PPR006` even when rollback should be blocked by downstream movements with `PPR005`.
+- `BatchPacking.vue` and `BatchEdit.vue` delete packing events by setting `inv_movements.status = 'void'`. For `packing_type = 'filling'`, this hides the event from the list but does not restore source lot quantity, remove filled lot availability, or write reversal lineage.
+- `datetime-local` inputs truncate seconds, so a source lot created at `21:20:30` and a packing movement entered as `21:20` could be rejected even though both display as `21:20`.
 
 ## Recommended Implementation Plan
 1. Add a DB helper to resolve lot business creation time:
@@ -65,6 +74,9 @@
 - [DB/function/43_public.product_filling.sql](/Users/zhao/dev/other/beer/DB/function/43_public.product_filling.sql)
 - [DB/function/71_public.product_unpacking.sql](/Users/zhao/dev/other/beer/DB/function/71_public.product_unpacking.sql)
 - [DB/function/72_public.batch_step_complete_backflush.sql](/Users/zhao/dev/other/beer/DB/function/72_public.batch_step_complete_backflush.sql)
+- [DB/function/45_public.product_produce_rollback.sql](/Users/zhao/dev/other/beer/DB/function/45_public.product_produce_rollback.sql)
+- [DB/function/47_public.product_filling_rollback.sql](/Users/zhao/dev/other/beer/DB/function/47_public.product_filling_rollback.sql)
+- [BatchEdit.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/BatchEdit.vue)
 - `DB/function/31_public.movement_save.sql` is protected indirectly by the new `inv_movements` update trigger.
 - raw material inventory movement path, currently [RawMaterialInventoryEdit.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/RawMaterialInventoryEdit.vue)
 - UI early-warning paths:
@@ -92,6 +104,7 @@
 ## Final Decisions
 - Added `public.lot_effective_created_at(p_lot_id uuid)` to resolve a lot's business creation timestamp from the first non-void `lot_edge.to_lot_id` movement, then `lot.produced_at`, then `lot.created_at`.
 - Added `public._assert_source_lot_not_after_movement(...)` to reject source lots created after the requested movement timestamp.
+- Source-lot chronology comparison uses minute precision in both DB and frontend early-warning logic; `21:20:00` and `21:20:59` are considered the same business minute.
 - Added a `lot_edge` trigger to protect all edge-based source-lot movement paths.
 - Added an `inv_movement_lines` trigger to protect legacy/direct movement-line paths that store source lot ids in line `meta`.
 - Added an `inv_movements` update trigger to protect changing `movement_at` after posting:
@@ -111,11 +124,22 @@
 - `ProductMoveFast.vue` preserves `LOT_TIME...` backend validation messages instead of replacing them with the generic RPC unavailable message.
 - The `inv_movements` chronology update trigger now also fires on `src_site_id` changes, because line-based lot validation depends on source-site semantics.
 - Voiding a lot-creating movement no longer skips downstream chronology validation; source-lot validation is skipped for voided movement rows, but downstream created-lot protection still runs.
+- `product_produce_rollback` now checks non-void downstream `lot_edge.from_lot_id` usage before checking produced lot quantity/inventory, matching the rollback spec and returning `PPR005` for child-dependency cases.
+- Added `product_filling_rollback` to reverse `product_filling` movements:
+  - rejects non-posted/non-filling/already-reversed movements
+  - rejects rollback when filled child lots have non-void downstream usage
+  - consumes/voids filled child lots through rollback lineage
+  - restores source lot and source inventory, including filling loss quantity
+  - marks the original filling movement `void` with `reversed_by_movement_id`
+- `BatchPacking.vue` and `BatchEdit.vue` now call `product_filling_rollback` when deleting a `filling` packing event; other packing event types keep the existing void-header behavior.
 
 ## Validation Results
 - `git diff --check -- specs/current-task.md DB/function/03_public.lot_chronology.sql DB/function/43_public.product_filling.sql DB/function/44_public.product_move.sql DB/function/71_public.product_unpacking.sql DB/function/72_public.batch_step_complete_backflush.sql`: passed.
 - `git diff --check -- specs/current-task.md beeradmin_tail/src/lib/lotChronology.ts beeradmin_tail/src/views/Pages/ProductMoveFast.vue beeradmin_tail/src/views/Pages/ProducedBeerMovementEdit.vue beeradmin_tail/src/views/Pages/BatchPacking.vue`: passed.
 - `git diff --check -- specs/current-task.md DB/function/03_public.lot_chronology.sql beeradmin_tail/src/lib/lotChronology.ts beeradmin_tail/src/views/Pages/ProductMoveFast.vue beeradmin_tail/src/views/Pages/BatchStepExecution.vue beeradmin_tail/src/views/Pages/BatchPacking.vue beeradmin_tail/src/views/Pages/ProducedBeerMovementEdit.vue`: passed after review fixes.
+- `git diff --check -- DB/function/45_public.product_produce_rollback.sql specs/current-task.md`: passed.
+- `git diff --check -- specs/current-task.md DB/function/47_public.product_filling_rollback.sql beeradmin_tail/src/views/Pages/BatchPacking.vue beeradmin_tail/src/views/Pages/BatchEdit.vue`: passed.
+- `git diff --check -- specs/current-task.md DB/function/03_public.lot_chronology.sql beeradmin_tail/src/lib/lotChronology.ts`: passed after minute-precision chronology fix.
 - `npx eslint src/lib/lotChronology.ts --no-fix`: passed.
 - `npx eslint src/views/Pages/BatchStepExecution.vue --no-fix`: passed.
 - `npx eslint src/lib/lotChronology.ts src/views/Pages/ProductMoveFast.vue src/views/Pages/ProducedBeerMovementEdit.vue src/views/Pages/BatchPacking.vue --no-fix`: failed because the touched Vue files already contain existing lint debt, mostly `@typescript-eslint/no-explicit-any` and unused-function errors. The new shared helper passes ESLint.
@@ -123,6 +147,7 @@
 - `npm run type-check` in `beeradmin_tail`: passed.
 - `npm run test --if-present` in `beeradmin_tail`: passed with no test script configured.
 - `npm run build:test` in `beeradmin_tail`: passed with existing CSS minifier warnings and existing large-chunk warnings.
+- `npx eslint src/views/Pages/BatchPacking.vue src/views/Pages/BatchEdit.vue --no-fix`: failed because `BatchPacking.vue` still contains existing `@typescript-eslint/no-explicit-any` lint debt; `BatchEdit.vue` did not introduce a new reported error in this targeted run.
 - SQL runtime validation was not executed in this workspace because `psql` is not installed; the new DB helper/trigger file should be applied and tested against Supabase/Postgres before release.
 
 ---

@@ -130,6 +130,21 @@ begin
     raise exception 'PPR004: produced lot site is missing';
   end if;
 
+  select e.movement_id
+    into v_downstream_movement_id
+  from public.lot_edge e
+  join public.inv_movements m
+    on m.tenant_id = v_tenant
+   and m.id = e.movement_id
+  where e.tenant_id = v_tenant
+    and e.from_lot_id = v_produced_lot_id
+    and m.status <> 'void'
+  limit 1;
+
+  if v_downstream_movement_id is not null then
+    raise exception 'PPR005: rollback blocked by downstream movements';
+  end if;
+
   if coalesce(v_produced_qty, 0) <= 0 then
     raise exception 'PPR006: produced lot quantity is not positive';
   end if;
@@ -147,21 +162,6 @@ begin
 
   if v_source_inv_id is null or coalesce(v_source_inv_qty, 0) < v_produced_qty then
     raise exception 'PPR006: produced lot inventory is insufficient';
-  end if;
-
-  select e.movement_id
-    into v_downstream_movement_id
-  from public.lot_edge e
-  join public.inv_movements m
-    on m.tenant_id = v_tenant
-   and m.id = e.movement_id
-  where e.tenant_id = v_tenant
-    and e.from_lot_id = v_produced_lot_id
-    and m.status <> 'void'
-  limit 1;
-
-  if v_downstream_movement_id is not null then
-    raise exception 'PPR005: rollback blocked by downstream movements';
   end if;
 
   insert into public.inv_movements (

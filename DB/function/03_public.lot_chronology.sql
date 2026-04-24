@@ -84,7 +84,7 @@ begin
 
     v_created_at := public.lot_effective_created_at(v_lot_id);
 
-    if v_created_at > p_movement_at then
+    if date_trunc('minute', v_created_at) > date_trunc('minute', p_movement_at) then
       raise exception
         'LOT_TIME004: movement_at % is before source lot % creation time % (context=%)',
         p_movement_at,

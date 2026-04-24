@@ -2793,11 +2793,15 @@ async function deletePackingEvent(event: PackingEvent) {
   })
   if (!confirmed) return
   try {
-    const { error } = await supabase
-      .from('inv_movements')
-      .update({ status: 'void' })
-      .eq('id', event.id)
-    if (error) throw error
+    if (event.packing_type === 'filling') {
+      await rollbackFillingPackingEvent(event)
+    } else {
+      const { error } = await supabase
+        .from('inv_movements')
+        .update({ status: 'void' })
+        .eq('id', event.id)
+      if (error) throw error
+    }
     await loadPackingEvents()
     if (highlightedPackingEventId.value === event.id) clearHighlightedPackingEvent()
     showPackingNotice(t('batch.packaging.toast.deleted'))
@@ -2805,6 +2809,26 @@ async function deletePackingEvent(event: PackingEvent) {
     console.error(err)
     packingDialog.globalError = t('batch.packaging.errors.deleteFailed')
   }
+}
+
+async function rollbackFillingPackingEvent(event: PackingEvent) {
+  const batchCode = batch.value?.batch_code || 'BATCH'
+  const rollbackDoc = {
+    doc_no: `PFR-${batchCode}-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    movement_at: new Date().toISOString(),
+    filling_movement_id: event.id,
+    reason: 'packing_event_deleted',
+    notes: 'Rollback deleted filling packing event',
+    meta: {
+      source: 'packing',
+      movement_intent: 'PACKAGE_FILL_ROLLBACK',
+      idempotency_key: `packing_filling_rollback:${event.id}`,
+    },
+  }
+  const { error } = await supabase.rpc('product_filling_rollback', {
+    p_doc: rollbackDoc,
+  })
+  if (error) throw error
 }
 
 type RootSourceLot = {

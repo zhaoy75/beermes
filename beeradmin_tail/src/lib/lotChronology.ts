@@ -44,7 +44,7 @@ export async function checkLotChronology(options: {
 
     const createdAt = parseDate(typeof data === 'string' ? data : null)
     if (!createdAt) continue
-    if (createdAt.getTime() > movementAt.getTime()) {
+    if (floorToMinute(createdAt).getTime() > floorToMinute(movementAt).getTime()) {
       violations.push({
         lotId: lot.lotId,
         lotLabel: lot.lotLabel || lot.lotId,
@@ -73,6 +73,12 @@ function parseDate(value: string | Date | null | undefined) {
   if (!value) return null
   const date = value instanceof Date ? value : new Date(value)
   return Number.isNaN(date.getTime()) ? null : date
+}
+
+function floorToMinute(value: Date) {
+  const date = new Date(value)
+  date.setSeconds(0, 0)
+  return date
 }
 
 function formatDateTime(value: string, locale: string | null | undefined) {

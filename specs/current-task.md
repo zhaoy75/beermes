@@ -1,53 +1,53 @@
 # Current Task
 
 ## Goal
-- Exclude non-reportable `tax_event` rows from `LIA110` UI display and generated XML:
-  - `NONE`
-  - `RETURN_TO_FACTORY_NON_TAXABLE` (`移入`)
+- Let operational pages use the available screen width instead of being constrained by centered `max-width` wrappers.
 
 ## Scope
-- Update the shared `LIA110` detail-row filter so `NONE` and `RETURN_TO_FACTORY_NON_TAXABLE` tax events are not converted into report rows.
-- Keep legacy fallback behavior for rows where `tax_event` is missing and `move_type` still maps to a valid legacy tax event.
-- Update the tax report specs to document that `NONE` and `RETURN_TO_FACTORY_NON_TAXABLE` are not output rows for `LIA110`.
+- Remove the shared admin layout content cap from tenant and system-admin layouts.
+- Remove top-level centered `max-w-*` wrappers from operational page containers so right-side panels/action areas can use wider screens.
+- Preserve modal/dialog width limits.
+- Preserve fixed sidebar/header behavior.
 
 ## Non-Goals
-- Do not change LIA110 volume/tax calculations for taxable, non-taxable, export, or return rows.
-- Do not add a new XML bucket or label for `RETURN_TO_FACTORY_NON_TAXABLE`.
-- Do not change LIA130 calculations.
-- Do not change Supabase schema or stored report shape.
-- Do not redesign the Tax Report Editor UI.
+- Do not redesign individual page layouts.
+- Do not change table columns, forms, or business logic.
+- Do not change modal/dialog max widths.
+- Do not add a user preference for page width in this pass.
 
 ## Affected Files
 - [specs/current-task.md](/Users/zhao/dev/other/beer/specs/current-task.md)
-- [docs/UI/tax-report-editor.md](/Users/zhao/dev/other/beer/docs/UI/tax-report-editor.md)
-- [docs/UI/tax-report-rli0010-232-implementation-spec.md](/Users/zhao/dev/other/beer/docs/UI/tax-report-rli0010-232-implementation-spec.md)
-- [beeradmin_tail/src/lib/taxReport.ts](/Users/zhao/dev/other/beer/beeradmin_tail/src/lib/taxReport.ts)
+- [beeradmin_tail/src/components/layout/AdminLayout.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/components/layout/AdminLayout.vue)
+- [beeradmin_tail/src/layouts/SystemAdminLayout.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/layouts/SystemAdminLayout.vue)
+- Operational page root containers under [beeradmin_tail/src/views/Pages](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages)
 
 ## Data Model / API Changes
 - No data model changes.
 - No API changes.
 
 ## Implementation Notes
-- `TaxReportEditor` display rows and XML generation both use `buildLia110ReportRows()`.
-- `buildLia110ReportRows()` uses `isLia110DetailItem()` as the shared detail-row gate.
-- Filtering `NONE` and `RETURN_TO_FACTORY_NON_TAXABLE` in `isLia110DetailItem()` removes those rows from both UI display and `LIA110` XML.
+- The shared layout currently uses `mx-auto max-w-(--breakpoint-2xl)`, which caps all page content around the 2xl breakpoint.
+- Several operational pages add a second top-level `max-w-5xl`, `max-w-6xl`, or `max-w-7xl` wrapper.
+- Removing the shared cap alone is not enough for pages with local caps, so update the top-level page wrappers that constrain the main operable area.
+- Keep nested modal/dialog `max-w-*` classes because they are not part of the main page operation area.
 
 ## Validation Plan
-- Run targeted ESLint for touched source files.
+- Run targeted ESLint for touched Vue files.
 - Run frontend type-check.
 - Run `git diff --check`.
 - Run `npm run test --if-present`.
 - Run `npm run build:test`.
 
 ## Final Decisions
-- `tax_event = NONE` and `tax_event = RETURN_TO_FACTORY_NON_TAXABLE` rows are filtered in `isLia110DetailItem()`.
-- Because `TaxReportEditor` and XML generation both use `buildLia110ReportRows()`, this removes those rows from both the movement table and generated `LIA110` XML.
-- `RETURN_TO_FACTORY_NON_TAXABLE` is still a valid movement-rule tax event for `移入`; this change only excludes it from tax-report `LIA110` display/XML output.
-- Stored source breakdown shape is unchanged; the filtering is output/display behavior only.
+- The shared tenant and system-admin layout wrappers now use full available width instead of `mx-auto max-w-(--breakpoint-2xl)`.
+- Main operational page wrappers that constrained the page with `max-w-5xl`, `max-w-6xl`, or `max-w-7xl` were widened to full width.
+- Modal/dialog-specific `max-w-*` constraints were left unchanged.
+- No business logic, routing, data model, or API behavior changed.
 
 ## Validation Results
-- `npx eslint src/lib/taxReport.ts --no-fix` in `beeradmin_tail`: passed.
+- `git diff --check -- ...`: passed.
 - `npm run type-check` in `beeradmin_tail`: passed.
-- `git diff --check -- specs/current-task.md docs/UI/tax-report-editor.md docs/UI/tax-report-rli0010-232-implementation-spec.md beeradmin_tail/src/lib/taxReport.ts`: passed.
 - `npm run test --if-present` in `beeradmin_tail`: passed with no test script configured.
 - `npm run build:test` in `beeradmin_tail`: passed with existing CSS `:is()` minify warnings and existing chunk-size warnings.
+- `npx eslint` on the shared layout files and a clean subset of widened pages passed.
+- `npx eslint` across every touched Vue file did not pass because several touched pages already contain unrelated lint errors (`no-explicit-any`, unused symbols, and missing script `lang`) outside this layout-only change.

@@ -2,7 +2,7 @@
   <AdminLayout>
     <PageBreadcrumb :pageTitle="pageTitle" />
 
-    <div class="max-w-6xl mx-auto p-4 space-y-4">
+    <div class="w-full p-4 space-y-4">
       <header class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
           <h1 class="text-xl font-semibold text-gray-800">{{ t('taxReportProfile.title') }}</h1>

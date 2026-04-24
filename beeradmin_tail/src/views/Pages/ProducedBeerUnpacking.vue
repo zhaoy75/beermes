@@ -1,7 +1,7 @@
 <template>
   <AdminLayout>
     <PageBreadcrumb :pageTitle="pageTitle" />
-    <div class="min-h-screen bg-white text-gray-900 p-4 max-w-6xl mx-auto space-y-6">
+    <div class="min-h-screen bg-white text-gray-900 p-4 space-y-6">
       <header class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 class="text-xl font-semibold">{{ t('producedBeerUnpacking.title') }}</h1>

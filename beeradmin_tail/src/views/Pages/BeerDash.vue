@@ -1,7 +1,7 @@
 <template>
   <AdminLayout>
     <PageBreadcrumb :pageTitle="currentPageTitle" />
-    <div class="max-w-6xl mx-auto px-2 sm:px-4 lg:px-0 pb-10 space-y-6">
+    <div class="w-full px-2 sm:px-4 lg:px-0 pb-10 space-y-6">
       <!-- Top stats -->
       <section class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <article v-for="card in kpiCards" :key="card.id" class="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">

@@ -2,7 +2,7 @@
   <AdminLayout>
     <PageBreadcrumb :pageTitle="pageTitle" />
 
-    <div class="max-w-5xl mx-auto p-4 space-y-4">
+    <div class="w-full p-4 space-y-4">
       <header class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 class="text-xl font-semibold text-gray-800">{{ t('package.title') }}</h1>

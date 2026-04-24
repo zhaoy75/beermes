@@ -1,7 +1,7 @@
 <template>
   <AdminLayout>
     <PageBreadcrumb :pageTitle="pageTitle" />
-    <div class="min-h-screen bg-white text-gray-900 p-4 max-w-6xl mx-auto">
+    <div class="min-h-screen bg-white text-gray-900 p-4">
       <header class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h1 class="text-xl font-semibold">{{ t('tank.title') }}</h1>

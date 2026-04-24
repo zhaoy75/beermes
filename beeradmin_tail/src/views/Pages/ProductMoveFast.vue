@@ -1,7 +1,7 @@
 <template>
   <AdminLayout>
     <PageBreadcrumb :pageTitle="pageTitle" />
-    <div class="min-h-screen bg-white text-gray-900 p-4 max-w-7xl mx-auto space-y-4">
+    <div class="min-h-screen bg-white text-gray-900 p-4 space-y-4">
       <header
         class="sticky top-0 z-20 -mx-4 px-4 py-3 border-b border-gray-200 bg-white/95 backdrop-blur"
       >

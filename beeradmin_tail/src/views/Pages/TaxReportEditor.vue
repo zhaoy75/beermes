@@ -62,15 +62,72 @@
               </select>
               <p v-if="errors.status" class="mt-1 text-xs text-red-600">{{ errors.status }}</p>
             </div>
-            <div class="md:col-span-4">
-              <label class="mb-1 block text-sm text-gray-600">{{ t('taxReport.form.totalTax') }}</label>
-              <div class="flex h-[40px] items-center rounded border bg-gray-50 px-3 text-sm text-gray-700">
-                {{ formatCurrency(totalTaxAmount) }}
+          </section>
+
+          <section class="space-y-0">
+          <section class="flex flex-col gap-3 border-y border-gray-100 py-2 xl:flex-row xl:items-center xl:justify-between">
+            <div class="overflow-x-auto">
+              <div class="inline-flex min-w-max rounded-full border border-gray-200 bg-gray-100 p-1">
+                <button
+                  v-for="tab in formTabs"
+                  :key="tab.id"
+                  type="button"
+                  class="min-w-[5.5rem] rounded-full px-4 py-2 text-center text-sm font-medium transition"
+                  :class="activeFormTab === tab.id ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-600 hover:bg-white/70 hover:text-gray-900'"
+                  :title="tab.title"
+                  :aria-label="tab.ariaLabel"
+                  @click="activeFormTab = tab.id"
+                >
+                  {{ tab.label }}
+                </button>
+              </div>
+            </div>
+            <div class="flex justify-end">
+              <div class="inline-flex w-fit rounded-full border border-gray-300 bg-gray-50 p-1">
+                <button
+                  v-for="mode in editorModes"
+                  :key="mode.id"
+                  type="button"
+                  class="rounded-full px-4 py-2 text-sm font-medium transition"
+                  :class="editorMode === mode.id ? 'bg-white font-semibold text-blue-700 shadow-sm' : 'text-gray-600 hover:text-gray-900'"
+                  @click="editorMode = mode.id"
+                >
+                  {{ mode.label }}
+                </button>
               </div>
             </div>
           </section>
 
-          <section class="space-y-3">
+          <section v-if="editorMode === 'edit' && activeFormTab === 'LIA010'" class="space-y-2">
+            <div>
+              <h2 class="text-base font-semibold">{{ t('taxReportEditor.forms.lia010.title') }}</h2>
+              <p class="text-xs text-gray-500">{{ t('taxReportEditor.forms.lia010.subtitle') }}</p>
+            </div>
+            <div class="max-h-[42vh] overflow-auto rounded border bg-gray-50">
+              <table class="min-w-full text-xs">
+                <thead class="sticky top-0 z-10 bg-white text-xs uppercase text-gray-500">
+                  <tr>
+                    <th class="w-32 px-3 py-1.5 text-left">{{ t('taxReportEditor.fieldList.code') }}</th>
+                    <th class="px-3 py-1.5 text-left">{{ t('taxReportEditor.fieldList.label') }}</th>
+                    <th class="px-3 py-1.5 text-left">{{ t('taxReportEditor.fieldList.value') }}</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                  <tr
+                    v-for="field in lia010EditorFields"
+                    :key="field.code"
+                    :class="field.highlight ? 'bg-white font-medium' : ''"
+                  >
+                    <td class="whitespace-nowrap px-3 py-1.5 font-mono text-xs text-gray-500">{{ field.code }}</td>
+                    <td class="px-3 py-1.5 text-gray-700">{{ field.label }}</td>
+                    <td class="px-3 py-1.5 text-gray-900">{{ field.value }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section v-if="editorMode === 'edit' && activeFormTab === 'LIA110'" class="space-y-3">
             <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
               <div>
                 <h2 class="text-base font-semibold">{{ t('taxReportEditor.sections.movement.title') }}</h2>
@@ -166,114 +223,732 @@
                 </tbody>
               </table>
             </div>
-            <div v-if="returnTableRows.length > 0" class="space-y-2">
-              <div>
-                <h3 class="text-sm font-semibold text-gray-700">{{ t('taxReportEditor.sections.returns.title') }}</h3>
-                <p class="text-xs text-gray-500">{{ t('taxReportEditor.sections.returns.subtitle') }}</p>
-              </div>
-              <div class="overflow-x-auto rounded border bg-gray-50">
-                <table class="min-w-full text-sm">
-                  <thead class="bg-white text-xs uppercase text-gray-500">
-                    <tr>
-                      <th class="px-3 py-2 text-left">{{ t('taxReportEditor.columns.taxEvent') }}</th>
-                      <th class="px-3 py-2 text-left">{{ t('taxReport.breakdown.columns.category') }}</th>
-                      <th class="px-3 py-2 text-left">{{ t('taxReport.breakdown.columns.abv') }}</th>
-                      <th class="px-3 py-2 text-right">{{ t('taxReport.breakdown.columns.volume') }}</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-gray-100">
-                    <tr v-for="row in returnTableRows" :key="row.item.key">
-                      <td class="px-3 py-2 text-gray-700">{{ breakdownMovementLabel(row.item) }}</td>
-                      <td class="px-3 py-2 text-gray-700">{{ row.item.categoryName }}</td>
-                      <td class="px-3 py-2">
-                        <input
-                          v-if="row.sourceIndex != null"
-                          :value="formatInputNumber(row.item.abv)"
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          class="h-[36px] w-full rounded border bg-white px-2"
-                          @input="updateReportBreakdownNumber(row.sourceIndex, 'abv', $event)"
-                        />
-                      </td>
-                      <td class="px-3 py-2 text-right">
-                        <input
-                          v-if="row.sourceIndex != null"
-                          :value="formatInputNumber(row.item.volume_l)"
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          class="h-[36px] w-full rounded border bg-white px-2 text-right"
-                          @input="updateReportBreakdownNumber(row.sourceIndex, 'volume_l', $event)"
-                        />
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-            <div class="space-y-2">
-              <div class="flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
-                <div>
-                  <h3 class="text-sm font-semibold text-gray-700">{{ t('taxReportEditor.sections.reduction.title') }}</h3>
-                  <p class="text-xs text-gray-500">{{ t('taxReportEditor.sections.reduction.subtitle') }}</p>
-                </div>
-                <div class="text-xs text-gray-500">
-                  <span v-if="reductionPreviewLoading">{{ t('common.loading') }}</span>
-                  <span v-else>{{ t('taxReportEditor.sections.reduction.rate', {
-                    category: taxReductionPreview.category,
-                    rate: formatPercent(taxReductionPreview.rate),
-                  }) }}</span>
-                </div>
-              </div>
-              <p v-if="reductionPreviewError" class="text-xs text-red-600">
-                {{ t('taxReportEditor.sections.reduction.loadFailed', { message: reductionPreviewError }) }}
-              </p>
-              <div class="overflow-x-auto rounded border bg-gray-50">
-                <table class="min-w-full text-sm">
-                  <thead class="bg-white text-xs uppercase text-gray-500">
-                    <tr>
-                      <th class="px-3 py-2 text-left">{{ t('taxReportEditor.sections.reduction.columns.item') }}</th>
-                      <th class="px-3 py-2 text-right">{{ t('taxReportEditor.sections.reduction.columns.standardTax') }}</th>
-                      <th class="px-3 py-2 text-right">{{ t('taxReportEditor.sections.reduction.columns.reducedTax') }}</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-gray-100">
-                    <tr>
-                      <td class="px-3 py-2 text-gray-700">{{ t('taxReportEditor.sections.reduction.rows.priorFiscalYear') }}</td>
-                      <td class="px-3 py-2 text-right text-gray-700">{{ formatCurrency(taxReductionPreview.priorFiscalYearStandardTaxAmount) }}</td>
-                      <td class="px-3 py-2 text-right text-gray-400">—</td>
-                    </tr>
-                    <tr>
-                      <td class="px-3 py-2 text-gray-700">{{ t('taxReportEditor.sections.reduction.rows.currentMonth') }}</td>
-                      <td class="px-3 py-2 text-right text-gray-700">{{ formatCurrency(taxReductionPreview.currentMonthStandardTaxAmount) }}</td>
-                      <td class="px-3 py-2 text-right text-gray-700">{{ formatCurrency(taxReductionPreview.currentMonthReducedTaxAmount) }}</td>
-                    </tr>
-                    <tr>
-                      <td class="px-3 py-2 text-gray-700">{{ t('taxReportEditor.sections.reduction.rows.returnDeduction') }}</td>
-                      <td class="px-3 py-2 text-right text-gray-700">{{ formatCurrency(taxReductionPreview.returnStandardTaxAmount) }}</td>
-                      <td class="px-3 py-2 text-right text-gray-700">{{ formatCurrency(taxReductionPreview.returnReducedTaxAmount) }}</td>
-                    </tr>
-                    <tr class="bg-white font-medium">
-                      <td class="px-3 py-2 text-gray-800">{{ t('taxReportEditor.sections.reduction.rows.netTax') }}</td>
-                      <td class="px-3 py-2 text-right text-gray-800">{{ formatCurrency(taxReductionPreview.netStandardTaxAmount) }}</td>
-                      <td class="px-3 py-2 text-right text-gray-800">{{ formatCurrency(taxReductionPreview.netReducedTaxAmount) }}</td>
-                    </tr>
-                    <tr>
-                      <td class="px-3 py-2 text-gray-700">{{ t('taxReportEditor.sections.reduction.rows.cumulativeBeforeReturn') }}</td>
-                      <td class="px-3 py-2 text-right text-gray-700">{{ formatCurrency(taxReductionPreview.cumulativeBeforeReturnStandardTaxAmount) }}</td>
-                      <td class="px-3 py-2 text-right text-gray-400">—</td>
-                    </tr>
-                    <tr>
-                      <td class="px-3 py-2 text-gray-700">{{ t('taxReportEditor.sections.reduction.rows.cumulativeAfterReturn') }}</td>
-                      <td class="px-3 py-2 text-right text-gray-700">{{ formatCurrency(taxReductionPreview.cumulativeAfterReturnStandardTaxAmount) }}</td>
-                      <td class="px-3 py-2 text-right text-gray-400">—</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
             <p v-if="errors.breakdown" class="text-xs text-red-600">{{ errors.breakdown }}</p>
+          </section>
+
+          <section v-if="editorMode === 'edit' && activeFormTab === 'LIA130'" class="space-y-2">
+            <div class="flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
+              <div>
+                <h2 class="text-base font-semibold text-gray-800">{{ t('taxReportEditor.forms.lia130.title') }}</h2>
+                <p class="text-xs text-gray-500">{{ t('taxReportEditor.sections.reduction.subtitle') }}</p>
+              </div>
+              <div class="text-xs text-gray-500">
+                <span v-if="reductionPreviewLoading">{{ t('common.loading') }}</span>
+                <span v-else>{{ t('taxReportEditor.sections.reduction.rate', {
+                  category: taxReductionPreview.category,
+                  rate: formatPercent(taxReductionPreview.rate),
+                }) }}</span>
+              </div>
+            </div>
+            <p v-if="reductionPreviewError" class="text-xs text-red-600">
+              {{ t('taxReportEditor.sections.reduction.loadFailed', { message: reductionPreviewError }) }}
+            </p>
+            <div class="max-h-[42vh] overflow-auto rounded border bg-gray-50">
+              <table class="min-w-full text-xs">
+                <thead class="sticky top-0 z-10 bg-white text-xs uppercase text-gray-500">
+                  <tr>
+                    <th class="w-32 px-3 py-1.5 text-left">{{ t('taxReportEditor.fieldList.code') }}</th>
+                    <th class="px-3 py-1.5 text-left">{{ t('taxReportEditor.fieldList.label') }}</th>
+                    <th class="px-3 py-1.5 text-left">{{ t('taxReportEditor.fieldList.value') }}</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                  <tr
+                    v-for="field in lia130EditorFields"
+                    :key="field.code"
+                    :class="field.highlight ? 'bg-white font-medium' : ''"
+                  >
+                    <td class="whitespace-nowrap px-3 py-1.5 font-mono text-xs text-gray-500">{{ field.code }}</td>
+                    <td class="px-3 py-1.5 text-gray-700">{{ field.label }}</td>
+                    <td class="px-3 py-1.5 text-gray-900">{{ field.value }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section v-if="editorMode === 'edit' && activeFormTab === 'LIA220'" class="space-y-3">
+            <div>
+              <h2 class="text-base font-semibold">{{ t('taxReportEditor.forms.lia220.title') }}</h2>
+              <p class="text-xs text-gray-500">{{ t('taxReportEditor.sections.returns.subtitle') }}</p>
+            </div>
+            <div class="overflow-x-auto rounded border bg-gray-50">
+              <table class="min-w-full text-sm">
+                <thead class="bg-white text-xs uppercase text-gray-500">
+                  <tr>
+                    <th class="px-3 py-2 text-left">{{ t('taxReportEditor.columns.taxEvent') }}</th>
+                    <th class="px-3 py-2 text-left">{{ t('taxReport.breakdown.columns.category') }}</th>
+                    <th class="px-3 py-2 text-left">{{ t('taxReport.breakdown.columns.abv') }}</th>
+                    <th class="px-3 py-2 text-right">{{ t('taxReport.breakdown.columns.volume') }}</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                  <tr v-for="row in returnTableRows" :key="row.item.key">
+                    <td class="px-3 py-2 text-gray-700">{{ breakdownMovementLabel(row.item) }}</td>
+                    <td class="px-3 py-2 text-gray-700">{{ row.item.categoryName }}</td>
+                    <td class="px-3 py-2">
+                      <input
+                        v-if="row.sourceIndex != null"
+                        :value="formatInputNumber(row.item.abv)"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        class="h-[36px] w-full rounded border bg-white px-2"
+                        @input="updateReportBreakdownNumber(row.sourceIndex, 'abv', $event)"
+                      />
+                    </td>
+                    <td class="px-3 py-2 text-right">
+                      <input
+                        v-if="row.sourceIndex != null"
+                        :value="formatInputNumber(row.item.volume_l)"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        class="h-[36px] w-full rounded border bg-white px-2 text-right"
+                        @input="updateReportBreakdownNumber(row.sourceIndex, 'volume_l', $event)"
+                      />
+                    </td>
+                  </tr>
+                  <tr v-if="returnTableRows.length === 0">
+                    <td colspan="4" class="px-3 py-4 text-center text-xs text-gray-400">{{ t('taxReportEditor.preview.empty') }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section v-if="editorMode === 'edit' && activeFormTab === 'LIA260'" class="space-y-3">
+            <div>
+              <h2 class="text-base font-semibold">{{ t('taxReportEditor.forms.lia260.title') }}</h2>
+              <p class="text-xs text-gray-500">{{ t('taxReportEditor.forms.lia260.subtitle') }}</p>
+            </div>
+            <div class="overflow-x-auto rounded border bg-gray-50">
+              <table class="min-w-full text-sm">
+                <thead class="bg-white text-xs uppercase text-gray-500">
+                  <tr>
+                    <th class="px-3 py-2 text-left">{{ t('taxReport.breakdown.columns.category') }}</th>
+                    <th class="px-3 py-2 text-left">{{ t('taxReport.breakdown.columns.abv') }}</th>
+                    <th class="px-3 py-2 text-right">{{ t('taxReport.breakdown.columns.volume') }}</th>
+                    <th class="px-3 py-2 text-left">{{ t('taxReportEditor.lia260.exportDate') }}</th>
+                    <th class="px-3 py-2 text-left">{{ t('taxReportEditor.lia260.destination') }}</th>
+                    <th class="px-3 py-2 text-left">{{ t('taxReportEditor.lia260.customsOffice') }}</th>
+                    <th class="px-3 py-2 text-left">{{ t('taxReportEditor.lia260.exporter') }}</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                  <tr v-for="row in exportExemptTableRows" :key="row.item.key">
+                    <td class="px-3 py-2 text-gray-700">{{ row.item.categoryName }}</td>
+                    <td class="px-3 py-2">
+                      <input
+                        v-if="row.sourceIndex != null"
+                        :value="formatInputNumber(row.item.abv)"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        class="h-[36px] w-full rounded border bg-white px-2"
+                        @input="updateReportBreakdownNumber(row.sourceIndex, 'abv', $event)"
+                      />
+                    </td>
+                    <td class="px-3 py-2 text-right">
+                      <input
+                        v-if="row.sourceIndex != null"
+                        :value="formatInputNumber(row.item.volume_l)"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        class="h-[36px] w-full rounded border bg-white px-2 text-right"
+                        @input="updateReportBreakdownNumber(row.sourceIndex, 'volume_l', $event)"
+                      />
+                    </td>
+                    <td class="px-3 py-2 text-gray-500">{{ reportDateText }}</td>
+                    <td class="px-3 py-2 text-gray-400">—</td>
+                    <td class="px-3 py-2 text-gray-400">—</td>
+                    <td class="px-3 py-2 text-gray-700">{{ tenantProfile.NOZEISHA_NM || tenantName || '—' }}</td>
+                  </tr>
+                  <tr v-if="exportExemptTableRows.length === 0">
+                    <td colspan="7" class="px-3 py-4 text-center text-xs text-gray-400">{{ t('taxReportEditor.preview.empty') }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section v-if="editorMode === 'preview'" class="space-y-2">
+            <div class="flex flex-col gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 md:flex-row md:items-center md:justify-between">
+              <div class="text-xs text-gray-500">{{ t('taxReportEditor.preview.dragHint') }}</div>
+              <div class="flex items-center gap-1">
+                <button
+                  type="button"
+                  class="flex h-8 w-8 items-center justify-center rounded border bg-white text-base hover:bg-gray-50 disabled:opacity-40"
+                  :title="t('taxReportEditor.preview.zoomOut')"
+                  :aria-label="t('taxReportEditor.preview.zoomOut')"
+                  :disabled="previewZoom <= PREVIEW_MIN_ZOOM"
+                  @click="zoomPreviewBy(-PREVIEW_ZOOM_STEP)"
+                >
+                  −
+                </button>
+                <button
+                  type="button"
+                  class="h-8 min-w-[4rem] rounded border bg-white px-2 text-xs font-semibold hover:bg-gray-50"
+                  :title="t('taxReportEditor.preview.resetZoom')"
+                  :aria-label="t('taxReportEditor.preview.resetZoom')"
+                  @click="resetPreviewZoom"
+                >
+                  {{ previewZoomPercent }}
+                </button>
+                <button
+                  type="button"
+                  class="flex h-8 w-8 items-center justify-center rounded border bg-white text-base hover:bg-gray-50 disabled:opacity-40"
+                  :title="t('taxReportEditor.preview.zoomIn')"
+                  :aria-label="t('taxReportEditor.preview.zoomIn')"
+                  :disabled="previewZoom >= PREVIEW_MAX_ZOOM"
+                  @click="zoomPreviewBy(PREVIEW_ZOOM_STEP)"
+                >
+                  ＋
+                </button>
+                <button
+                  type="button"
+                  class="flex h-8 w-8 items-center justify-center rounded border bg-white text-sm hover:bg-gray-50"
+                  :title="t('taxReportEditor.preview.fitWidth')"
+                  :aria-label="t('taxReportEditor.preview.fitWidth')"
+                  @click="fitPreviewToWidth"
+                >
+                  ⤢
+                </button>
+              </div>
+            </div>
+            <div
+              ref="previewViewport"
+              class="h-[70vh] overflow-auto rounded-lg border border-gray-300 bg-gray-200 touch-none"
+              :class="previewDragging ? 'cursor-grabbing select-none' : 'cursor-grab'"
+              @pointerdown="startPreviewPan"
+              @pointermove="movePreviewPan"
+              @pointerup="endPreviewPan"
+              @pointercancel="endPreviewPan"
+              @pointerleave="endPreviewPan"
+            >
+              <div class="flex w-full min-w-max justify-center p-6">
+                <div :style="previewScaledPageStyle">
+                  <div
+                    class="w-[297mm] min-h-[210mm] border border-neutral-400 bg-white px-[10mm] py-[8mm] text-[10px] leading-tight text-black shadow-xl"
+                    :style="previewPageTransformStyle"
+                  >
+              <div v-if="activeFormTab === 'LIA010'" class="space-y-[2mm] text-[10px]">
+                <div class="grid grid-cols-[60mm_1fr_38mm] items-start">
+                  <div class="space-y-[2mm] text-[14px]">
+                    <div>ＣＣ１－５２０５－１</div>
+                    <div class="pl-[18mm] text-[18px]">{{ reportPeriodText }}</div>
+                  </div>
+                  <div class="pt-[10mm] text-center text-[22px] font-bold tracking-[0.35em]">酒 税 納 税 申 告 書</div>
+                  <div class="pt-[12mm] text-right">整理番号</div>
+                </div>
+
+                <table class="w-full border-collapse border-2 border-black">
+                  <tbody>
+                    <tr class="h-[44mm] align-top">
+                      <td class="w-[46mm] border border-black p-[2mm]">
+                        <div>{{ reportDateText }}</div>
+                        <div class="mt-[24mm] text-center text-[14px]">{{ tenantProfile.ZEIMUSHO.zeimusho_NM || '' }}　税務署長殿</div>
+                      </td>
+                      <td class="w-[10mm] border border-black p-[1mm] text-center text-[16px] leading-[2.4]">申<br />告<br />者</td>
+                      <td class="border border-black p-0">
+                        <div class="grid h-full grid-rows-3">
+                          <div class="border-b border-black p-[1.5mm]">
+                            （製造場の所在地及び名称）〒<br />
+                            <span class="text-[12px] font-semibold">{{ tenantProfile.SEIZOJO_ADR || '' }}</span><br />
+                            <span class="text-[12px] font-semibold">{{ tenantProfile.SEIZOJO_NM || tenantName || '' }}</span>
+                          </div>
+                          <div class="border-b border-black p-[1.5mm]">
+                            （住所）〒<br />
+                            <span class="text-[12px] font-semibold">{{ tenantProfile.NOZEISHA_ADR || '' }}</span>
+                          </div>
+                          <div class="p-[1.5mm]">
+                            （氏名又は名称及び代表者氏名）<br />
+                            <span class="text-[12px] font-semibold">{{ tenantProfile.NOZEISHA_NM || tenantName || '' }}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="w-[54mm] border border-black p-0">
+                        <div class="grid h-full grid-cols-[12mm_1fr]">
+                          <div class="border-r border-black p-[1mm] text-center leading-[2.6]">税<br />務<br />署<br />整<br />理<br />欄</div>
+                          <div class="grid grid-rows-4">
+                            <div class="grid grid-cols-2 border-b border-black">
+                              <div class="border-r border-black p-[1.5mm]">申告区分</div>
+                              <div class="p-[1.5mm]">調査区分</div>
+                            </div>
+                            <div class="grid grid-cols-2 border-b border-black">
+                              <div class="border-r border-black p-[1.5mm]">申告年月日</div>
+                              <div class="p-[1.5mm]">調査年月日</div>
+                            </div>
+                            <div class="border-b border-black p-[1.5mm]">審査者印</div>
+                            <div class="p-[1.5mm]">確認者印</div>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td colspan="4" class="border border-black p-[2mm] text-[14px]">
+                        下記のとおり酒税の納税申告書（　期限内申告書　）を提出します。
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <div class="text-center text-[12px]">記</div>
+                <table class="w-full border-collapse border-2 border-black text-[11px]">
+                  <tbody>
+                    <tr>
+                      <td rowspan="4" class="w-[12mm] border border-black p-[1mm] text-center leading-[1.6]">納付すべき税額等の計算</td>
+                      <th class="w-[46mm] border border-black p-[1.5mm] font-normal">区　分</th>
+                      <th class="w-[72mm] border border-black p-[1.5mm] font-normal">この申告書による税額</th>
+                      <th class="border border-black p-[1.5mm] font-normal">修正申告の場合の修正申告前の確定額</th>
+                      <th class="w-[56mm] border border-black p-[1.5mm] font-normal">差引納付税額</th>
+                    </tr>
+                    <tr class="h-[9mm]">
+                      <td class="border border-black p-[1.5mm] text-center">算　出　税　額　①</td>
+                      <td class="border border-black p-[1.5mm] text-right text-[16px] font-semibold">{{ formatInteger(filingTaxAmount) }}　円</td>
+                      <td class="border border-black p-[1.5mm]"></td>
+                      <td rowspan="3" class="border border-black p-[1.5mm] align-bottom text-right text-[16px] font-semibold">{{ formatInteger(finalPayableTaxAmount) }}　円</td>
+                    </tr>
+                    <tr class="h-[9mm]">
+                      <td class="border border-black p-[1.5mm] text-center">端 数 切 捨 額　②</td>
+                      <td class="border border-black p-[1.5mm] text-right text-[16px]">{{ formatInteger(roundedDownTaxAmount) }}　円</td>
+                      <td class="border border-black p-[1.5mm]"></td>
+                    </tr>
+                    <tr class="h-[9mm]">
+                      <td class="border border-black p-[1.5mm] text-center">納付すべき税額　④</td>
+                      <td class="border border-black p-[1.5mm] text-right text-[16px] font-semibold">{{ formatInteger(finalPayableTaxAmount) }}　円</td>
+                      <td class="border border-black p-[1.5mm]"></td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <table class="w-full border-collapse border-2 border-black text-[10px]">
+                  <tbody>
+                    <tr class="h-[11mm]">
+                      <td class="w-[68mm] border border-black p-[1.5mm]">納期限の延長</td>
+                      <td class="border border-black p-[1.5mm] text-center">還付される税金の受取場所</td>
+                      <td class="w-[52mm] border border-black p-[1.5mm] text-center">摘　要</td>
+                    </tr>
+                    <tr class="h-[25mm]">
+                      <td class="border border-black p-[1.5mm]">税理士署名押印</td>
+                      <td class="border border-black p-[1.5mm]">
+                        <div>銀行等の預貯金口座に振込みを希望する場合</div>
+                        <div class="mt-[4mm]">口座種類　普通　　口座番号</div>
+                      </td>
+                      <td class="border border-black p-[1.5mm]"></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div v-else-if="activeFormTab === 'LIA110'" class="space-y-[2mm]">
+                <div class="grid grid-cols-[65mm_1fr_55mm] items-start">
+                  <div class="space-y-[2mm] text-[14px]">
+                    <div>ＣＣ１－５２０５－２</div>
+                    <div class="pl-[18mm] text-[18px]">{{ reportPeriodText }}</div>
+                    <div class="text-[11px]">（本表の２）</div>
+                  </div>
+                  <div class="pt-[9mm] text-center text-[22px] font-bold tracking-[0.35em]">税　額　算　出　表</div>
+                  <div class="pt-[6mm] text-right text-[14px]">（　　/　　）</div>
+                  <div class="col-start-3 mt-[1mm] border-2 border-black text-[11px]">
+                    <div class="grid grid-cols-[18mm_1fr]">
+                      <div class="border-r border-black px-[2mm] py-[1mm]">製造場名</div>
+                      <div class="px-[2mm] py-[1mm] font-semibold">{{ tenantProfile.SEIZOJO_NM || tenantName || '' }}</div>
+                    </div>
+                  </div>
+                </div>
+                <table class="w-full border-collapse border-2 border-black text-[8.5px]">
+                  <thead>
+                    <tr class="align-middle">
+                      <th class="w-[8mm] border border-black p-[0.8mm] font-normal">順<br />号</th>
+                      <th class="w-[8mm] border border-black p-[0.8mm] font-normal">区<br />分</th>
+                      <th class="w-[12mm] border border-black p-[0.8mm] font-normal">酒類<br />コード</th>
+                      <th class="w-[35mm] border border-black p-[0.8mm] font-normal">酒類の品目別</th>
+                      <th class="w-[12mm] border border-black p-[0.8mm] font-normal">アルコール<br />分別<br />度</th>
+                      <th class="w-[26mm] border border-black p-[0.8mm] font-normal">①総移出数量<br /><span class="float-right text-[7px]">ML</span></th>
+                      <th class="w-[29mm] border border-black p-[0.8mm] font-normal">②未納税移出数量<br />③輸出免税数量<br /><span class="float-right text-[7px]">ML</span></th>
+                      <th class="w-[26mm] border border-black p-[0.8mm] font-normal">④課税標準数量<br /><span class="float-right text-[7px]">ML</span></th>
+                      <th class="w-[16mm] border border-black p-[0.8mm] font-normal">⑤税率<br /><span class="float-right text-[7px]">円</span></th>
+                      <th class="w-[25mm] border border-black p-[0.8mm] font-normal">⑦軽減後税額<br />⑥税額<br /><span class="float-right text-[7px]">円</span></th>
+                      <th class="w-[27mm] border border-black p-[0.8mm] font-normal">控除数量<br />⑧控除税額<br /><span class="float-right text-[7px]">ML　円</span></th>
+                      <th class="w-[28mm] border border-black p-[0.8mm] font-normal">⑨算出税額<br />（⑥－⑧）又は<br />（⑦－⑧）<br /><span class="float-right text-[7px]">円</span></th>
+                      <th class="border border-black p-[0.8mm] font-normal">摘要</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(row, index) in movementTableRows" :key="`preview-${row.item.key}`" class="h-[7.2mm]">
+                      <td class="border border-black p-[0.8mm] text-center">{{ index + 1 }}</td>
+                      <td class="border border-black p-[0.8mm] text-center">{{ lia110KubunCodeForItem(row.item) }}</td>
+                      <td class="border border-black p-[0.8mm] text-center">{{ row.item.categoryCode }}</td>
+                      <td class="border border-black p-[0.8mm] font-semibold">{{ row.item.categoryName }}</td>
+                      <td class="border border-black p-[0.8mm] text-right">{{ formatNullableNumber(row.item.abv, 1) }}</td>
+                      <td class="border border-black p-[0.8mm] text-right">{{ formatMilliliters(row.item.volume_l) }}</td>
+                      <td class="border border-black p-0">
+                        <div class="h-1/2 border-b border-black px-[0.8mm] text-right">{{ formatMilliliters(row.item.non_taxable_volume_l) }}</div>
+                        <div class="px-[0.8mm] text-right">{{ formatMilliliters(row.item.export_exempt_volume_l) }}</div>
+                      </td>
+                      <td class="border border-black p-[0.8mm] text-right">{{ formatMilliliters(row.item.taxable_volume_l) }}</td>
+                      <td class="border border-black p-[0.8mm] text-right">{{ formatInteger(row.item.tax_rate) }}</td>
+                      <td class="border border-black p-0">
+                        <div class="h-1/2 border-b border-black px-[0.8mm] text-right">（{{ formatInteger(row.item.tax_amount ?? 0) }}）</div>
+                        <div class="px-[0.8mm] text-right">{{ formatInteger(row.item.tax_amount ?? 0) }}</div>
+                      </td>
+                      <td class="border border-black p-0">
+                        <div class="h-1/2 border-b border-black px-[0.8mm] text-right"></div>
+                        <div class="px-[0.8mm] text-right"></div>
+                      </td>
+                      <td class="border border-black p-[0.8mm] text-right">{{ formatInteger(previewTaxAmount(row.item)) }}</td>
+                      <td class="border border-black p-[0.8mm]">{{ movementRowLabel(row.item) }}</td>
+                    </tr>
+                    <tr v-if="movementTableRows.length === 0" class="h-[7.2mm]">
+                      <td colspan="13" class="border border-black p-[1mm] text-center">{{ t('taxReportEditor.preview.empty') }}</td>
+                    </tr>
+                    <tr v-for="index in lia110BlankRowCount" :key="`lia110-blank-${index}`" class="h-[7.2mm]">
+                      <td class="border border-black p-[0.8mm] text-center">{{ movementTableRows.length + index }}</td>
+                      <td class="border border-black"></td>
+                      <td class="border border-black"></td>
+                      <td class="border border-black"></td>
+                      <td class="border border-black"></td>
+                      <td class="border border-black"></td>
+                      <td class="border border-black"></td>
+                      <td class="border border-black"></td>
+                      <td class="border border-black"></td>
+                      <td class="border border-black"></td>
+                      <td class="border border-black"></td>
+                      <td class="border border-black"></td>
+                      <td class="border border-black"></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div v-else-if="activeFormTab === 'LIA130'" class="space-y-[4mm]">
+                <div class="grid grid-cols-[76mm_1fr_128mm] items-start">
+                  <div class="space-y-[3mm] pl-[12mm] text-[19px]">
+                    <div>{{ reportPeriodText }}</div>
+                    <div>令和　　年　　月　　日分</div>
+                  </div>
+                  <div class="pt-[10mm] text-center text-[21px] font-bold tracking-[0.35em]">軽 減 税 額 算 出 表</div>
+                  <div class="mt-[1mm] border-2 border-black text-[13px]">
+                    <div class="grid h-[8mm] grid-cols-[24mm_1fr] border-b-2 border-black">
+                      <div class="border-r border-black px-[2mm] py-[1.5mm]">整理番号</div>
+                      <div class="px-[2mm] py-[1.5mm]"></div>
+                    </div>
+                    <div class="grid h-[8mm] grid-cols-[24mm_1fr]">
+                      <div class="border-r border-black px-[2mm] py-[1.5mm]">製造場名</div>
+                      <div class="px-[2mm] py-[1.5mm] font-semibold">{{ tenantProfile.SEIZOJO_NM || tenantName || '' }}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <table class="w-full border-collapse border-2 border-black text-[10px]">
+                  <colgroup>
+                    <col class="w-[11mm]" />
+                    <col class="w-[72mm]" />
+                    <col class="w-[7mm]" />
+                    <col class="w-[65mm]" />
+                    <col class="w-[61mm]" />
+                    <col class="w-[61mm]" />
+                  </colgroup>
+                  <thead>
+                    <tr class="h-[10mm]">
+                      <th
+                        colspan="3"
+                        rowspan="2"
+                        class="border border-black p-0 font-normal"
+                        style="background-image: linear-gradient(to top right, transparent calc(50% - 0.7px), #111 calc(50% - 0.7px), #111 calc(50% + 0.7px), transparent calc(50% + 0.7px));"
+                      ></th>
+                      <th rowspan="2" class="border border-black p-[1.5mm] font-normal">
+                        全製造場の本則税額(円)<br />Ⓐ
+                      </th>
+                      <th colspan="2" class="border border-black p-[1mm] font-normal">申告対象製造場</th>
+                    </tr>
+                    <tr class="h-[9mm]">
+                      <th class="border border-black p-[1mm] font-normal">本則税額(円)<br />Ⓑ</th>
+                      <th class="border border-black p-[1mm] font-normal">軽減後税額(円)<br />Ⓒ</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr class="h-[10mm] border-t-2 border-black">
+                      <td class="border border-black"></td>
+                      <td class="border border-black p-[1mm] text-center">前月までの当年度酒税累計額</td>
+                      <td class="border border-black text-center">①</td>
+                      <td class="border border-black p-[1mm] text-right">{{ formatInteger(taxReductionPreview.priorFiscalYearStandardTaxAmount) }}</td>
+                      <td
+                        class="border border-black bg-gray-300"
+                        style="background-image: linear-gradient(to bottom left, transparent calc(50% - 0.7px), #111 calc(50% - 0.7px), #111 calc(50% + 0.7px), transparent calc(50% + 0.7px));"
+                      ></td>
+                      <td
+                        class="border border-black bg-gray-300"
+                        style="background-image: linear-gradient(to bottom left, transparent calc(50% - 0.7px), #111 calc(50% - 0.7px), #111 calc(50% + 0.7px), transparent calc(50% + 0.7px));"
+                      ></td>
+                    </tr>
+                    <tr class="h-[10mm]">
+                      <td rowspan="5" class="border border-black p-[1mm] text-center leading-[1.45]" style="writing-mode: vertical-rl;">
+                        当月の当年度酒税累計額の計算
+                      </td>
+                      <td class="border border-black p-[1mm]">軽減対象酒類の移出に係る税額</td>
+                      <td class="border border-black text-center">②</td>
+                      <td class="border border-black p-[1mm] text-right">{{ formatInteger(taxReductionPreview.currentMonthStandardTaxAmount) }}</td>
+                      <td class="border border-black p-[1mm] text-right">{{ formatInteger(taxReductionPreview.currentMonthStandardTaxAmount) }}</td>
+                      <td class="border border-black p-[1mm] text-right">{{ formatInteger(taxReductionPreview.currentMonthReducedTaxAmount) }}</td>
+                    </tr>
+                    <tr class="h-[10mm]">
+                      <td class="border border-black p-[1mm] text-center">0円〜5,000万円以下</td>
+                      <td class="border border-black text-center">③</td>
+                      <td class="border border-black p-[1mm] text-right">{{ formatInteger(taxReductionPreview.currentMonthStandardTaxAmount) }}</td>
+                      <td class="border border-black p-[1mm] text-right">{{ formatInteger(taxReductionPreview.currentMonthStandardTaxAmount) }}</td>
+                      <td class="border border-black p-[1mm] text-right">{{ formatInteger(taxReductionPreview.currentMonthReducedTaxAmount) }}</td>
+                    </tr>
+                    <tr class="h-[10mm]">
+                      <td class="border border-black p-[1mm] text-center">5,000万円超〜8,000万円以下</td>
+                      <td class="border border-black text-center">④</td>
+                      <td class="border border-black"></td>
+                      <td class="border border-black"></td>
+                      <td class="border border-black"></td>
+                    </tr>
+                    <tr class="h-[10mm]">
+                      <td class="border border-black p-[1mm] text-center">8,000万円超〜1億円以下</td>
+                      <td class="border border-black text-center">⑤</td>
+                      <td class="border border-black"></td>
+                      <td class="border border-black"></td>
+                      <td class="border border-black"></td>
+                    </tr>
+                    <tr class="h-[10mm]">
+                      <td class="border border-black p-[1mm] text-center">1億円超(本則税額と軽減後税額は同額)</td>
+                      <td class="border border-black text-center">⑥</td>
+                      <td class="border border-black"></td>
+                      <td class="border border-black"></td>
+                      <td class="border border-black"></td>
+                    </tr>
+                    <tr class="h-[10mm] border-t-2 border-black">
+                      <td class="border border-black"></td>
+                      <td class="border border-black p-[1mm] text-center">控除税額計算前の当年度酒税累計額<br />(①＋②)</td>
+                      <td class="border border-black text-center">⑦</td>
+                      <td class="border border-black p-[1mm] text-right">{{ formatInteger(taxReductionPreview.cumulativeBeforeReturnStandardTaxAmount) }}</td>
+                      <td
+                        class="border border-black bg-gray-300"
+                        style="background-image: linear-gradient(to bottom left, transparent calc(50% - 0.7px), #111 calc(50% - 0.7px), #111 calc(50% + 0.7px), transparent calc(50% + 0.7px));"
+                      ></td>
+                      <td
+                        class="border border-black bg-gray-300"
+                        style="background-image: linear-gradient(to bottom left, transparent calc(50% - 0.7px), #111 calc(50% - 0.7px), #111 calc(50% + 0.7px), transparent calc(50% + 0.7px));"
+                      ></td>
+                    </tr>
+                    <tr class="h-[10mm] border-t-2 border-black">
+                      <td class="border border-black"></td>
+                      <td class="border border-black p-[1mm] text-center">戻入れ酒類の控除税額の合計</td>
+                      <td class="border border-black text-center">⑧</td>
+                      <td class="border border-black p-[1mm] text-right">{{ formatInteger(taxReductionPreview.returnStandardTaxAmount) }}</td>
+                      <td class="border border-black p-[1mm] text-right">{{ formatInteger(taxReductionPreview.returnStandardTaxAmount) }}</td>
+                      <td class="border border-black p-[1mm] text-right">{{ formatInteger(taxReductionPreview.returnReducedTaxAmount) }}</td>
+                    </tr>
+                    <tr class="h-[10mm]">
+                      <td class="border border-black"></td>
+                      <td class="border border-black p-[1mm] text-center">差引酒税額<br />(②−⑧)</td>
+                      <td class="border border-black text-center">⑨</td>
+                      <td class="border border-black p-[1mm] text-right">{{ formatInteger(taxReductionPreview.currentMonthStandardTaxAmount - taxReductionPreview.returnStandardTaxAmount) }}</td>
+                      <td class="border border-black p-[1mm] text-right">{{ formatInteger(taxReductionPreview.netStandardTaxAmount) }}</td>
+                      <td class="border border-black p-[1mm] text-right">{{ formatInteger(taxReductionPreview.netReducedTaxAmount) }}</td>
+                    </tr>
+                    <tr class="h-[10mm] border-t-2 border-black">
+                      <td class="border border-black"></td>
+                      <td class="border border-black p-[1mm] text-center">当年度酒税累計額<br />(①＋⑨)</td>
+                      <td class="border border-black text-center">⑩</td>
+                      <td class="border border-black p-[1mm] text-right">{{ formatInteger(taxReductionPreview.cumulativeAfterReturnStandardTaxAmount) }}</td>
+                      <td
+                        class="border border-black bg-gray-300"
+                        style="background-image: linear-gradient(to bottom left, transparent calc(50% - 0.7px), #111 calc(50% - 0.7px), #111 calc(50% + 0.7px), transparent calc(50% + 0.7px));"
+                      ></td>
+                      <td
+                        class="border border-black bg-gray-300"
+                        style="background-image: linear-gradient(to bottom left, transparent calc(50% - 0.7px), #111 calc(50% - 0.7px), #111 calc(50% + 0.7px), transparent calc(50% + 0.7px));"
+                      ></td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <div class="grid grid-cols-[74mm_1fr] gap-[6mm]">
+                  <div class="grid h-[44mm] grid-rows-[18mm_1fr] border-2 border-black">
+                    <div class="flex items-center justify-center border-b border-black">軽減割合の区分</div>
+                    <div class="flex items-center justify-center text-[13px]">{{ taxReductionPreview.category }}</div>
+                  </div>
+                  <div class="space-y-[4mm]">
+                    <table class="w-full border-collapse border-2 border-black text-[10px]">
+                      <tbody>
+                        <tr class="h-[10mm]">
+                          <td class="border border-black p-[1mm] text-center">申告対象製造場　軽減対象外酒類の移出に係る税額</td>
+                          <td class="w-[7mm] border border-black text-center">⑪</td>
+                          <td class="w-[62mm] border border-black"></td>
+                        </tr>
+                        <tr class="h-[10mm]">
+                          <td class="border border-black p-[1mm] text-center">申告対象製造場　移入酒類の再移出等控除税額の合計</td>
+                          <td class="border border-black text-center">⑫</td>
+                          <td class="border border-black"></td>
+                        </tr>
+                        <tr class="h-[10mm]">
+                          <td class="border border-black p-[1mm] text-center">申告対象製造場　被災酒類に対する酒税の控除税額の合計</td>
+                          <td class="border border-black text-center">⑬</td>
+                          <td class="border border-black"></td>
+                        </tr>
+                      </tbody>
+                    </table>
+                    <table class="w-full border-collapse border-2 border-black text-[10px]">
+                      <tbody>
+                        <tr class="h-[10mm]">
+                          <td class="border border-black p-[1mm] text-center">申告対象製造場　合計酒税額<br />（⑨Ⓒ＋⑪−⑫−⑬）</td>
+                          <td class="w-[7mm] border border-black text-center">⑭</td>
+                          <td class="w-[62mm] border border-black p-[1mm] text-right font-semibold">{{ formatInteger(taxReductionPreview.netReducedTaxAmount) }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                    <div class="text-right text-[10px]">※酒税納税申告書の①へ記載</div>
+                  </div>
+                </div>
+              </div>
+
+              <div v-else-if="activeFormTab === 'LIA220'" class="space-y-[2mm]">
+                <div class="grid grid-cols-[75mm_1fr_54mm] items-start">
+                  <div class="space-y-[2mm] text-[14px]">
+                    <div>ＣＣ１－５２０５－４</div>
+                    <div class="pl-[18mm] text-[18px]">{{ reportPeriodText }}</div>
+                    <div class="text-[11px]">（付表２）</div>
+                  </div>
+                  <div class="pt-[9mm] text-center text-[20px] font-bold">戻入れ酒類の控除（還付）税額計算書</div>
+                  <div class="pt-[7mm] text-right text-[14px]">（　　/　　）</div>
+                  <div class="col-start-3 mt-[1mm] border-2 border-black text-[11px]">
+                    <div class="grid grid-cols-[18mm_1fr]">
+                      <div class="border-r border-black px-[2mm] py-[1mm]">製造場名</div>
+                      <div class="px-[2mm] py-[1mm] font-semibold">{{ tenantProfile.SEIZOJO_NM || tenantName || '' }}</div>
+                    </div>
+                  </div>
+                </div>
+                <table class="w-full border-collapse border-2 border-black text-[9px]">
+                  <thead>
+                    <tr>
+                      <th class="w-[7mm] border border-black p-[0.8mm] font-normal">順<br />号</th>
+                      <th class="w-[8mm] border border-black p-[0.8mm] font-normal">区<br />分</th>
+                      <th class="w-[12mm] border border-black p-[0.8mm] font-normal">酒類<br />コード</th>
+                      <th class="w-[36mm] border border-black p-[0.8mm] font-normal">酒類の品目別</th>
+                      <th class="w-[13mm] border border-black p-[0.8mm] font-normal">アルコール<br />分別<br />度</th>
+                      <th class="w-[28mm] border border-black p-[0.8mm] font-normal">数量<br /><span class="float-right text-[7px]">ML</span></th>
+                      <th class="w-[16mm] border border-black p-[0.8mm] font-normal">税率<br /><span class="float-right text-[7px]">円</span></th>
+                      <th class="w-[25mm] border border-black p-[0.8mm] font-normal">税額<br /><span class="float-right text-[7px]">円</span></th>
+                      <th class="w-[24mm] border border-black p-[0.8mm] font-normal">軽減後税額<br /><span class="float-right text-[7px]">円</span></th>
+                      <th class="border border-black p-[0.8mm] font-normal">摘要</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(row, index) in returnTableRows" :key="`return-preview-${row.item.key}`" class="h-[7.2mm]">
+                      <td class="border border-black p-[0.8mm] text-center">{{ index + 1 }}</td>
+                      <td class="border border-black p-[0.8mm] text-center">1</td>
+                      <td class="border border-black p-[0.8mm] text-center">{{ row.item.categoryCode }}</td>
+                      <td class="border border-black p-[0.8mm] font-semibold">{{ row.item.categoryName }}</td>
+                      <td class="border border-black p-[0.8mm] text-right">{{ formatNullableNumber(row.item.abv, 1) }}</td>
+                      <td class="border border-black p-[0.8mm] text-right">{{ formatMilliliters(row.item.volume_l) }}</td>
+                      <td class="border border-black p-[0.8mm] text-right">{{ formatInteger(row.item.tax_rate) }}</td>
+                      <td class="border border-black p-[0.8mm] text-right">{{ formatInteger(previewReturnTaxAmount(row.item)) }}</td>
+                      <td class="border border-black p-[0.8mm] text-right"></td>
+                      <td class="border border-black p-[0.8mm]">{{ breakdownMovementLabel(row.item) }}</td>
+                    </tr>
+                    <tr v-if="returnTableRows.length === 0" class="h-[7.2mm]">
+                      <td colspan="10" class="border border-black p-[1mm] text-center">{{ t('taxReportEditor.preview.empty') }}</td>
+                    </tr>
+                    <tr v-for="index in lia220BlankRowCount" :key="`lia220-blank-${index}`" class="h-[7.2mm]">
+                      <td class="border border-black p-[0.8mm] text-center">{{ returnTableRows.length + index }}</td>
+                      <td class="border border-black"></td>
+                      <td class="border border-black"></td>
+                      <td class="border border-black"></td>
+                      <td class="border border-black"></td>
+                      <td class="border border-black"></td>
+                      <td class="border border-black"></td>
+                      <td class="border border-black"></td>
+                      <td class="border border-black"></td>
+                      <td class="border border-black"></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div v-else-if="activeFormTab === 'LIA260'" class="space-y-[2mm]">
+                <div class="grid grid-cols-[75mm_1fr_54mm] items-start">
+                  <div class="space-y-[2mm] text-[14px]">
+                    <div>ＣＣ１－５２０５－８</div>
+                    <div class="pl-[18mm] text-[18px]">{{ reportPeriodText }}</div>
+                    <div class="text-[11px]">（付表６）</div>
+                  </div>
+                  <div class="pt-[5mm] text-center text-[18px] font-bold leading-snug">
+                    輸出免税酒類輸出明細書　兼<br />
+                    輸出酒類販売場における購入明細書
+                  </div>
+                  <div class="pt-[7mm] text-right text-[14px]">（　　/　　）</div>
+                  <div class="col-start-3 mt-[1mm] border-2 border-black text-[11px]">
+                    <div class="grid grid-cols-[18mm_1fr]">
+                      <div class="border-r border-black px-[2mm] py-[1mm]">製造場名</div>
+                      <div class="px-[2mm] py-[1mm] font-semibold">{{ tenantProfile.SEIZOJO_NM || tenantName || '' }}</div>
+                    </div>
+                  </div>
+                </div>
+                <table class="w-full border-collapse border-2 border-black text-[8.5px]">
+                  <thead>
+                    <tr>
+                      <th class="w-[7mm] border border-black p-[0.8mm] font-normal">順<br />号</th>
+                      <th class="w-[8mm] border border-black p-[0.8mm] font-normal">区<br />分</th>
+                      <th class="w-[13mm] border border-black p-[0.8mm] font-normal">酒類<br />コード</th>
+                      <th class="w-[32mm] border border-black p-[0.8mm] font-normal">酒類の品目別等</th>
+                      <th class="w-[12mm] border border-black p-[0.8mm] font-normal">アルコール<br />分別<br />度</th>
+                      <th class="w-[26mm] border border-black p-[0.8mm] font-normal">数量<br /><span class="float-right text-[7px]">ML</span></th>
+                      <th class="w-[32mm] border border-black p-[0.8mm] font-normal">輸出年月日<br />又は<br />販売年月日</th>
+                      <th class="w-[24mm] border border-black p-[0.8mm] font-normal">仕向地</th>
+                      <th class="w-[24mm] border border-black p-[0.8mm] font-normal">輸出港の<br />所轄税関</th>
+                      <th class="border border-black p-[0.8mm] font-normal">
+                        輸出者 又 は<br />国際第二種貨物利用運送事業者<br />の住所及び氏名又は名称
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(row, index) in exportExemptRows" :key="`export-preview-${row.key}`" class="h-[13.5mm]">
+                      <td class="border border-black p-[0.8mm] text-center">{{ index + 1 }}</td>
+                      <td class="border border-black p-[0.8mm] text-center">0</td>
+                      <td class="border border-black p-[0.8mm] text-center">{{ row.categoryCode }}</td>
+                      <td class="border border-black p-[0.8mm] font-semibold">{{ row.categoryName }}</td>
+                      <td class="border border-black p-[0.8mm] text-right">{{ formatNullableNumber(row.abv, 1) }}</td>
+                      <td class="border border-black p-[0.8mm] text-right">{{ formatMilliliters(row.volume_l) }}</td>
+                      <td class="border border-black p-[0.8mm]">{{ reportDateText }}</td>
+                      <td class="border border-black p-[0.8mm]"></td>
+                      <td class="border border-black p-[0.8mm]"></td>
+                      <td class="border border-black p-[0.8mm] leading-[1.7]">
+                        {{ tenantProfile.NOZEISHA_NM || tenantName || '' }}<br />
+                        {{ tenantProfile.NOZEISHA_ADR || '' }}
+                      </td>
+                    </tr>
+                    <tr v-if="exportExemptRows.length === 0" class="h-[13.5mm]">
+                      <td colspan="10" class="border border-black p-[1mm] text-center">{{ t('taxReportEditor.preview.empty') }}</td>
+                    </tr>
+                    <tr v-for="index in lia260BlankRowCount" :key="`lia260-blank-${index}`" class="h-[13.5mm]">
+                      <td class="border border-black p-[0.8mm] text-center">{{ exportExemptRows.length + index }}</td>
+                      <td class="border border-black"></td>
+                      <td class="border border-black"></td>
+                      <td class="border border-black"></td>
+                      <td class="border border-black"></td>
+                      <td class="border border-black"></td>
+                      <td class="border border-black p-[0.8mm]">令和　年　月　日</td>
+                      <td class="border border-black"></td>
+                      <td class="border border-black"></td>
+                      <td class="border border-black"></td>
+                    </tr>
+                  </tbody>
+                </table>
+                <div class="grid min-h-[25mm] grid-cols-[22mm_1fr] border-2 border-black">
+                  <div class="border-r border-black p-[2mm]">参考事項</div>
+                  <div class="p-[2mm]"></div>
+                </div>
+              </div>
+            </div>
+                </div>
+              </div>
+            </div>
           </section>
 
           <section class="space-y-3">
@@ -336,6 +1011,7 @@
                 </tbody>
               </table>
             </div>
+          </section>
           </section>
 
           <section class="space-y-3">
@@ -456,6 +1132,13 @@ import {
   loadTaxableRemovalDetailRows,
   type TaxableRemovalExportLabels,
 } from '@/lib/taxableRemovalReport'
+import { formatYen, nonNegativeYen, taxAmountFromLiters, truncateYen } from '@/lib/moneyFormat'
+import {
+  formatMilliliters as formatMillilitersValue,
+  litersToMilliliters,
+  millilitersToLiters,
+  quantityToMilliliters,
+} from '@/lib/volumeFormat'
 import { useRuleengineLabels } from '@/composables/useRuleengineLabels'
 
 interface CategoryRow {
@@ -473,11 +1156,20 @@ interface TaxRateRecord {
 
 type MovementSortKey = 'kubun' | 'taxEvent' | 'category' | 'abv' | 'volume'
 type MovementSortDirection = 'asc' | 'desc'
+type EditorMode = 'edit' | 'preview'
+type TaxReportFormTab = 'LIA010' | 'LIA110' | 'LIA130' | 'LIA220' | 'LIA260'
 
 interface MovementTableRow {
   item: TaxVolumeItem
   sourceIndex: number | null
   editable: boolean
+}
+
+interface EditorField {
+  code: string
+  label: string
+  value: string
+  highlight?: boolean
 }
 
 interface MovementHeader {
@@ -531,6 +1223,12 @@ const TAX_TYPE_OPTIONS = ['monthly'] as const
 const SUMMARY_DOC_TYPES = ['sale', 'tax_transfer', 'return', 'transfer'] as const
 const DISPOSE_DOC_TYPES = ['waste'] as const
 const REPORT_DOC_TYPES = [...SUMMARY_DOC_TYPES, ...DISPOSE_DOC_TYPES] as const
+const PREVIEW_PAGE_WIDTH_MM = 297
+const PREVIEW_PAGE_HEIGHT_MM = 210
+const PREVIEW_MIN_ZOOM = 0.4
+const PREVIEW_MAX_ZOOM = 2
+const PREVIEW_ZOOM_STEP = 0.1
+const CSS_PIXELS_PER_MM = 96 / 25.4
 
 const { t, tm, locale } = useI18n()
 const route = useRoute()
@@ -569,6 +1267,16 @@ const summaryXmlName = ref('')
 const disposeXmlUrl = ref('')
 const disposeXmlName = ref('')
 const storedReportFiles = ref<TaxReportStoredFile[]>([])
+const previewViewport = ref<HTMLElement | null>(null)
+const previewZoom = ref(1)
+const previewDragging = ref(false)
+const previewDragState = reactive({
+  pointerId: null as number | null,
+  startX: 0,
+  startY: 0,
+  scrollLeft: 0,
+  scrollTop: 0,
+})
 const movementSort = reactive<{
   key: MovementSortKey
   direction: MovementSortDirection
@@ -576,15 +1284,54 @@ const movementSort = reactive<{
   key: 'category',
   direction: 'asc',
 })
+const editorMode = ref<EditorMode>('edit')
+const activeFormTab = ref<TaxReportFormTab>('LIA010')
 
 const editing = computed(() => typeof route.params.id === 'string' && route.params.id.length > 0)
 const pageTitle = computed(() => (editing.value ? t('taxReportEditor.editTitle') : t('taxReportEditor.newTitle')))
 const statusOptions = STATUS_OPTIONS
 const taxTypeOptions = TAX_TYPE_OPTIONS
 const monthOptions = computed(() => [4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3])
-const currencyFormatter = computed(
-  () => new Intl.NumberFormat(locale.value, { style: 'currency', currency: 'JPY', maximumFractionDigits: 0 }),
-)
+const editorModes = computed<Array<{ id: EditorMode; label: string }>>(() => [
+  { id: 'edit', label: t('taxReportEditor.modes.edit') },
+  { id: 'preview', label: t('taxReportEditor.modes.preview') },
+])
+const toShortTabText = (value: string) => {
+  const characters = Array.from(value)
+  return characters.length <= 14 ? value : characters.slice(0, 14).join('')
+}
+const formTabs = computed<Array<{ id: TaxReportFormTab; label: string; title: string; ariaLabel: string }>>(() => [
+  {
+    id: 'LIA010',
+    label: toShortTabText(t('taxReportEditor.forms.lia010.shortTitle')),
+    title: toShortTabText(t('taxReportEditor.forms.lia010.shortTitle')),
+    ariaLabel: t('taxReportEditor.forms.lia010.title'),
+  },
+  {
+    id: 'LIA110',
+    label: toShortTabText(t('taxReportEditor.forms.lia110.shortTitle')),
+    title: toShortTabText(t('taxReportEditor.forms.lia110.shortTitle')),
+    ariaLabel: t('taxReportEditor.forms.lia110.title'),
+  },
+  {
+    id: 'LIA130',
+    label: toShortTabText(t('taxReportEditor.forms.lia130.shortTitle')),
+    title: toShortTabText(t('taxReportEditor.forms.lia130.shortTitle')),
+    ariaLabel: t('taxReportEditor.forms.lia130.title'),
+  },
+  {
+    id: 'LIA220',
+    label: toShortTabText(t('taxReportEditor.forms.lia220.shortTitle')),
+    title: toShortTabText(t('taxReportEditor.forms.lia220.shortTitle')),
+    ariaLabel: t('taxReportEditor.forms.lia220.title'),
+  },
+  {
+    id: 'LIA260',
+    label: toShortTabText(t('taxReportEditor.forms.lia260.shortTitle')),
+    title: toShortTabText(t('taxReportEditor.forms.lia260.shortTitle')),
+    ariaLabel: t('taxReportEditor.forms.lia260.title'),
+  },
+])
 const attachmentList = computed(() => parseFileList(form.attachment_files))
 const expectedGeneratedFiles = computed(() => {
   const files: Array<{ fileName: string; fileType: GeneratedTaxReportFile['fileType'] }> = []
@@ -657,12 +1404,91 @@ const returnTableRows = computed<MovementTableRow[]>(() =>
       return compareNullableNumbers(a.item.abv, b.item.abv, 'desc')
     }),
 )
+const exportExemptTableRows = computed<MovementTableRow[]>(() =>
+  reportBreakdown.value
+    .map((item, index) => ({ item, sourceIndex: index, editable: true }))
+    .filter((row) => resolveTaxEvent(row.item.move_type, row.item.tax_event) === 'EXPORT_EXEMPT')
+    .sort((a, b) => {
+      const categoryResult = compareStrings(a.item.categoryName, b.item.categoryName, 'asc')
+      if (categoryResult !== 0) return categoryResult
+      return compareNullableNumbers(a.item.abv, b.item.abv, 'desc')
+    }),
+)
 const taxReductionPreview = computed(() =>
   buildTaxReductionPreview({
     breakdown: reportBreakdown.value,
     priorFiscalYearStandardTaxAmount: priorFiscalYearStandardTaxAmount.value,
   }),
 )
+const filingTaxAmount = computed(() => taxReductionPreview.value.netReducedTaxAmount)
+const roundedDownTaxAmount = computed(() => (filingTaxAmount.value > 0 ? filingTaxAmount.value % 100 : 0))
+const finalPayableTaxAmount = computed(() => Math.max(0, filingTaxAmount.value - roundedDownTaxAmount.value))
+const refundableTaxAmount = computed(() => Math.max(0, -filingTaxAmount.value))
+const lia010EditorFields = computed<EditorField[]>(() => [
+  { code: 'EFA00010', label: t('taxReportEditor.lia010.fields.filingPeriod'), value: reportPeriodText.value },
+  { code: 'EFB00010', label: t('taxReportEditor.lia010.fields.submissionDate'), value: t('taxReportEditor.lia010.generatedAtXmlCreation') },
+  { code: 'EFB00020', label: t('taxReportEditor.lia010.fields.taxOffice'), value: displayValue(tenantProfile.value.ZEIMUSHO.zeimusho_NM) },
+  { code: 'EFB00030', label: t('taxReportEditor.lia010.fields.factoryZip'), value: formatZipParts(tenantProfile.value.SEIZOJO_ZIP) },
+  { code: 'EFB00040', label: t('taxReportEditor.lia010.fields.factoryAddress'), value: displayValue(tenantProfile.value.SEIZOJO_ADR) },
+  { code: 'EFB00050', label: t('taxReportEditor.lia010.fields.factoryName'), value: displayValue(tenantProfile.value.SEIZOJO_NM || tenantName.value) },
+  { code: 'EFB00060', label: t('taxReportEditor.lia010.fields.factoryTel'), value: formatTelParts(tenantProfile.value.SEIZOJO_TEL) },
+  { code: 'EFB00070', label: t('taxReportEditor.lia010.fields.taxpayerZip'), value: formatZipParts(tenantProfile.value.NOZEISHA_ZIP) },
+  { code: 'EFB00080', label: t('taxReportEditor.lia010.fields.taxpayerAddress'), value: displayValue(tenantProfile.value.NOZEISHA_ADR) },
+  { code: 'EFB00090', label: t('taxReportEditor.lia010.fields.taxpayerTel'), value: formatTelParts(tenantProfile.value.NOZEISHA_TEL) },
+  { code: 'EFB00100', label: t('taxReportEditor.lia010.fields.taxpayerName'), value: displayValue(tenantProfile.value.NOZEISHA_NM || tenantName.value) },
+  { code: 'EFB00110', label: t('taxReportEditor.lia010.fields.representativeName'), value: displayValue(tenantProfile.value.DAIHYO_NM) },
+  { code: 'kubun_CD', label: t('taxReportEditor.lia010.fields.declarationType'), value: t('taxReportEditor.lia010.declarationTypeDefault') },
+  { code: 'EFD00020', label: t('taxReportEditor.lia010.fields.taxAmount'), value: formatCurrency(filingTaxAmount.value), highlight: true },
+  { code: 'EFD00030', label: t('taxReportEditor.lia010.fields.roundedDownAmount'), value: formatCurrency(roundedDownTaxAmount.value) },
+  { code: 'EFD00040', label: t('taxReportEditor.lia010.fields.refundableTaxAmount'), value: formatCurrency(refundableTaxAmount.value) },
+  { code: 'EFD00050', label: t('taxReportEditor.lia010.fields.payableTaxAmount'), value: formatCurrency(finalPayableTaxAmount.value), highlight: true },
+  { code: 'EFD00090', label: t('taxReportEditor.lia010.fields.amendedRefundableTaxAmount'), value: displayValue('') },
+  { code: 'EFD00100', label: t('taxReportEditor.lia010.fields.amendedPayableTaxAmount'), value: displayValue('') },
+  { code: 'EFD00110', label: t('taxReportEditor.lia010.fields.netPayableTaxAmount'), value: formatCurrency(finalPayableTaxAmount.value), highlight: true },
+  { code: 'EFE00010', label: t('taxReportEditor.lia010.fields.taxAccountantName'), value: displayValue(tenantProfile.value.DAIRI_NM) },
+  { code: 'EFE00020', label: t('taxReportEditor.lia010.fields.taxAccountantTel'), value: formatTelParts(tenantProfile.value.DAIRI_TEL) },
+  { code: 'EFG00000', label: t('taxReportEditor.lia010.fields.refundAccount'), value: formatRefundAccount(tenantProfile.value.KANPU_KINYUKIKAN) },
+  { code: 'EFI00000', label: t('taxReportEditor.lia010.fields.creatorName'), value: displayValue(tenantName.value) },
+])
+const lia130EditorFields = computed<EditorField[]>(() => [
+  { code: 'EQA00010', label: t('taxReportEditor.lia130.fields.filingPeriod'), value: reportPeriodText.value },
+  { code: 'EQB00020', label: t('taxReportEditor.lia130.fields.factoryName'), value: displayValue(tenantProfile.value.SEIZOJO_NM || tenantName.value) },
+  { code: 'EQC00010', label: t('taxReportEditor.lia130.fields.priorFiscalYear'), value: formatCurrency(taxReductionPreview.value.priorFiscalYearStandardTaxAmount) },
+  { code: 'EQC00050', label: t('taxReportEditor.lia130.fields.currentMonthStandardTax'), value: formatCurrency(taxReductionPreview.value.currentMonthStandardTaxAmount) },
+  { code: 'EQC00070', label: t('taxReportEditor.lia130.fields.currentMonthStandardTax'), value: formatCurrency(taxReductionPreview.value.currentMonthStandardTaxAmount) },
+  { code: 'EQC00080', label: t('taxReportEditor.lia130.fields.currentMonthReducedTax'), value: formatCurrency(taxReductionPreview.value.currentMonthReducedTaxAmount) },
+  { code: 'EQC00100', label: t('taxReportEditor.lia130.fields.currentMonthStandardTax'), value: formatCurrency(taxReductionPreview.value.currentMonthStandardTaxAmount) },
+  { code: 'EQC00120', label: t('taxReportEditor.lia130.fields.currentMonthStandardTax'), value: formatCurrency(taxReductionPreview.value.currentMonthStandardTaxAmount) },
+  { code: 'EQC00130', label: t('taxReportEditor.lia130.fields.currentMonthReducedTax'), value: formatCurrency(taxReductionPreview.value.currentMonthReducedTaxAmount) },
+  { code: 'EQC00290', label: t('taxReportEditor.lia130.fields.cumulativeBeforeReturn'), value: formatCurrency(taxReductionPreview.value.cumulativeBeforeReturnStandardTaxAmount) },
+  { code: 'EQC00310', label: t('taxReportEditor.lia130.fields.returnStandardTax'), value: formatCurrency(taxReductionPreview.value.returnStandardTaxAmount) },
+  { code: 'EQC00330', label: t('taxReportEditor.lia130.fields.returnStandardTax'), value: formatCurrency(taxReductionPreview.value.returnStandardTaxAmount) },
+  { code: 'EQC00340', label: t('taxReportEditor.lia130.fields.returnReducedTax'), value: formatCurrency(taxReductionPreview.value.returnReducedTaxAmount) },
+  { code: 'EQC00360', label: t('taxReportEditor.lia130.fields.netStandardTax'), value: formatCurrency(taxReductionPreview.value.netStandardTaxAmount), highlight: true },
+  { code: 'EQC00380', label: t('taxReportEditor.lia130.fields.netStandardTax'), value: formatCurrency(taxReductionPreview.value.netStandardTaxAmount), highlight: true },
+  { code: 'EQC00390', label: t('taxReportEditor.lia130.fields.netReducedTax'), value: formatCurrency(taxReductionPreview.value.netReducedTaxAmount), highlight: true },
+  { code: 'EQC00400', label: t('taxReportEditor.lia130.fields.cumulativeAfterReturn'), value: formatCurrency(taxReductionPreview.value.cumulativeAfterReturnStandardTaxAmount) },
+  { code: 'EQD00000', label: t('taxReportEditor.lia130.fields.reductionCategory'), value: displayValue(taxReductionPreview.value.category) },
+  { code: 'EQE00040', label: t('taxReportEditor.lia130.fields.finalFactoryTax'), value: formatCurrency(taxReductionPreview.value.netReducedTaxAmount), highlight: true },
+])
+const exportExemptRows = computed(() =>
+  reportBreakdown.value.filter((item) => resolveTaxEvent(item.move_type, item.tax_event) === 'EXPORT_EXEMPT'),
+)
+const lia110BlankRowCount = computed(() => Math.max(0, 18 - Math.max(1, movementTableRows.value.length)))
+const lia220BlankRowCount = computed(() => Math.max(0, 18 - Math.max(1, returnTableRows.value.length)))
+const lia260BlankRowCount = computed(() => Math.max(0, 9 - Math.max(1, exportExemptRows.value.length)))
+const reportPeriodText = computed(() => formatWarekiMonth(form.tax_year, form.tax_month))
+const reportDateText = computed(() => formatWarekiDate(form.tax_year, form.tax_month, 1))
+const previewZoomPercent = computed(() => `${Math.round(previewZoom.value * 100)}%`)
+const previewScaledPageStyle = computed(() => ({
+  width: `${PREVIEW_PAGE_WIDTH_MM * previewZoom.value}mm`,
+  minHeight: `${PREVIEW_PAGE_HEIGHT_MM * previewZoom.value}mm`,
+}))
+const previewPageTransformStyle = computed(() => ({
+  transform: `scale(${previewZoom.value})`,
+  transformOrigin: 'top left',
+  fontFamily: "'Yu Mincho', YuMincho, 'Hiragino Mincho ProN', serif",
+}))
 const taxableRemovalExportLabels = computed<TaxableRemovalExportLabels>(() => ({
   summaryTitle: t('taxableRemovalReport.summary.title'),
   tableTitle: t('taxableRemovalReport.table.title'),
@@ -763,6 +1589,33 @@ function formatPercent(value: number | null | undefined) {
     style: 'percent',
     maximumFractionDigits: 1,
   }).format(Number(value))
+}
+
+function displayValue(value: string | number | null | undefined) {
+  const text = value == null ? '' : String(value).trim()
+  return text || '—'
+}
+
+function formatZipParts(value: TaxReportProfile['NOZEISHA_ZIP']) {
+  if (!value.zip1 && !value.zip2) return '—'
+  return [value.zip1, value.zip2].filter(Boolean).join('-')
+}
+
+function formatTelParts(value: TaxReportProfile['NOZEISHA_TEL']) {
+  const parts = [value.tel1, value.tel2, value.tel3].filter(Boolean)
+  return parts.length > 0 ? parts.join('-') : '—'
+}
+
+function formatRefundAccount(value: TaxReportProfile['KANPU_KINYUKIKAN']) {
+  const parts = [
+    value.kinyukikan_NM,
+    value.kinyukikan_KB,
+    value.shiten_NM,
+    value.shiten_KB,
+    value.yokin,
+    value.koza,
+  ].filter(Boolean)
+  return parts.length > 0 ? parts.join(' / ') : '—'
 }
 
 function compareNullableNumbers(
@@ -870,13 +1723,102 @@ function sortMovementTable(key: MovementSortKey) {
   sortMovementBreakdown(reportBreakdown.value)
 }
 
-function formatCurrency(value: number | null | undefined) {
-  if (value == null || Number.isNaN(value)) return '—'
-  try {
-    return currencyFormatter.value.format(value)
-  } catch {
-    return `¥${Math.round(value).toLocaleString()}`
+function clampPreviewZoom(value: number) {
+  if (!Number.isFinite(value)) return 1
+  return Math.min(PREVIEW_MAX_ZOOM, Math.max(PREVIEW_MIN_ZOOM, Number(value.toFixed(2))))
+}
+
+function setPreviewZoom(value: number) {
+  previewZoom.value = clampPreviewZoom(value)
+}
+
+function zoomPreviewBy(delta: number) {
+  setPreviewZoom(previewZoom.value + delta)
+}
+
+function resetPreviewZoom() {
+  setPreviewZoom(1)
+}
+
+function fitPreviewToWidth() {
+  const viewport = previewViewport.value
+  if (!viewport) {
+    setPreviewZoom(1)
+    return
   }
+  const pageWidthPx = PREVIEW_PAGE_WIDTH_MM * CSS_PIXELS_PER_MM
+  const availableWidth = Math.max(320, viewport.clientWidth - 48)
+  setPreviewZoom(availableWidth / pageWidthPx)
+  viewport.scrollLeft = 0
+}
+
+function startPreviewPan(event: PointerEvent) {
+  if (event.button !== 0 || !previewViewport.value) return
+  previewDragging.value = true
+  previewDragState.pointerId = event.pointerId
+  previewDragState.startX = event.clientX
+  previewDragState.startY = event.clientY
+  previewDragState.scrollLeft = previewViewport.value.scrollLeft
+  previewDragState.scrollTop = previewViewport.value.scrollTop
+  previewViewport.value.setPointerCapture?.(event.pointerId)
+}
+
+function movePreviewPan(event: PointerEvent) {
+  if (!previewDragging.value || !previewViewport.value) return
+  event.preventDefault()
+  const dx = event.clientX - previewDragState.startX
+  const dy = event.clientY - previewDragState.startY
+  previewViewport.value.scrollLeft = previewDragState.scrollLeft - dx
+  previewViewport.value.scrollTop = previewDragState.scrollTop - dy
+}
+
+function endPreviewPan(event?: PointerEvent) {
+  if (event && previewViewport.value && previewDragState.pointerId != null) {
+    previewViewport.value.releasePointerCapture?.(previewDragState.pointerId)
+  }
+  previewDragging.value = false
+  previewDragState.pointerId = null
+}
+
+function formatCurrency(value: number | null | undefined) {
+  return formatYen(value, locale.value)
+}
+
+function formatInteger(value: number | null | undefined) {
+  if (!Number.isFinite(value)) return ''
+  return new Intl.NumberFormat(locale.value, {
+    maximumFractionDigits: 0,
+  }).format(truncateYen(Number(value)))
+}
+
+function formatMilliliters(value: number | null | undefined) {
+  return formatMillilitersValue(litersToMilliliters(value), locale.value, '')
+}
+
+function previewTaxAmount(item: TaxVolumeItem) {
+  if (Number.isFinite(item.tax_amount)) return nonNegativeYen(Number(item.tax_amount))
+  const taxableVolume = item.taxable_volume_l ?? (resolveTaxEvent(item.move_type, item.tax_event) === 'TAXABLE_REMOVAL' ? item.volume_l : 0)
+  return taxAmountFromLiters(taxableVolume, item.tax_rate || 0)
+}
+
+function previewReturnTaxAmount(item: TaxVolumeItem) {
+  return taxAmountFromLiters(item.volume_l || 0, item.tax_rate || 0)
+}
+
+function formatWarekiMonth(year: number, month: number) {
+  const { eraName, yy } = toWarekiYearParts(year)
+  return `${eraName} ${yy} 年 ${month} 月分`
+}
+
+function formatWarekiDate(year: number, month: number, day: number) {
+  const { eraName, yy } = toWarekiYearParts(year)
+  return `${eraName} ${yy} 年 ${month} 月 ${day} 日`
+}
+
+function toWarekiYearParts(year: number) {
+  if (year >= 2019) return { eraName: '令和', yy: year - 2018 }
+  if (year >= 1989) return { eraName: '平成', yy: year - 1988 }
+  return { eraName: '昭和', yy: year - 1925 }
 }
 
 function isSummaryDocType(value: string): value is (typeof SUMMARY_DOC_TYPES)[number] {
@@ -891,6 +1833,7 @@ function handleBreakdownChange(index: number) {
   const item = reportBreakdown.value[index]
   if (!item) return
   if (!Number.isFinite(item.volume_l)) item.volume_l = 0
+  item.volume_ml = litersToMilliliters(item.volume_l)
   if (!Number.isFinite(item.abv)) item.abv = null
   recalcTotalTax()
 }
@@ -916,6 +1859,7 @@ function handleDisposeChange(index: number) {
   const item = disposeBreakdown.value[index]
   if (!item) return
   if (!Number.isFinite(item.volume_l)) item.volume_l = 0
+  item.volume_ml = litersToMilliliters(item.volume_l)
   if (!Number.isFinite(item.abv)) item.abv = null
   recalcTotalTax()
 }
@@ -1031,22 +1975,7 @@ function normalizeTaxCategoryCode(value: unknown) {
 }
 
 function convertToLiters(size: number | null, uomCode: string | null | undefined) {
-  if (size == null || Number.isNaN(size)) return null
-  const normalized = uomCode ? uomCode.toLowerCase() : null
-  switch (normalized) {
-    case 'l':
-    case null:
-    case undefined:
-      return size
-    case 'ml':
-      return size / 1000
-    case 'kl':
-      return size * 1000
-    case 'gal_us':
-      return size * 3.78541
-    default:
-      return size
-  }
+  return millilitersToLiters(quantityToMilliliters(size, uomCode))
 }
 
 function resolvePackageSizeLiters(row: PackageCategoryInfo | undefined) {
@@ -1380,6 +2309,8 @@ async function generateReportForPeriod(taxType: string, year: number, month: num
       const existing = breakdownMap.get(key)
       if (existing) {
         existing.volume_l += volume
+        existing.volume_ml = (existing.volume_ml ?? litersToMilliliters(existing.volume_l - volume) ?? 0)
+          + (litersToMilliliters(volume) ?? 0)
       } else {
         breakdownMap.set(key, {
           key,
@@ -1390,6 +2321,7 @@ async function generateReportForPeriod(taxType: string, year: number, month: num
           categoryName,
           abv: abv != null ? Number(abv) : null,
           volume_l: volume,
+          volume_ml: litersToMilliliters(volume),
           tax_rate: null,
         })
       }

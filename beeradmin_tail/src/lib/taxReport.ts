@@ -4,6 +4,8 @@ import {
   generateRLI0010_232,
   type RLI0010_232_ReductionTotals,
 } from '@/lib/taxreportxml/RLI0010_232'
+import { nonNegativeYen, taxAmountFromLiters, truncateYen } from '@/lib/moneyFormat'
+import { litersToMilliliters, millilitersToLiters } from '@/lib/volumeFormat'
 
 export type JsonMap = Record<string, unknown>
 
@@ -24,6 +26,7 @@ export interface TaxVolumeItem {
   categoryName: string
   abv: number | null
   volume_l: number
+  volume_ml?: number | null
   tax_rate: number | null
   row_role?: TaxReportRowRole | null
   kubun_code?: number | null
@@ -31,6 +34,12 @@ export interface TaxVolumeItem {
   export_exempt_volume_l?: number | null
   taxable_volume_l?: number | null
   tax_amount?: number | null
+  export_date?: string | null
+  export_destination?: string | null
+  export_customs_office?: string | null
+  exporter_address?: string | null
+  exporter_name?: string | null
+  export_reference_notes?: string | null
 }
 
 export interface TaxReportStoredFile {
@@ -127,10 +136,20 @@ export function calculateTaxAmount(
   taxRate: number | null | undefined,
   taxEvent?: string | null,
 ) {
-  const volume = Number.isFinite(volumeLiters) ? Number(volumeLiters) : 0
-  const rate = Number.isFinite(taxRate) ? Number(taxRate) : 0
-  const taxableKl = volume / 1000
-  return taxDirectionForMovement(moveType, taxEvent) * taxableKl * rate
+  return taxDirectionForMovement(moveType, taxEvent) * taxAmountFromLiters(volumeLiters, taxRate)
+}
+
+export function volumeMillilitersForItem(
+  item: Pick<TaxVolumeItem, 'volume_l' | 'volume_ml'>,
+) {
+  if (Number.isFinite(item.volume_ml)) return Math.max(0, Math.round(Number(item.volume_ml)))
+  return litersToMilliliters(item.volume_l) ?? 0
+}
+
+export function volumeLitersForItem(
+  item: Pick<TaxVolumeItem, 'volume_l' | 'volume_ml'>,
+) {
+  return millilitersToLiters(volumeMillilitersForItem(item)) ?? 0
 }
 
 export function normalizeTaxEventValue(value: unknown) {
@@ -395,7 +414,17 @@ export function normalizeReport(row: JsonMap): TaxReportRow {
         categoryName: String(record.categoryName ?? record.category_name ?? '—'),
         abv: typeof record.abv === 'number' ? record.abv : record.abv ? Number(record.abv) : null,
         volume_l:
-          typeof record.volume_l === 'number' ? record.volume_l : Number(record.volume_l || 0),
+          typeof record.volume_l === 'number'
+            ? record.volume_l
+            : record.volume_ml
+              ? (millilitersToLiters(Number(record.volume_ml)) ?? 0)
+              : Number(record.volume_l || 0),
+        volume_ml:
+          typeof record.volume_ml === 'number'
+            ? record.volume_ml
+            : record.volume_ml
+              ? Number(record.volume_ml)
+              : null,
         tax_rate:
           typeof record.tax_rate === 'number'
             ? record.tax_rate
@@ -404,6 +433,12 @@ export function normalizeReport(row: JsonMap): TaxReportRow {
               : record.taxRate
                 ? Number(record.taxRate)
                 : null,
+        export_date: toNullableString(record.export_date ?? record.exportDate),
+        export_destination: toNullableString(record.export_destination ?? record.exportDestination),
+        export_customs_office: toNullableString(record.export_customs_office ?? record.exportCustomsOffice),
+        exporter_address: toNullableString(record.exporter_address ?? record.exporterAddress),
+        exporter_name: toNullableString(record.exporter_name ?? record.exporterName),
+        export_reference_notes: toNullableString(record.export_reference_notes ?? record.exportReferenceNotes),
       }
     })
     .filter((item) => item.categoryId || item.categoryName)
@@ -563,7 +598,8 @@ function createKubunSummaryRow(
     non_taxable_volume_l: nonTaxableVolume,
     export_exempt_volume_l: exportExemptVolume,
     taxable_volume_l: taxableVolume,
-    tax_amount: Math.max(0, Math.round(taxAmount)),
+    tax_amount: nonNegativeYen(taxAmount),
+    volume_ml: litersToMilliliters(kubunCode === 1 ? taxableVolume : totalVolume),
   }
 }
 
@@ -588,7 +624,8 @@ function createCategorySummaryRow(
     non_taxable_volume_l: 0,
     export_exempt_volume_l: 0,
     taxable_volume_l: taxableVolume,
-    tax_amount: Math.max(0, Math.round(taxAmount)),
+    tax_amount: nonNegativeYen(taxAmount),
+    volume_ml: litersToMilliliters(taxableVolume),
   }
 }
 
@@ -608,7 +645,8 @@ function createGrandTotalRow(taxableVolume: number, taxAmount: number): TaxVolum
     non_taxable_volume_l: 0,
     export_exempt_volume_l: 0,
     taxable_volume_l: taxableVolume,
-    tax_amount: Math.max(0, Math.round(taxAmount)),
+    tax_amount: nonNegativeYen(taxAmount),
+    volume_ml: litersToMilliliters(taxableVolume),
   }
 }
 
@@ -697,11 +735,11 @@ function buildLia130ReductionTotals(options: {
 }
 
 function reducedTaxAmount(value: number) {
-  return Math.max(0, Math.floor(roundNonNegativeTax(value) * LIA130_REDUCTION_RATE))
+  return nonNegativeYen(roundNonNegativeTax(value) * LIA130_REDUCTION_RATE)
 }
 
 function roundNonNegativeTax(value: number) {
-  return Math.max(0, Math.round(Number.isFinite(value) ? value : 0))
+  return nonNegativeYen(Number.isFinite(value) ? value : 0)
 }
 
 export async function buildXmlPayload(options: {
@@ -738,6 +776,9 @@ export async function buildXmlPayload(options: {
   const returnItems = disposeOnly
     ? []
     : sourceBreakdown.filter((item) => isReturnTaxEvent(item.move_type, item.tax_event))
+  const exportExemptItems = disposeOnly
+    ? []
+    : sourceBreakdown.filter((item) => resolveTaxEvent(item.move_type, item.tax_event) === 'EXPORT_EXEMPT')
   const currentMonthStandardTaxAmount = roundNonNegativeTax(calculateTaxTotalAmount(lia110DetailItems))
   const returnStandardTaxAmount = roundNonNegativeTax(Math.abs(calculateTaxTotalAmount(returnItems)))
   const rawNetStandardTaxAmount = currentMonthStandardTaxAmount - returnStandardTaxAmount
@@ -750,10 +791,10 @@ export async function buildXmlPayload(options: {
         returnStandardTaxAmount,
       })
     : undefined
-  const totalTaxAmount = reduction?.netReducedTaxAmount ?? Math.max(0, Math.round(rawTotalTaxAmount))
+  const totalTaxAmount = reduction?.netReducedTaxAmount ?? nonNegativeYen(rawTotalTaxAmount)
   const roundedDownAmount = totalTaxAmount > 0 ? totalTaxAmount % 100 : 0
   const payableTaxAmount = Math.max(0, totalTaxAmount - roundedDownAmount)
-  const refundableTaxAmount = Math.max(0, Math.round(rawTotalTaxAmount < 0 ? Math.abs(rawTotalTaxAmount) : 0))
+  const refundableTaxAmount = Math.max(0, truncateYen(rawTotalTaxAmount < 0 ? Math.abs(rawTotalTaxAmount) : 0))
   const generatedAt = new Date().toISOString()
 
   const result = await generateRLI0010_232({
@@ -783,6 +824,7 @@ export async function buildXmlPayload(options: {
       breakdown: {
         summary: summaryItems,
         returns: returnItems,
+        exportExempt: exportExemptItems,
       },
       attachments: [],
     },

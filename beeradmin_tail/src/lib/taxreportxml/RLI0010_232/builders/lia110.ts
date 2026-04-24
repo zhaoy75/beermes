@@ -1,4 +1,5 @@
-import { lia110KubunCodeForItem, type TaxVolumeItem } from '@/lib/taxReport'
+import { lia110KubunCodeForItem, volumeMillilitersForItem, type TaxVolumeItem } from '@/lib/taxReport'
+import { nonNegativeYen, taxAmountFromMilliliters } from '@/lib/moneyFormat'
 import type { RLI0010_232_Input } from '../types'
 import { paginate } from '../../core/pagination'
 import { element, emptyElement, joinXml, optionalElement } from '../../core/xml'
@@ -32,7 +33,7 @@ export function buildLia110Xml(input: RLI0010_232_Input) {
 }
 
 function buildLia110Row(item: TaxVolumeItem) {
-  const volume = formatXmlVolume(item.volume_l)
+  const volume = formatXmlVolume(item)
   const taxRate = Math.max(0, Math.round(item.tax_rate || 0))
   const rowRole = item.row_role ?? 'detail'
   const kubunCode = lia110KubunCodeForItem(item)
@@ -80,9 +81,12 @@ function toWarekiYear(year: number) {
   return { era: 3, yy: year }
 }
 
-function formatXmlVolume(value: number) {
-  if (!Number.isFinite(value)) return 0
-  return Math.max(0, Math.round(value * 1000))
+function formatXmlVolume(itemOrLiters: TaxVolumeItem | number | null | undefined) {
+  if (typeof itemOrLiters === 'object' && itemOrLiters != null) {
+    return volumeMillilitersForItem(itemOrLiters)
+  }
+  if (!Number.isFinite(itemOrLiters)) return 0
+  return Math.max(0, Math.round(Number(itemOrLiters) * 1000))
 }
 
 function formatOptionalXmlVolume(value: number | null | undefined) {
@@ -96,10 +100,12 @@ function resolveCategoryCode(item: TaxVolumeItem) {
 }
 
 function taxAmountForRow(item: TaxVolumeItem) {
-  if (Number.isFinite(item.tax_amount)) return Math.max(0, Math.round(Number(item.tax_amount)))
+  if (Number.isFinite(item.tax_amount)) return nonNegativeYen(Number(item.tax_amount))
   if ((item.row_role ?? 'detail') === 'detail') return 0
-  const taxableVolume = item.taxable_volume_l ?? item.volume_l ?? 0
-  return Math.max(0, Math.round((taxableVolume / 1000) * (item.tax_rate || 0)))
+  const taxableMilliliters = item.taxable_volume_l != null
+    ? formatXmlVolume(item.taxable_volume_l)
+    : volumeMillilitersForItem(item)
+  return taxAmountFromMilliliters(taxableMilliliters, item.tax_rate || 0)
 }
 
 function moveTypeSummary(moveType: string, taxEvent?: string | null) {

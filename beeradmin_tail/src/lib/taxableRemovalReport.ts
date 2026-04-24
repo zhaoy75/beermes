@@ -10,6 +10,8 @@ import {
   resolveBatchTargetAbv,
 } from '@/lib/batchRecipeSnapshot'
 import { createWorkbookBlob, type WorkbookCell, type WorkbookCellValue, type WorkbookSheet } from '@/lib/fillingReportExport'
+import { formatYen, taxAmountFromMilliliters } from '@/lib/moneyFormat'
+import { formatTotalVolumeFromMilliliters, quantityToMilliliters } from '@/lib/volumeFormat'
 
 type JsonMap = Record<string, unknown>
 
@@ -438,10 +440,6 @@ function resolveMetaNumber(meta: JsonMap | null | undefined, key: string) {
   return toNumber(meta?.[key])
 }
 
-function resolveBatchLabel(meta: JsonMap | null | undefined) {
-  return resolveMetaString(meta, 'batch_label') ?? resolveMetaString(meta, 'name')
-}
-
 function resolveLocalizedName(value: Record<string, string> | null | undefined, locale: string) {
   if (!value) return ''
   const exact = value[locale]
@@ -451,26 +449,13 @@ function resolveLocalizedName(value: Record<string, string> | null | undefined, 
 }
 
 function convertToLiters(quantity: number | null, uomCode: string | null | undefined) {
-  if (quantity == null || Number.isNaN(quantity)) return null
-  switch (uomCode) {
-    case 'L':
-    case null:
-    case undefined:
-      return quantity
-    case 'mL':
-      return quantity / 1000
-    case 'kL':
-      return quantity * 1000
-    case 'gal_us':
-      return quantity * 3.78541
-    default:
-      return quantity
-  }
+  const milliliters = quantityToMilliliters(quantity, uomCode)
+  return milliliters == null ? null : milliliters / 1000
 }
 
 function quantityMlFromLiters(quantityLiters: number | null) {
   if (quantityLiters == null) return null
-  return quantityLiters * 1000
+  return quantityToMilliliters(quantityLiters, 'L')
 }
 
 function formatNumberValue(value: number | null | undefined, locale: string, digits = 0) {
@@ -490,21 +475,11 @@ function formatAbv(value: number | null | undefined, locale: string) {
 }
 
 function formatQuantityMl(value: number | null | undefined, locale: string) {
-  if (value == null || Number.isNaN(value)) return '—'
-  return new Intl.NumberFormat(locale, {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(Math.round(value))
+  return formatTotalVolumeFromMilliliters(value, locale)
 }
 
 function formatCurrency(value: number | null | undefined, locale: string) {
-  if (value == null || Number.isNaN(value)) return '—'
-  return new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency: 'JPY',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(Math.round(value))
+  return formatYen(value, locale)
 }
 
 function formatTaxRateSummary(values: number[], locale: string) {
@@ -699,7 +674,7 @@ function taxRateForLine(line: MovementLineRow, header: MovementHeaderRow) {
 
 function taxAmountForLine(quantityMl: number | null, taxRate: number | null) {
   if (quantityMl == null || taxRate == null) return null
-  return (quantityMl / 1000000) * taxRate
+  return taxAmountFromMilliliters(quantityMl, taxRate)
 }
 
 async function loadUoms(supabase: SupabaseClient) {

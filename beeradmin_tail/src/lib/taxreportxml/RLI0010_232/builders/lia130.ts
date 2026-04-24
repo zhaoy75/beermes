@@ -1,6 +1,7 @@
 import type { RLI0010_232_Input, RLI0010_232_ReductionTotals } from '../types'
 import { LIA130_ID, SOFTWARE_NAME } from '../constants'
 import { element, emptyElement, joinXml, optionalElement } from '../../core/xml'
+import { nonNegativeYen } from '@/lib/moneyFormat'
 
 export function buildLia130Xml(input: RLI0010_232_Input) {
   const reduction = input.totals.reduction
@@ -80,5 +81,5 @@ function toWarekiYear(year: number) {
 }
 
 function amount(value: number) {
-  return Math.max(0, Math.round(Number.isFinite(value) ? value : 0))
+  return nonNegativeYen(Number.isFinite(value) ? value : 0)
 }

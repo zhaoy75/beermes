@@ -13,14 +13,15 @@ import {
   resolveBatchStyleName,
   resolveBatchTargetAbv,
 } from '@/lib/batchRecipeSnapshot'
-import { formatVolumeNumber } from '@/lib/volumeFormat'
+import { formatTotalVolumeFromLiters, millilitersToLiters, quantityToMilliliters } from '@/lib/volumeFormat'
 
 type ContainerKind = 'tank' | 'keg' | 'case' | 'other'
+type JsonMap = Record<string, unknown>
 
 interface CategoryRow {
   def_id: string
   def_key: string
-  spec: Record<string, any>
+  spec: JsonMap
 }
 
 interface SiteOption {
@@ -211,7 +212,7 @@ export function useProducedBeerInventory() {
   }
 
   function formatVolumeNumberValue(value: number | null | undefined) {
-    return formatVolumeNumber(value, locale.value)
+    return formatTotalVolumeFromLiters(value, locale.value)
   }
 
   function formatAbv(value: number | null | undefined) {
@@ -274,47 +275,27 @@ export function useProducedBeerInventory() {
     return 'other'
   }
 
-  function resolveBatchLabel(meta: Record<string, any> | null | undefined) {
+  function resolveBatchLabel(meta: JsonMap | null | undefined) {
     const label = meta?.label
     if (typeof label !== 'string') return null
     const trimmed = label.trim()
     return trimmed.length ? trimmed : null
   }
 
-  function resolveMetaString(meta: Record<string, any> | null | undefined, key: string) {
-    const value = meta?.[key]
-    if (typeof value !== 'string') return null
-    const trimmed = value.trim()
-    return trimmed.length ? trimmed : null
-  }
-
-  function resolveMetaNumber(meta: Record<string, any> | null | undefined, key: string) {
-    const value = meta?.[key]
+  function toNumber(value: unknown): number | null {
     if (value == null) return null
     const num = Number(value)
     return Number.isFinite(num) ? num : null
   }
 
-  function toNumber(value: any): number | null {
+  function toStringOrNull(value: unknown) {
     if (value == null) return null
-    const num = Number(value)
-    return Number.isFinite(num) ? num : null
+    const text = String(value)
+    return text ? text : null
   }
 
   function convertToLiters(size: number | null, uomCode: string | null | undefined) {
-    if (size == null || Number.isNaN(size)) return null
-    switch (uomCode) {
-      case 'L':
-      case null:
-      case undefined:
-        return size
-      case 'mL':
-        return size / 1000
-      case 'gal_us':
-        return size * 3.78541
-      default:
-        return size
-    }
+    return millilitersToLiters(quantityToMilliliters(size, uomCode))
   }
 
   async function ensureTenant() {
@@ -360,7 +341,7 @@ export function useProducedBeerInventory() {
       .eq('is_active', true)
     if (siteTypeError) throw siteTypeError
     const siteTypeMap = new Map<string, string>()
-    ;(siteTypes ?? []).forEach((row: any) => {
+    ;((siteTypes ?? []) as JsonMap[]).forEach((row) => {
       if (!row?.def_id) return
       siteTypeMap.set(String(row.def_id), String(row.def_key ?? ''))
     })
@@ -437,7 +418,7 @@ export function useProducedBeerInventory() {
         .eq('is_active', true)
       if (attrDefError) throw attrDefError
 
-      ;(attrDefs ?? []).forEach((row: any) => {
+      ;((attrDefs ?? []) as JsonMap[]).forEach((row) => {
         const id = Number(row.attr_id)
         if (!Number.isFinite(id)) return
         attrIds.push(id)
@@ -453,7 +434,7 @@ export function useProducedBeerInventory() {
           .in('attr_id', attrIds)
         if (attrValueError) throw attrValueError
 
-        ;(attrValues ?? []).forEach((row: any) => {
+        ;((attrValues ?? []) as JsonMap[]).forEach((row) => {
           const batchId = String(row.entity_id ?? '')
           if (!batchId) return
           if (!attrValueByBatch.has(batchId)) {
@@ -470,7 +451,11 @@ export function useProducedBeerInventory() {
           if (!code) return
 
           if (code === 'beer_category') {
-            const jsonDefId = row.value_json?.def_id
+            const valueJson =
+              row.value_json && typeof row.value_json === 'object' && !Array.isArray(row.value_json)
+                ? (row.value_json as JsonMap)
+                : null
+            const jsonDefId = valueJson?.def_id
             if (typeof jsonDefId === 'string' && jsonDefId.trim()) {
               entry.beerCategoryId = jsonDefId.trim()
             } else if (typeof row.value_text === 'string' && row.value_text.trim()) {
@@ -505,7 +490,7 @@ export function useProducedBeerInventory() {
         .in('entity_id', uniqueIds)
       if (keywordError) throw keywordError
 
-      ;(keywordAttrs ?? []).forEach((row: any) => {
+      ;((keywordAttrs ?? []) as JsonMap[]).forEach((row) => {
         const batchId = String(row.entity_id ?? '')
         if (!batchId) return
         const keywordSet = ensureKeywordSet(batchId)
@@ -524,11 +509,13 @@ export function useProducedBeerInventory() {
       .in('id', uniqueIds)
     if (error) throw error
 
-    ;(data ?? []).forEach((row: any) => {
-      const attr = attrValueByBatch.get(row.id)
+    ;((data ?? []) as JsonMap[]).forEach((row) => {
+      const rowId = toStringOrNull(row.id)
+      if (!rowId) return
+      const attr = attrValueByBatch.get(rowId)
       const meta =
         row.meta && typeof row.meta === 'object' && !Array.isArray(row.meta)
-          ? (row.meta as Record<string, any>)
+          ? (row.meta as JsonMap)
           : null
       const productName = resolveBatchDisplayName(row)
       const keywordText = buildKeywordIndex(
@@ -536,11 +523,11 @@ export function useProducedBeerInventory() {
         row.batch_label,
         row.product_name,
         meta,
-        keywordTermsByBatch.get(row.id),
+        keywordTermsByBatch.get(rowId),
       )
 
-      infoMap.set(row.id, {
-        batchCode: row.batch_code ?? resolveBatchLabel(meta) ?? null,
+      infoMap.set(rowId, {
+        batchCode: toStringOrNull(row.batch_code) ?? resolveBatchLabel(meta) ?? null,
         beerCategoryId: resolveBatchBeerCategoryId(row, attr),
         targetAbv: resolveBatchTargetAbv(row, attr),
         styleName: resolveBatchStyleName(row, attr),
@@ -570,7 +557,9 @@ export function useProducedBeerInventory() {
         return
       }
 
-      const lotIds = Array.from(new Set(inventory.map((row: any) => row.lot_id).filter(Boolean)))
+      const lotIds = Array.from(
+        new Set((inventory as JsonMap[]).map((row) => toStringOrNull(row.lot_id)).filter(Boolean)),
+      )
       if (!lotIds.length) {
         inventoryRows.value = []
         return
@@ -584,9 +573,10 @@ export function useProducedBeerInventory() {
         .neq('status', 'void')
       if (lotError) throw lotError
 
-      const lotMap = new Map<string, any>()
-      ;(lots ?? []).forEach((row: any) => {
-        if (String(row.status ?? '').toLowerCase() !== 'void') lotMap.set(row.id, row)
+      const lotMap = new Map<string, JsonMap>()
+      ;((lots ?? []) as JsonMap[]).forEach((row) => {
+        const lotId = toStringOrNull(row.id)
+        if (lotId && String(row.status ?? '').toLowerCase() !== 'void') lotMap.set(lotId, row)
       })
       if (lotMap.size === 0) {
         inventoryRows.value = []
@@ -596,15 +586,15 @@ export function useProducedBeerInventory() {
       const packageIds = Array.from(
         new Set(
           Array.from(lotMap.values())
-            .map((row: any) => row.package_id)
-            .filter(Boolean),
+            .map((row) => toStringOrNull(row.package_id))
+            .filter((value): value is string => Boolean(value)),
         ),
       )
       const batchIds = Array.from(
         new Set(
           Array.from(lotMap.values())
-            .map((row: any) => row.batch_id)
-            .filter(Boolean),
+            .map((row) => toStringOrNull(row.batch_id))
+            .filter((value): value is string => Boolean(value)),
         ),
       )
 
@@ -644,16 +634,18 @@ export function useProducedBeerInventory() {
 
       const accum = new Map<string, InventoryAccumulator>()
 
-      inventory.forEach((row: any) => {
-        const lot = lotMap.get(row.lot_id)
+      ;(inventory as JsonMap[]).forEach((row) => {
+        const lot = lotMap.get(toStringOrNull(row.lot_id) ?? '')
         if (!lot) return
 
-        const siteId = row.site_id as string | null
+        const siteId = toStringOrNull(row.site_id)
         if (!siteId) return
         if (isDomesticRemovalDummySite(siteId)) return
 
-        const pkgInfo = lot.package_id ? packageInfoMap.get(lot.package_id) : undefined
-        const batchInfo = lot.batch_id ? batchInfoMap.get(lot.batch_id) : undefined
+        const packageId = toStringOrNull(lot.package_id)
+        const batchId = toStringOrNull(lot.batch_id)
+        const pkgInfo = packageId ? packageInfoMap.get(packageId) : undefined
+        const batchInfo = batchId ? batchInfoMap.get(batchId) : undefined
         const lotMeta =
           lot.meta && typeof lot.meta === 'object' && !Array.isArray(lot.meta)
             ? (lot.meta as Record<string, unknown>)
@@ -665,13 +657,14 @@ export function useProducedBeerInventory() {
         const inventoryQty = toNumber(row.qty)
         if (inventoryQty == null || inventoryQty <= 0) return
 
-        const inventoryUomCode = row.uom_id ? (uomMap.value.get(row.uom_id) ?? null) : null
+        const inventoryUomId = toStringOrNull(row.uom_id)
+        const inventoryUomCode = inventoryUomId ? (uomMap.value.get(inventoryUomId) ?? null) : null
         const qtyLiters = convertToLiters(inventoryQty, inventoryUomCode) ?? 0
         const unitSizeLiters = pkgInfo?.unitSizeLiters ?? null
         const qtyPackages =
           unitSizeLiters != null && unitSizeLiters > 0 ? qtyLiters / unitSizeLiters : 0
         const packageGroupKey = pkgInfo?.packageId ?? `label:${pkgInfo?.packageTypeLabel ?? ''}`
-        const batchGroupKey = lot.batch_id ? String(lot.batch_id) : ''
+        const batchGroupKey = batchId ?? ''
         const lotNoGroupKey = String(lot.lot_no ?? '')
         const lotTaxTypeGroupKey = String(lot.lot_tax_type ?? '')
         const key = `${batchGroupKey}__${lotNoGroupKey}__${lotTaxTypeGroupKey}__${packageGroupKey}__${siteId}`
@@ -700,9 +693,9 @@ export function useProducedBeerInventory() {
             siteId,
             siteIds: new Set([siteId]),
             siteLabels: new Set(siteName && siteName !== '—' ? [siteName] : []),
-            lotNo: lot.lot_no ?? null,
-            lotTaxType: lot.lot_tax_type ?? null,
-            batchId: lot.batch_id ? String(lot.batch_id) : null,
+            lotNo: toStringOrNull(lot.lot_no),
+            lotTaxType: toStringOrNull(lot.lot_tax_type),
+            batchId,
             batchCode: batchInfo?.batchCode ?? null,
             beerCategoryId: batchInfo?.beerCategoryId ?? null,
             targetAbv: batchInfo?.targetAbv ?? null,
@@ -716,7 +709,7 @@ export function useProducedBeerInventory() {
             arrivalIntent,
             showAsInventoryWithoutPackage,
             keywordParts,
-            productionDate: lot.produced_at ?? null,
+            productionDate: toStringOrNull(lot.produced_at),
             qtyPackages: 0,
             qtyLiters: 0,
             canVoid: siteTypeKey(siteId) === 'TAX_STORAGE',
@@ -736,7 +729,8 @@ export function useProducedBeerInventory() {
         entry.qtyLiters += qtyLiters
         entry.qtyPackages += qtyPackages
         pushKeyword(entry.keywordParts, lot.id)
-        if (!entry.productionDate && lot.produced_at) entry.productionDate = lot.produced_at
+        const producedAt = toStringOrNull(lot.produced_at)
+        if (!entry.productionDate && producedAt) entry.productionDate = producedAt
         if (siteTypeKey(siteId) === 'TAX_STORAGE') {
           const targetKey = `${lot.id}__${siteId}`
           if (!entry.voidTargets.some((target) => `${target.lotId}__${target.siteId}` === targetKey)) {
@@ -750,14 +744,14 @@ export function useProducedBeerInventory() {
         if (detail) {
           detail.qtyLiters = (detail.qtyLiters ?? 0) + qtyLiters
           detail.qtyPackages = (detail.qtyPackages ?? 0) + qtyPackages
-          if (!detail.productionDate && lot.produced_at) detail.productionDate = lot.produced_at
+          if (!detail.productionDate && producedAt) detail.productionDate = producedAt
         } else {
           entry.detailMap.set(detailKey, {
             id: detailKey,
             lotId: String(lot.id),
-            lotNo: lot.lot_no ?? null,
-            lotTaxType: lot.lot_tax_type ?? null,
-            productionDate: lot.produced_at ?? null,
+            lotNo: toStringOrNull(lot.lot_no),
+            lotTaxType: toStringOrNull(lot.lot_tax_type),
+            productionDate: producedAt,
             qtyPackages: qtyPackages > 0 ? qtyPackages : null,
             qtyLiters: qtyLiters > 0 ? qtyLiters : null,
             siteId,

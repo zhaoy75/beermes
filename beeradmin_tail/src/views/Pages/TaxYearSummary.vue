@@ -130,7 +130,8 @@ import {
 } from '@/lib/alcoholTypeRegistry'
 import { supabase } from '@/lib/supabase'
 import { calculateTaxAmount, normalizeTaxEventValue, resolveTaxEvent } from '@/lib/taxReport'
-import { formatVolume as formatVolumeDisplay } from '@/lib/volumeFormat'
+import { formatYen, truncateYen } from '@/lib/moneyFormat'
+import { formatTotalVolumeFromLiters, millilitersToLiters, quantityToMilliliters } from '@/lib/volumeFormat'
 
 Chart.register(...registerables)
 
@@ -274,22 +275,13 @@ function monthLabel(monthIndex: number) {
   return monthFormatter.value.format(new Date(selectedYear.value, monthIndex, 1))
 }
 
-const currencyFormatter = computed(() =>
-  new Intl.NumberFormat(locale.value, { style: 'currency', currency: 'JPY', maximumFractionDigits: 0 }),
-)
-
 function formatVolume(value: number) {
   if (!Number.isFinite(value)) return '—'
-  return formatVolumeDisplay(value, locale.value)
+  return formatTotalVolumeFromLiters(value, locale.value)
 }
 
 function formatCurrency(value: number) {
-  if (!Number.isFinite(value)) return '—'
-  try {
-    return currencyFormatter.value.format(value)
-  } catch {
-    return `¥${Math.round(value).toLocaleString()}`
-  }
+  return formatYen(value, locale.value)
 }
 
 function formatDate(value: string) {
@@ -392,22 +384,7 @@ async function loadUoms() {
 }
 
 function convertToLiters(size: number | null | undefined, uomCode: string | null | undefined) {
-  if (size == null || Number.isNaN(Number(size))) return null
-  const numeric = Number(size)
-  switch (uomCode?.toLowerCase()) {
-    case 'l':
-    case null:
-    case undefined:
-      return numeric
-    case 'ml':
-      return numeric / 1000
-    case 'kl':
-      return numeric * 1000
-    case 'gal_us':
-      return numeric * 3.78541
-    default:
-      return numeric
-  }
+  return millilitersToLiters(quantityToMilliliters(size, uomCode))
 }
 
 function toNumber(value: unknown): number | null {
@@ -750,7 +727,7 @@ function updateChart() {
 
     const labels = monthlySeries.value.map((entry) => monthLabel(entry.month))
     const volumes = monthlySeries.value.map((entry) => Number(entry.volume.toFixed(2)))
-    const taxes = monthlySeries.value.map((entry) => Number(entry.tax.toFixed(0)))
+    const taxes = monthlySeries.value.map((entry) => truncateYen(entry.tax))
 
     if (!chartInstance) {
       chartInstance = new Chart(ctx, {

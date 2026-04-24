@@ -3101,6 +3101,112 @@
     "actions": {
       "back": "Back to list"
     },
+    "modes": {
+      "edit": "Edit",
+      "preview": "Document preview"
+    },
+    "summary": {
+      "standardTaxTotal": "Standard tax total",
+      "reductionTax": "Reduced amount",
+      "filingTax": "Filing tax",
+      "refundTax": "Refund tax",
+      "finalPayableTax": "Final payable tax"
+    },
+    "fieldList": {
+      "code": "XML field",
+      "label": "Field",
+      "value": "Value"
+    },
+    "forms": {
+      "lia010": {
+        "title": "Liquor tax return",
+        "shortTitle": "Tax return",
+        "subtitle": "Review the filing period, taxpayer, factory, and tax amounts."
+      },
+      "lia110": {
+        "title": "Tax calculation table",
+        "shortTitle": "Tax calc"
+      },
+      "lia130": {
+        "title": "Reduced tax calculation table",
+        "shortTitle": "Reduction"
+      },
+      "lia220": {
+        "title": "Return deduction/refund calculation",
+        "shortTitle": "Returns"
+      },
+      "lia260": {
+        "title": "Export-exempt liquor details",
+        "shortTitle": "Export",
+        "subtitle": "Review export-exempt quantity details. XML output is enabled after the detail storage mapping is confirmed."
+      }
+    },
+    "lia010": {
+      "period": "Filing period",
+      "taxOffice": "Tax office",
+      "declarationType": "Declaration type",
+      "declarationTypeDefault": "On-time return",
+      "taxpayer": "Taxpayer",
+      "factory": "Reporting factory",
+      "generatedAtXmlCreation": "Set when XML is generated",
+      "fields": {
+        "filingPeriod": "Filing period",
+        "submissionDate": "Submission date",
+        "taxOffice": "Tax office",
+        "factoryZip": "Factory postal code",
+        "factoryAddress": "Factory address",
+        "factoryName": "Factory name",
+        "factoryTel": "Factory phone",
+        "taxpayerZip": "Taxpayer postal code",
+        "taxpayerAddress": "Taxpayer address",
+        "taxpayerTel": "Taxpayer phone",
+        "taxpayerName": "Taxpayer name",
+        "representativeName": "Representative name",
+        "declarationType": "Declaration type",
+        "taxAmount": "Tax amount",
+        "roundedDownAmount": "Rounded-down amount under 100 yen",
+        "refundableTaxAmount": "Refundable tax amount",
+        "payableTaxAmount": "Payable tax amount",
+        "amendedRefundableTaxAmount": "Amended refundable tax amount",
+        "amendedPayableTaxAmount": "Amended payable tax amount",
+        "netPayableTaxAmount": "Net payable tax amount",
+        "taxAccountantName": "Tax accountant name",
+        "taxAccountantTel": "Tax accountant phone",
+        "refundAccount": "Refund bank account",
+        "creatorName": "Creator name"
+      }
+    },
+    "lia130": {
+      "fields": {
+        "filingPeriod": "Filing period",
+        "factoryName": "Reporting factory",
+        "priorFiscalYear": "Prior fiscal-year cumulative tax through previous month",
+        "currentMonthStandardTax": "Current-month standard tax",
+        "currentMonthReducedTax": "Current-month reduced tax",
+        "cumulativeBeforeReturn": "Cumulative standard tax before return deduction",
+        "returnStandardTax": "Return deduction standard tax",
+        "returnReducedTax": "Return deduction reduced tax",
+        "netStandardTax": "Net standard tax",
+        "netReducedTax": "Net reduced tax",
+        "cumulativeAfterReturn": "Cumulative standard tax after return deduction",
+        "reductionCategory": "Reduction-rate category",
+        "finalFactoryTax": "Reporting-factory total tax amount"
+      }
+    },
+    "lia260": {
+      "exportDate": "Export or sale date",
+      "destination": "Destination",
+      "customsOffice": "Export customs office",
+      "exporter": "Exporter"
+    },
+    "preview": {
+      "empty": "No detail rows to display.",
+      "zoomOut": "Zoom out",
+      "zoomIn": "Zoom in",
+      "resetZoom": "Reset to 100%",
+      "fitWidth": "Fit to width",
+      "dragHint": "Drag to pan the page."
+    },
     "columns": {
       "kubun": "Class",
       "taxEvent": "Tax movement type"
@@ -3181,7 +3287,7 @@
       "columns": {
         "liquorCode": "Liquor code",
         "abv": "ABV",
-        "quantityMl": "Quantity (mL)",
+        "quantityMl": "Quantity (L)",
         "packageCount": "Package count",
         "taxRate": "Tax rate",
         "taxAmount": "Tax amount"
@@ -3195,7 +3301,7 @@
         "abv": "Alcohol (%)",
         "movementAt": "Date",
         "container": "Container",
-        "quantityMl": "Quantity (mL)",
+        "quantityMl": "Quantity (L)",
         "unitPrice": "Unit price (JPY)",
         "amount": "Amount (JPY)",
         "removalType": "Removal type",

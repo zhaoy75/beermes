@@ -284,7 +284,8 @@ import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import TableColumnHeader from '@/components/common/TableColumnHeader.vue'
 import { useConfirmDialog } from '@/composables/useConfirmDialog'
 import { useColumnTableControls } from '@/composables/useColumnTableControls'
-import { formatVolume as formatVolumeDisplay } from '@/lib/volumeFormat'
+import { formatYen } from '@/lib/moneyFormat'
+import { formatTotalVolumeFromLiters } from '@/lib/volumeFormat'
 import { supabase } from '@/lib/supabase'
 import {
   createEmptyTaxReportProfile,
@@ -382,10 +383,6 @@ const yearOptions = computed(() => {
 })
 
 const monthOptions = computed(() => [4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3])
-const currencyFormatter = computed(
-  () => new Intl.NumberFormat(locale.value, { style: 'currency', currency: 'JPY', maximumFractionDigits: 0 }),
-)
-
 function statusLabel(status: string) {
   const map = tm('taxReport.statusMap')
   if (!map || typeof map !== 'object') return status
@@ -421,16 +418,11 @@ function formatPeriod(row: TaxReportRow) {
 }
 
 function formatCurrency(value: number | null | undefined) {
-  if (value == null || Number.isNaN(value)) return '—'
-  try {
-    return currencyFormatter.value.format(value)
-  } catch {
-    return `¥${Math.round(value).toLocaleString()}`
-  }
+  return formatYen(value, locale.value)
 }
 
 function formatVolume(value: number | null | undefined) {
-  return formatVolumeDisplay(value, locale.value)
+  return formatTotalVolumeFromLiters(value, locale.value)
 }
 
 function formatAbv(value: number | null | undefined) {

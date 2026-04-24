@@ -66,6 +66,7 @@ export interface RLI0010_232_Input {
   breakdown: {
     summary: TaxVolumeItem[]
     returns: TaxVolumeItem[]
+    exportExempt: TaxVolumeItem[]
   }
   attachments: Array<{
     kind: string
@@ -85,6 +86,7 @@ export interface RLI0010_232_Result {
     LIA110: { included: boolean; pageCount: number; rowCount: number }
     LIA130: { included: boolean }
     LIA220: { included: boolean; pageCount: number; rowCount: number }
+    LIA260: { included: boolean; pageCount: number; rowCount: number }
   }
   validation: {
     businessValid: boolean

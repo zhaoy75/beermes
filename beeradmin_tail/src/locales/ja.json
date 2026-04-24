@@ -3093,6 +3093,112 @@
     "actions": {
       "back": "一覧へ戻る"
     },
+    "modes": {
+      "edit": "編集",
+      "preview": "帳票プレビュー"
+    },
+    "summary": {
+      "standardTaxTotal": "本則税額合計",
+      "reductionTax": "軽減税額",
+      "filingTax": "納付税額",
+      "refundTax": "還付税額",
+      "finalPayableTax": "最終納付税額"
+    },
+    "fieldList": {
+      "code": "XML項目",
+      "label": "項目",
+      "value": "値"
+    },
+    "forms": {
+      "lia010": {
+        "title": "酒税納税申告書",
+        "shortTitle": "納税申告",
+        "subtitle": "申告対象年月、納税者、製造場、税額を確認します。"
+      },
+      "lia110": {
+        "title": "税額算出表",
+        "shortTitle": "税額算出"
+      },
+      "lia130": {
+        "title": "軽減税額算出表",
+        "shortTitle": "軽減税額"
+      },
+      "lia220": {
+        "title": "戻入れ酒類の控除(還付)税額計算書",
+        "shortTitle": "戻入控除"
+      },
+      "lia260": {
+        "title": "輸出免税酒類輸出明細書兼輸出酒類販売場における購入明細書",
+        "shortTitle": "輸出免税",
+        "subtitle": "輸出免税数量の明細を確認します。XML出力は詳細項目の保存先確定後に有効化します。"
+      }
+    },
+    "lia010": {
+      "period": "申告対象年月",
+      "taxOffice": "提出先税務署",
+      "declarationType": "申告区分",
+      "declarationTypeDefault": "期限内申告書",
+      "taxpayer": "納税者",
+      "factory": "申告対象製造場",
+      "generatedAtXmlCreation": "XML生成時に設定",
+      "fields": {
+        "filingPeriod": "申告対象年月",
+        "submissionDate": "提出年月日",
+        "taxOffice": "提出先税務署",
+        "factoryZip": "製造場郵便番号",
+        "factoryAddress": "製造場所在地",
+        "factoryName": "製造場名称",
+        "factoryTel": "製造場電話番号",
+        "taxpayerZip": "納税者郵便番号",
+        "taxpayerAddress": "納税者住所",
+        "taxpayerTel": "納税者電話番号",
+        "taxpayerName": "納税者氏名又は名称",
+        "representativeName": "代表者氏名",
+        "declarationType": "申告区分",
+        "taxAmount": "税額",
+        "roundedDownAmount": "100円未満切捨額",
+        "refundableTaxAmount": "還付税額",
+        "payableTaxAmount": "納付税額",
+        "amendedRefundableTaxAmount": "修正申告還付税額",
+        "amendedPayableTaxAmount": "修正申告納付税額",
+        "netPayableTaxAmount": "差引納付税額",
+        "taxAccountantName": "税理士氏名",
+        "taxAccountantTel": "税理士電話番号",
+        "refundAccount": "還付金融機関",
+        "creatorName": "作成者名"
+      }
+    },
+    "lia130": {
+      "fields": {
+        "filingPeriod": "申告対象年月",
+        "factoryName": "申告対象製造場",
+        "priorFiscalYear": "前月までの当年度酒税累計額",
+        "currentMonthStandardTax": "当月分本則税額",
+        "currentMonthReducedTax": "当月分軽減後税額",
+        "cumulativeBeforeReturn": "戻入控除前累計本則税額",
+        "returnStandardTax": "戻入控除分本則税額",
+        "returnReducedTax": "戻入控除分軽減後税額",
+        "netStandardTax": "差引本則税額",
+        "netReducedTax": "差引軽減後税額",
+        "cumulativeAfterReturn": "戻入控除後累計本則税額",
+        "reductionCategory": "軽減割合の区分",
+        "finalFactoryTax": "申告対象製造場合計酒税額"
+      }
+    },
+    "lia260": {
+      "exportDate": "輸出年月日又は販売年月日",
+      "destination": "仕向地",
+      "customsOffice": "輸出港の所轄税関",
+      "exporter": "輸出者等"
+    },
+    "preview": {
+      "empty": "表示対象の明細はありません。",
+      "zoomOut": "縮小",
+      "zoomIn": "拡大",
+      "resetZoom": "100%に戻す",
+      "fitWidth": "幅に合わせる",
+      "dragHint": "ドラッグで移動できます。"
+    },
     "columns": {
       "kubun": "区分",
       "taxEvent": "税務移出種別"
@@ -3173,7 +3279,7 @@
       "columns": {
         "liquorCode": "酒類分類",
         "abv": "ABV",
-        "quantityMl": "数量(ml)",
+        "quantityMl": "数量(L)",
         "packageCount": "存在数",
         "taxRate": "税率",
         "taxAmount": "酒税"
@@ -3187,7 +3293,7 @@
         "abv": "アルコール分（％）",
         "movementAt": "年月日",
         "container": "容器",
-        "quantityMl": "数量（mℓ）",
+        "quantityMl": "数量(L)",
         "unitPrice": "単価（円）",
         "amount": "価格（円）",
         "removalType": "移出区分",

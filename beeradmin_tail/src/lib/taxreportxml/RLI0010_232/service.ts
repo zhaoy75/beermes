@@ -1,5 +1,6 @@
 import { buildXml } from './builders/root'
 import { reportName } from './constants'
+import { schemaMap } from './schemaMap'
 import type { RLI0010_232_Input, RLI0010_232_Result } from './types'
 import { validateBusiness } from './validation/business'
 import { validateStructural } from './validation/structural'
@@ -43,7 +44,9 @@ export async function generateRLI0010_232(options: Options): Promise<RLI0010_232
       LIA010: { included: true },
       LIA110: {
         included: input.breakdown.summary.length > 0,
-        pageCount: input.breakdown.summary.length > 0 ? Math.ceil(input.breakdown.summary.length / 18) : 0,
+        pageCount: input.breakdown.summary.length > 0
+          ? Math.ceil(input.breakdown.summary.length / schemaMap.forms.LIA110.rowsPerPage)
+          : 0,
         rowCount: input.breakdown.summary.length,
       },
       LIA130: {
@@ -51,8 +54,17 @@ export async function generateRLI0010_232(options: Options): Promise<RLI0010_232
       },
       LIA220: {
         included: input.breakdown.returns.length > 0,
-        pageCount: input.breakdown.returns.length > 0 ? Math.ceil(input.breakdown.returns.length / 18) : 0,
+        pageCount: input.breakdown.returns.length > 0
+          ? Math.ceil(input.breakdown.returns.length / schemaMap.forms.LIA220.rowsPerPage)
+          : 0,
         rowCount: input.breakdown.returns.length,
+      },
+      LIA260: {
+        included: input.breakdown.exportExempt.length > 0,
+        pageCount: input.breakdown.exportExempt.length > 0
+          ? Math.ceil(input.breakdown.exportExempt.length / schemaMap.forms.LIA260.rowsPerPage)
+          : 0,
+        rowCount: input.breakdown.exportExempt.length,
       },
     },
     validation: {

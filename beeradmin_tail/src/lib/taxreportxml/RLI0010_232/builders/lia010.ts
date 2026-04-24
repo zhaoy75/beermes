@@ -1,6 +1,7 @@
 import type { RLI0010_232_Input } from '../types'
 import { LIA010_ID, SOFTWARE_NAME } from '../constants'
 import { element, emptyElement, joinXml, optionalElement } from '../../core/xml'
+import { nonNegativeYen } from '@/lib/moneyFormat'
 
 export function buildLia010Xml(input: RLI0010_232_Input) {
   const { totals, report, profile, tenant } = input
@@ -31,18 +32,18 @@ export function buildLia010Xml(input: RLI0010_232_Input) {
       ])),
       element('EFD00000', joinXml([
         element('EFD00010', joinXml([
-          optionalElement('EFD00020', Math.round(totals.totalTaxAmount), { AutoCalc: 1 }),
-          optionalElement('EFD00030', Math.max(0, Math.round(totals.roundedDownAmount || 0)), { AutoCalc: 1 }),
-          optionalElement('EFD00040', Math.max(0, Math.round(totals.refundableTaxAmount || 0)), { AutoCalc: 1 }),
-          optionalElement('EFD00050', Math.max(0, Math.round(totals.payableTaxAmount || 0)), { AutoCalc: 1 }),
+          optionalElement('EFD00020', nonNegativeYen(totals.totalTaxAmount), { AutoCalc: 1 }),
+          optionalElement('EFD00030', nonNegativeYen(totals.roundedDownAmount || 0), { AutoCalc: 1 }),
+          optionalElement('EFD00040', nonNegativeYen(totals.refundableTaxAmount || 0), { AutoCalc: 1 }),
+          optionalElement('EFD00050', nonNegativeYen(totals.payableTaxAmount || 0), { AutoCalc: 1 }),
         ])),
         totals.amendedRefundableTaxAmount || totals.amendedPayableTaxAmount
           ? element('EFD00060', joinXml([
-              optionalElement('EFD00090', Math.max(0, Math.round(totals.amendedRefundableTaxAmount || 0)), { AutoCalc: 1 }),
-              optionalElement('EFD00100', Math.max(0, Math.round(totals.amendedPayableTaxAmount || 0)), { AutoCalc: 1 }),
+              optionalElement('EFD00090', nonNegativeYen(totals.amendedRefundableTaxAmount || 0), { AutoCalc: 1 }),
+              optionalElement('EFD00100', nonNegativeYen(totals.amendedPayableTaxAmount || 0), { AutoCalc: 1 }),
             ]))
           : '',
-        optionalElement('EFD00110', Math.max(0, Math.round(totals.netPayableTaxAmount || totals.payableTaxAmount || 0)), { AutoCalc: 1 }),
+        optionalElement('EFD00110', nonNegativeYen(totals.netPayableTaxAmount || totals.payableTaxAmount || 0), { AutoCalc: 1 }),
       ])),
       hasTaxAccountant
         ? element('EFE00000', joinXml([

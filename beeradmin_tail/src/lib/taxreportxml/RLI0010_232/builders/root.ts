@@ -5,18 +5,21 @@ import { buildLia010Xml } from './lia010'
 import { buildLia110Xml } from './lia110'
 import { buildLia130Xml } from './lia130'
 import { buildLia220Xml } from './lia220'
+import { buildLia260Xml } from './lia260'
 import type { RLI0010_232_Input } from '../types'
-import { LIA010_ID, LIA130_ID, buildLia110Id, buildLia220Id } from '../constants'
+import { LIA010_ID, LIA130_ID, buildLia110Id, buildLia220Id, buildLia260Id } from '../constants'
 
 export function buildXml(input: RLI0010_232_Input) {
   const lia110Pages = buildLia110Xml(input)
   const lia130Xml = buildLia130Xml(input)
   const lia220Pages = buildLia220Xml(input)
+  const lia260Pages = buildLia260Xml(input)
   const formIds = [
     LIA010_ID,
     ...lia110Pages.map((_, index) => buildLia110Id(index + 1)),
     ...(lia130Xml ? [LIA130_ID] : []),
     ...lia220Pages.map((_, index) => buildLia220Id(index + 1)),
+    ...lia260Pages.map((_, index) => buildLia260Id(index + 1)),
   ]
   return `<?xml version="1.0" encoding="UTF-8"?>${element(
     'DATA',
@@ -30,6 +33,7 @@ export function buildXml(input: RLI0010_232_Input) {
           ...lia110Pages,
           lia130Xml,
           ...lia220Pages,
+          ...lia260Pages,
         ]), { id: 'CONTENTS' }),
       ]),
       { id: 'RLI0010', VR: '23.2.0' },

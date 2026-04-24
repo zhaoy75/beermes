@@ -411,7 +411,12 @@ import { useColumnTableControls } from '@/composables/useColumnTableControls'
 import { useRuleengineLabels } from '@/composables/useRuleengineLabels'
 import { createWorkbookBlob, type WorkbookCell, type WorkbookSheet } from '@/lib/fillingReportExport'
 import { supabase } from '@/lib/supabase'
-import { formatVolumeNumber } from '@/lib/volumeFormat'
+import {
+  formatTotalVolumeFromLiters,
+  formatUnitVolumeFromLiters,
+  millilitersToLiters,
+  quantityToMilliliters,
+} from '@/lib/volumeFormat'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { toast } from 'vue3-toastify'
@@ -703,7 +708,7 @@ function formatDateInput(date: Date) {
 }
 
 function formatVolumeNumberValue(value: number | null | undefined) {
-  return formatVolumeNumber(value, locale.value)
+  return formatTotalVolumeFromLiters(value, locale.value)
 }
 
 function formatAbv(value: number | null | undefined) {
@@ -819,9 +824,9 @@ function packageVolumePerPackageLabel(packageTypeId: string | null | undefined) 
   const pkg = packageCategoryMap.value.get(packageTypeId)
   if (pkg?.size == null || Number.isNaN(pkg.size)) return null
   const qty = Number(pkg.size)
-  const display = Number.isFinite(qty) ? formatVolumeNumberValue(qty) : String(pkg.size)
   const uomCode = pkg.uomId ? uomMap.value.get(pkg.uomId) ?? pkg.uomId : null
-  return uomCode ? `${display} ${uomCode}` : display
+  const liters = Number.isFinite(qty) ? convertToLiters(qty, uomCode) : null
+  return liters != null ? formatUnitVolumeFromLiters(liters, locale.value) : String(pkg.size)
 }
 
 function movementVolumeLabel(card: MovementCardView) {
@@ -965,19 +970,7 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 }
 
 function convertToLiters(size: number | null, uomCode: string | null | undefined) {
-  if (size == null || Number.isNaN(size)) return null
-  switch (uomCode) {
-    case 'L':
-    case null:
-    case undefined:
-      return size
-    case 'mL':
-      return size / 1000
-    case 'gal_us':
-      return size * 3.78541
-    default:
-      return size
-  }
+  return millilitersToLiters(quantityToMilliliters(size, uomCode))
 }
 
 async function ensureTenant() {

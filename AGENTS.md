@@ -26,6 +26,9 @@
 - Add tests for changed behavior where feasible.
 - Run the required checks before finishing.
 
+## Domain rules
+- Follow durable quantity and money rules in `docs/domain/quantity-and-money.md`.
+
 ## Validation
 - Run:
   - unit tests

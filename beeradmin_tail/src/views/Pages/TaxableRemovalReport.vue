@@ -323,6 +323,8 @@ import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import TableColumnHeader from '@/components/common/TableColumnHeader.vue'
 import { useColumnTableControls } from '@/composables/useColumnTableControls'
 import { supabase } from '@/lib/supabase'
+import { formatYen } from '@/lib/moneyFormat'
+import { formatTotalVolumeFromMilliliters } from '@/lib/volumeFormat'
 import {
   buildTaxableRemovalBusinessYearFileName,
   buildTaxableRemovalSummaryRows,
@@ -523,21 +525,11 @@ function formatAbv(value: number | null | undefined) {
 }
 
 function formatQuantityMl(value: number | null | undefined) {
-  if (value == null || Number.isNaN(value)) return '—'
-  return new Intl.NumberFormat(locale.value, {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(Math.round(value))
+  return formatTotalVolumeFromMilliliters(value, locale.value)
 }
 
 function formatCurrency(value: number | null | undefined) {
-  if (value == null || Number.isNaN(value)) return '—'
-  return new Intl.NumberFormat(locale.value, {
-    style: 'currency',
-    currency: 'JPY',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(Math.round(value))
+  return formatYen(value, locale.value)
 }
 
 function formatTaxRateSummary(values: number[]) {

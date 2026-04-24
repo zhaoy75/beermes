@@ -19,6 +19,12 @@ export function validateStructural(input: RLI0010_232_Input) {
     }
   })
 
+  input.breakdown.exportExempt.forEach((item, index) => {
+    if (item.volume_l < 0) {
+      messages.push(error('NEGATIVE_EXPORT_EXEMPT_VOLUME', '負の輸出免税数量はXMLに出力できません。', `exportExempt[${index}].volume_l`))
+    }
+  })
+
   const summaryPages = Math.ceil(input.breakdown.summary.length / schemaMap.forms.LIA110.rowsPerPage)
   if (summaryPages > 999) {
     messages.push(error('LIA110_PAGE_LIMIT', 'LIA110 の総頁数が上限を超えています。', 'breakdown.summary'))
@@ -26,6 +32,10 @@ export function validateStructural(input: RLI0010_232_Input) {
   const returnPages = Math.ceil(input.breakdown.returns.length / schemaMap.forms.LIA220.rowsPerPage)
   if (returnPages > 999) {
     messages.push(error('LIA220_PAGE_LIMIT', 'LIA220 の総頁数が上限を超えています。', 'breakdown.returns'))
+  }
+  const exportExemptPages = Math.ceil(input.breakdown.exportExempt.length / schemaMap.forms.LIA260.rowsPerPage)
+  if (exportExemptPages > 999) {
+    messages.push(error('LIA260_PAGE_LIMIT', 'LIA260 の総頁数が上限を超えています。', 'breakdown.exportExempt'))
   }
 
   return messages

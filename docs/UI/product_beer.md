@@ -4,7 +4,7 @@
 - Keep inventory browsing on the dedicated `ProducedBeerInventory` page, not on this page.
 
 ## Entry Points
-- Sidebar -> `移出登録` / `Movement Register`
+- Sidebar -> `移入出登録` / `Inbound/Outbound Register`
 - Route: `/producedBeer`
 - Create page: `/producedBeerMovement`
 - Fast-create page: `/producedBeerMovementFast`
@@ -31,6 +31,11 @@
 - Section title: `producedBeer.sections.movements`
 - Subtitle: `producedBeer.movement.subtitle`
 - View: table only
+- Table controls:
+  - single-column sort by clicking a column header.
+  - multi-column filters in the table header.
+  - column filters apply after page-level filters.
+  - Clear filters clears table column filters only.
 - Actions:
   - Export Excel
   - Fast movement
@@ -44,10 +49,13 @@
   - Date from
     - default: one month ago
   - Date to
+  - Tax-related movements only (`税務関連移入出のみ表示`)
+    - default: checked
   - Tax removal type (`税務移出種別`)
 
 ### Movement List View columns
 - Movement date
+- Batch code
 - Style name
 - Target ABV
 - Package type
@@ -58,6 +66,9 @@
 - Source site
 - Destination site
 - Document no
+  - table display is limited to 15 characters
+  - if longer than 15 characters, show the left 15 characters followed by `....`
+  - full value remains available for export and actions
 - Tax removal type (`税務移出種別`)
 - Actions (reverse)
 
@@ -66,9 +77,12 @@
   - clear beer/category/package/batch/date filters.
   - restore `Date from` to one month ago.
   - set tax removal type to `all`.
+  - restore `Tax-related movements only` to checked.
 - Export Excel:
   - exports the currently visible filtered movement table rows.
+  - respects table column filters and current sort order.
   - exported columns match the visible movement table columns except the actions column.
+  - batch code is included in the export in the same position as the visible table.
   - file name format: `movements-YYYYMMDD.xlsx`.
   - exported sheet has bordered cells, gray header background, and bold header font.
 - Fast movement:
@@ -89,6 +103,7 @@
   - `transferNotax`: `doc_type = transfer` and `meta.tax_type = notax`
 - Filter behavior:
   - Date range and tax removal type are applied before loading movement lines into the page result.
+  - When `Tax-related movements only` is enabled, rows whose resolved raw `tax_event` is missing or `NONE` are excluded before loading movement lines.
   - Beer/category/package/batch filters are applied client-side to movement lines.
   - Movement rows with zero remaining lines after client-side filtering are hidden.
 - Totals:
@@ -125,9 +140,14 @@
   - `mes_batches` (batch code, product name, recipe link, meta)
 - Derived fields:
   - movement row totals from filtered lines.
+  - batch code from `mes_batches.batch_code` through the movement line's `batch_id`.
+  - when a visible movement row contains multiple unique batch codes, display the unique values joined by comma.
+  - if no batch code is available, display `—`.
   - tax removal type value from `inv_movements.meta.tax_event`.
   - tax removal type filter value uses raw `tax_event` code.
+  - `Tax-related movements only` uses raw `tax_event`; missing values and `NONE` are not tax movement rows.
   - tax removal type display label must use rule engine `tax_event_labels`.
+  - when raw `tax_event = NONE`, display `—` for `税務移出種別`.
   - if label mapping is unavailable, fallback to raw `tax_event` code.
   - Volume Per Package from `mst_uom`.
   - tax rate label from `inv_movement_lines.tax_rate`, displayed with `/kl` suffix.
@@ -141,7 +161,7 @@
   - load sites, categories, packages, and UOMs in parallel
   - initialize `Date from` to one month ago
   - load movements
-- On change of `dateFrom`, `dateTo`, or tax removal type:
+- On change of `dateFrom`, `dateTo`, tax removal type, or `Tax-related movements only`:
   - automatically reload movements
 - Other filters update the visible result locally without refetching
 

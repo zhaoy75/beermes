@@ -119,6 +119,7 @@ begin
     where m.tenant_id = v_tenant
       and m.meta ->> 'idempotency_key' = v_idempotency_key
       and m.doc_type = v_doc_type_text::public.inv_doc_type
+      and m.status = 'posted'
     order by m.created_at desc
     limit 1;
 
@@ -198,20 +199,23 @@ begin
   v_line_counter := 0;
 
   with recursive upstream as (
-    select l.id, l.lot_no, 0 as depth
+    select l.id, l.lot_no, 0 as depth, array[l.id] as path
     from public.lot l
     where l.tenant_id = v_tenant
       and l.id = v_from_lot_id
     union all
-    select parent.id, parent.lot_no, u.depth + 1
+    select parent.id, parent.lot_no, u.depth + 1, u.path || parent.id
     from upstream u
     join public.lot_edge e
       on e.tenant_id = v_tenant
      and e.to_lot_id = u.id
      and e.from_lot_id is not null
+     and e.edge_type <> 'MERGE'::public.lot_edge_type
     join public.lot parent
       on parent.tenant_id = v_tenant
      and parent.id = e.from_lot_id
+    where u.depth < 50
+      and not parent.id = any(u.path)
   )
   select u.lot_no
     into v_root_lot_no

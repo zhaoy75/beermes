@@ -312,6 +312,7 @@ Warnings:
   - function: `public.get_packing_source_lotid`
   - parameter: `p_batch_id = current batch id`
 - Use returned `source_lot_id` as `from_lot_id` in `product_filling` payload
+- Before calling `product_filling`, UI should run the source-lot chronology early-warning check when the helper is available; the database remains the final authority.
 - `src_site_id` must be auto-derived from the batch BREWERY_MANUFACTUR site
 - `dest_site_id` must default to `src_site_id`
 - `product_filling` RPC payload must include:
@@ -323,6 +324,13 @@ Warnings:
   - include `unit` and `tax_rate` when those values are available for the packed line
 - If not found, show error: `product_produce must be executed first`
 - UI must not insert/update `inv_movements`, `inv_movement_lines`, `lot`, `lot_edge` directly
+- If a previous filling row was deleted through rollback, the next filling save must still call `product_filling` normally. Rollback `MERGE` lineage must be handled inside the database function and must not be followed by UI code as source ancestry.
+
+### Filling delete / rollback rule
+- Deleting a Filling event must call stored function `public.product_filling_rollback(p_doc jsonb)`.
+- UI must not void only the `inv_movements` header for Filling events.
+- Rollback must restore source lot/source inventory and remove or consume filled child lot availability through database lineage.
+- Rollback-created `MERGE` edges are reversal/audit lineage. They must not change which source lot `get_packing_source_lotid` returns for future filling saves.
 
 ### Filling RPC payload (`public.product_filling`)
 ```json

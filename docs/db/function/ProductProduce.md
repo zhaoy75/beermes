@@ -105,7 +105,8 @@ Return `movement_id uuid`.
 ## Idempotency Recommendation
 Support optional `idempotency_key` in `p_doc.meta`:
 - unique per tenant
-- if repeated, return existing `movement_id` without creating duplicate lot/inventory.
+- if repeated while the matching movement is still `posted`, return existing `movement_id` without creating duplicate lot/inventory.
+- do not return voided/reversed movements for idempotency. If the previous produce movement was rolled back, the same business correction may need to create a new active source lot.
 
 ## Example Input
 ```json

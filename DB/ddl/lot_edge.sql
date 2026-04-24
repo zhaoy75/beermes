@@ -56,6 +56,17 @@ create unique index if not exists ux_lot_edge_tenant_movement_line_edge
   on public.lot_edge(tenant_id, movement_id, movement_line_id, edge_type, from_lot_id, to_lot_id)
   where movement_line_id is not null;
 
+create index if not exists idx_lot_edge_tenant_movement
+  on public.lot_edge (tenant_id, movement_id);
+
+create index if not exists idx_lot_edge_tenant_from_lot
+  on public.lot_edge (tenant_id, from_lot_id)
+  where from_lot_id is not null;
+
+create index if not exists idx_lot_edge_tenant_to_lot
+  on public.lot_edge (tenant_id, to_lot_id)
+  where to_lot_id is not null;
+
 -- (Optional) If you want strict tenant matching without composite FKs,
 -- at least enforce tenant equality by triggers. Skipping here per your request.
 

@@ -110,6 +110,7 @@ begin
     where m.tenant_id = v_tenant
       and m.meta ->> 'idempotency_key' = v_idempotency_key
       and m.doc_type = v_doc_type_text::public.inv_doc_type
+      and m.status = 'posted'
     order by m.created_at desc
     limit 1;
 

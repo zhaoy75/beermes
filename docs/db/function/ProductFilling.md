@@ -7,6 +7,7 @@ Register filling/packaging for product produced from a batch. Quantity is moved 
 - Movement intent: filling/package
 - Result: source lot is consumed (partially or fully) and new packed lots are created
 - Traceability: `lot_edge` records split flow from source lot to each packed lot
+- Rollback/reversal lineage is audit lineage only; it must not be treated as upstream production ancestry for future filling lot-number generation.
 
 ## Tables Affected
 - Write: `public.inv_movements`
@@ -34,7 +35,7 @@ Required fields:
 - `from_lot_id` uuid: source produced lot id
 - `uom_id` uuid: quantity UOM (volume)
 - `lines` jsonb array: at least 1 line
-- `loss qty` numeric: loss quantity for packing
+- `loss_qty` numeric: loss quantity for packing. Legacy key `loss qty` may be accepted for backward compatibility.
 
 Required line fields (`lines[]`):
 - `qty` numeric: filled quantity per line, must be `> 0`
@@ -64,43 +65,60 @@ Optional header fields:
 - `lot_edge.from_lot_id = p_doc.from_lot_id`
 - `lot_edge.to_lot_id = <new_filled_lot_id>`
 
+## Lot Lineage And Lot Numbering
+- `product_filling` derives the root lot number by walking upstream from `p_doc.from_lot_id` through `lot_edge.to_lot_id -> lot_edge.from_lot_id`.
+- The upstream walk is used only to generate default destination filled lot numbers when `lines[].lot_no` is not provided.
+- The upstream walk must be cycle-safe:
+  - track visited lot ids
+  - stop at a bounded maximum depth
+  - never follow `MERGE` edges
+- `MERGE` edges written by `product_filling_rollback` represent rollback/reversal movement from filled child lot back to the source lot. They must not be used as production ancestry; otherwise a later filling save can loop through source lot -> filled child lot -> source lot and hit `statement_timeout`.
+- Generated filled lot numbers use the highest existing numeric suffix for the resolved root lot:
+  - root lot: `<ROOT_LOT_NO>`
+  - generated filled lot: `<ROOT_LOT_NO>_NNN`
+  - the suffix scan is protected by an advisory transaction lock on `(tenant, root lot number)`.
+
 ## Validation
 - Tenant exists via `public._assert_tenant()`.
 - `doc_no`, `src_site_id`, `dest_site_id`, `batch_id`, `from_lot_id`, `uom_id`, `lines[]` are present.
 - `lines[]` is non-empty and each line `qty > 0`.
 - If line `unit` is provided, it must be `> 0`.
-- Source lot exists, tenant-visible, and has enough balance for `sum(lines.qty)`.
-- `src_site_id` and `dest_site_id` must be same for filling intent (or explicitly allowed by your rule).
+- Source lot exists, tenant-visible, and has enough balance for `sum(lines.qty) + loss_qty`.
+- Source inventory exists at `(src_site_id, from_lot_id, uom_id)` and has enough balance for `sum(lines.qty) + loss_qty`.
+- Source lot `uom_id` must match payload `uom_id`.
+- Source lot `site_id`, when present, must match payload `src_site_id`.
+- Filling `movement_at` must not be before the effective creation time of `from_lot_id`.
+- `src_site_id` and `dest_site_id` normally match for filling; the function may allow same-site filling when packaging happens in the source site.
 - `doc_no` unique per tenant in `inv_movements`.
 - `uom_id` consistency across movement lines, lot, lot_edge, inventory.
 
 ## Transaction Behavior (Atomic)
 1. Resolve tenant id (`v_tenant`) and normalize payload.
 2. Lock source lot row (`from_lot_id`) for update.
-3. Validate total required qty against source lot qty.
-4. Insert one row into `inv_movements`:
+3. Validate total required qty against source lot qty and source inventory qty.
+4. Resolve root lot number with the cycle-safe upstream walk described above.
+5. Insert one row into `inv_movements`:
    - `doc_type = PACKAGE_FILL`
    - `status = posted`
    - `src_site_id = p_doc.src_site_id`
    - `dest_site_id = p_doc.dest_site_id`
-5. For each `lines[]` row:
+6. For each `lines[]` row:
    - Determine `line_no`.
+   - Generate `lot_no` from root lot when the line does not provide one.
    - Create destination filled lot in `lot` with line qty and line unit. lot_tax_type set to TAX_SUSPENDED.
    - Insert one `inv_movement_lines` row with `qty`, `unit`, optional `tax_rate`, `uom_id`.
    - Insert one `lot_edge` row with `edge_type = SPLIT` from source lot to destination lot.
-   - Decrease source lot qty by line qty.
    - Upsert inventory:
-     - decrement source inventory `(src_site_id, from_lot_id, uom_id)`
      - increment destination inventory `(dest_site_id, new_lot_id, uom_id)`
-6. If loss qty is > 0
-  - Determine `line_no`.
-  - Insert one `inv_movement_lines` row.
+7. If loss qty is > 0:
+   - Determine `line_no`.
+   - Insert one `inv_movement_lines` row.
    - meta.line_role: `LOSS`
    - meta.tank_id: `tank_id`
-  - Decrease source lot qty by line qty.
-
-6. If source lot qty reaches `0`, optionally set source lot `status = consumed`.
-7. Return `<movement_id>`.
+8. Decrement source inventory `(src_site_id, from_lot_id, uom_id)` by `sum(lines.qty) + loss_qty`.
+9. Decrease source lot qty by `sum(lines.qty) + loss_qty`.
+10. If source lot qty reaches `0`, set source lot `status = consumed`.
+11. Return `<movement_id>`.
 
 ## Suggested Return
 Return `movement_id uuid`.
@@ -116,7 +134,8 @@ Return `movement_id uuid`.
 ## Idempotency Recommendation
 Support optional `idempotency_key` in `p_doc.meta`:
 - unique per tenant
-- if repeated, return existing `movement_id` and do not create duplicate lots/edges.
+- if repeated while the matching movement is still `posted`, return existing `movement_id` and do not create duplicate lots/edges.
+- do not return voided/reversed movements for idempotency. A filling event deleted by rollback must not block a later re-created filling event from writing active lots/edges.
 
 ## Example Input
 ```json
@@ -160,3 +179,4 @@ Support optional `idempotency_key` in `p_doc.meta`:
 - If `inv_doc_type` does not include `PACKAGE_FILL`, map to your available enum (commonly `production_receipt`).
 - `inv_movement_lines` persists per-line `unit` and optional `tax_rate`; `lot` persists the per-line `unit` value when provided.
 - Downstream UI/search flows must treat `lot.id` as the canonical key and `lot_no` as a non-unique display/search attribute.
+- Apply supporting indexes on `lot_edge` for `(tenant_id, movement_id)`, `(tenant_id, from_lot_id)`, and `(tenant_id, to_lot_id)` because filling, rollback, chronology checks, and source-lot lookup all rely on these access patterns.

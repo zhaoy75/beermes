@@ -1,4 +1,4 @@
-import type { TaxVolumeItem } from '@/lib/taxReport'
+import { lia110KubunCodeForItem, type TaxVolumeItem } from '@/lib/taxReport'
 import type { RLI0010_232_Input } from '../types'
 import { paginate } from '../../core/pagination'
 import { element, emptyElement, joinXml, optionalElement } from '../../core/xml'
@@ -34,25 +34,34 @@ export function buildLia110Xml(input: RLI0010_232_Input) {
 function buildLia110Row(item: TaxVolumeItem) {
   const volume = formatXmlVolume(item.volume_l)
   const taxRate = Math.max(0, Math.round(item.tax_rate || 0))
-  const taxAmount = Math.max(0, Math.round(((item.volume_l || 0) / 1000) * (item.tax_rate || 0)))
+  const rowRole = item.row_role ?? 'detail'
+  const kubunCode = lia110KubunCodeForItem(item)
+  const taxAmount = taxAmountForRow(item)
   const taxEvent = item.tax_event || ''
-  const nonTaxableRemovalVolume = taxEvent === 'NON_TAXABLE_REMOVAL' ? volume : null
-  const exportExemptVolume = taxEvent === 'EXPORT_EXEMPT' ? volume : null
-  const taxableStandardVolume =
-    taxEvent === 'NON_TAXABLE_REMOVAL' || taxEvent === 'EXPORT_EXEMPT' ? 0 : volume
+  const nonTaxableRemovalVolume = formatOptionalXmlVolume(
+    item.non_taxable_volume_l ?? (taxEvent === 'NON_TAXABLE_REMOVAL' ? item.volume_l : 0),
+  )
+  const exportExemptVolume = formatOptionalXmlVolume(
+    item.export_exempt_volume_l ?? (taxEvent === 'EXPORT_EXEMPT' ? item.volume_l : 0),
+  )
+  const taxableStandardVolume = formatXmlVolume(
+    item.taxable_volume_l ?? (taxEvent === 'TAXABLE_REMOVAL' ? item.volume_l : 0),
+  )
+  const includeTaxRate = rowRole === 'kubun_summary'
+  const includeSummaryText = rowRole === 'detail'
   return element('EHD00000', joinXml([
-    element('EHD00010', optionalElement('kubun_CD', kubunCodeForMoveType(item.move_type))),
+    element('EHD00010', optionalElement('kubun_CD', kubunCode)),
     optionalElement('EHD00020', resolveCategoryCode(item)),
     optionalElement('EHD00030', item.categoryName),
-    optionalElement('EHD00040', item.abv != null ? item.abv.toFixed(1) : null, { AutoCalc: 1 }),
+    optionalElement('EHD00040', rowRole === 'detail' && item.abv != null ? item.abv.toFixed(1) : null, { AutoCalc: 1 }),
     optionalElement('EHD00050', volume, { AutoCalc: 1 }),
     optionalElement('EHD00060', nonTaxableRemovalVolume),
     optionalElement('EHD00070', exportExemptVolume),
     optionalElement('EHD00080', taxableStandardVolume, { AutoCalc: 1 }),
-    optionalElement('EHD00090', taxRate, { AutoCalc: 1 }),
+    optionalElement('EHD00090', includeTaxRate ? taxRate : null, { AutoCalc: 1 }),
     optionalElement('EHD00100', taxAmount, { AutoCalc: 1 }),
     optionalElement('EHD00140', taxAmount, { AutoCalc: 1 }),
-    optionalElement('EHD00150', moveTypeSummary(item.move_type, item.tax_event)),
+    optionalElement('EHD00150', includeSummaryText ? moveTypeSummary(item.move_type, item.tax_event) : null),
   ]))
 }
 
@@ -76,30 +85,39 @@ function formatXmlVolume(value: number) {
   return Math.max(0, Math.round(value * 1000))
 }
 
+function formatOptionalXmlVolume(value: number | null | undefined) {
+  if (!Number.isFinite(value) || Number(value) <= 0) return null
+  return formatXmlVolume(Number(value))
+}
+
 function resolveCategoryCode(item: TaxVolumeItem) {
   if (item.categoryCode && /^\d+$/.test(item.categoryCode)) return item.categoryCode.slice(0, 3)
   return '000'
 }
 
-function kubunCodeForMoveType(moveType: string) {
-  switch (moveType) {
-    case 'sale':
-      return 1
-    case 'tax_transfer':
-      return 2
-    case 'transfer':
-      return 3
-    case 'waste':
-      return 9
-    default:
-      return 0
-  }
+function taxAmountForRow(item: TaxVolumeItem) {
+  if (Number.isFinite(item.tax_amount)) return Math.max(0, Math.round(Number(item.tax_amount)))
+  if ((item.row_role ?? 'detail') === 'detail') return 0
+  const taxableVolume = item.taxable_volume_l ?? item.volume_l ?? 0
+  return Math.max(0, Math.round((taxableVolume / 1000) * (item.tax_rate || 0)))
 }
 
 function moveTypeSummary(moveType: string, taxEvent?: string | null) {
-  if (taxEvent === 'EXPORT_EXEMPT') return '輸出免税'
-  if (taxEvent === 'NON_TAXABLE_REMOVAL') return '未納税移出'
-  if (taxEvent === 'RETURN_TO_FACTORY') return '戻入'
+  switch (taxEvent) {
+    case 'TAXABLE_REMOVAL':
+      return '課税移出'
+    case 'EXPORT_EXEMPT':
+      return '輸出免税'
+    case 'NON_TAXABLE_REMOVAL':
+      return '未納税移出'
+    case 'RETURN_TO_FACTORY':
+      return '戻入'
+    case 'NONE':
+      return '摘要'
+    default:
+      break
+  }
+
   switch (moveType) {
     case 'sale':
       return '課税移出'

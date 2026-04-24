@@ -3099,12 +3099,23 @@
       "back": "Back to list"
     },
     "columns": {
+      "kubun": "Class",
       "taxEvent": "Tax movement type"
+    },
+    "rowTypes": {
+      "generated": "Calculated",
+      "kubunSummary": "Class subtotal",
+      "categorySummary": "Category subtotal",
+      "grandTotal": "Grand total"
     },
     "sections": {
       "movement": {
         "title": "Movement Summary",
         "subtitle": "Review and edit the reportable movement rows."
+      },
+      "returns": {
+        "title": "Returns",
+        "subtitle": "Return rows are written to LIA220."
       },
       "files": {
         "title": "Generated Files",

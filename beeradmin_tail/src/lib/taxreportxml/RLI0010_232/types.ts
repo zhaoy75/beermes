@@ -23,6 +23,21 @@ export interface RLI0010_232_XsdValidateResponse {
   messages: RLI0010_232_ValidationMessage[]
 }
 
+export interface RLI0010_232_ReductionTotals {
+  included: boolean
+  priorFiscalYearStandardTaxAmount: number
+  currentMonthStandardTaxAmount: number
+  currentMonthReducedTaxAmount: number
+  returnStandardTaxAmount: number
+  returnReducedTaxAmount: number
+  netStandardTaxAmount: number
+  netReducedTaxAmount: number
+  cumulativeBeforeReturnStandardTaxAmount: number
+  cumulativeAfterReturnStandardTaxAmount: number
+  category: string
+  rate: number
+}
+
 export interface RLI0010_232_Input {
   report: {
     taxType: 'monthly'
@@ -36,6 +51,9 @@ export interface RLI0010_232_Input {
   }
   profile: TaxReportProfile
   totals: {
+    currentMonthStandardTaxAmount: number
+    returnStandardTaxAmount: number
+    netStandardTaxAmount: number
     totalTaxAmount: number
     refundableTaxAmount: number
     roundedDownAmount: number
@@ -43,6 +61,7 @@ export interface RLI0010_232_Input {
     amendedRefundableTaxAmount?: number
     amendedPayableTaxAmount?: number
     netPayableTaxAmount?: number
+    reduction?: RLI0010_232_ReductionTotals
   }
   breakdown: {
     summary: TaxVolumeItem[]
@@ -64,6 +83,7 @@ export interface RLI0010_232_Result {
     IT: { included: true }
     LIA010: { included: true }
     LIA110: { included: boolean; pageCount: number; rowCount: number }
+    LIA130: { included: boolean }
     LIA220: { included: boolean; pageCount: number; rowCount: number }
   }
   validation: {

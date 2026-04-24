@@ -46,6 +46,9 @@ export async function generateRLI0010_232(options: Options): Promise<RLI0010_232
         pageCount: input.breakdown.summary.length > 0 ? Math.ceil(input.breakdown.summary.length / 18) : 0,
         rowCount: input.breakdown.summary.length,
       },
+      LIA130: {
+        included: Boolean(input.totals.reduction?.included),
+      },
       LIA220: {
         included: input.breakdown.returns.length > 0,
         pageCount: input.breakdown.returns.length > 0 ? Math.ceil(input.breakdown.returns.length / 18) : 0,

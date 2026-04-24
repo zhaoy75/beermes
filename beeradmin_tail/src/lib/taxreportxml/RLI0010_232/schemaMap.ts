@@ -8,6 +8,7 @@ export const schemaMap = {
   forms: {
     LIA010: { version: '4.1', required: true },
     LIA110: { version: '3.0', required: true, rowsPerPage: 18 },
+    LIA130: { version: '1.0', required: false },
     LIA220: { version: '2.0', required: false, rowsPerPage: 18 },
   },
   validation: {

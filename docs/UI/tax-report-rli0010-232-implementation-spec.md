@@ -16,9 +16,9 @@
   - `IT`
   - `LIA010`
   - `LIA110`
+  - `LIA130`
   - `LIA220`
 - Optional forms that remain out of initial scope:
-  - `LIA130`
   - `LIA230`
   - `LIA240`
   - `LIA250`
@@ -66,11 +66,13 @@ beeradmin_tail/src/lib/taxreportxml/
       it.ts
       lia010.ts
       lia110.ts
+      lia130.ts
       lia220.ts
     mappers/
       toIT.ts
       toLIA010.ts
       toLIA110.ts
+      toLIA130.ts
       toLIA220.ts
     validation/
       business.ts
@@ -146,6 +148,9 @@ type RLI0010_232_Input = {
   }
   profile: TaxReportProfile
   totals: {
+    currentMonthStandardTaxAmount: number
+    returnStandardTaxAmount: number
+    netStandardTaxAmount: number
     totalTaxAmount: number
     refundableTaxAmount: number
     roundedDownAmount: number
@@ -153,6 +158,20 @@ type RLI0010_232_Input = {
     amendedRefundableTaxAmount?: number
     amendedPayableTaxAmount?: number
     netPayableTaxAmount?: number
+    reduction?: {
+      included: boolean
+      priorFiscalYearStandardTaxAmount: number
+      currentMonthStandardTaxAmount: number
+      currentMonthReducedTaxAmount: number
+      returnStandardTaxAmount: number
+      returnReducedTaxAmount: number
+      netStandardTaxAmount: number
+      netReducedTaxAmount: number
+      cumulativeBeforeReturnStandardTaxAmount: number
+      cumulativeAfterReturnStandardTaxAmount: number
+      category: string
+      rate: number
+    }
   }
   breakdown: {
     summary: TaxVolumeItem[]
@@ -166,6 +185,15 @@ type RLI0010_232_Input = {
   }>
 }
 ```
+
+### Total field semantics
+- `currentMonthStandardTaxAmount` is the current-month standard tax before return deductions, matching the `LIA110` grand total.
+- `returnStandardTaxAmount` is the current-month return/deduction standard tax, matching the `LIA220` total.
+- `netStandardTaxAmount` is `currentMonthStandardTaxAmount - returnStandardTaxAmount`.
+- `tax_reports.total_tax_amount` stores `netStandardTaxAmount` so later months can use it for `LIA130/EQC00010`.
+- `totalTaxAmount` is the filing amount written to `LIA010/EFD00020`.
+- When `totals.reduction.included` is true, `totalTaxAmount` equals `totals.reduction.netReducedTaxAmount`.
+- When `totals.reduction.included` is false, `totalTaxAmount` equals `netStandardTaxAmount`.
 
 ### Validation message
 
@@ -190,6 +218,7 @@ type RLI0010_232_Result = {
     IT: { included: true }
     LIA010: { included: true }
     LIA110: { included: boolean; pageCount: number; rowCount: number }
+    LIA130: { included: boolean }
     LIA220: { included: boolean; pageCount: number; rowCount: number }
   }
   validation: {
@@ -234,6 +263,7 @@ export const schemaMap = {
     IT: { required: true },
     LIA010: { required: true, version: '0.0.4' },
     LIA110: { required: true, version: '0.0.3', rowsPerPage: 18 },
+    LIA130: { required: false, version: '1.0' },
     LIA220: { required: false, version: '0.0.2', rowsPerPage: 18 },
   },
   validation: {
@@ -267,6 +297,11 @@ export const schemaMap = {
   - declaration category defaults
   - tax totals
   - IT reference fields
+- When `totals.reduction.included` is true:
+  - `LIA010/EFD00020` uses `totals.reduction.netReducedTaxAmount`
+  - `roundedDownAmount`, `payableTaxAmount`, and `netPayableTaxAmount` are derived from that reduced amount
+- When `totals.reduction.included` is false:
+  - `LIA010/EFD00020` uses `totals.totalTaxAmount`
 
 ### `mappers/toLIA110.ts`
 - Convert summary-side breakdown rows into paged LIA110 payloads
@@ -274,6 +309,16 @@ export const schemaMap = {
   - row grouping
   - page splitting
   - form page numbering
+
+### `mappers/toLIA130.ts`
+- Convert reduction totals into one `LIA130` payload when `totals.reduction.included` is true.
+- Own:
+  - `EQC00010`: prior fiscal-year cumulative standard tax amount
+  - current-month standard and reduced tax amounts
+  - return/deduction standard and reduced tax amounts
+  - net standard and reduced tax amounts
+  - current fiscal-year cumulative standard amount after return deductions
+  - reduction category and rate
 
 ### `mappers/toLIA220.ts`
 - Convert return-side breakdown rows into paged LIA220 payloads
@@ -296,6 +341,7 @@ These are implementation assumptions based on the current template-driven flow.
 - Source:
   - report period from editor state
   - totals from generated report breakdown
+  - reduced final amount from `LIA130` when reduction is included
   - taxpayer references from tenant profile
 
 ### `LIA110`
@@ -312,6 +358,50 @@ These are implementation assumptions based on the current template-driven flow.
     - `registry_def(kind='alcohol_type')`
     - `registry_def(kind='alcohol_tax')`
     - `movement_get_rules(...)`
+- Exclude rows where `tax_event = NONE` or `RETURN_TO_FACTORY_NON_TAXABLE`; they are not displayed as `LIA110` detail rows and are not output to `LIA110` XML.
+- Detail-row `EHD00150` label rule:
+  - resolve from `tax_event` first
+  - `TAXABLE_REMOVAL` -> `課税移出`
+  - `NON_TAXABLE_REMOVAL` -> `未納税移出`
+  - `EXPORT_EXEMPT` -> `輸出免税`
+  - `RETURN_TO_FACTORY` -> `戻入`
+  - `RETURN_TO_FACTORY_NON_TAXABLE` -> excluded before label rendering
+  - unknown -> `摘要`
+  - use `move_type` only as a legacy fallback when `tax_event` is missing
+
+### `LIA130`
+- Source:
+  - `LIA110` grand-total standard tax amount before returns
+  - `LIA220` return/deduction standard tax amount
+  - prior fiscal-year cumulative standard tax amount from saved `tax_reports.total_tax_amount`
+- Query rule for `EQC00010`:
+  - same tenant as the edited report
+  - `tax_type = 'monthly'`
+  - current Japanese fiscal year only, April through March
+  - include months from fiscal-year start through the month before the current report month
+  - sum `total_tax_amount`
+- Stored total rule:
+  - `tax_reports.total_tax_amount` remains the monthly standard/net tax amount before `LIA130` reduction
+  - the reduced amount is calculated for XML output and must not overwrite the cumulative source value
+- XML field rules:
+  - `EQC00010` = prior fiscal-year cumulative standard tax amount
+  - `EQC00050` and `EQC00070` = current-month standard tax before return deductions
+  - `EQC00080` = current-month reduced tax
+  - `EQC00100` and `EQC00120` = same current-month standard tax when the cumulative band is `0円～5,000万円以下`
+  - `EQC00130` = same current-month reduced tax when the cumulative band is `0円～5,000万円以下`
+  - `EQC00290` = `EQC00010 + EQC00050`
+  - `EQC00310` and `EQC00330` = return/deduction standard tax amount
+  - `EQC00340` = return/deduction reduced tax amount
+  - `EQC00360` and `EQC00380` = current-month net standard tax after returns
+  - `EQC00390` = `EQC00080 - EQC00340`
+  - `EQC00400` = `EQC00290 - EQC00310`
+  - `EQD00000` = reduction category, current sample value `Ａ`
+  - `EQE00040` = final total liquor tax amount for the filing
+- Current sample formula:
+  - category `Ａ`
+  - rate `0.8`
+  - current and return reduced amounts are floored separately after multiplying by `0.8`
+  - net reduced tax is current reduced tax minus return reduced tax
 
 ### `LIA220`
 - Source:
@@ -403,6 +493,7 @@ type TaxReportEditorXmlState = {
   validationMessages: RLI0010_232_ValidationMessage[]
   formSummary: {
     lia110Pages: number
+    lia130Included: boolean
     lia220Pages: number
   }
 }
@@ -424,6 +515,7 @@ type TaxReportEditorXmlState = {
 - `IT`
 - `LIA010`
 - `LIA110` page count
+- `LIA130` included status
 - `LIA220` page count
 
 4. Validation section
@@ -480,7 +572,7 @@ type TaxReportEditorXmlState = {
 ### Phase 1
 - Create folder `beeradmin_tail/src/lib/taxreportxml/RLI0010_232`
 - Add types, schema map, business validation, structural validation
-- Add `IT`, `LIA010`, `LIA110`, `LIA220` builders
+- Add `IT`, `LIA010`, `LIA110`, `LIA130`, `LIA220` builders
 
 ### Phase 2
 - Add HTTP XSD validation endpoint

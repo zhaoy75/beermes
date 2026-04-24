@@ -1,45 +1,53 @@
 # Current Task
 
 ## Goal
-- Hide the `工程実行一覧` section on the `バッチ実績入力` page when `VITE_DEVELOPMENT_MODE` is false.
+- Exclude non-reportable `tax_event` rows from `LIA110` UI display and generated XML:
+  - `NONE`
+  - `RETURN_TO_FACTORY_NON_TAXABLE` (`移入`)
 
 ## Scope
-- Update the batch edit page to conditionally hide the step execution section by the existing development-mode flag.
-- Prevent the under-development step execution detail page from being directly reachable when development mode is disabled.
-- Keep the rest of the batch edit page behavior unchanged.
+- Update the shared `LIA110` detail-row filter so `NONE` and `RETURN_TO_FACTORY_NON_TAXABLE` tax events are not converted into report rows.
+- Keep legacy fallback behavior for rows where `tax_event` is missing and `move_type` still maps to a valid legacy tax event.
+- Update the tax report specs to document that `NONE` and `RETURN_TO_FACTORY_NON_TAXABLE` are not output rows for `LIA110`.
 
 ## Non-Goals
-- Do not redesign the `バッチ実績入力` page layout.
-- Do not change the `工程実行一覧` implementation itself.
-- Do not change unrelated routing, packing, lot DAG, or batch save behavior.
+- Do not change LIA110 volume/tax calculations for taxable, non-taxable, export, or return rows.
+- Do not add a new XML bucket or label for `RETURN_TO_FACTORY_NON_TAXABLE`.
+- Do not change LIA130 calculations.
+- Do not change Supabase schema or stored report shape.
+- Do not redesign the Tax Report Editor UI.
 
 ## Affected Files
 - [specs/current-task.md](/Users/zhao/dev/other/beer/specs/current-task.md)
-- [beeradmin_tail/src/views/Pages/BatchEdit.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/BatchEdit.vue)
-- [beeradmin_tail/src/router/tenant-routes.ts](/Users/zhao/dev/other/beer/beeradmin_tail/src/router/tenant-routes.ts)
+- [docs/UI/tax-report-editor.md](/Users/zhao/dev/other/beer/docs/UI/tax-report-editor.md)
+- [docs/UI/tax-report-rli0010-232-implementation-spec.md](/Users/zhao/dev/other/beer/docs/UI/tax-report-rli0010-232-implementation-spec.md)
+- [beeradmin_tail/src/lib/taxReport.ts](/Users/zhao/dev/other/beer/beeradmin_tail/src/lib/taxReport.ts)
 
 ## Data Model / API Changes
 - No data model changes.
 - No API changes.
-- Route metadata will mark the step execution detail page as development-only.
 
 ## Implementation Notes
-- Reuse the existing `DEVELOPMENT_MODE_ENABLED` helper in `src/lib/devMode.ts`.
-- Hide the `工程実行一覧` section entirely when development mode is off.
-- Skip loading step execution summary data on the batch edit page when the section is hidden.
-- Add `requiresDevelopmentMode: true` to the batch step execution detail route so the existing router guard blocks direct access when development mode is off.
-
-## Final Decisions
-- Hide the `工程実行一覧` section on `BatchEdit` by checking the existing `DEVELOPMENT_MODE_ENABLED` flag.
-- Skip loading execution summary data when that section is hidden so the page does not make unnecessary MES execution queries in non-development mode.
-- Mark the `batchStepExecution` route as `requiresDevelopmentMode: true` so direct access is blocked by the existing router guard when development mode is disabled.
+- `TaxReportEditor` display rows and XML generation both use `buildLia110ReportRows()`.
+- `buildLia110ReportRows()` uses `isLia110DetailItem()` as the shared detail-row gate.
+- Filtering `NONE` and `RETURN_TO_FACTORY_NON_TAXABLE` in `isLia110DetailItem()` removes those rows from both UI display and `LIA110` XML.
 
 ## Validation Plan
-- Run targeted ESLint for the touched frontend files.
+- Run targeted ESLint for touched source files.
 - Run frontend type-check.
-- Run the frontend unit test command if available; otherwise document that no test script exists.
+- Run `git diff --check`.
+- Run `npm run test --if-present`.
+- Run `npm run build:test`.
+
+## Final Decisions
+- `tax_event = NONE` and `tax_event = RETURN_TO_FACTORY_NON_TAXABLE` rows are filtered in `isLia110DetailItem()`.
+- Because `TaxReportEditor` and XML generation both use `buildLia110ReportRows()`, this removes those rows from both the movement table and generated `LIA110` XML.
+- `RETURN_TO_FACTORY_NON_TAXABLE` is still a valid movement-rule tax event for `移入`; this change only excludes it from tax-report `LIA110` display/XML output.
+- Stored source breakdown shape is unchanged; the filtering is output/display behavior only.
 
 ## Validation Results
-- `npx eslint src/views/Pages/BatchEdit.vue src/router/tenant-routes.ts --no-fix` in `beeradmin_tail`: passed.
+- `npx eslint src/lib/taxReport.ts --no-fix` in `beeradmin_tail`: passed.
 - `npm run type-check` in `beeradmin_tail`: passed.
-- `npm run test` in `beeradmin_tail`: failed because `package.json` does not define a `test` script.
+- `git diff --check -- specs/current-task.md docs/UI/tax-report-editor.md docs/UI/tax-report-rli0010-232-implementation-spec.md beeradmin_tail/src/lib/taxReport.ts`: passed.
+- `npm run test --if-present` in `beeradmin_tail`: passed with no test script configured.
+- `npm run build:test` in `beeradmin_tail`: passed with existing CSS `:is()` minify warnings and existing chunk-size warnings.

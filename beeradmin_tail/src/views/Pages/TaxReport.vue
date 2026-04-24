@@ -211,6 +211,7 @@ import {
   buildXmlPayload,
   downloadStoredTaxReportFile,
   disposeItemsFromBreakdown,
+  fetchPriorFiscalYearStandardTaxAmount,
   inferStoredFileType,
   isDisposeFilename,
   normalizeReport,
@@ -493,14 +494,26 @@ async function downloadXmlForRowFile(row: TaxReportRow, file: TaxReportStoredFil
   }
 
   try {
+    const tenant = await ensureTenant()
+    const priorFiscalYearStandardTaxAmount = dispose
+      ? 0
+      : await fetchPriorFiscalYearStandardTaxAmount({
+          supabase,
+          tenantId: tenant,
+          taxYear: row.tax_year,
+          taxMonth: row.tax_month,
+          excludeReportId: row.id,
+        })
     const xml = buildXmlPayload({
       taxType: row.tax_type,
       taxYear: row.tax_year,
       taxMonth: row.tax_month,
       breakdown,
       profile: tenantProfile.value,
-      tenantId: tenantId.value ?? '',
+      tenantId: tenant,
       tenantName: tenantName.value,
+      priorFiscalYearStandardTaxAmount,
+      includeLia130: !dispose,
     })
     downloadTextFile(file.fileName, await xml)
   } catch (err) {

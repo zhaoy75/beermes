@@ -1,8 +1,13 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { TaxReportProfile } from '@/lib/taxReportProfile'
-import { generateRLI0010_232 } from '@/lib/taxreportxml/RLI0010_232'
+import {
+  generateRLI0010_232,
+  type RLI0010_232_ReductionTotals,
+} from '@/lib/taxreportxml/RLI0010_232'
 
 export type JsonMap = Record<string, unknown>
+
+export type TaxReportRowRole = 'detail' | 'kubun_summary' | 'category_summary' | 'grand_total'
 
 export type TaxReportFileType =
   | 'tax_report_xml'
@@ -20,6 +25,12 @@ export interface TaxVolumeItem {
   abv: number | null
   volume_l: number
   tax_rate: number | null
+  row_role?: TaxReportRowRole | null
+  kubun_code?: number | null
+  non_taxable_volume_l?: number | null
+  export_exempt_volume_l?: number | null
+  taxable_volume_l?: number | null
+  tax_amount?: number | null
 }
 
 export interface TaxReportStoredFile {
@@ -56,6 +67,8 @@ export interface TaxReportRow {
 const SUMMARY_DOC_TYPES = ['sale', 'tax_transfer', 'return', 'transfer'] as const
 const DISPOSE_DOC_TYPES = ['waste'] as const
 const DEFAULT_BUCKET = import.meta.env.VITE_TAX_REPORT_STORAGE_BUCKET || 'tax-report-files'
+const LIA130_REDUCTION_CATEGORY = 'Ａ'
+const LIA130_REDUCTION_RATE = 0.8
 const MOVEMENT_TYPE_SORT_ORDER = [
   ...SUMMARY_DOC_TYPES,
   ...DISPOSE_DOC_TYPES,
@@ -67,16 +80,18 @@ const TAX_EVENT_SORT_ORDER = [
   'NON_TAXABLE_REMOVAL',
   'EXPORT_EXEMPT',
   'RETURN_TO_FACTORY',
+  'RETURN_TO_FACTORY_NON_TAXABLE',
   'NONE',
   'unknown',
 ] as const
+const LIA110_EXCLUDED_TAX_EVENTS = new Set(['NONE', 'RETURN_TO_FACTORY_NON_TAXABLE'])
 
 export function summaryItemsFromBreakdown(items: TaxVolumeItem[]) {
-  return items.filter((item) => isSummaryDocType(item.move_type))
+  return items.filter((item) => !isGeneratedTaxVolumeItem(item) && isSummaryDocType(item.move_type))
 }
 
 export function disposeItemsFromBreakdown(items: TaxVolumeItem[]) {
-  return items.filter((item) => isDisposeDocType(item.move_type))
+  return items.filter((item) => !isGeneratedTaxVolumeItem(item) && isDisposeDocType(item.move_type))
 }
 
 export function sortTaxVolumeItems(items: TaxVolumeItem[]) {
@@ -160,6 +175,86 @@ export function isReturnTaxEvent(moveType: string, taxEvent?: string | null) {
   return resolveTaxEvent(moveType, taxEvent) === 'RETURN_TO_FACTORY'
 }
 
+export function isGeneratedTaxVolumeItem(item: Pick<TaxVolumeItem, 'row_role'>) {
+  const rowRole = item.row_role ?? 'detail'
+  return rowRole !== 'detail'
+}
+
+export function isLia110DetailItem(item: TaxVolumeItem) {
+  const taxEvent = resolveTaxEvent(item.move_type, item.tax_event)
+  return (
+    !isGeneratedTaxVolumeItem(item) &&
+    isSummaryDocType(item.move_type) &&
+    taxEvent !== 'RETURN_TO_FACTORY' &&
+    !LIA110_EXCLUDED_TAX_EVENTS.has(taxEvent ?? '')
+  )
+}
+
+export function lia110KubunCodeForItem(item: TaxVolumeItem) {
+  if (Number.isFinite(item.kubun_code)) return Number(item.kubun_code)
+  const rowRole = item.row_role ?? 'detail'
+  if (rowRole === 'category_summary') return 8
+  if (rowRole === 'grand_total') return 9
+
+  const taxEvent = resolveTaxEvent(item.move_type, item.tax_event)
+  if (taxEvent === 'TAXABLE_REMOVAL') return 1
+  if (taxEvent === 'NON_TAXABLE_REMOVAL' || taxEvent === 'EXPORT_EXEMPT') return 0
+  return 0
+}
+
+export function buildLia110ReportRows(items: TaxVolumeItem[]) {
+  const detailRows = items
+    .filter(isLia110DetailItem)
+    .map((item) => createLia110DetailRow(item))
+    .sort(compareLia110Rows)
+
+  const categoryGroups = new Map<string, TaxVolumeItem[]>()
+  detailRows.forEach((item) => {
+    const key = categoryGroupKey(item)
+    if (!categoryGroups.has(key)) categoryGroups.set(key, [])
+    categoryGroups.get(key)?.push(item)
+  })
+
+  const rows: TaxVolumeItem[] = []
+  let grandTaxableVolume = 0
+  let grandTaxAmount = 0
+
+  Array.from(categoryGroups.entries())
+    .sort(([, leftRows], [, rightRows]) => compareCategoryRows(leftRows[0], rightRows[0]))
+    .forEach(([categoryKey, categoryRows]) => {
+      const kubunGroups = new Map<number, TaxVolumeItem[]>()
+      categoryRows.forEach((item) => {
+        const kubunCode = lia110KubunCodeForItem(item)
+        if (!kubunGroups.has(kubunCode)) kubunGroups.set(kubunCode, [])
+        kubunGroups.get(kubunCode)?.push(item)
+      })
+
+      let categoryTaxableVolume = 0
+      let categoryTaxAmount = 0
+
+      Array.from(kubunGroups.entries())
+        .sort(([left], [right]) => left - right)
+        .forEach(([kubunCode, groupRows]) => {
+          groupRows.sort(compareLia110Rows)
+          rows.push(...groupRows)
+          const summaryRow = createKubunSummaryRow(categoryKey, kubunCode, groupRows)
+          rows.push(summaryRow)
+          categoryTaxableVolume += summaryRow.taxable_volume_l ?? 0
+          categoryTaxAmount += summaryRow.tax_amount ?? 0
+        })
+
+      rows.push(createCategorySummaryRow(categoryKey, categoryRows[0], categoryTaxableVolume, categoryTaxAmount))
+      grandTaxableVolume += categoryTaxableVolume
+      grandTaxAmount += categoryTaxAmount
+    })
+
+  if (detailRows.length > 0) {
+    rows.push(createGrandTotalRow(grandTaxableVolume, grandTaxAmount))
+  }
+
+  return rows
+}
+
 export function calculateTaxTotalAmount(
   items: Array<Pick<TaxVolumeItem, 'move_type' | 'tax_event' | 'volume_l' | 'tax_rate'>>,
 ) {
@@ -167,6 +262,59 @@ export function calculateTaxTotalAmount(
     (sum, item) => sum + calculateTaxAmount(item.move_type, item.volume_l, item.tax_rate, item.tax_event),
     0,
   )
+}
+
+export function priorFiscalYearReportPeriods(taxYear: number, taxMonth: number) {
+  if (!Number.isFinite(taxYear) || !Number.isFinite(taxMonth) || taxMonth < 1 || taxMonth > 12) {
+    return []
+  }
+
+  const startYear = taxMonth >= 4 ? taxYear : taxYear - 1
+  const periods: Array<{ taxYear: number; taxMonth: number }> = []
+  let year = startYear
+  let month = 4
+
+  while (year < taxYear || (year === taxYear && month < taxMonth)) {
+    periods.push({ taxYear: year, taxMonth: month })
+    month += 1
+    if (month > 12) {
+      month = 1
+      year += 1
+    }
+  }
+
+  return periods
+}
+
+export async function fetchPriorFiscalYearStandardTaxAmount(options: {
+  supabase: SupabaseClient
+  tenantId: string
+  taxYear: number
+  taxMonth: number
+  excludeReportId?: string | null
+}) {
+  const { supabase, tenantId, taxYear, taxMonth, excludeReportId } = options
+  const periods = priorFiscalYearReportPeriods(taxYear, taxMonth)
+  if (periods.length === 0) return 0
+
+  const years = Array.from(new Set(periods.map((period) => period.taxYear)))
+  const periodKeys = new Set(periods.map((period) => `${period.taxYear}-${period.taxMonth}`))
+  const { data, error } = await supabase
+    .from('tax_reports')
+    .select('id, tax_year, tax_month, total_tax_amount')
+    .eq('tenant_id', tenantId)
+    .eq('tax_type', 'monthly')
+    .in('tax_year', years)
+
+  if (error) throw error
+
+  return (data ?? []).reduce((sum, row) => {
+    if (excludeReportId && String(row.id) === excludeReportId) return sum
+    const key = `${Number(row.tax_year)}-${Number(row.tax_month)}`
+    if (!periodKeys.has(key)) return sum
+    const amount = Number(row.total_tax_amount ?? 0)
+    return Number.isFinite(amount) ? sum + amount : sum
+  }, 0)
 }
 
 export function isSummaryDocType(value: string): value is (typeof SUMMARY_DOC_TYPES)[number] {
@@ -339,6 +487,206 @@ export function inferMimeType(fileName: string) {
   return 'application/octet-stream'
 }
 
+function createLia110DetailRow(item: TaxVolumeItem): TaxVolumeItem {
+  const taxEvent = resolveTaxEvent(item.move_type, item.tax_event)
+  const volume = finiteNumber(item.volume_l)
+  const kubunCode = lia110KubunCodeForItem(item)
+  return {
+    ...item,
+    row_role: 'detail',
+    kubun_code: kubunCode,
+    tax_event: taxEvent,
+    non_taxable_volume_l: taxEvent === 'NON_TAXABLE_REMOVAL' ? volume : 0,
+    export_exempt_volume_l: taxEvent === 'EXPORT_EXEMPT' ? volume : 0,
+    taxable_volume_l: taxEvent === 'TAXABLE_REMOVAL' ? volume : 0,
+    tax_amount: 0,
+  }
+}
+
+function createLegacyDisposeLia110Row(item: TaxVolumeItem): TaxVolumeItem {
+  const volume = finiteNumber(item.volume_l)
+  return {
+    ...item,
+    row_role: 'detail',
+    kubun_code: 9,
+    non_taxable_volume_l: volume,
+    export_exempt_volume_l: 0,
+    taxable_volume_l: 0,
+    tax_amount: 0,
+  }
+}
+
+function createKubunSummaryRow(
+  categoryKey: string,
+  kubunCode: number,
+  rows: TaxVolumeItem[],
+): TaxVolumeItem {
+  const first = rows[0]
+  const totalVolume = sumNumbers(rows.map((item) => item.volume_l))
+  const nonTaxableVolume = sumNumbers(rows.map((item) => item.non_taxable_volume_l))
+  const exportExemptVolume = sumNumbers(rows.map((item) => item.export_exempt_volume_l))
+  const taxableVolume = sumNumbers(rows.map((item) => item.taxable_volume_l))
+  const taxAmount = sumNumbers(
+    rows.map((item) => calculateTaxAmount(item.move_type, item.volume_l, item.tax_rate, item.tax_event)),
+  )
+  const basisVolume = taxableVolume > 0 ? taxableVolume : totalVolume
+
+  return {
+    key: `${categoryKey}-kubun-${kubunCode}-summary`,
+    move_type: first?.move_type ?? 'summary',
+    tax_event: kubunCode === 1 ? 'TAXABLE_REMOVAL' : null,
+    categoryId: first?.categoryId ?? '',
+    categoryCode: first?.categoryCode ?? '',
+    categoryName: first?.categoryName ?? '—',
+    abv: null,
+    volume_l: kubunCode === 1 ? taxableVolume : totalVolume,
+    tax_rate: effectiveTaxRate(rows, basisVolume, taxAmount),
+    row_role: 'kubun_summary',
+    kubun_code: kubunCode,
+    non_taxable_volume_l: nonTaxableVolume,
+    export_exempt_volume_l: exportExemptVolume,
+    taxable_volume_l: taxableVolume,
+    tax_amount: Math.max(0, Math.round(taxAmount)),
+  }
+}
+
+function createCategorySummaryRow(
+  categoryKey: string,
+  first: TaxVolumeItem | undefined,
+  taxableVolume: number,
+  taxAmount: number,
+): TaxVolumeItem {
+  return {
+    key: `${categoryKey}-category-summary`,
+    move_type: 'summary',
+    tax_event: 'TAXABLE_REMOVAL',
+    categoryId: first?.categoryId ?? '',
+    categoryCode: first?.categoryCode ?? '',
+    categoryName: first?.categoryName ?? '—',
+    abv: null,
+    volume_l: taxableVolume,
+    tax_rate: null,
+    row_role: 'category_summary',
+    kubun_code: 8,
+    non_taxable_volume_l: 0,
+    export_exempt_volume_l: 0,
+    taxable_volume_l: taxableVolume,
+    tax_amount: Math.max(0, Math.round(taxAmount)),
+  }
+}
+
+function createGrandTotalRow(taxableVolume: number, taxAmount: number): TaxVolumeItem {
+  return {
+    key: 'all-liquor-grand-total',
+    move_type: 'summary',
+    tax_event: 'TAXABLE_REMOVAL',
+    categoryId: '__all__',
+    categoryCode: '000',
+    categoryName: '全酒類',
+    abv: null,
+    volume_l: taxableVolume,
+    tax_rate: null,
+    row_role: 'grand_total',
+    kubun_code: 9,
+    non_taxable_volume_l: 0,
+    export_exempt_volume_l: 0,
+    taxable_volume_l: taxableVolume,
+    tax_amount: Math.max(0, Math.round(taxAmount)),
+  }
+}
+
+function categoryGroupKey(item: TaxVolumeItem) {
+  return `${item.categoryId || item.categoryCode || item.categoryName || 'unknown'}`
+}
+
+function compareLia110Rows(left: TaxVolumeItem, right: TaxVolumeItem) {
+  const categoryResult = compareCategoryRows(left, right)
+  if (categoryResult !== 0) return categoryResult
+
+  const kubunResult = lia110KubunCodeForItem(left) - lia110KubunCodeForItem(right)
+  if (kubunResult !== 0) return kubunResult
+
+  const leftAbv = Number.isFinite(left.abv) ? Number(left.abv) : Number.NEGATIVE_INFINITY
+  const rightAbv = Number.isFinite(right.abv) ? Number(right.abv) : Number.NEGATIVE_INFINITY
+  if (leftAbv !== rightAbv) return rightAbv - leftAbv
+
+  return String(left.tax_event ?? '').localeCompare(String(right.tax_event ?? ''))
+}
+
+function compareCategoryRows(left: TaxVolumeItem | undefined, right: TaxVolumeItem | undefined) {
+  const leftCode = left?.categoryCode ?? ''
+  const rightCode = right?.categoryCode ?? ''
+  if (leftCode !== rightCode) return leftCode.localeCompare(rightCode)
+
+  const leftName = left?.categoryName ?? ''
+  const rightName = right?.categoryName ?? ''
+  if (leftName !== rightName) return leftName.localeCompare(rightName)
+
+  return (left?.categoryId ?? '').localeCompare(right?.categoryId ?? '')
+}
+
+function effectiveTaxRate(rows: TaxVolumeItem[], basisVolume: number, taxAmount: number) {
+  if (basisVolume > 0 && taxAmount > 0) return (taxAmount * 1000) / basisVolume
+
+  const weightedVolume = sumNumbers(rows.map((item) => item.volume_l))
+  if (weightedVolume <= 0) return finiteNumber(rows.find((item) => Number.isFinite(item.tax_rate))?.tax_rate)
+
+  const weightedRateTotal = sumNumbers(
+    rows.map((item) => finiteNumber(item.tax_rate) * finiteNumber(item.volume_l)),
+  )
+  return weightedRateTotal / weightedVolume
+}
+
+function sumNumbers(values: Array<number | null | undefined>): number {
+  return values.reduce<number>((sum, value) => sum + finiteNumber(value), 0)
+}
+
+function finiteNumber(value: number | null | undefined) {
+  return Number.isFinite(value) ? Number(value) : 0
+}
+
+function buildLia130ReductionTotals(options: {
+  priorFiscalYearStandardTaxAmount: number
+  currentMonthStandardTaxAmount: number
+  returnStandardTaxAmount: number
+}): RLI0010_232_ReductionTotals {
+  const priorFiscalYearStandardTaxAmount = roundNonNegativeTax(options.priorFiscalYearStandardTaxAmount)
+  const currentMonthStandardTaxAmount = roundNonNegativeTax(options.currentMonthStandardTaxAmount)
+  const returnStandardTaxAmount = roundNonNegativeTax(options.returnStandardTaxAmount)
+  const netStandardTaxAmount = roundNonNegativeTax(currentMonthStandardTaxAmount - returnStandardTaxAmount)
+  const cumulativeBeforeReturnStandardTaxAmount = roundNonNegativeTax(
+    priorFiscalYearStandardTaxAmount + currentMonthStandardTaxAmount,
+  )
+  const cumulativeAfterReturnStandardTaxAmount = roundNonNegativeTax(
+    cumulativeBeforeReturnStandardTaxAmount - returnStandardTaxAmount,
+  )
+  const currentMonthReducedTaxAmount = reducedTaxAmount(currentMonthStandardTaxAmount)
+  const returnReducedTaxAmount = reducedTaxAmount(returnStandardTaxAmount)
+
+  return {
+    included: true,
+    priorFiscalYearStandardTaxAmount,
+    currentMonthStandardTaxAmount,
+    currentMonthReducedTaxAmount,
+    returnStandardTaxAmount,
+    returnReducedTaxAmount,
+    netStandardTaxAmount,
+    netReducedTaxAmount: roundNonNegativeTax(currentMonthReducedTaxAmount - returnReducedTaxAmount),
+    cumulativeBeforeReturnStandardTaxAmount,
+    cumulativeAfterReturnStandardTaxAmount,
+    category: LIA130_REDUCTION_CATEGORY,
+    rate: LIA130_REDUCTION_RATE,
+  }
+}
+
+function reducedTaxAmount(value: number) {
+  return Math.max(0, Math.floor(roundNonNegativeTax(value) * LIA130_REDUCTION_RATE))
+}
+
+function roundNonNegativeTax(value: number) {
+  return Math.max(0, Math.round(Number.isFinite(value) ? value : 0))
+}
+
 export async function buildXmlPayload(options: {
   taxType: string
   taxYear: number
@@ -347,15 +695,45 @@ export async function buildXmlPayload(options: {
   profile: TaxReportProfile
   tenantId: string
   tenantName: string
+  priorFiscalYearStandardTaxAmount?: number
+  includeLia130?: boolean
 }) {
-  const { taxType, taxYear, taxMonth, breakdown, profile, tenantId, tenantName } = options
+  const {
+    taxType,
+    taxYear,
+    taxMonth,
+    breakdown,
+    profile,
+    tenantId,
+    tenantName,
+    priorFiscalYearStandardTaxAmount = 0,
+    includeLia130 = true,
+  } = options
   if (taxType !== 'monthly') {
     throw new Error('UNSUPPORTED_TAX_TYPE')
   }
-  const taxableItems = breakdown.filter((item) => !isReturnTaxEvent(item.move_type, item.tax_event))
-  const returnItems = breakdown.filter((item) => isReturnTaxEvent(item.move_type, item.tax_event))
-  const rawTotalTaxAmount = calculateTaxTotalAmount(breakdown)
-  const totalTaxAmount = Math.max(0, Math.round(rawTotalTaxAmount))
+  const sourceBreakdown = breakdown.filter((item) => !isGeneratedTaxVolumeItem(item))
+  const disposeOnly = sourceBreakdown.length > 0 && sourceBreakdown.every((item) => isDisposeDocType(item.move_type))
+  const lia110DetailItems = sourceBreakdown.filter(isLia110DetailItem)
+  const summaryItems = disposeOnly
+    ? sourceBreakdown.map((item) => createLegacyDisposeLia110Row(item))
+    : buildLia110ReportRows(lia110DetailItems)
+  const returnItems = disposeOnly
+    ? []
+    : sourceBreakdown.filter((item) => isReturnTaxEvent(item.move_type, item.tax_event))
+  const currentMonthStandardTaxAmount = roundNonNegativeTax(calculateTaxTotalAmount(lia110DetailItems))
+  const returnStandardTaxAmount = roundNonNegativeTax(Math.abs(calculateTaxTotalAmount(returnItems)))
+  const rawNetStandardTaxAmount = currentMonthStandardTaxAmount - returnStandardTaxAmount
+  const netStandardTaxAmount = roundNonNegativeTax(rawNetStandardTaxAmount)
+  const rawTotalTaxAmount = disposeOnly ? calculateTaxTotalAmount(sourceBreakdown) : rawNetStandardTaxAmount
+  const reduction = !disposeOnly && includeLia130
+    ? buildLia130ReductionTotals({
+        priorFiscalYearStandardTaxAmount,
+        currentMonthStandardTaxAmount,
+        returnStandardTaxAmount,
+      })
+    : undefined
+  const totalTaxAmount = reduction?.netReducedTaxAmount ?? Math.max(0, Math.round(rawTotalTaxAmount))
   const roundedDownAmount = totalTaxAmount > 0 ? totalTaxAmount % 100 : 0
   const payableTaxAmount = Math.max(0, totalTaxAmount - roundedDownAmount)
   const refundableTaxAmount = Math.max(0, Math.round(rawTotalTaxAmount < 0 ? Math.abs(rawTotalTaxAmount) : 0))
@@ -375,14 +753,18 @@ export async function buildXmlPayload(options: {
       },
       profile,
       totals: {
+        currentMonthStandardTaxAmount,
+        returnStandardTaxAmount,
+        netStandardTaxAmount,
         totalTaxAmount,
         refundableTaxAmount,
         roundedDownAmount,
         payableTaxAmount,
         netPayableTaxAmount: payableTaxAmount,
+        reduction,
       },
       breakdown: {
-        summary: taxableItems,
+        summary: summaryItems,
         returns: returnItems,
       },
       attachments: [],

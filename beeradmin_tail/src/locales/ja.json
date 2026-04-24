@@ -3091,12 +3091,23 @@
       "back": "一覧へ戻る"
     },
     "columns": {
+      "kubun": "区分",
       "taxEvent": "税務移出種別"
+    },
+    "rowTypes": {
+      "generated": "自動計算",
+      "kubunSummary": "区分小計",
+      "categorySummary": "酒類分類小計",
+      "grandTotal": "総合計"
     },
     "sections": {
       "movement": {
         "title": "移出・移入概要",
         "subtitle": "申告対象の移動内訳を確認・編集します。"
+      },
+      "returns": {
+        "title": "戻入",
+        "subtitle": "戻入行は LIA220 に出力します。"
       },
       "files": {
         "title": "生成ファイル",

@@ -94,9 +94,9 @@
                 <thead class="bg-white text-xs uppercase text-gray-500">
                   <tr>
                     <th class="px-3 py-2 text-left">
-                      <button class="inline-flex items-center gap-1 hover:text-gray-700" type="button" @click="sortMovementTable('taxEvent')">
-                        <span>{{ t('taxReportEditor.columns.taxEvent') }}</span>
-                        <span>{{ movementSortIndicator('taxEvent') }}</span>
+                      <button class="inline-flex items-center gap-1 hover:text-gray-700" type="button" @click="sortMovementTable('kubun')">
+                        <span>{{ t('taxReportEditor.columns.kubun') }}</span>
+                        <span>{{ movementSortIndicator('kubun') }}</span>
                       </button>
                     </th>
                     <th class="px-3 py-2 text-left">
@@ -117,38 +117,100 @@
                         <span>{{ movementSortIndicator('volume') }}</span>
                       </button>
                     </th>
+                    <th class="px-3 py-2 text-left">
+                      <button class="inline-flex items-center gap-1 hover:text-gray-700" type="button" @click="sortMovementTable('taxEvent')">
+                        <span>{{ t('taxReportEditor.columns.taxEvent') }}</span>
+                        <span>{{ movementSortIndicator('taxEvent') }}</span>
+                      </button>
+                    </th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
-                  <tr v-for="(item, index) in reportBreakdown" :key="item.key">
-                    <td class="px-3 py-2 text-gray-700">{{ breakdownMovementLabel(item) }}</td>
-                    <td class="px-3 py-2 text-gray-700">{{ item.categoryName }}</td>
+                  <tr v-for="row in movementTableRows" :key="row.item.key" :class="movementRowClass(row.item)">
+                    <td class="px-3 py-2 text-gray-700">{{ lia110KubunCodeForItem(row.item) }}</td>
+                    <td class="px-3 py-2 text-gray-700">{{ row.item.categoryName }}</td>
                     <td class="px-3 py-2">
                       <input
-                        v-model.number="item.abv"
+                        v-if="row.editable && row.sourceIndex != null"
+                        :value="formatInputNumber(row.item.abv)"
                         type="number"
                         min="0"
                         step="0.01"
                         class="h-[36px] w-full rounded border bg-white px-2"
-                        @input="handleBreakdownChange(index)"
+                        @input="updateReportBreakdownNumber(row.sourceIndex, 'abv', $event)"
                       />
+                      <span v-else class="text-gray-600">{{ formatNullableNumber(row.item.abv, 1) }}</span>
                     </td>
                     <td class="px-3 py-2 text-right">
                       <input
-                        v-model.number="item.volume_l"
+                        v-if="row.editable && row.sourceIndex != null"
+                        :value="formatInputNumber(row.item.volume_l)"
                         type="number"
                         min="0"
                         step="0.01"
                         class="h-[36px] w-full rounded border bg-white px-2 text-right"
-                        @input="handleBreakdownChange(index)"
+                        @input="updateReportBreakdownNumber(row.sourceIndex, 'volume_l', $event)"
                       />
+                      <span v-else class="text-gray-700">{{ formatNullableNumber(row.item.volume_l, 2) }}</span>
+                    </td>
+                    <td class="px-3 py-2 text-gray-700">
+                      <div>{{ movementRowLabel(row.item) }}</div>
+                      <div v-if="movementRowRoleLabel(row.item)" class="text-[11px] text-gray-400">
+                        {{ movementRowRoleLabel(row.item) }}
+                      </div>
                     </td>
                   </tr>
-                  <tr v-if="reportBreakdown.length === 0">
-                    <td colspan="4" class="px-3 py-4 text-center text-xs text-gray-400">{{ t('taxReport.emptyBreakdown') }}</td>
+                  <tr v-if="movementTableRows.length === 0">
+                    <td colspan="5" class="px-3 py-4 text-center text-xs text-gray-400">{{ t('taxReport.emptyBreakdown') }}</td>
                   </tr>
                 </tbody>
               </table>
+            </div>
+            <div v-if="returnTableRows.length > 0" class="space-y-2">
+              <div>
+                <h3 class="text-sm font-semibold text-gray-700">{{ t('taxReportEditor.sections.returns.title') }}</h3>
+                <p class="text-xs text-gray-500">{{ t('taxReportEditor.sections.returns.subtitle') }}</p>
+              </div>
+              <div class="overflow-x-auto rounded border bg-gray-50">
+                <table class="min-w-full text-sm">
+                  <thead class="bg-white text-xs uppercase text-gray-500">
+                    <tr>
+                      <th class="px-3 py-2 text-left">{{ t('taxReportEditor.columns.taxEvent') }}</th>
+                      <th class="px-3 py-2 text-left">{{ t('taxReport.breakdown.columns.category') }}</th>
+                      <th class="px-3 py-2 text-left">{{ t('taxReport.breakdown.columns.abv') }}</th>
+                      <th class="px-3 py-2 text-right">{{ t('taxReport.breakdown.columns.volume') }}</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-100">
+                    <tr v-for="row in returnTableRows" :key="row.item.key">
+                      <td class="px-3 py-2 text-gray-700">{{ breakdownMovementLabel(row.item) }}</td>
+                      <td class="px-3 py-2 text-gray-700">{{ row.item.categoryName }}</td>
+                      <td class="px-3 py-2">
+                        <input
+                          v-if="row.sourceIndex != null"
+                          :value="formatInputNumber(row.item.abv)"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          class="h-[36px] w-full rounded border bg-white px-2"
+                          @input="updateReportBreakdownNumber(row.sourceIndex, 'abv', $event)"
+                        />
+                      </td>
+                      <td class="px-3 py-2 text-right">
+                        <input
+                          v-if="row.sourceIndex != null"
+                          :value="formatInputNumber(row.item.volume_l)"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          class="h-[36px] w-full rounded border bg-white px-2 text-right"
+                          @input="updateReportBreakdownNumber(row.sourceIndex, 'volume_l', $event)"
+                        />
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
             <p v-if="errors.breakdown" class="text-xs text-red-600">{{ errors.breakdown }}</p>
           </section>
@@ -302,12 +364,14 @@ import {
 import {
   calculateTaxAmount,
   calculateTaxTotalAmount,
+  buildLia110ReportRows,
   buildTaxableRemovalExcelFilename,
   buildDisposeXmlFilename,
   buildXmlFilename,
   buildXmlPayload,
   downloadStoredTaxReportFile,
   disposeItemsFromBreakdown,
+  fetchPriorFiscalYearStandardTaxAmount,
   type GeneratedTaxReportFile,
   inferStoredFileType,
   mergeStoredFiles,
@@ -315,6 +379,8 @@ import {
   parseFileList,
   removeStoredTaxReportFiles,
   resolveTaxEvent,
+  isReturnTaxEvent,
+  lia110KubunCodeForItem,
   sortTaxVolumeItems,
   summaryItemsFromBreakdown,
   type TaxReportStoredFile,
@@ -351,8 +417,14 @@ interface MovementRules {
   tax_event_labels?: Record<string, RuleLabel>
 }
 
-type MovementSortKey = 'taxEvent' | 'category' | 'abv' | 'volume'
+type MovementSortKey = 'kubun' | 'taxEvent' | 'category' | 'abv' | 'volume'
 type MovementSortDirection = 'asc' | 'desc'
+
+interface MovementTableRow {
+  item: TaxVolumeItem
+  sourceIndex: number | null
+  editable: boolean
+}
 
 interface MovementHeader {
   id: string
@@ -444,7 +516,7 @@ const movementSort = reactive<{
   key: MovementSortKey
   direction: MovementSortDirection
 }>({
-  key: 'taxEvent',
+  key: 'category',
   direction: 'asc',
 })
 
@@ -508,6 +580,26 @@ const displayReportFiles = computed(() => {
 
   return rows.sort((a, b) => a.fileName.localeCompare(b.fileName))
 })
+const movementTableRows = computed<MovementTableRow[]>(() => {
+  const sourceIndexByKey = new Map(reportBreakdown.value.map((item, index) => [item.key, index]))
+  const rows = buildLia110ReportRows(reportBreakdown.value).map((item) => ({
+    item,
+    sourceIndex: (item.row_role ?? 'detail') === 'detail' ? sourceIndexByKey.get(item.key) ?? null : null,
+    editable: (item.row_role ?? 'detail') === 'detail',
+  }))
+
+  return sortMovementTableRows(rows)
+})
+const returnTableRows = computed<MovementTableRow[]>(() =>
+  reportBreakdown.value
+    .map((item, index) => ({ item, sourceIndex: index, editable: true }))
+    .filter((row) => isReturnTaxEvent(row.item.move_type, row.item.tax_event))
+    .sort((a, b) => {
+      const categoryResult = compareStrings(a.item.categoryName, b.item.categoryName, 'asc')
+      if (categoryResult !== 0) return categoryResult
+      return compareNullableNumbers(a.item.abv, b.item.abv, 'desc')
+    }),
+)
 const taxableRemovalExportLabels = computed<TaxableRemovalExportLabels>(() => ({
   summaryTitle: t('taxableRemovalReport.summary.title'),
   tableTitle: t('taxableRemovalReport.table.title'),
@@ -577,9 +669,43 @@ function breakdownMovementLabel(item: TaxVolumeItem) {
   return taxEventLabel(actualTaxEvent)
 }
 
+function movementRowLabel(item: TaxVolumeItem) {
+  const rowRole = item.row_role ?? 'detail'
+  if (rowRole === 'detail') return breakdownMovementLabel(item)
+  if (rowRole === 'kubun_summary') return t('taxReportEditor.rowTypes.kubunSummary')
+  if (rowRole === 'category_summary') return t('taxReportEditor.rowTypes.categorySummary')
+  if (rowRole === 'grand_total') return t('taxReportEditor.rowTypes.grandTotal')
+  return breakdownMovementLabel(item)
+}
+
+function movementRowRoleLabel(item: TaxVolumeItem) {
+  const rowRole = item.row_role ?? 'detail'
+  if (rowRole === 'detail') return ''
+  return t('taxReportEditor.rowTypes.generated')
+}
+
+function movementRowClass(item: TaxVolumeItem) {
+  const rowRole = item.row_role ?? 'detail'
+  if (rowRole === 'grand_total') return 'bg-blue-50 font-semibold'
+  if (rowRole === 'category_summary') return 'bg-gray-100 font-semibold'
+  if (rowRole === 'kubun_summary') return 'bg-gray-50 font-medium'
+  return 'bg-white'
+}
+
 function movementSortIndicator(key: MovementSortKey) {
   if (movementSort.key !== key) return ''
   return movementSort.direction === 'asc' ? '↑' : '↓'
+}
+
+function formatInputNumber(value: number | null | undefined) {
+  return Number.isFinite(value) ? String(value) : ''
+}
+
+function formatNullableNumber(value: number | null | undefined, maximumFractionDigits = 2) {
+  if (!Number.isFinite(value)) return '—'
+  return new Intl.NumberFormat(locale.value, {
+    maximumFractionDigits,
+  }).format(Number(value))
 }
 
 function compareNullableNumbers(
@@ -600,13 +726,64 @@ function compareStrings(left: string, right: string, direction: MovementSortDire
   return direction === 'asc' ? result : -result
 }
 
+function sortMovementTableRows(rows: MovementTableRow[]) {
+  if (movementSort.key === 'category' && movementSort.direction === 'asc') return rows
+
+  return [...rows].sort((a, b) => compareMovementTableRows(a.item, b.item))
+}
+
+function compareMovementTableRows(a: TaxVolumeItem, b: TaxVolumeItem) {
+  let result = 0
+  if (movementSort.key === 'kubun') {
+    result = compareNullableNumbers(lia110KubunCodeForItem(a), lia110KubunCodeForItem(b), movementSort.direction)
+  } else if (movementSort.key === 'taxEvent') {
+    result = compareStrings(movementRowLabel(a), movementRowLabel(b), movementSort.direction)
+  } else if (movementSort.key === 'category') {
+    result = compareStrings(a.categoryName, b.categoryName, movementSort.direction)
+  } else if (movementSort.key === 'abv') {
+    result = compareNullableNumbers(a.abv, b.abv, movementSort.direction)
+  } else if (movementSort.key === 'volume') {
+    result = compareNullableNumbers(a.volume_l, b.volume_l, movementSort.direction)
+  }
+  if (result !== 0) return result
+
+  const categoryResult = compareStrings(a.categoryName, b.categoryName, 'asc')
+  if (categoryResult !== 0) return categoryResult
+
+  const kubunResult = lia110KubunCodeForItem(a) - lia110KubunCodeForItem(b)
+  if (kubunResult !== 0) return kubunResult
+
+  const roleResult = movementRowRoleRank(a) - movementRowRoleRank(b)
+  if (roleResult !== 0) return roleResult
+
+  return compareNullableNumbers(a.abv, b.abv, 'desc')
+}
+
+function movementRowRoleRank(item: TaxVolumeItem) {
+  switch (item.row_role ?? 'detail') {
+    case 'detail':
+      return 0
+    case 'kubun_summary':
+      return 1
+    case 'category_summary':
+      return 2
+    case 'grand_total':
+      return 3
+    default:
+      return 9
+  }
+}
+
 function sortMovementBreakdown(
   items: TaxVolumeItem[],
   key = movementSort.key,
   direction = movementSort.direction,
 ) {
   items.sort((a, b) => {
-    if (key === 'taxEvent') {
+    if (key === 'kubun') {
+      const result = compareNullableNumbers(lia110KubunCodeForItem(a), lia110KubunCodeForItem(b), direction)
+      if (result !== 0) return result
+    } else if (key === 'taxEvent') {
       const result = compareStrings(breakdownMovementLabel(a), breakdownMovementLabel(b), direction)
       if (result !== 0) return result
     } else if (key === 'category') {
@@ -659,6 +836,23 @@ function handleBreakdownChange(index: number) {
   if (!Number.isFinite(item.volume_l)) item.volume_l = 0
   if (!Number.isFinite(item.abv)) item.abv = null
   recalcTotalTax()
+}
+
+function updateReportBreakdownNumber(
+  index: number,
+  field: 'abv' | 'volume_l',
+  event: Event,
+) {
+  const item = reportBreakdown.value[index]
+  const target = event.target as HTMLInputElement | null
+  if (!item || !target) return
+  const value = target.value === '' ? null : Number(target.value)
+  if (field === 'abv') {
+    item.abv = Number.isFinite(value) ? Number(value) : null
+  } else {
+    item.volume_l = Number.isFinite(value) ? Number(value) : 0
+  }
+  handleBreakdownChange(index)
 }
 
 function handleDisposeChange(index: number) {
@@ -1097,6 +1291,7 @@ async function generateReportForPeriod(taxType: string, year: number, month: num
 
     const breakdownMap = new Map<string, TaxVolumeItem>()
     const taxTotalMap = new Map<string, number>()
+    const taxRateWeightedMap = new Map<string, number>()
     let totalTax = 0
 
     lines.forEach((line) => {
@@ -1130,7 +1325,9 @@ async function generateReportForPeriod(taxType: string, year: number, month: num
 
       if (!volume || Number.isNaN(volume)) return
 
-      const key = `${moveType}-${taxEvent ?? 'unknown'}-${categoryId}-${abv ?? 'na'}`
+      const key = isSummaryDocType(moveType)
+        ? `${taxEvent ?? 'unknown'}-${categoryId}-${abv ?? 'na'}`
+        : `${moveType}-${taxEvent ?? 'unknown'}-${categoryId}-${abv ?? 'na'}`
       const existing = breakdownMap.get(key)
       if (existing) {
         existing.volume_l += volume
@@ -1154,12 +1351,17 @@ async function generateReportForPeriod(taxType: string, year: number, month: num
         totalTax += lineTaxAmount
       }
       taxTotalMap.set(key, (taxTotalMap.get(key) ?? 0) + lineTaxAmount)
+      taxRateWeightedMap.set(key, (taxRateWeightedMap.get(key) ?? 0) + (taxRate * volume))
     })
 
     breakdownMap.forEach((item, key) => {
       const taxTotal = taxTotalMap.get(key) ?? 0
       const direction = Math.sign(calculateTaxAmount(item.move_type, item.volume_l, 1, item.tax_event))
-      item.tax_rate = item.volume_l > 0 && direction !== 0 ? (taxTotal * 1000) / (item.volume_l * direction) : 0
+      const weightedRate = item.volume_l > 0 ? (taxRateWeightedMap.get(key) ?? 0) / item.volume_l : 0
+      item.tax_rate =
+        item.volume_l > 0 && direction !== 0
+          ? (taxTotal * 1000) / (item.volume_l * direction)
+          : weightedRate
     })
 
     const generatedItems = sortTaxVolumeItems(Array.from(breakdownMap.values()))
@@ -1188,6 +1390,14 @@ function validateForm() {
 async function buildSummaryXmlFile() {
   const summaryBreakdown = summaryItemsFromBreakdown(reportBreakdown.value)
   if (summaryBreakdown.length === 0) return null
+  const tenant = await ensureTenant()
+  const priorFiscalYearStandardTaxAmount = await fetchPriorFiscalYearStandardTaxAmount({
+    supabase,
+    tenantId: tenant,
+    taxYear: form.tax_year,
+    taxMonth: form.tax_month,
+    excludeReportId: form.id || null,
+  })
   const fileName = buildXmlFilename(form.tax_type, form.tax_year, form.tax_month)
   const content = await buildXmlPayload({
     taxType: form.tax_type,
@@ -1195,8 +1405,10 @@ async function buildSummaryXmlFile() {
     taxMonth: form.tax_month,
     breakdown: summaryBreakdown,
     profile: tenantProfile.value,
-    tenantId: tenantId.value ?? '',
+    tenantId: tenant,
     tenantName: tenantName.value,
+    priorFiscalYearStandardTaxAmount,
+    includeLia130: true,
   })
   return {
     blob: new Blob([content], { type: 'application/xml' }),
@@ -1218,6 +1430,7 @@ async function buildDisposeXmlFile() {
     profile: tenantProfile.value,
     tenantId: tenantId.value ?? '',
     tenantName: tenantName.value,
+    includeLia130: false,
   })
   return {
     blob: new Blob([content], { type: 'application/xml' }),

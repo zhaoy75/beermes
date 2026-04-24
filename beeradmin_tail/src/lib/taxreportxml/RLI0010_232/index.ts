@@ -2,6 +2,7 @@ export { reportName } from './constants'
 export { schemaMap } from './schemaMap'
 export type {
   RLI0010_232_Input,
+  RLI0010_232_ReductionTotals,
   RLI0010_232_Result,
   RLI0010_232_ValidationMessage,
   RLI0010_232_XsdValidateRequest,

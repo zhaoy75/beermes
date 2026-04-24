@@ -273,7 +273,7 @@ export const tenantRoutes: RouteRecordRaw[] = [
     name: 'ProducedBeer',
     component: () => import('@/views/Pages/ProducedBeer.vue'),
     meta: {
-      title: 'Movement Register',
+      title: 'Inbound/Outbound Register',
       requiresAuth: true,
     },
   },

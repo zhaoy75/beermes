@@ -1454,7 +1454,7 @@
     }
   },
   "producedBeer": {
-    "title": "移出登録",
+    "title": "移入出登録",
     "subtitle": "製品ビールの移出を管理します。",
     "sections": {
       "inventory": "在庫",
@@ -1489,7 +1489,8 @@
         "batchNo": "製造バッチ",
         "dateFrom": "開始日",
         "dateTo": "終了日",
-        "movementType": "税務移出種別"
+        "movementType": "税務移出種別",
+        "taxMovementOnly": "税務関連移入出のみ表示"
       },
       "types": {
         "taxed": "課税移出",
@@ -1525,6 +1526,7 @@
         "taxType": "税区分",
         "taxRate": "税率",
         "movementDate": "移出日",
+        "batchCode": "バッチコード",
         "source": "移出元",
         "destination": "移出先",
         "volumePerPackage": "容量/本(箱)",
@@ -2698,7 +2700,7 @@
       "beerInventory": "ビール在庫管理",
       "rawMaterialReceipts": "原材料受入",
       "rawMaterialInventory": "原材料在庫管理",
-      "producedBeer": "移出登録",
+      "producedBeer": "移入出登録",
       "waste": "廃棄物管理",
       "masterMaintenance": "マスタ管理",
       "systemMaintenance": "システム管理",

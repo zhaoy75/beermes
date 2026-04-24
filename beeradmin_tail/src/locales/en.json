@@ -1454,7 +1454,7 @@
     }
   },
   "producedBeer": {
-    "title": "Movement Register",
+    "title": "Inbound/Outbound Register",
     "subtitle": "Monitor packaged craft beer movements.",
     "sections": {
       "inventory": "Inventory",
@@ -1489,7 +1489,8 @@
         "batchNo": "Production batch no",
         "dateFrom": "Date from",
         "dateTo": "Date to",
-        "movementType": "Tax movement type"
+        "movementType": "Tax movement type",
+        "taxMovementOnly": "Tax-related movements only"
       },
       "types": {
         "taxed": "Taxed shipment",
@@ -1525,6 +1526,7 @@
         "taxType": "Tax type",
         "taxRate": "Tax rate",
         "movementDate": "Movement date",
+        "batchCode": "Batch code",
         "source": "Source site",
         "destination": "Destination site",
         "volumePerPackage": "Volume Per Package",
@@ -2706,7 +2708,7 @@
       "beerInventory": "Beer Inventory Management",
       "rawMaterialReceipts": "Raw Material Receipts",
       "rawMaterialInventory": "Raw Material Inventory Management",
-      "producedBeer": "Movement Register",
+      "producedBeer": "Inbound/Outbound Register",
       "waste": "Waste",
       "masterMaintenance": "Master Maintenance",
       "systemMaintenance": "System Maintenance",

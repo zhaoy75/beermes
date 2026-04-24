@@ -129,6 +129,16 @@
                 class="w-full h-[40px] border rounded px-3"
               />
             </div>
+            <div class="md:col-span-2 flex items-end">
+              <label class="flex h-[40px] items-center gap-2 text-sm text-gray-700">
+                <input
+                  v-model="movementFilters.taxMovementOnly"
+                  type="checkbox"
+                  class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span>{{ t('producedBeer.movement.filters.taxMovementOnly') }}</span>
+              </label>
+            </div>
             <div>
               <label class="block text-sm text-gray-600 mb-1">{{
                 t('producedBeer.movement.filters.movementType')
@@ -156,6 +166,9 @@
               <tr>
                 <th class="px-3 py-2 text-left">
                   {{ t('producedBeer.movement.card.movementDate') }}
+                </th>
+                <th class="px-3 py-2 text-left">
+                  {{ t('producedBeer.movement.card.batchCode') }}
                 </th>
                 <th class="px-3 py-2 text-left">
                   {{ t('producedBeer.inventory.table.styleName') }}
@@ -190,6 +203,7 @@
                 <td class="px-3 py-2 text-xs text-gray-500">
                   {{ formatDateTime(card.movementAt) }}
                 </td>
+                <td class="px-3 py-2 font-mono text-xs text-gray-600">{{ movementBatchCodeLabel(card) }}</td>
                 <td class="px-3 py-2 text-gray-600">{{ movementStyleLabel(card) }}</td>
                 <td class="px-3 py-2 text-right text-gray-600">
                   {{ movementTargetAbvLabel(card) }}
@@ -207,7 +221,9 @@
                 <td class="px-3 py-2 text-right text-gray-600">{{ movementTaxRateLabel(card) }}</td>
                 <td class="px-3 py-2 text-gray-600">{{ siteLabel(card.sourceSiteId) }}</td>
                 <td class="px-3 py-2 text-gray-600">{{ siteLabel(card.destSiteId) }}</td>
-                <td class="px-3 py-2 font-semibold text-gray-900">{{ card.docNo }}</td>
+                <td class="px-3 py-2 font-semibold text-gray-900" :title="card.docNo">
+                  {{ movementDocumentNoLabel(card.docNo) }}
+                </td>
                 <td class="px-3 py-2 text-gray-600">
                   {{ movementTypeLabel(card.taxEvent) }}
                 </td>
@@ -226,7 +242,7 @@
                 </td>
               </tr>
               <tr v-if="!movementLoading && filteredMovementCards.length === 0">
-                <td colspan="13" class="px-3 py-8 text-center text-gray-500">
+                <td colspan="14" class="px-3 py-8 text-center text-gray-500">
                   {{ t('common.noData') }}
                 </td>
               </tr>
@@ -254,16 +270,13 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import ConfirmActionDialog from '@/components/common/ConfirmActionDialog.vue'
-import {
-  buildAlcoholTypeLabelMap,
-  loadAlcoholTypeReferenceData,
-  resolveAlcoholTypeLabel,
-} from '@/lib/alcoholTypeRegistry'
+import { loadAlcoholTypeReferenceData } from '@/lib/alcoholTypeRegistry'
 import {
   resolveBatchBeerCategoryId,
   resolveBatchDisplayName,
   resolveBatchStyleName,
   resolveBatchTargetAbv,
+  type BatchRecipeSource,
 } from '@/lib/batchRecipeSnapshot'
 import { useConfirmDialog } from '@/composables/useConfirmDialog'
 import { createWorkbookBlob, type WorkbookCell, type WorkbookSheet } from '@/lib/fillingReportExport'
@@ -277,7 +290,7 @@ import 'vue3-toastify/dist/index.css'
 interface CategoryRow {
   def_id: string
   def_key: string
-  spec: Record<string, any>
+  spec: Record<string, unknown>
 }
 
 interface SiteOption {
@@ -312,7 +325,7 @@ interface MovementHeader {
   src_site_id: string | null
   dest_site_id: string | null
   notes: string | null
-  meta?: Record<string, any> | null
+  meta?: Record<string, unknown> | null
 }
 
 interface MovementLineRow {
@@ -324,7 +337,25 @@ interface MovementLineRow {
   unit: number | null
   tax_rate: number | null
   uom_id: string | null
-  meta?: Record<string, any> | null
+  meta?: Record<string, unknown> | null
+}
+
+type AttrDefRow = {
+  attr_id: unknown
+  code: unknown
+}
+
+type EntityAttrRow = {
+  entity_id: unknown
+  attr_id: unknown
+  value_text: unknown
+  value_num: unknown
+  value_ref_type_id: unknown
+  value_json: unknown
+}
+
+type MesBatchRow = BatchRecipeSource & {
+  id: string
 }
 
 interface PackageInfo {
@@ -382,7 +413,6 @@ const movementLoading = ref(false)
 const exportLoading = ref(false)
 
 const categories = ref<CategoryRow[]>([])
-const categoryFallbackRows = ref<CategoryRow[]>([])
 const packageCategories = ref<PackageCategoryRow[]>([])
 const uoms = ref<Array<{ id: string; code: string | null }>>([])
 const siteOptions = ref<SiteOption[]>([])
@@ -397,6 +427,7 @@ const movementFilters = reactive({
   batchNo: '',
   dateFrom: defaultMovementDateFrom,
   dateTo: '',
+  taxMovementOnly: true,
 })
 
 const movementTypeFilter = ref<
@@ -414,8 +445,6 @@ const siteMap = computed(() => {
   siteOptions.value.forEach((item) => map.set(item.value, item))
   return map
 })
-
-const categoryLabelMap = computed(() => buildAlcoholTypeLabelMap(categories.value, categoryFallbackRows.value))
 
 const packageCategoryMap = computed(() => {
   const map = new Map<string, { label: string; size: number | null; uomId: string | null }>()
@@ -502,15 +531,6 @@ function formatAbv(value: number | null | undefined) {
   return `${numberFormatter.value.format(value)}%`
 }
 
-function formatDate(value: string | null | undefined) {
-  if (!value) return '—'
-  try {
-    return new Intl.DateTimeFormat(locale.value).format(new Date(value))
-  } catch {
-    return value
-  }
-}
-
 function formatDateTime(value: string | null | undefined) {
   if (!value) return '—'
   try {
@@ -518,11 +538,6 @@ function formatDateTime(value: string | null | undefined) {
   } catch {
     return value
   }
-}
-
-function categoryLabel(categoryId: string | null | undefined) {
-  if (!categoryId) return '—'
-  return resolveAlcoholTypeLabel(categoryLabelMap.value, categoryId) ?? categoryId
 }
 
 function resolveLang() {
@@ -537,27 +552,6 @@ function resolvePackageName(row: PackageCategoryRow) {
   const lang = resolveLang()
   const name = row.name_i18n?.[lang] ?? Object.values(row.name_i18n ?? {})[0]
   return name || row.package_code
-}
-
-function resolveBatchLabel(meta: Record<string, any> | null | undefined) {
-  const label = meta?.label
-  if (typeof label !== 'string') return null
-  const trimmed = label.trim()
-  return trimmed.length ? trimmed : null
-}
-
-function resolveMetaString(meta: Record<string, any> | null | undefined, key: string) {
-  const value = meta?.[key]
-  if (typeof value !== 'string') return null
-  const trimmed = value.trim()
-  return trimmed.length ? trimmed : null
-}
-
-function resolveMetaNumber(meta: Record<string, any> | null | undefined, key: string) {
-  const value = meta?.[key]
-  if (value == null) return null
-  const num = Number(value)
-  return Number.isFinite(num) ? num : null
 }
 
 function siteLabel(siteId: string | null | undefined) {
@@ -581,9 +575,21 @@ function legacyMovementTaxEvent(docType: string, taxType: string | null) {
   return null
 }
 
+function resolveHeaderTaxType(header: MovementHeader) {
+  return typeof header.meta?.tax_type === 'string' ? header.meta.tax_type : null
+}
+
+function resolveHeaderTaxEvent(header: MovementHeader) {
+  const taxType = resolveHeaderTaxType(header)
+  return typeof header.meta?.tax_event === 'string' && header.meta.tax_event.trim()
+    ? header.meta.tax_event.trim()
+    : legacyMovementTaxEvent(header.doc_type, taxType)
+}
+
 function movementTypeLabel(taxEvent: string | null | undefined) {
   const normalized = (taxEvent ?? '').trim()
   if (!normalized.length) return '—'
+  if (normalized === 'NONE') return '—'
   return pickLabel(movementRules.value?.tax_event_labels?.[normalized], normalized)
 }
 
@@ -612,6 +618,11 @@ function uniqueNumbers(values: Array<number | null | undefined>, precision = 6) 
 function movementStyleLabel(card: MovementCardView) {
   const styles = uniqueNonEmpty(card.lines.map((line) => line.styleName))
   return styles.length ? styles.join(', ') : '—'
+}
+
+function movementBatchCodeLabel(card: MovementCardView) {
+  const batchCodes = uniqueNonEmpty(card.lines.map((line) => line.batchCode))
+  return batchCodes.length ? batchCodes.join(', ') : '—'
 }
 
 function movementTargetAbvLabel(card: MovementCardView) {
@@ -656,6 +667,10 @@ function movementTaxRateLabel(card: MovementCardView) {
   return '—'
 }
 
+function movementDocumentNoLabel(docNo: string) {
+  return docNo.length > 15 ? `${docNo.slice(0, 15)}....` : docNo
+}
+
 function borderedRow(values: Array<string | number | null | undefined>, style: 'border' | 'header' = 'border'): WorkbookCell[] {
   return values.map((value) => ({
     style,
@@ -666,6 +681,7 @@ function borderedRow(values: Array<string | number | null | undefined>, style: '
 function buildMovementExportSheet(): WorkbookSheet {
   const header = borderedRow([
     t('producedBeer.movement.card.movementDate'),
+    t('producedBeer.movement.card.batchCode'),
     t('producedBeer.inventory.table.styleName'),
     t('producedBeer.inventory.table.targetAbv'),
     t('producedBeer.movement.card.linePackageType'),
@@ -682,6 +698,7 @@ function buildMovementExportSheet(): WorkbookSheet {
   const rows = filteredMovementCards.value.map((card) =>
     borderedRow([
       formatDateTime(card.movementAt),
+      movementBatchCodeLabel(card),
       movementStyleLabel(card),
       movementTargetAbvLabel(card),
       movementPackageLabel(card),
@@ -741,20 +758,20 @@ function extractErrorMessage(err: unknown) {
 }
 
 function matchesMovementType(header: MovementHeader) {
+  const taxEvent = resolveHeaderTaxEvent(header)
+  if (movementFilters.taxMovementOnly && (!taxEvent || taxEvent === 'NONE')) return false
   if (movementTypeFilter.value === 'all') return true
-
-  const taxType = typeof header.meta?.tax_type === 'string' ? header.meta.tax_type : ''
-  const taxEvent =
-    typeof header.meta?.tax_event === 'string' && header.meta.tax_event.trim()
-      ? header.meta.tax_event.trim()
-      : legacyMovementTaxEvent(header.doc_type, taxType)
   return taxEvent === movementTypeFilter.value
 }
 
-function toNumber(value: any): number | null {
+function toNumber(value: unknown): number | null {
   if (value == null) return null
   const num = Number(value)
   return Number.isFinite(num) ? num : null
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return typeof value === 'object' && value !== null && !Array.isArray(value) ? value as Record<string, unknown> : null
 }
 
 function convertToLiters(size: number | null, uomCode: string | null | undefined) {
@@ -784,9 +801,8 @@ async function ensureTenant() {
 }
 
 async function loadCategories() {
-  const { optionRows, fallbackRows } = await loadAlcoholTypeReferenceData(supabase)
+  const { optionRows } = await loadAlcoholTypeReferenceData(supabase)
   categories.value = optionRows as CategoryRow[]
-  categoryFallbackRows.value = fallbackRows as CategoryRow[]
 }
 
 async function loadPackageCategories() {
@@ -865,9 +881,7 @@ async function fetchMovements() {
 
     if (lineError) throw lineError
 
-    const lineList = (lines ?? []).filter(
-      (row: any) => row.package_id || row.batch_id,
-    ) as MovementLineRow[]
+    const lineList = (lines ?? []).filter((row) => row.package_id || row.batch_id) as MovementLineRow[]
     const packageIds = lineList.map((row) => row.package_id).filter(Boolean) as string[]
     const batchIds = lineList.map((row) => row.batch_id).filter(Boolean) as string[]
 
@@ -879,11 +893,8 @@ async function fetchMovements() {
       const header = headerMap.get(line.movement_id)
       if (!header) return
       if (!cardMap.has(line.movement_id)) {
-        const taxType = typeof header.meta?.tax_type === 'string' ? header.meta.tax_type : null
-        const taxEvent =
-          typeof header.meta?.tax_event === 'string' && header.meta.tax_event.trim()
-            ? header.meta.tax_event.trim()
-            : legacyMovementTaxEvent(header.doc_type, taxType)
+        const taxType = resolveHeaderTaxType(header)
+        const taxEvent = resolveHeaderTaxEvent(header)
         cardMap.set(line.movement_id, {
           id: line.movement_id,
           docNo: header.doc_no,
@@ -995,7 +1006,7 @@ async function loadBatchInfo(batchIds: string[]) {
       .in('code', ['beer_category', 'actual_abv', 'target_abv', 'style_name'])
       .eq('is_active', true)
     if (attrDefError) throw attrDefError
-    ;(attrDefs ?? []).forEach((row: any) => {
+    ;((attrDefs ?? []) as AttrDefRow[]).forEach((row) => {
       const id = Number(row.attr_id)
       if (!Number.isFinite(id)) return
       attrIds.push(id)
@@ -1010,7 +1021,7 @@ async function loadBatchInfo(batchIds: string[]) {
         .in('entity_id', uniqueIds)
         .in('attr_id', attrIds)
       if (attrValueError) throw attrValueError
-      ;(attrValues ?? []).forEach((row: any) => {
+      ;((attrValues ?? []) as EntityAttrRow[]).forEach((row) => {
         const batchId = String(row.entity_id ?? '')
         if (!batchId) return
         if (!attrValueByBatch.has(batchId)) {
@@ -1027,7 +1038,7 @@ async function loadBatchInfo(batchIds: string[]) {
         if (!code) return
 
         if (code === 'beer_category') {
-          const jsonDefId = row.value_json?.def_id
+          const jsonDefId = asRecord(row.value_json)?.def_id
           if (typeof jsonDefId === 'string' && jsonDefId.trim())
             entry.beerCategoryId = jsonDefId.trim()
           else if (typeof row.value_text === 'string' && row.value_text.trim())
@@ -1059,7 +1070,7 @@ async function loadBatchInfo(batchIds: string[]) {
     .eq('tenant_id', tenant)
     .in('id', uniqueIds)
   if (error) throw error
-  ;(data ?? []).forEach((row: any) => {
+  ;((data ?? []) as MesBatchRow[]).forEach((row) => {
     const attr = attrValueByBatch.get(row.id)
 
     infoMap.set(row.id, {
@@ -1080,6 +1091,7 @@ function resetMovementFilters() {
   movementFilters.batchNo = ''
   movementFilters.dateFrom = defaultMovementDateFrom
   movementFilters.dateTo = ''
+  movementFilters.taxMovementOnly = true
   movementTypeFilter.value = 'all'
 }
 
@@ -1124,6 +1136,7 @@ watch(
   () => ({
     dateFrom: movementFilters.dateFrom,
     dateTo: movementFilters.dateTo,
+    taxMovementOnly: movementFilters.taxMovementOnly,
     movementType: movementTypeFilter.value,
   }),
   async () => {

@@ -3112,6 +3112,25 @@
         "title": "戻入",
         "subtitle": "戻入行は LIA220 に出力します。"
       },
+      "reduction": {
+        "title": "軽減税額算出表",
+        "subtitle": "LIA130 に出力する軽減税額をプレビューします。",
+        "rate": "区分 {category} / 軽減率 {rate}",
+        "loadFailed": "前月までの累計額を取得できませんでした: {message}",
+        "columns": {
+          "item": "項目",
+          "standardTax": "本則税額",
+          "reducedTax": "軽減後税額"
+        },
+        "rows": {
+          "priorFiscalYear": "前月までの当年度酒税累計額",
+          "currentMonth": "当月分",
+          "returnDeduction": "戻入控除分",
+          "netTax": "差引税額",
+          "cumulativeBeforeReturn": "戻入控除前累計",
+          "cumulativeAfterReturn": "戻入控除後累計"
+        }
+      },
       "files": {
         "title": "生成ファイル",
         "subtitle": "保存時に Supabase Storage へ保存されるファイル一覧です。",

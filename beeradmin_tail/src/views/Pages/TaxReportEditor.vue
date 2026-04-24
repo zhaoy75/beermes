@@ -212,6 +212,67 @@
                 </table>
               </div>
             </div>
+            <div class="space-y-2">
+              <div class="flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
+                <div>
+                  <h3 class="text-sm font-semibold text-gray-700">{{ t('taxReportEditor.sections.reduction.title') }}</h3>
+                  <p class="text-xs text-gray-500">{{ t('taxReportEditor.sections.reduction.subtitle') }}</p>
+                </div>
+                <div class="text-xs text-gray-500">
+                  <span v-if="reductionPreviewLoading">{{ t('common.loading') }}</span>
+                  <span v-else>{{ t('taxReportEditor.sections.reduction.rate', {
+                    category: taxReductionPreview.category,
+                    rate: formatPercent(taxReductionPreview.rate),
+                  }) }}</span>
+                </div>
+              </div>
+              <p v-if="reductionPreviewError" class="text-xs text-red-600">
+                {{ t('taxReportEditor.sections.reduction.loadFailed', { message: reductionPreviewError }) }}
+              </p>
+              <div class="overflow-x-auto rounded border bg-gray-50">
+                <table class="min-w-full text-sm">
+                  <thead class="bg-white text-xs uppercase text-gray-500">
+                    <tr>
+                      <th class="px-3 py-2 text-left">{{ t('taxReportEditor.sections.reduction.columns.item') }}</th>
+                      <th class="px-3 py-2 text-right">{{ t('taxReportEditor.sections.reduction.columns.standardTax') }}</th>
+                      <th class="px-3 py-2 text-right">{{ t('taxReportEditor.sections.reduction.columns.reducedTax') }}</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-100">
+                    <tr>
+                      <td class="px-3 py-2 text-gray-700">{{ t('taxReportEditor.sections.reduction.rows.priorFiscalYear') }}</td>
+                      <td class="px-3 py-2 text-right text-gray-700">{{ formatCurrency(taxReductionPreview.priorFiscalYearStandardTaxAmount) }}</td>
+                      <td class="px-3 py-2 text-right text-gray-400">—</td>
+                    </tr>
+                    <tr>
+                      <td class="px-3 py-2 text-gray-700">{{ t('taxReportEditor.sections.reduction.rows.currentMonth') }}</td>
+                      <td class="px-3 py-2 text-right text-gray-700">{{ formatCurrency(taxReductionPreview.currentMonthStandardTaxAmount) }}</td>
+                      <td class="px-3 py-2 text-right text-gray-700">{{ formatCurrency(taxReductionPreview.currentMonthReducedTaxAmount) }}</td>
+                    </tr>
+                    <tr>
+                      <td class="px-3 py-2 text-gray-700">{{ t('taxReportEditor.sections.reduction.rows.returnDeduction') }}</td>
+                      <td class="px-3 py-2 text-right text-gray-700">{{ formatCurrency(taxReductionPreview.returnStandardTaxAmount) }}</td>
+                      <td class="px-3 py-2 text-right text-gray-700">{{ formatCurrency(taxReductionPreview.returnReducedTaxAmount) }}</td>
+                    </tr>
+                    <tr class="bg-white font-medium">
+                      <td class="px-3 py-2 text-gray-800">{{ t('taxReportEditor.sections.reduction.rows.netTax') }}</td>
+                      <td class="px-3 py-2 text-right text-gray-800">{{ formatCurrency(taxReductionPreview.netStandardTaxAmount) }}</td>
+                      <td class="px-3 py-2 text-right text-gray-800">{{ formatCurrency(taxReductionPreview.netReducedTaxAmount) }}</td>
+                    </tr>
+                    <tr>
+                      <td class="px-3 py-2 text-gray-700">{{ t('taxReportEditor.sections.reduction.rows.cumulativeBeforeReturn') }}</td>
+                      <td class="px-3 py-2 text-right text-gray-700">{{ formatCurrency(taxReductionPreview.cumulativeBeforeReturnStandardTaxAmount) }}</td>
+                      <td class="px-3 py-2 text-right text-gray-400">—</td>
+                    </tr>
+                    <tr>
+                      <td class="px-3 py-2 text-gray-700">{{ t('taxReportEditor.sections.reduction.rows.cumulativeAfterReturn') }}</td>
+                      <td class="px-3 py-2 text-right text-gray-700">{{ formatCurrency(taxReductionPreview.cumulativeAfterReturnStandardTaxAmount) }}</td>
+                      <td class="px-3 py-2 text-right text-gray-400">—</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
             <p v-if="errors.breakdown" class="text-xs text-red-600">{{ errors.breakdown }}</p>
           </section>
 
@@ -365,6 +426,7 @@ import {
   calculateTaxAmount,
   calculateTaxTotalAmount,
   buildLia110ReportRows,
+  buildTaxReductionPreview,
   buildTaxableRemovalExcelFilename,
   buildDisposeXmlFilename,
   buildXmlFilename,
@@ -394,6 +456,7 @@ import {
   loadTaxableRemovalDetailRows,
   type TaxableRemovalExportLabels,
 } from '@/lib/taxableRemovalReport'
+import { useRuleengineLabels } from '@/composables/useRuleengineLabels'
 
 interface CategoryRow {
   id: string
@@ -406,15 +469,6 @@ interface TaxRateRecord {
   taxrate: number
   effectDate: Date | null
   expireDate: Date | null
-}
-
-interface RuleLabel {
-  ja?: string | null
-  en?: string | null
-}
-
-interface MovementRules {
-  tax_event_labels?: Record<string, RuleLabel>
 }
 
 type MovementSortKey = 'kubun' | 'taxEvent' | 'category' | 'abv' | 'volume'
@@ -481,6 +535,7 @@ const REPORT_DOC_TYPES = [...SUMMARY_DOC_TYPES, ...DISPOSE_DOC_TYPES] as const
 const { t, tm, locale } = useI18n()
 const route = useRoute()
 const router = useRouter()
+const { loadRuleengineLabels, ruleLabel } = useRuleengineLabels()
 
 const loadingInitial = ref(false)
 const saving = ref(false)
@@ -492,7 +547,6 @@ const tenantProfile = ref<TaxReportProfile>(createEmptyTaxReportProfile())
 const categories = ref<CategoryRow[]>([])
 const uoms = ref<Array<{ id: string; code: string | null }>>([])
 const taxRateIndex = ref<Record<string, TaxRateRecord[]>>({})
-const movementRules = ref<MovementRules | null>(null)
 
 const form = reactive({
   id: '',
@@ -507,6 +561,9 @@ const errors = reactive<Record<string, string>>({})
 const reportBreakdown = ref<TaxVolumeItem[]>([])
 const disposeBreakdown = ref<TaxVolumeItem[]>([])
 const totalTaxAmount = ref(0)
+const priorFiscalYearStandardTaxAmount = ref(0)
+const reductionPreviewLoading = ref(false)
+const reductionPreviewError = ref('')
 const summaryXmlUrl = ref('')
 const summaryXmlName = ref('')
 const disposeXmlUrl = ref('')
@@ -600,6 +657,12 @@ const returnTableRows = computed<MovementTableRow[]>(() =>
       return compareNullableNumbers(a.item.abv, b.item.abv, 'desc')
     }),
 )
+const taxReductionPreview = computed(() =>
+  buildTaxReductionPreview({
+    breakdown: reportBreakdown.value,
+    priorFiscalYearStandardTaxAmount: priorFiscalYearStandardTaxAmount.value,
+  }),
+)
 const taxableRemovalExportLabels = computed<TaxableRemovalExportLabels>(() => ({
   summaryTitle: t('taxableRemovalReport.summary.title'),
   tableTitle: t('taxableRemovalReport.table.title'),
@@ -646,22 +709,8 @@ function taxTypeLabel(taxType: string) {
   return typeof label === 'string' ? label : taxType
 }
 
-function pickLabel(label: RuleLabel | null | undefined, fallback: string) {
-  if (!label) return fallback
-  const isJa = String(locale.value || '')
-    .toLowerCase()
-    .startsWith('ja')
-  if (isJa) return label.ja || label.en || fallback
-  return label.en || label.ja || fallback
-}
-
-function mapRuleLabel(map: Record<string, RuleLabel> | undefined, code: string | null | undefined) {
-  if (!code) return '—'
-  return pickLabel(map?.[code], code)
-}
-
 function taxEventLabel(value: string | null | undefined) {
-  return mapRuleLabel(movementRules.value?.tax_event_labels, value)
+  return ruleLabel('tax_event', value)
 }
 
 function breakdownMovementLabel(item: TaxVolumeItem) {
@@ -705,6 +754,14 @@ function formatNullableNumber(value: number | null | undefined, maximumFractionD
   if (!Number.isFinite(value)) return '—'
   return new Intl.NumberFormat(locale.value, {
     maximumFractionDigits,
+  }).format(Number(value))
+}
+
+function formatPercent(value: number | null | undefined) {
+  if (!Number.isFinite(value)) return '—'
+  return new Intl.NumberFormat(locale.value, {
+    style: 'percent',
+    maximumFractionDigits: 1,
   }).format(Number(value))
 }
 
@@ -1086,14 +1143,6 @@ async function loadTaxRates() {
   buildTaxRateIndex((data ?? []) as Array<{ spec?: Record<string, unknown> | null }>)
 }
 
-async function loadMovementRules() {
-  const { data, error } = await supabase.rpc('movement_get_rules', {
-    p_movement_intent: null,
-  })
-  if (error) throw error
-  movementRules.value = ((Array.isArray(data) ? data[0] : data) ?? null) as MovementRules | null
-}
-
 function applicableTaxRate(categoryCode: string | null | undefined, dateStr: string | null | undefined) {
   const code = normalizeTaxCategoryCode(categoryCode)
   if (!code) return 0
@@ -1391,13 +1440,14 @@ async function buildSummaryXmlFile() {
   const summaryBreakdown = summaryItemsFromBreakdown(reportBreakdown.value)
   if (summaryBreakdown.length === 0) return null
   const tenant = await ensureTenant()
-  const priorFiscalYearStandardTaxAmount = await fetchPriorFiscalYearStandardTaxAmount({
+  const priorStandardTaxAmount = await fetchPriorFiscalYearStandardTaxAmount({
     supabase,
     tenantId: tenant,
     taxYear: form.tax_year,
     taxMonth: form.tax_month,
     excludeReportId: form.id || null,
   })
+  priorFiscalYearStandardTaxAmount.value = priorStandardTaxAmount
   const fileName = buildXmlFilename(form.tax_type, form.tax_year, form.tax_month)
   const content = await buildXmlPayload({
     taxType: form.tax_type,
@@ -1407,7 +1457,7 @@ async function buildSummaryXmlFile() {
     profile: tenantProfile.value,
     tenantId: tenant,
     tenantName: tenantName.value,
-    priorFiscalYearStandardTaxAmount,
+    priorFiscalYearStandardTaxAmount: priorStandardTaxAmount,
     includeLia130: true,
   })
   return {
@@ -1644,6 +1694,31 @@ async function loadExistingReport(id: string) {
   totalTaxAmount.value = row.total_tax_amount
 }
 
+async function refreshReductionPreview() {
+  if (form.tax_type !== 'monthly' || !form.tax_year || !form.tax_month) {
+    priorFiscalYearStandardTaxAmount.value = 0
+    reductionPreviewError.value = ''
+    return
+  }
+  try {
+    reductionPreviewLoading.value = true
+    reductionPreviewError.value = ''
+    const tenant = await ensureTenant()
+    priorFiscalYearStandardTaxAmount.value = await fetchPriorFiscalYearStandardTaxAmount({
+      supabase,
+      tenantId: tenant,
+      taxYear: form.tax_year,
+      taxMonth: form.tax_month,
+      excludeReportId: form.id || null,
+    })
+  } catch (err) {
+    console.error(err)
+    reductionPreviewError.value = err instanceof Error ? err.message : String(err)
+  } finally {
+    reductionPreviewLoading.value = false
+  }
+}
+
 function queryNumber(value: unknown, fallback: number) {
   const numeric = Number(value)
   return Number.isFinite(numeric) ? numeric : fallback
@@ -1666,12 +1741,19 @@ onMounted(async () => {
   try {
     loadingInitial.value = true
     await ensureTenant()
-    await Promise.all([loadCategories(), loadUoms(), loadTaxRates(), loadMovementRules(), loadTenantTaxReportProfile()])
+    await Promise.all([
+      loadCategories(),
+      loadUoms(),
+      loadTaxRates(),
+      loadRuleengineLabels({ tenantId: tenantId.value }),
+      loadTenantTaxReportProfile(),
+    ])
     if (editing.value && typeof route.params.id === 'string') {
       await loadExistingReport(route.params.id)
     } else {
       await initializeNewReport()
     }
+    await refreshReductionPreview()
   } catch (err) {
     console.error(err)
     toast.error(err instanceof Error ? err.message : String(err))

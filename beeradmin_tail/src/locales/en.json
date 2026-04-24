@@ -3120,6 +3120,25 @@
         "title": "Returns",
         "subtitle": "Return rows are written to LIA220."
       },
+      "reduction": {
+        "title": "Reduced Tax Calculation",
+        "subtitle": "Preview the reduced tax amount written to LIA130.",
+        "rate": "Category {category} / reduction rate {rate}",
+        "loadFailed": "Could not load prior cumulative amount: {message}",
+        "columns": {
+          "item": "Item",
+          "standardTax": "Standard tax",
+          "reducedTax": "Reduced tax"
+        },
+        "rows": {
+          "priorFiscalYear": "Prior fiscal-year cumulative tax through previous month",
+          "currentMonth": "Current month",
+          "returnDeduction": "Return deduction",
+          "netTax": "Net tax",
+          "cumulativeBeforeReturn": "Cumulative before return deduction",
+          "cumulativeAfterReturn": "Cumulative after return deduction"
+        }
+      },
       "files": {
         "title": "Generated Files",
         "subtitle": "These files will be saved to Supabase Storage when you save the report.",

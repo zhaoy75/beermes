@@ -626,6 +626,7 @@ import {
   registerInventorySearchContext,
   type InventorySearchSelection,
 } from '@/composables/useInventorySearchModal'
+import { useRuleengineLabels } from '@/composables/useRuleengineLabels'
 import {
   resolveBatchDisplayName,
   resolveBatchStyleName,
@@ -753,6 +754,7 @@ const INTERNAL_TRANSFER_INTENT = 'INTERNAL_TRANSFER'
 
 const router = useRouter()
 const { t, locale } = useI18n()
+const { loadRuleengineLabels, ruleLabel } = useRuleengineLabels()
 const pageTitle = computed(() => t('producedBeer.movementFast.title'))
 
 const tenantId = ref<string | null>(null)
@@ -846,20 +848,6 @@ function formatDateTime(value: string | null | undefined) {
 function formatNumber(value: number | null | undefined) {
   if (value == null || Number.isNaN(value)) return '—'
   return new Intl.NumberFormat(locale.value, { maximumFractionDigits: 3 }).format(value)
-}
-
-function pickLabel(label: RuleLabel | null | undefined, fallback: string) {
-  if (!label) return fallback
-  const isJa = String(locale.value || '')
-    .toLowerCase()
-    .startsWith('ja')
-  if (isJa) return label.ja || label.en || fallback
-  return label.en || label.ja || fallback
-}
-
-function mapLabel(map: Record<string, RuleLabel> | undefined, code: string | null | undefined) {
-  if (!code) return '—'
-  return pickLabel(map?.[code], code)
 }
 
 function resolveLocalizedName(value: unknown) {
@@ -1058,7 +1046,7 @@ async function loadMovementRules() {
 
 function siteOptionLabel(site: SiteOption) {
   const siteType = site.siteTypeKey
-    ? mapLabel(movementRules.value?.site_type_labels, site.siteTypeKey)
+    ? ruleLabel('site_type', site.siteTypeKey, movementRules.value?.site_type_labels)
     : ''
   return siteType ? `${site.name} (${siteType})` : site.name
 }
@@ -2140,10 +2128,10 @@ const taxDecisionOptions = computed(() => {
     const label = isJa
       ? (def?.name_ja ??
         def?.name_en ??
-        mapLabel(movementRules.value?.tax_decision_code_labels, code))
+        ruleLabel('tax_decision_code', code, movementRules.value?.tax_decision_code_labels))
       : (def?.name_en ??
         def?.name_ja ??
-        mapLabel(movementRules.value?.tax_decision_code_labels, code))
+        ruleLabel('tax_decision_code', code, movementRules.value?.tax_decision_code_labels))
     return { value: code, label }
   })
 })
@@ -2182,15 +2170,15 @@ const defaultTaxDecisionCode = computed(() => {
 function taxDecisionLabel(code: string | null | undefined) {
   if (!code) return '—'
   const option = taxDecisionOptions.value.find((entry) => entry.value === code)
-  return option?.label ?? mapLabel(movementRules.value?.tax_decision_code_labels, code)
+  return option?.label ?? ruleLabel('tax_decision_code', code, movementRules.value?.tax_decision_code_labels)
 }
 
 function intentLabel(code: string | null | undefined) {
-  return mapLabel(movementRules.value?.movement_intent_labels, code)
+  return ruleLabel('movement_intent', code, movementRules.value?.movement_intent_labels)
 }
 
 function taxEventLabel(code: string | null | undefined) {
-  return mapLabel(movementRules.value?.tax_event_labels, code)
+  return ruleLabel('tax_event', code, movementRules.value?.tax_event_labels)
 }
 
 const derivedTaxEventCodes = computed(() => {
@@ -2768,7 +2756,12 @@ watch(
 onMounted(async () => {
   try {
     await ensureTenant()
-    await Promise.all([loadUomDefinitions(), loadSites(), loadMovementRules()])
+    await Promise.all([
+      loadUomDefinitions(),
+      loadSites(),
+      loadMovementRules(),
+      loadRuleengineLabels({ tenantId: tenantId.value }),
+    ])
     loadStoredRoutes()
     await loadFavoriteRoutes()
     unregisterInventorySearchContext = registerInventorySearchContext(() => {

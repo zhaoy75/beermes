@@ -202,7 +202,7 @@
                     </div>
                   </td>
                   <td class="px-3 py-2 font-mono text-xs text-gray-600">
-                    {{ row.lotTaxType || '—' }}
+                    {{ lotTaxTypeLabel(row.lotTaxType) }}
                   </td>
                   <td class="px-3 py-2 font-mono text-xs text-gray-600">
                     {{ row.batchCode || '—' }}
@@ -268,7 +268,7 @@
                           <tbody class="divide-y divide-gray-100 bg-white">
                             <tr v-for="detail in row.mergedDetails" :key="detail.id">
                               <td class="px-3 py-2 font-mono text-gray-600">{{ detail.lotNo || '—' }}</td>
-                              <td class="px-3 py-2 font-mono text-gray-600">{{ detail.lotTaxType || '—' }}</td>
+                              <td class="px-3 py-2 font-mono text-gray-600">{{ lotTaxTypeLabel(detail.lotTaxType) }}</td>
                               <td class="px-3 py-2 text-gray-500">{{ formatDate(detail.productionDate) }}</td>
                               <td class="px-3 py-2 text-right text-gray-700">{{ formatVolumeNumberValue(detail.qtyLiters) }}</td>
                               <td class="px-3 py-2 text-right text-gray-700">{{ formatNumber(detail.qtyPackages) }}</td>
@@ -321,7 +321,7 @@
                       </div>
                       <div>
                         <div class="text-xs text-gray-500">{{ t('producedBeer.inventory.table.lotTaxType') }}</div>
-                        <div class="font-mono text-gray-700">{{ dagDialog.rootLot?.lotTaxType || '—' }}</div>
+                        <div class="font-mono text-gray-700">{{ lotTaxTypeLabel(dagDialog.rootLot?.lotTaxType) }}</div>
                       </div>
                       <div>
                         <div class="text-xs text-gray-500">{{ t('producedBeer.inventory.table.site') }}</div>
@@ -405,7 +405,7 @@
                           </tr>
                           <tr v-for="row in dagDialog.relatedLots" v-else :key="row.id" class="hover:bg-gray-50">
                             <td class="px-3 py-2 font-mono text-xs text-gray-600">{{ row.lotNo || '—' }}</td>
-                            <td class="px-3 py-2 font-mono text-xs text-gray-600">{{ row.lotTaxType || '—' }}</td>
+                            <td class="px-3 py-2 font-mono text-xs text-gray-600">{{ lotTaxTypeLabel(row.lotTaxType) }}</td>
                             <td class="px-3 py-2 text-gray-700">{{ siteLabel(row.siteId) }}</td>
                             <td class="px-3 py-2 text-right text-gray-700">{{ formatVolumeNumberValue(row.qty) }}</td>
                             <td class="px-3 py-2 text-gray-700">{{ row.status || '—' }}</td>
@@ -444,6 +444,7 @@ import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import Modal from '@/components/ui/Modal.vue'
 import { useConfirmDialog } from '@/composables/useConfirmDialog'
+import { useRuleengineLabels } from '@/composables/useRuleengineLabels'
 import { supabase } from '@/lib/supabase'
 import { useProducedBeerInventory } from '@/composables/useProducedBeerInventory'
 import { toast } from 'vue3-toastify'
@@ -452,6 +453,7 @@ const { t } = useI18n()
 const router = useRouter()
 const pageTitle = computed(() => t('producedBeerInventory.title'))
 const { confirmDialog, requestConfirmation, cancelConfirmation, acceptConfirmation } = useConfirmDialog()
+const { loadRuleengineLabels, ruleLabel } = useRuleengineLabels()
 
 const {
   categoryLabel,
@@ -679,6 +681,10 @@ function sortIndicator(key: SortKey) {
   return sortState.direction === 'asc' ? '^' : 'v'
 }
 
+function lotTaxTypeLabel(code: string | null | undefined) {
+  return ruleLabel('lot_tax_type', code)
+}
+
 function toNumber(value: unknown): number | null {
   if (value == null || value === '') return null
   const parsed = Number(value)
@@ -894,7 +900,7 @@ async function completeDomesticRemoval(row: InventoryPageRow) {
 }
 
 onMounted(async () => {
-  await initialize()
+  await Promise.all([initialize(), loadRuleengineLabels()])
 })
 </script>
 

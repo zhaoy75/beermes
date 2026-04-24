@@ -408,6 +408,7 @@ import {
 } from '@/lib/batchRecipeSnapshot'
 import { useConfirmDialog } from '@/composables/useConfirmDialog'
 import { useColumnTableControls } from '@/composables/useColumnTableControls'
+import { useRuleengineLabels } from '@/composables/useRuleengineLabels'
 import { createWorkbookBlob, type WorkbookCell, type WorkbookSheet } from '@/lib/fillingReportExport'
 import { supabase } from '@/lib/supabase'
 import { formatVolumeNumber } from '@/lib/volumeFormat'
@@ -425,16 +426,6 @@ interface CategoryRow {
 interface SiteOption {
   value: string
   label: string
-}
-
-type RuleLabel = {
-  ja?: string
-  en?: string
-}
-
-type MovementRules = {
-  enums?: Record<string, string[]>
-  tax_event_labels?: Record<string, RuleLabel>
 }
 
 interface PackageCategoryRow {
@@ -550,6 +541,7 @@ type MovementTableSortKey =
 const { t, locale } = useI18n()
 const router = useRouter()
 const { confirmDialog, requestConfirmation, cancelConfirmation, acceptConfirmation } = useConfirmDialog()
+const { enumValues, loadRuleengineLabels, ruleLabel } = useRuleengineLabels()
 const pageTitle = computed(() => t('producedBeer.title'))
 
 const tenantId = ref<string | null>(null)
@@ -560,7 +552,6 @@ const categories = ref<CategoryRow[]>([])
 const packageCategories = ref<PackageCategoryRow[]>([])
 const uoms = ref<Array<{ id: string; code: string | null }>>([])
 const siteOptions = ref<SiteOption[]>([])
-const movementRules = ref<MovementRules | null>(null)
 
 const movementCards = ref<MovementCard[]>([])
 const defaultMovementDateFrom = oneMonthAgoDateInput()
@@ -580,8 +571,9 @@ const movementTypeFilter = ref<
 
 const taxEventFilterOptions = computed(() => {
   const allowed = ['TAXABLE_REMOVAL', 'NON_TAXABLE_REMOVAL', 'EXPORT_EXEMPT', 'RETURN_TO_FACTORY']
-  const codes = movementRules.value?.enums?.tax_event?.filter((code) => allowed.includes(code)) ?? allowed
-  return codes.map((code) => ({ value: code, label: taxEventLabel(code) }))
+  const codes = enumValues('tax_event').filter((code) => allowed.includes(code))
+  const values = codes.length ? codes : allowed
+  return values.map((code) => ({ value: code, label: taxEventLabel(code) }))
 })
 
 const siteMap = computed(() => {
@@ -747,12 +739,6 @@ function siteLabel(siteId: string | null | undefined) {
   return siteMap.value.get(siteId)?.label ?? '—'
 }
 
-function pickLabel(row: RuleLabel | undefined, fallback: string) {
-  const lang = resolveLang()
-  const label = lang === 'ja' ? row?.ja ?? row?.en : row?.en ?? row?.ja
-  return typeof label === 'string' && label.trim() ? label : fallback
-}
-
 function legacyMovementTaxEvent(docType: string, taxType: string | null) {
   if (docType === 'sale' && taxType === 'tax') return 'TAXABLE_REMOVAL'
   if (docType === 'sale' && taxType === 'notax') return 'NON_TAXABLE_REMOVAL'
@@ -778,13 +764,13 @@ function movementTypeLabel(taxEvent: string | null | undefined) {
   const normalized = (taxEvent ?? '').trim()
   if (!normalized.length) return '—'
   if (normalized === 'NONE') return '—'
-  return pickLabel(movementRules.value?.tax_event_labels?.[normalized], normalized)
+  return ruleLabel('tax_event', normalized)
 }
 
 function taxEventLabel(taxEvent: string | null | undefined) {
   const normalized = (taxEvent ?? '').trim()
   if (!normalized.length) return '—'
-  return pickLabel(movementRules.value?.tax_event_labels?.[normalized], normalized)
+  return ruleLabel('tax_event', normalized)
 }
 
 function uniqueNonEmpty(values: Array<string | null | undefined>) {
@@ -1019,14 +1005,6 @@ async function loadPackageCategories() {
     .order('package_code', { ascending: true })
   if (error) throw error
   packageCategories.value = data ?? []
-}
-
-async function loadMovementRules() {
-  const { data, error } = await supabase.rpc('movement_get_rules', {
-    p_movement_intent: null,
-  })
-  if (error) throw error
-  movementRules.value = ((Array.isArray(data) ? data[0] : data) ?? null) as MovementRules | null
 }
 
 async function loadUoms() {
@@ -1356,7 +1334,7 @@ onMounted(async () => {
       loadCategories(),
       loadPackageCategories(),
       loadUoms(),
-      loadMovementRules(),
+      loadRuleengineLabels({ tenantId: tenantId.value }),
     ])
     await fetchMovements()
   } catch (err) {

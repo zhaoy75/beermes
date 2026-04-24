@@ -264,6 +264,23 @@ export function calculateTaxTotalAmount(
   )
 }
 
+export function buildTaxReductionPreview(options: {
+  breakdown: TaxVolumeItem[]
+  priorFiscalYearStandardTaxAmount: number
+}): RLI0010_232_ReductionTotals {
+  const sourceBreakdown = options.breakdown.filter((item) => !isGeneratedTaxVolumeItem(item))
+  const lia110DetailItems = sourceBreakdown.filter(isLia110DetailItem)
+  const returnItems = sourceBreakdown.filter((item) => isReturnTaxEvent(item.move_type, item.tax_event))
+  const currentMonthStandardTaxAmount = roundNonNegativeTax(calculateTaxTotalAmount(lia110DetailItems))
+  const returnStandardTaxAmount = roundNonNegativeTax(Math.abs(calculateTaxTotalAmount(returnItems)))
+
+  return buildLia130ReductionTotals({
+    priorFiscalYearStandardTaxAmount: options.priorFiscalYearStandardTaxAmount,
+    currentMonthStandardTaxAmount,
+    returnStandardTaxAmount,
+  })
+}
+
 export function priorFiscalYearReportPeriods(taxYear: number, taxMonth: number) {
   if (!Number.isFinite(taxYear) || !Number.isFinite(taxMonth) || taxMonth < 1 || taxMonth > 12) {
     return []

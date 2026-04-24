@@ -239,7 +239,7 @@
                           <div class="text-[11px] text-gray-400">{{ rowDisambiguationText(row) }}</div>
                         </td>
                         <td class="px-3 py-2 font-mono text-xs text-gray-600">
-                          {{ row.lotTaxType || '—' }}
+                          {{ lotTaxTypeLabel(row.lotTaxType) }}
                         </td>
                         <td class="px-3 py-2 font-mono text-xs text-gray-600">
                           {{ row.batchCode || '—' }}
@@ -280,7 +280,7 @@
                                     @dblclick.stop.prevent="handleMergedDetailDoubleClick(row, detail)"
                                   >
                                     <td class="px-3 py-2 font-mono text-gray-600">{{ detail.lotNo || '—' }}</td>
-                                    <td class="px-3 py-2 font-mono text-gray-600">{{ detail.lotTaxType || '—' }}</td>
+                                    <td class="px-3 py-2 font-mono text-gray-600">{{ lotTaxTypeLabel(detail.lotTaxType) }}</td>
                                     <td class="px-3 py-2 text-gray-500">{{ formatDate(detail.productionDate) }}</td>
                                     <td class="px-3 py-2 text-right text-gray-700">{{ formatNumber(detail.qtyLiters) }}</td>
                                     <td class="px-3 py-2 text-right text-gray-700">{{ formatNumber(detail.qtyPackages) }}</td>
@@ -307,6 +307,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Modal from '@/components/ui/Modal.vue'
+import { useRuleengineLabels } from '@/composables/useRuleengineLabels'
 import { useProducedBeerInventory } from '@/composables/useProducedBeerInventory'
 
 import type { InventorySearchSelection } from '@/composables/useInventorySearchModal'
@@ -330,6 +331,7 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+const { loadRuleengineLabels, ruleLabel } = useRuleengineLabels()
 const keywordInputRef = ref<HTMLInputElement | null>(null)
 const dialogRef = ref<HTMLElement | null>(null)
 const activeRowId = ref('')
@@ -557,6 +559,10 @@ function sortIndicator(key: (typeof sortState)['key']) {
   return sortState.direction === 'asc' ? '^' : 'v'
 }
 
+function lotTaxTypeLabel(code: string | null | undefined) {
+  return ruleLabel('lot_tax_type', code)
+}
+
 function handleModalKeydown(event: KeyboardEvent) {
   if (event.defaultPrevented) return
   if (event.altKey || event.ctrlKey || event.metaKey) return
@@ -659,7 +665,7 @@ watch(
 )
 
 onMounted(async () => {
-  await initialize()
+  await Promise.all([initialize(), loadRuleengineLabels()])
   if (siteLocked.value) {
     filters.site = props.siteId
   }

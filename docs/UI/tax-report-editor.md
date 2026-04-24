@@ -45,6 +45,17 @@
 - XML generate button
 - optional generated download link
 
+### Reduction Preview Section (`軽減税額算出表`)
+- read-only preview of the `LIA130` reduced tax calculation
+- uses the same calculation source as generated XML
+- shows:
+  - prior fiscal-year cumulative standard tax through the previous month
+  - current-month standard tax and reduced tax
+  - return/deduction standard tax and reduced tax
+  - net standard tax and net reduced tax
+  - cumulative standard tax before and after return/deduction
+- does not update `tax_reports.total_tax_amount`
+
 ### Disposal Section
 - visible table of disposal-only rows
 - XML generate button

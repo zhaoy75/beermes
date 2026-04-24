@@ -1,6 +1,7 @@
 // src/stores/auth.ts
 import { defineStore } from 'pinia'
 import { supabase } from '../lib/supabase'
+import { useRuleengineLabelsStore } from './ruleengineLabels'
 
 let authListenerSet = false
 
@@ -55,6 +56,15 @@ export const useAuthStore = defineStore('auth', {
     isAuthed: (s) => !!s.accessToken && !!s.userId,
   },
   actions: {
+    async loadRuleengineLabelsIfAuthed(force = false) {
+      if (!this.accessToken || !this.userId) return
+      try {
+        await useRuleengineLabelsStore().loadLabels({ tenantId: this.tenantId, force })
+      } catch (err) {
+        console.warn('ruleengine label cache load failed', err)
+      }
+    },
+
     async signIn(email: string, password: string) {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) throw error
@@ -68,12 +78,14 @@ export const useAuthStore = defineStore('auth', {
       const refreshed = await supabase.auth.refreshSession()
       const session = refreshed.data.session ?? data.session
       applySession(this, session)
+      await this.loadRuleengineLabelsIfAuthed(true)
       return data
     },
 
     async signOut() {
       const { error } = await supabase.auth.signOut()
       if (error) throw error
+      useRuleengineLabelsStore().clearLabels()
       this.$reset()
     },
 
@@ -81,12 +93,14 @@ export const useAuthStore = defineStore('auth', {
     async bootstrap() {
       const { data } = await supabase.auth.getSession()
       applySession(this, data.session)
+      await this.loadRuleengineLabelsIfAuthed(true)
 
       // Keep Pinia in sync on auth events (token refresh, sign-in, sign-out)
       if (authListenerSet) return
       authListenerSet = true
       supabase.auth.onAuthStateChange((_event, sess) => {
         if (!sess) {
+          useRuleengineLabelsStore().clearLabels()
           this.$reset()
           const path = window.location.pathname
           if (path !== '/signin' && path !== '/signup' && path !== '/accept-invite') {
@@ -96,6 +110,7 @@ export const useAuthStore = defineStore('auth', {
           return
         }
         applySession(this, sess)
+        void this.loadRuleengineLabelsIfAuthed()
       })
     },
   },

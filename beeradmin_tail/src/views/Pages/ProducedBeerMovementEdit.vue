@@ -335,6 +335,7 @@ import {
   resolveBatchStyleName,
   resolveBatchTargetAbv,
 } from '@/lib/batchRecipeSnapshot'
+import { useRuleengineLabels } from '@/composables/useRuleengineLabels'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
@@ -355,6 +356,7 @@ type MovementRules = {
 
 const router = useRouter()
 const { t, locale } = useI18n()
+const { loadRuleengineLabels, ruleLabel } = useRuleengineLabels()
 const pageTitle = computed(() => t('producedBeer.movementWizard.title'))
 
 const currentStep = ref(1)
@@ -436,18 +438,6 @@ const movementForm = reactive({
   notes: '',
 })
 
-function pickLabel(label: RuleLabel | null | undefined, fallback: string) {
-  if (!label) return fallback
-  const isJa = String(locale.value || '').toLowerCase().startsWith('ja')
-  if (isJa) return label.ja || label.en || fallback
-  return label.en || label.ja || fallback
-}
-
-function mapLabel(map: Record<string, RuleLabel> | undefined, code: string | null | undefined) {
-  if (!code) return '—'
-  return pickLabel(map?.[code], code)
-}
-
 function intentLabel(code: string | null | undefined) {
   if (!code) return '—'
   const row = intentOptions.value.find((item) => item.value === code)
@@ -455,7 +445,7 @@ function intentLabel(code: string | null | undefined) {
 }
 
 function siteTypeLabel(code: string | null | undefined) {
-  return mapLabel(rules.value?.site_type_labels, code)
+  return ruleLabel('site_type', code, rules.value?.site_type_labels)
 }
 
 function siteOptionLabel(site: SiteOption) {
@@ -467,18 +457,18 @@ function siteOptionLabel(site: SiteOption) {
 }
 
 function lotTaxTypeLabel(code: string | null | undefined) {
-  return mapLabel(rules.value?.lot_tax_type_labels, code)
+  return ruleLabel('lot_tax_type', code, rules.value?.lot_tax_type_labels)
 }
 
 function taxEventLabel(code: string | null | undefined) {
-  return mapLabel(rules.value?.tax_event_labels, code)
+  return ruleLabel('tax_event', code, rules.value?.tax_event_labels)
 }
 
 function taxDecisionLabel(code: string | null | undefined) {
   if (!code) return '—'
   const option = taxDecisionOptions.value.find((item) => item.value === code)
   if (option?.label) return option.label
-  return mapLabel(rules.value?.tax_decision_code_labels, code)
+  return ruleLabel('tax_decision_code', code, rules.value?.tax_decision_code_labels)
 }
 
 const numberFormatter = computed(() => new Intl.NumberFormat(locale.value, { maximumFractionDigits: 3 }))
@@ -721,8 +711,8 @@ const taxDecisionOptions = computed(() => {
     const def = defs.get(code)
     const isJa = String(locale.value || '').toLowerCase().startsWith('ja')
     const label = isJa
-      ? (def?.name_ja ?? def?.name_en ?? mapLabel(rules.value?.tax_decision_code_labels, code))
-      : (def?.name_en ?? def?.name_ja ?? mapLabel(rules.value?.tax_decision_code_labels, code))
+      ? (def?.name_ja ?? def?.name_en ?? ruleLabel('tax_decision_code', code, rules.value?.tax_decision_code_labels))
+      : (def?.name_en ?? def?.name_ja ?? ruleLabel('tax_decision_code', code, rules.value?.tax_decision_code_labels))
     return { value: code, label }
   })
 })
@@ -1565,6 +1555,9 @@ function goBack() {
 }
 
 onMounted(() => {
+  ensureTenant()
+    .then((tenant) => loadRuleengineLabels({ tenantId: tenant }))
+    .catch((err) => console.error(err))
   loadMovementIntents().catch((err) => console.error(err))
   loadSites().catch((err) => console.error(err))
   loadAlcoholTypes().catch((err) => console.error(err))

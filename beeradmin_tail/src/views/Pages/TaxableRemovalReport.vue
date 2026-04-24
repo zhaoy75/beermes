@@ -135,28 +135,148 @@
                 {{ t('taxableRemovalReport.table.title') }}
               </h2>
               <p class="text-sm text-gray-500">
-                {{ t('taxableRemovalReport.results.count', { count: filteredRows.length }) }}
+                {{ t('taxableRemovalReport.results.count', { count: visibleDetailRows.length }) }}
               </p>
             </div>
+            <button
+              class="rounded border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50 disabled:opacity-50"
+              :disabled="!hasColumnFilters"
+              type="button"
+              @click="clearColumnFilters"
+            >
+              {{ t('common.clearFilters') }}
+            </button>
           </div>
 
           <section class="overflow-x-auto rounded-lg border border-gray-200 bg-white">
             <table class="min-w-full divide-y divide-gray-200 text-sm">
               <thead class="bg-gray-50 text-xs uppercase text-gray-600">
                 <tr>
-                  <th class="px-3 py-2 text-left">{{ t('taxableRemovalReport.table.columns.item') }}</th>
-                  <th class="px-3 py-2 text-left">{{ t('taxableRemovalReport.table.columns.brand') }}</th>
-                  <th class="px-3 py-2 text-right">{{ t('taxableRemovalReport.table.columns.abv') }}</th>
-                  <th class="px-3 py-2 text-left">{{ t('taxableRemovalReport.table.columns.movementAt') }}</th>
-                  <th class="px-3 py-2 text-left">{{ t('taxableRemovalReport.table.columns.container') }}</th>
-                  <th class="px-3 py-2 text-right">{{ t('taxableRemovalReport.table.columns.quantityMl') }}</th>
+                  <th class="px-3 py-2 text-left">
+                    <TableColumnHeader
+                      v-model:filter-value="columnFilters.item"
+                      :active-sort-key="sortKey"
+                      :filter-placeholder="t('common.search')"
+                      :label="t('taxableRemovalReport.table.columns.item')"
+                      sort-key="item"
+                      :sort-direction="sortDirection"
+                      @sort="setColumnSort"
+                    />
+                  </th>
+                  <th class="px-3 py-2 text-left">
+                    <TableColumnHeader
+                      v-model:filter-value="columnFilters.brand"
+                      :active-sort-key="sortKey"
+                      :filter-placeholder="t('common.search')"
+                      :label="t('taxableRemovalReport.table.columns.brand')"
+                      sort-key="brand"
+                      :sort-direction="sortDirection"
+                      @sort="setColumnSort"
+                    />
+                  </th>
+                  <th class="px-3 py-2 text-right">
+                    <TableColumnHeader
+                      v-model:filter-value="columnFilters.abv"
+                      align="right"
+                      :active-sort-key="sortKey"
+                      :filter-placeholder="t('common.search')"
+                      :label="t('taxableRemovalReport.table.columns.abv')"
+                      sort-key="abv"
+                      :sort-direction="sortDirection"
+                      @sort="setColumnSort"
+                    />
+                  </th>
+                  <th class="px-3 py-2 text-left">
+                    <TableColumnHeader
+                      v-model:filter-value="columnFilters.movementAt"
+                      :active-sort-key="sortKey"
+                      :filter-placeholder="t('common.search')"
+                      :label="t('taxableRemovalReport.table.columns.movementAt')"
+                      sort-key="movementAt"
+                      :sort-direction="sortDirection"
+                      @sort="setColumnSort"
+                    />
+                  </th>
+                  <th class="px-3 py-2 text-left">
+                    <TableColumnHeader
+                      v-model:filter-value="columnFilters.container"
+                      :active-sort-key="sortKey"
+                      :filter-placeholder="t('common.search')"
+                      :label="t('taxableRemovalReport.table.columns.container')"
+                      sort-key="container"
+                      :sort-direction="sortDirection"
+                      @sort="setColumnSort"
+                    />
+                  </th>
+                  <th class="px-3 py-2 text-right">
+                    <TableColumnHeader
+                      v-model:filter-value="columnFilters.quantityMl"
+                      align="right"
+                      :active-sort-key="sortKey"
+                      :filter-placeholder="t('common.search')"
+                      :label="t('taxableRemovalReport.table.columns.quantityMl')"
+                      sort-key="quantityMl"
+                      :sort-direction="sortDirection"
+                      @sort="setColumnSort"
+                    />
+                  </th>
                   <th class="px-3 py-2 text-right">{{ t('taxableRemovalReport.table.columns.unitPrice') }}</th>
                   <th class="px-3 py-2 text-right">{{ t('taxableRemovalReport.table.columns.amount') }}</th>
-                  <th class="px-3 py-2 text-left">{{ t('taxableRemovalReport.table.columns.removalType') }}</th>
-                  <th class="px-3 py-2 text-left">{{ t('taxableRemovalReport.table.columns.destinationAddress') }}</th>
-                  <th class="px-3 py-2 text-left">{{ t('taxableRemovalReport.table.columns.destinationName') }}</th>
-                  <th class="px-3 py-2 text-left">{{ t('taxableRemovalReport.table.columns.lotNo') }}</th>
-                  <th class="px-3 py-2 text-left">{{ t('taxableRemovalReport.table.columns.notes') }}</th>
+                  <th class="px-3 py-2 text-left">
+                    <TableColumnHeader
+                      v-model:filter-value="columnFilters.removalType"
+                      :active-sort-key="sortKey"
+                      :filter-placeholder="t('common.search')"
+                      :label="t('taxableRemovalReport.table.columns.removalType')"
+                      sort-key="removalType"
+                      :sort-direction="sortDirection"
+                      @sort="setColumnSort"
+                    />
+                  </th>
+                  <th class="px-3 py-2 text-left">
+                    <TableColumnHeader
+                      v-model:filter-value="columnFilters.destinationAddress"
+                      :active-sort-key="sortKey"
+                      :filter-placeholder="t('common.search')"
+                      :label="t('taxableRemovalReport.table.columns.destinationAddress')"
+                      sort-key="destinationAddress"
+                      :sort-direction="sortDirection"
+                      @sort="setColumnSort"
+                    />
+                  </th>
+                  <th class="px-3 py-2 text-left">
+                    <TableColumnHeader
+                      v-model:filter-value="columnFilters.destinationName"
+                      :active-sort-key="sortKey"
+                      :filter-placeholder="t('common.search')"
+                      :label="t('taxableRemovalReport.table.columns.destinationName')"
+                      sort-key="destinationName"
+                      :sort-direction="sortDirection"
+                      @sort="setColumnSort"
+                    />
+                  </th>
+                  <th class="px-3 py-2 text-left">
+                    <TableColumnHeader
+                      v-model:filter-value="columnFilters.lotNo"
+                      :active-sort-key="sortKey"
+                      :filter-placeholder="t('common.search')"
+                      :label="t('taxableRemovalReport.table.columns.lotNo')"
+                      sort-key="lotNo"
+                      :sort-direction="sortDirection"
+                      @sort="setColumnSort"
+                    />
+                  </th>
+                  <th class="px-3 py-2 text-left">
+                    <TableColumnHeader
+                      v-model:filter-value="columnFilters.notes"
+                      :active-sort-key="sortKey"
+                      :filter-placeholder="t('common.search')"
+                      :label="t('taxableRemovalReport.table.columns.notes')"
+                      sort-key="notes"
+                      :sort-direction="sortDirection"
+                      @sort="setColumnSort"
+                    />
+                  </th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-100 bg-white">
@@ -165,12 +285,12 @@
                     {{ t('common.loading') }}
                   </td>
                 </tr>
-                <tr v-else-if="filteredRows.length === 0">
+                <tr v-else-if="visibleDetailRows.length === 0">
                   <td colspan="13" class="px-3 py-8 text-center text-gray-500">
                     {{ t('common.noData') }}
                   </td>
                 </tr>
-                <tr v-for="row in filteredRows" v-else :key="row.id" class="hover:bg-gray-50">
+                <tr v-for="row in visibleDetailRows" v-else :key="row.id" class="hover:bg-gray-50">
                   <td class="px-3 py-2 text-gray-700">{{ row.itemLabel || row.liquorCode || '—' }}</td>
                   <td class="px-3 py-2 text-gray-700">{{ row.brandName || '—' }}</td>
                   <td class="px-3 py-2 text-right">{{ formatAbv(row.abv) }}</td>
@@ -200,6 +320,8 @@ import { useI18n } from 'vue-i18n'
 import { toast } from 'vue3-toastify'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import TableColumnHeader from '@/components/common/TableColumnHeader.vue'
+import { useColumnTableControls } from '@/composables/useColumnTableControls'
 import { supabase } from '@/lib/supabase'
 import {
   buildTaxableRemovalBusinessYearFileName,
@@ -219,6 +341,19 @@ type LiquorCodeOption = {
   value: string
   label: string
 }
+
+type DetailTableSortKey =
+  | 'item'
+  | 'brand'
+  | 'abv'
+  | 'movementAt'
+  | 'container'
+  | 'quantityMl'
+  | 'removalType'
+  | 'destinationAddress'
+  | 'destinationName'
+  | 'lotNo'
+  | 'notes'
 
 const { t, locale } = useI18n()
 
@@ -317,6 +452,37 @@ const filteredRows = computed(() =>
     .slice()
     .sort(compareTaxableRemovalDetailRows),
 )
+
+const {
+  sortKey,
+  sortDirection,
+  columnFilters,
+  sortedRows: visibleDetailRows,
+  hasColumnFilters,
+  setSort,
+  clearColumnFilters,
+} = useColumnTableControls<TaxableRemovalDetailRow, DetailTableSortKey>(
+  filteredRows,
+  [
+    { key: 'item', sortValue: (row) => row.itemLabel || row.liquorCode, filterType: 'text' },
+    { key: 'brand', sortValue: (row) => row.brandName, filterType: 'text' },
+    { key: 'abv', sortValue: (row) => row.abv, filterValue: (row) => formatAbv(row.abv), filterType: 'text' },
+    { key: 'movementAt', sortValue: (row) => (row.movementAt ? Date.parse(row.movementAt) : null), filterValue: (row) => formatDateTime(row.movementAt), filterType: 'text' },
+    { key: 'container', sortValue: (row) => row.containerLabel, filterType: 'text' },
+    { key: 'quantityMl', sortValue: (row) => row.quantityMl, filterValue: (row) => formatQuantityMl(row.quantityMl), filterType: 'text' },
+    { key: 'removalType', sortValue: (row) => row.removalTypeLabel, filterType: 'text' },
+    { key: 'destinationAddress', sortValue: (row) => row.destinationAddress, filterType: 'text' },
+    { key: 'destinationName', sortValue: (row) => row.destinationName, filterType: 'text' },
+    { key: 'lotNo', sortValue: (row) => row.lotNo, filterType: 'text' },
+    { key: 'notes', sortValue: (row) => row.notes, filterType: 'text' },
+  ],
+  'movementAt',
+  'desc',
+)
+
+function setColumnSort(key: string) {
+  setSort(key as DetailTableSortKey)
+}
 
 const businessYearDetailRows = computed(() =>
   detailRows.value

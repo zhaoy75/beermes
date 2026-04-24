@@ -9,6 +9,14 @@
             <p class="text-sm text-gray-500">{{ t('taxReport.subtitle') }}</p>
           </div>
           <div class="flex flex-wrap items-center gap-2">
+            <button
+              class="rounded border border-gray-300 px-3 py-2 hover:bg-gray-50 disabled:opacity-50"
+              :disabled="!hasColumnFilters"
+              type="button"
+              @click="clearColumnFilters"
+            >
+              {{ t('common.clearFilters') }}
+            </button>
             <button class="rounded bg-blue-600 px-3 py-2 text-white hover:bg-blue-700" @click="openCreate">
               {{ t('taxReport.actions.new') }}
             </button>
@@ -63,18 +71,93 @@
           <table class="min-w-full text-sm">
             <thead class="bg-gray-50 text-xs uppercase text-gray-500">
               <tr>
-                <th class="px-3 py-2 text-left">{{ t('taxReport.card.taxType') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('taxReport.card.period') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('taxReport.card.status') }}</th>
-                <th class="px-3 py-2 text-right">{{ t('taxReport.card.totalTax') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('taxReport.card.productionVolume') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('taxReport.card.reportFiles') || t('taxReport.card.xmlFiles') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('taxReport.card.attachments') }}</th>
+                <th class="px-3 py-2 text-left">
+                  <TableColumnHeader
+                    v-model:filter-value="columnFilters.taxType"
+                    :active-sort-key="sortKey"
+                    :all-label="t('common.all')"
+                    :filter-options="taxTypeColumnFilterOptions"
+                    filter-type="select"
+                    :label="t('taxReport.card.taxType')"
+                    sort-key="taxType"
+                    :sort-direction="sortDirection"
+                    @sort="setColumnSort"
+                  />
+                </th>
+                <th class="px-3 py-2 text-left">
+                  <TableColumnHeader
+                    v-model:filter-value="columnFilters.period"
+                    :active-sort-key="sortKey"
+                    :filter-placeholder="t('common.search')"
+                    :label="t('taxReport.card.period')"
+                    sort-key="period"
+                    :sort-direction="sortDirection"
+                    @sort="setColumnSort"
+                  />
+                </th>
+                <th class="px-3 py-2 text-left">
+                  <TableColumnHeader
+                    v-model:filter-value="columnFilters.status"
+                    :active-sort-key="sortKey"
+                    :all-label="t('common.all')"
+                    :filter-options="statusColumnFilterOptions"
+                    filter-type="select"
+                    :label="t('taxReport.card.status')"
+                    sort-key="status"
+                    :sort-direction="sortDirection"
+                    @sort="setColumnSort"
+                  />
+                </th>
+                <th class="px-3 py-2 text-right">
+                  <TableColumnHeader
+                    v-model:filter-value="columnFilters.totalTax"
+                    align="right"
+                    :active-sort-key="sortKey"
+                    :filter-placeholder="t('common.search')"
+                    :label="t('taxReport.card.totalTax')"
+                    sort-key="totalTax"
+                    :sort-direction="sortDirection"
+                    @sort="setColumnSort"
+                  />
+                </th>
+                <th class="px-3 py-2 text-left">
+                  <TableColumnHeader
+                    v-model:filter-value="columnFilters.productionVolume"
+                    :active-sort-key="sortKey"
+                    :filter-placeholder="t('common.search')"
+                    :label="t('taxReport.card.productionVolume')"
+                    sort-key="productionVolume"
+                    :sort-direction="sortDirection"
+                    @sort="setColumnSort"
+                  />
+                </th>
+                <th class="px-3 py-2 text-left">
+                  <TableColumnHeader
+                    v-model:filter-value="columnFilters.reportFiles"
+                    :active-sort-key="sortKey"
+                    :filter-placeholder="t('common.search')"
+                    :label="t('taxReport.card.reportFiles') || t('taxReport.card.xmlFiles')"
+                    sort-key="reportFiles"
+                    :sort-direction="sortDirection"
+                    @sort="setColumnSort"
+                  />
+                </th>
+                <th class="px-3 py-2 text-left">
+                  <TableColumnHeader
+                    v-model:filter-value="columnFilters.attachments"
+                    :active-sort-key="sortKey"
+                    :filter-placeholder="t('common.search')"
+                    :label="t('taxReport.card.attachments')"
+                    sort-key="attachments"
+                    :sort-direction="sortDirection"
+                    @sort="setColumnSort"
+                  />
+                </th>
                 <th class="px-3 py-2 text-left">{{ t('common.actions') }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
-              <tr v-for="row in rows" :key="row.id" class="align-top">
+              <tr v-for="row in visibleReportRows" :key="row.id" class="align-top">
                 <td class="px-3 py-3 text-gray-700">{{ taxTypeLabel(row.tax_type) }}</td>
                 <td class="px-3 py-3 text-gray-700">
                   <button class="text-left text-blue-600 hover:underline" type="button" @click="openEdit(row)">
@@ -125,7 +208,7 @@
                   </div>
                 </td>
               </tr>
-              <tr v-if="!loading && rows.length === 0">
+              <tr v-if="!loading && visibleReportRows.length === 0">
                 <td colspan="8" class="px-3 py-8 text-center text-gray-500">{{ t('common.noData') }}</td>
               </tr>
             </tbody>
@@ -198,7 +281,9 @@ import 'vue3-toastify/dist/index.css'
 import ConfirmActionDialog from '@/components/common/ConfirmActionDialog.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import TableColumnHeader from '@/components/common/TableColumnHeader.vue'
 import { useConfirmDialog } from '@/composables/useConfirmDialog'
+import { useColumnTableControls } from '@/composables/useColumnTableControls'
 import { formatVolume as formatVolumeDisplay } from '@/lib/volumeFormat'
 import { supabase } from '@/lib/supabase'
 import {
@@ -226,6 +311,14 @@ import {
 const TABLE = 'tax_reports'
 const STATUS_OPTIONS = ['draft', 'submitted', 'approved'] as const
 const TAX_TYPE_OPTIONS = ['monthly'] as const
+type ReportTableSortKey =
+  | 'taxType'
+  | 'period'
+  | 'status'
+  | 'totalTax'
+  | 'productionVolume'
+  | 'reportFiles'
+  | 'attachments'
 
 const { t, tm, locale } = useI18n()
 const router = useRouter()
@@ -249,6 +342,36 @@ const promptForm = reactive({
 
 const statusOptions = STATUS_OPTIONS
 const taxTypeOptions = TAX_TYPE_OPTIONS
+const {
+  sortKey,
+  sortDirection,
+  columnFilters,
+  sortedRows: visibleReportRows,
+  hasColumnFilters,
+  setSort,
+  clearColumnFilters,
+} = useColumnTableControls<TaxReportRow, ReportTableSortKey>(
+  rows,
+  [
+    { key: 'taxType', sortValue: (row) => taxTypeLabel(row.tax_type), filterValue: (row) => row.tax_type, filterType: 'select' },
+    { key: 'period', sortValue: (row) => row.tax_year * 100 + (row.tax_month ?? 0), filterValue: (row) => formatPeriod(row), filterType: 'text' },
+    { key: 'status', sortValue: (row) => statusLabel(row.status), filterValue: (row) => row.status, filterType: 'select' },
+    { key: 'totalTax', sortValue: (row) => displayTotalTax(row), filterValue: (row) => formatCurrency(displayTotalTax(row)), filterType: 'text' },
+    { key: 'productionVolume', sortValue: (row) => reportVolumeText(row), filterType: 'text' },
+    { key: 'reportFiles', sortValue: (row) => reportFileText(row), filterType: 'text' },
+    { key: 'attachments', sortValue: (row) => row.attachment_files.join(' '), filterType: 'text' },
+  ],
+  'period',
+  'desc',
+)
+
+const taxTypeColumnFilterOptions = computed(() =>
+  taxTypeOptions.map((type) => ({ value: type, label: taxTypeLabel(type) })),
+)
+
+const statusColumnFilterOptions = computed(() =>
+  statusOptions.map((status) => ({ value: status, label: statusLabel(status) })),
+)
 
 const yearOptions = computed(() => {
   const current = new Date().getFullYear()
@@ -319,6 +442,18 @@ function breakdownLabel(item: TaxVolumeItem) {
   const actualTaxEvent = resolveTaxEvent(item.move_type, item.tax_event)
   const movementLabel = taxEventLabel(actualTaxEvent) || movementTypeLabel(item.move_type)
   return `${movementLabel} · ${item.categoryName} (${formatAbv(item.abv)}): ${formatVolume(item.volume_l)}`
+}
+
+function reportVolumeText(row: Pick<TaxReportRow, 'volume_breakdown'>) {
+  return row.volume_breakdown.map((item) => breakdownLabel(item)).join(' ')
+}
+
+function reportFileText(row: Pick<TaxReportRow, 'report_files'>) {
+  return row.report_files.map((file) => file.fileName).join(' ')
+}
+
+function setColumnSort(key: string) {
+  setSort(key as ReportTableSortKey)
 }
 
 function visibleBreakdownItems(row: Pick<TaxReportRow, 'volume_breakdown'>) {

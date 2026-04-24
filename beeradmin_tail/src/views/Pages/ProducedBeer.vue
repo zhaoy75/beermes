@@ -18,7 +18,15 @@
           <div class="flex flex-wrap items-center gap-2">
             <button
               class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
-              :disabled="movementLoading || exportLoading || filteredMovementCards.length === 0"
+              :disabled="!hasMovementColumnFilters"
+              type="button"
+              @click="clearMovementColumnFilters"
+            >
+              {{ t('common.clearFilters') }}
+            </button>
+            <button
+              class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
+              :disabled="movementLoading || exportLoading || visibleMovementCards.length === 0"
               @click="exportMovementsExcel"
             >
               {{
@@ -165,41 +173,160 @@
             <thead class="bg-gray-50 text-xs uppercase text-gray-600">
               <tr>
                 <th class="px-3 py-2 text-left">
-                  {{ t('producedBeer.movement.card.movementDate') }}
+                  <TableColumnHeader
+                    v-model:filter-value="movementColumnFilters.movementAt"
+                    :active-sort-key="movementSortKey"
+                    :filter-placeholder="t('common.search')"
+                    :label="t('producedBeer.movement.card.movementDate')"
+                    sort-key="movementAt"
+                    :sort-direction="movementSortDirection"
+                    @sort="setMovementColumnSort"
+                  />
                 </th>
                 <th class="px-3 py-2 text-left">
-                  {{ t('producedBeer.movement.card.batchCode') }}
+                  <TableColumnHeader
+                    v-model:filter-value="movementColumnFilters.batchCode"
+                    :active-sort-key="movementSortKey"
+                    :filter-placeholder="t('common.search')"
+                    :label="t('producedBeer.movement.card.batchCode')"
+                    sort-key="batchCode"
+                    :sort-direction="movementSortDirection"
+                    @sort="setMovementColumnSort"
+                  />
                 </th>
                 <th class="px-3 py-2 text-left">
-                  {{ t('producedBeer.inventory.table.styleName') }}
+                  <TableColumnHeader
+                    v-model:filter-value="movementColumnFilters.styleName"
+                    :active-sort-key="movementSortKey"
+                    :filter-placeholder="t('common.search')"
+                    :label="t('producedBeer.inventory.table.styleName')"
+                    sort-key="styleName"
+                    :sort-direction="movementSortDirection"
+                    @sort="setMovementColumnSort"
+                  />
                 </th>
                 <th class="px-3 py-2 text-right">
-                  {{ t('producedBeer.inventory.table.targetAbv') }}
+                  <TableColumnHeader
+                    v-model:filter-value="movementColumnFilters.targetAbv"
+                    align="right"
+                    :active-sort-key="movementSortKey"
+                    :filter-placeholder="t('common.search')"
+                    :label="t('producedBeer.inventory.table.targetAbv')"
+                    sort-key="targetAbv"
+                    :sort-direction="movementSortDirection"
+                    @sort="setMovementColumnSort"
+                  />
                 </th>
                 <th class="px-3 py-2 text-left">
-                  {{ t('producedBeer.movement.card.linePackageType') }}
+                  <TableColumnHeader
+                    v-model:filter-value="movementColumnFilters.packageType"
+                    :active-sort-key="movementSortKey"
+                    :filter-placeholder="t('common.search')"
+                    :label="t('producedBeer.movement.card.linePackageType')"
+                    sort-key="packageType"
+                    :sort-direction="movementSortDirection"
+                    @sort="setMovementColumnSort"
+                  />
                 </th>
                 <th class="px-3 py-2 text-right">
-                  {{ t('producedBeer.movement.card.volumePerPackage') }}
+                  <TableColumnHeader
+                    v-model:filter-value="movementColumnFilters.volumePerPackage"
+                    align="right"
+                    :active-sort-key="movementSortKey"
+                    :filter-placeholder="t('common.search')"
+                    :label="t('producedBeer.movement.card.volumePerPackage')"
+                    sort-key="volumePerPackage"
+                    :sort-direction="movementSortDirection"
+                    @sort="setMovementColumnSort"
+                  />
                 </th>
                 <th class="px-3 py-2 text-right">
-                  {{ t('producedBeer.movement.card.unitOfPackage') }}
+                  <TableColumnHeader
+                    v-model:filter-value="movementColumnFilters.unitOfPackage"
+                    align="right"
+                    :active-sort-key="movementSortKey"
+                    :filter-placeholder="t('common.search')"
+                    :label="t('producedBeer.movement.card.unitOfPackage')"
+                    sort-key="unitOfPackage"
+                    :sort-direction="movementSortDirection"
+                    @sort="setMovementColumnSort"
+                  />
                 </th>
-                <th class="px-3 py-2 text-right">{{ t('producedBeer.movement.card.totalVolume') }}</th>
-                <th class="px-3 py-2 text-right">{{ t('producedBeer.movement.card.taxRate') }}</th>
-                <th class="px-3 py-2 text-left">{{ t('producedBeer.movement.card.source') }}</th>
-                <th class="px-3 py-2 text-left">
-                  {{ t('producedBeer.movement.card.destination') }}
+                <th class="px-3 py-2 text-right">
+                  <TableColumnHeader
+                    v-model:filter-value="movementColumnFilters.totalVolume"
+                    align="right"
+                    :active-sort-key="movementSortKey"
+                    :filter-placeholder="t('common.search')"
+                    :label="t('producedBeer.movement.card.totalVolume')"
+                    sort-key="totalVolume"
+                    :sort-direction="movementSortDirection"
+                    @sort="setMovementColumnSort"
+                  />
                 </th>
-                <th class="px-3 py-2 text-left">{{ t('producedBeer.movement.card.docNo') }}</th>
+                <th class="px-3 py-2 text-right">
+                  <TableColumnHeader
+                    v-model:filter-value="movementColumnFilters.taxRate"
+                    align="right"
+                    :active-sort-key="movementSortKey"
+                    :filter-placeholder="t('common.search')"
+                    :label="t('producedBeer.movement.card.taxRate')"
+                    sort-key="taxRate"
+                    :sort-direction="movementSortDirection"
+                    @sort="setMovementColumnSort"
+                  />
+                </th>
                 <th class="px-3 py-2 text-left">
-                  {{ t('producedBeer.movement.filters.movementType') }}
+                  <TableColumnHeader
+                    v-model:filter-value="movementColumnFilters.source"
+                    :active-sort-key="movementSortKey"
+                    :filter-placeholder="t('common.search')"
+                    :label="t('producedBeer.movement.card.source')"
+                    sort-key="source"
+                    :sort-direction="movementSortDirection"
+                    @sort="setMovementColumnSort"
+                  />
+                </th>
+                <th class="px-3 py-2 text-left">
+                  <TableColumnHeader
+                    v-model:filter-value="movementColumnFilters.destination"
+                    :active-sort-key="movementSortKey"
+                    :filter-placeholder="t('common.search')"
+                    :label="t('producedBeer.movement.card.destination')"
+                    sort-key="destination"
+                    :sort-direction="movementSortDirection"
+                    @sort="setMovementColumnSort"
+                  />
+                </th>
+                <th class="px-3 py-2 text-left">
+                  <TableColumnHeader
+                    v-model:filter-value="movementColumnFilters.docNo"
+                    :active-sort-key="movementSortKey"
+                    :filter-placeholder="t('common.search')"
+                    :label="t('producedBeer.movement.card.docNo')"
+                    sort-key="docNo"
+                    :sort-direction="movementSortDirection"
+                    @sort="setMovementColumnSort"
+                  />
+                </th>
+                <th class="px-3 py-2 text-left">
+                  <TableColumnHeader
+                    v-model:filter-value="movementColumnFilters.taxEvent"
+                    :active-sort-key="movementSortKey"
+                    :all-label="t('common.all')"
+                    :filter-options="movementTaxEventColumnFilterOptions"
+                    filter-type="select"
+                    :label="t('producedBeer.movement.filters.movementType')"
+                    sort-key="taxEvent"
+                    :sort-direction="movementSortDirection"
+                    @sort="setMovementColumnSort"
+                  />
                 </th>
                 <th class="px-3 py-2 text-left">{{ t('common.actions') }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
-              <tr v-for="card in filteredMovementCards" :key="card.id" class="hover:bg-gray-50">
+              <tr v-for="card in visibleMovementCards" :key="card.id" class="hover:bg-gray-50">
                 <td class="px-3 py-2 text-xs text-gray-500">
                   {{ formatDateTime(card.movementAt) }}
                 </td>
@@ -241,7 +368,7 @@
                   </button>
                 </td>
               </tr>
-              <tr v-if="!movementLoading && filteredMovementCards.length === 0">
+              <tr v-if="!movementLoading && visibleMovementCards.length === 0">
                 <td colspan="14" class="px-3 py-8 text-center text-gray-500">
                   {{ t('common.noData') }}
                 </td>
@@ -270,6 +397,7 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import ConfirmActionDialog from '@/components/common/ConfirmActionDialog.vue'
+import TableColumnHeader from '@/components/common/TableColumnHeader.vue'
 import { loadAlcoholTypeReferenceData } from '@/lib/alcoholTypeRegistry'
 import {
   resolveBatchBeerCategoryId,
@@ -279,6 +407,7 @@ import {
   type BatchRecipeSource,
 } from '@/lib/batchRecipeSnapshot'
 import { useConfirmDialog } from '@/composables/useConfirmDialog'
+import { useColumnTableControls } from '@/composables/useColumnTableControls'
 import { createWorkbookBlob, type WorkbookCell, type WorkbookSheet } from '@/lib/fillingReportExport'
 import { supabase } from '@/lib/supabase'
 import { formatVolumeNumber } from '@/lib/volumeFormat'
@@ -403,6 +532,21 @@ interface MovementCardView extends MovementCard {
   totalLiters: number | null
 }
 
+type MovementTableSortKey =
+  | 'movementAt'
+  | 'batchCode'
+  | 'styleName'
+  | 'targetAbv'
+  | 'packageType'
+  | 'volumePerPackage'
+  | 'unitOfPackage'
+  | 'totalVolume'
+  | 'taxRate'
+  | 'source'
+  | 'destination'
+  | 'docNo'
+  | 'taxEvent'
+
 const { t, locale } = useI18n()
 const router = useRouter()
 const { confirmDialog, requestConfirmation, cancelConfirmation, acceptConfirmation } = useConfirmDialog()
@@ -499,6 +643,50 @@ const filteredMovementCards = computed<MovementCardView[]>(() => {
     return acc
   }, [])
 })
+
+const {
+  sortKey: movementSortKey,
+  sortDirection: movementSortDirection,
+  columnFilters: movementColumnFilters,
+  sortedRows: visibleMovementCards,
+  hasColumnFilters: hasMovementColumnFilters,
+  setSort: setMovementSort,
+  clearColumnFilters: clearMovementColumnFilters,
+} = useColumnTableControls<MovementCardView, MovementTableSortKey>(
+  filteredMovementCards,
+  [
+    { key: 'movementAt', sortValue: (card) => (card.movementAt ? Date.parse(card.movementAt) : null), filterValue: (card) => formatDateTime(card.movementAt), filterType: 'text' },
+    { key: 'batchCode', sortValue: (card) => movementBatchCodeLabel(card), filterType: 'text' },
+    { key: 'styleName', sortValue: (card) => movementStyleLabel(card), filterType: 'text' },
+    { key: 'targetAbv', sortValue: (card) => movementTargetAbvSortValue(card), filterValue: (card) => movementTargetAbvLabel(card), filterType: 'text' },
+    { key: 'packageType', sortValue: (card) => movementPackageLabel(card), filterType: 'text' },
+    { key: 'volumePerPackage', sortValue: (card) => movementVolumeLabel(card), filterType: 'text' },
+    { key: 'unitOfPackage', sortValue: (card) => movementUnitOfPackageSortValue(card), filterValue: (card) => movementUnitOfPackageLabel(card), filterType: 'text' },
+    { key: 'totalVolume', sortValue: (card) => card.totalLiters, filterValue: (card) => formatVolumeNumberValue(card.totalLiters), filterType: 'text' },
+    { key: 'taxRate', sortValue: (card) => movementTaxRateSortValue(card), filterValue: (card) => movementTaxRateLabel(card), filterType: 'text' },
+    { key: 'source', sortValue: (card) => siteLabel(card.sourceSiteId), filterType: 'text' },
+    { key: 'destination', sortValue: (card) => siteLabel(card.destSiteId), filterType: 'text' },
+    { key: 'docNo', sortValue: (card) => card.docNo, filterType: 'text' },
+    { key: 'taxEvent', sortValue: (card) => movementTypeLabel(card.taxEvent), filterValue: (card) => card.taxEvent, filterType: 'select' },
+  ],
+  'movementAt',
+  'desc',
+)
+
+const movementTaxEventColumnFilterOptions = computed(() => {
+  const options = taxEventFilterOptions.value.map((option) => ({
+    value: option.value,
+    label: option.label,
+  }))
+  if (movementCards.value.some((card) => card.taxEvent === 'NONE')) {
+    options.push({ value: 'NONE', label: '—' })
+  }
+  return options
+})
+
+function setMovementColumnSort(key: string) {
+  setMovementSort(key as MovementTableSortKey)
+}
 
 const numberFormatter = computed(
   () => new Intl.NumberFormat(locale.value, { maximumFractionDigits: 2 }),
@@ -631,6 +819,10 @@ function movementTargetAbvLabel(card: MovementCardView) {
   return abvs.map((value) => formatAbv(value)).join(', ')
 }
 
+function movementTargetAbvSortValue(card: MovementCardView) {
+  return uniqueNumbers(card.lines.map((line) => line.targetAbv))[0] ?? null
+}
+
 function movementPackageLabel(card: MovementCardView) {
   const packages = uniqueNonEmpty(card.lines.map((line) => line.packageTypeLabel))
   return packages.length ? packages.join(', ') : '—'
@@ -659,12 +851,24 @@ function movementUnitOfPackageLabel(card: MovementCardView) {
   return units.map((value) => formatNumber(value)).join(', ')
 }
 
+function movementUnitOfPackageSortValue(card: MovementCardView) {
+  return uniqueNumbers(card.lines.map((line) => line.unitOfPackage))[0] ?? null
+}
+
 function movementTaxRateLabel(card: MovementCardView) {
   const taxRates = uniqueNumbers(card.lines.map((line) => line.taxRate ?? NaN))
   if (taxRates.length) return taxRates.map((value) => `${formatNumber(value)}/kl`).join(', ')
   if (card.taxEvent && card.taxEvent !== 'TAXABLE_REMOVAL') return '0/kl'
   if (card.taxType === 'notax') return '0/kl'
   return '—'
+}
+
+function movementTaxRateSortValue(card: MovementCardView) {
+  const taxRates = uniqueNumbers(card.lines.map((line) => line.taxRate ?? NaN))
+  if (taxRates.length) return taxRates[0] ?? null
+  if (card.taxEvent && card.taxEvent !== 'TAXABLE_REMOVAL') return 0
+  if (card.taxType === 'notax') return 0
+  return null
 }
 
 function movementDocumentNoLabel(docNo: string) {
@@ -695,7 +899,7 @@ function buildMovementExportSheet(): WorkbookSheet {
     t('producedBeer.movement.filters.movementType'),
   ], 'header')
 
-  const rows = filteredMovementCards.value.map((card) =>
+  const rows = visibleMovementCards.value.map((card) =>
     borderedRow([
       formatDateTime(card.movementAt),
       movementBatchCodeLabel(card),
@@ -720,7 +924,7 @@ function buildMovementExportSheet(): WorkbookSheet {
 }
 
 function exportMovementsExcel() {
-  if (!filteredMovementCards.value.length) {
+  if (!visibleMovementCards.value.length) {
     toast.error(t('producedBeer.movement.export.noData'))
     return
   }

@@ -9,6 +9,14 @@
         </div>
         <div class="flex gap-2">
           <button
+            class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
+            :disabled="!hasColumnFilters"
+            type="button"
+            @click="clearColumnFilters"
+          >
+            {{ t('common.clearFilters') }}
+          </button>
+          <button
             class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
             :disabled="loading"
             @click="openCreate"
@@ -26,34 +34,63 @@
           <thead class="bg-gray-50">
             <tr>
               <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
-                <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('dimension')">
-                  <span>{{ t('uom.table.dimension') }}</span>
-                  <span v-if="sortIcon('dimension')" class="text-xs">{{ sortIcon('dimension') }}</span>
-                </button>
+                <TableColumnHeader
+                  v-model:filter-value="columnFilters.dimension"
+                  :active-sort-key="sortKey"
+                  :all-label="t('common.all')"
+                  :filter-options="dimensionFilterOptions"
+                  filter-type="select"
+                  :label="t('uom.table.dimension')"
+                  sort-key="dimension"
+                  :sort-direction="sortDirection"
+                  @sort="setColumnSort"
+                />
               </th>
               <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
-                <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('code')">
-                  <span>{{ t('uom.table.code') }}</span>
-                  <span v-if="sortIcon('code')" class="text-xs">{{ sortIcon('code') }}</span>
-                </button>
+                <TableColumnHeader
+                  v-model:filter-value="columnFilters.code"
+                  :active-sort-key="sortKey"
+                  :filter-placeholder="t('common.search')"
+                  :label="t('uom.table.code')"
+                  sort-key="code"
+                  :sort-direction="sortDirection"
+                  @sort="setColumnSort"
+                />
               </th>
               <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
-                <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('name')">
-                  <span>{{ t('uom.table.name') }}</span>
-                  <span v-if="sortIcon('name')" class="text-xs">{{ sortIcon('name') }}</span>
-                </button>
+                <TableColumnHeader
+                  v-model:filter-value="columnFilters.name"
+                  :active-sort-key="sortKey"
+                  :filter-placeholder="t('common.search')"
+                  :label="t('uom.table.name')"
+                  sort-key="name"
+                  :sort-direction="sortDirection"
+                  @sort="setColumnSort"
+                />
               </th>
               <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
-                <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('baseFactor')">
-                  <span>{{ t('uom.table.conversionFactor') }}</span>
-                  <span v-if="sortIcon('baseFactor')" class="text-xs">{{ sortIcon('baseFactor') }}</span>
-                </button>
+                <TableColumnHeader
+                  v-model:filter-value="columnFilters.baseFactor"
+                  :active-sort-key="sortKey"
+                  :filter-placeholder="t('common.search')"
+                  :label="t('uom.table.conversionFactor')"
+                  sort-key="baseFactor"
+                  :sort-direction="sortDirection"
+                  @sort="setColumnSort"
+                />
               </th>
               <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
-                <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('baseUnit')">
-                  <span>{{ t('uom.table.baseUnit') }}</span>
-                  <span v-if="sortIcon('baseUnit')" class="text-xs">{{ sortIcon('baseUnit') }}</span>
-                </button>
+                <TableColumnHeader
+                  v-model:filter-value="columnFilters.baseUnit"
+                  :active-sort-key="sortKey"
+                  :all-label="t('common.all')"
+                  :filter-options="yesNoFilterOptions"
+                  filter-type="select"
+                  :label="t('uom.table.baseUnit')"
+                  sort-key="baseUnit"
+                  :sort-direction="sortDirection"
+                  @sort="setColumnSort"
+                />
               </th>
               <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('common.actions') }}</th>
             </tr>
@@ -92,15 +129,15 @@
                 </button>
               </td>
             </tr>
-            <tr v-if="rows.length === 0">
+            <tr v-if="!loading && sortedRows.length === 0">
               <td colspan="6" class="px-3 py-8 text-center text-gray-500">{{ t('common.noData') }}</td>
             </tr>
           </tbody>
         </table>
       </section>
 
-      <div class="flex items-center justify-between text-sm text-gray-600 mt-3" v-if="rows.length">
-        <div>{{ t('uom.pagination.showing', { start: pageStart + 1, end: pageEnd, total: rows.length }) }}</div>
+      <div class="flex items-center justify-between text-sm text-gray-600 mt-3" v-if="sortedRows.length">
+        <div>{{ t('uom.pagination.showing', { start: pageStart + 1, end: pageEnd, total: sortedRows.length }) }}</div>
         <div class="flex items-center gap-2">
           <button class="px-2 py-1 border rounded disabled:opacity-50" :disabled="page === 1" @click="page--">
             {{ t('uom.pagination.prev') }}
@@ -184,14 +221,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { supabase } from '../../lib/supabase'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import TableColumnHeader from '@/components/common/TableColumnHeader.vue'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
-import { useTableSort } from '@/composables/useTableSort'
+import { useColumnTableControls } from '@/composables/useColumnTableControls'
 
 type UomMeta = {
   label?: {
@@ -213,6 +251,10 @@ type UomRow = {
   owner_id: string | null
   meta: UomMeta | null
   created_at?: string | null
+}
+
+type DimensionRow = {
+  dimension: string | null
 }
 
 type SortKey = 'dimension' | 'code' | 'name' | 'baseFactor' | 'baseUnit'
@@ -248,15 +290,23 @@ const form = reactive({
 
 const errors = reactive<Record<string, string>>({})
 
-const { sortedRows, setSort, sortIcon } = useTableSort<UomRow, SortKey>(
+const {
+  sortKey,
+  sortDirection,
+  columnFilters,
+  sortedRows,
+  hasColumnFilters,
+  setSort,
+  clearColumnFilters,
+} = useColumnTableControls<UomRow, SortKey>(
   rows,
-  {
-    dimension: (row) => row.dimension,
-    code: (row) => row.code,
-    name: (row) => labelEn(row),
-    baseFactor: (row) => row.base_factor,
-    baseUnit: (row) => row.is_base_unit,
-  },
+  [
+    { key: 'dimension', sortValue: (row) => row.dimension, filterType: 'select' },
+    { key: 'code', sortValue: (row) => row.code, filterType: 'text' },
+    { key: 'name', sortValue: (row) => labelEn(row), filterValue: (row) => `${labelEn(row)} ${labelJa(row)}`, filterType: 'text' },
+    { key: 'baseFactor', sortValue: (row) => row.base_factor, filterType: 'text' },
+    { key: 'baseUnit', sortValue: (row) => row.is_base_unit, filterType: 'select' },
+  ],
   'dimension',
 )
 
@@ -264,6 +314,31 @@ const totalPages = computed(() => Math.max(1, Math.ceil(sortedRows.value.length 
 const pageStart = computed(() => (page.value - 1) * pageSize)
 const pageEnd = computed(() => Math.min(sortedRows.value.length, pageStart.value + pageSize))
 const pagedRows = computed(() => sortedRows.value.slice(pageStart.value, pageEnd.value))
+const dimensionFilterOptions = computed(() =>
+  Array.from(new Set(rows.value.map((row) => row.dimension).filter((value): value is string => Boolean(value))))
+    .sort((left, right) => left.localeCompare(right))
+    .map((value) => ({ value, label: value })),
+)
+const yesNoFilterOptions = computed(() => [
+  { value: 'true', label: t('common.yes') },
+  { value: 'false', label: t('common.no') },
+])
+
+function setColumnSort(key: string) {
+  setSort(key as SortKey)
+}
+
+watch(
+  () => ({ ...columnFilters }),
+  () => {
+    page.value = 1
+  },
+  { deep: true },
+)
+
+watch(sortedRows, () => {
+  if (page.value > totalPages.value) page.value = totalPages.value
+})
 
 function labelEn(row: UomRow) {
   return row.meta?.label?.en || row.name || '—'
@@ -306,7 +381,7 @@ async function fetchDimensions() {
     return
   }
   const set = new Set<string>()
-  ;(data ?? []).forEach((row: any) => {
+  ;((data ?? []) as DimensionRow[]).forEach((row) => {
     if (row.dimension) set.add(String(row.dimension))
   })
   const values = Array.from(set).sort()
@@ -435,7 +510,7 @@ async function saveRecord() {
     const baseFactor = isBase ? 1 : Number(form.base_factor)
     const baseCode = isBase ? form.code.trim() : baseUnit?.code ?? null
 
-    const payload: Record<string, any> = {
+    const payload: Record<string, unknown> = {
       code: form.code.trim(),
       name: form.name_en.trim(),
       dimension: form.dimension,

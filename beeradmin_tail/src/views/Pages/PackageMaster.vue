@@ -9,6 +9,14 @@
           <p class="text-sm text-gray-500">{{ t('package.subtitle') }}</p>
         </div>
         <div class="flex items-center gap-2">
+          <button
+            class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-50"
+            type="button"
+            :disabled="!hasColumnFilters"
+            @click="clearColumnFilters"
+          >
+            {{ t('common.clearFilters') }}
+          </button>
           <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" type="button" @click="openCreate">
             {{ t('common.add') }}
           </button>
@@ -28,52 +36,96 @@
           <thead class="bg-gray-50">
             <tr>
               <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
-                <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('packageCode')">
-                  <span>{{ t('package.columns.code') }}</span>
-                  <span v-if="sortIcon('packageCode')" class="text-xs">{{ sortIcon('packageCode') }}</span>
-                </button>
+                <TableColumnHeader
+                  v-model:filter-value="columnFilters.packageCode"
+                  :active-sort-key="sortKey"
+                  :filter-placeholder="t('common.search')"
+                  :label="t('package.columns.code')"
+                  sort-key="packageCode"
+                  :sort-direction="sortDirection"
+                  @sort="setColumnSort"
+                />
               </th>
               <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
-                <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('name')">
-                  <span>{{ t('package.columns.name') }}</span>
-                  <span v-if="sortIcon('name')" class="text-xs">{{ sortIcon('name') }}</span>
-                </button>
+                <TableColumnHeader
+                  v-model:filter-value="columnFilters.name"
+                  :active-sort-key="sortKey"
+                  :filter-placeholder="t('common.search')"
+                  :label="t('package.columns.name')"
+                  sort-key="name"
+                  :sort-direction="sortDirection"
+                  @sort="setColumnSort"
+                />
               </th>
               <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
-                <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('description')">
-                  <span>{{ t('package.columns.text') }}</span>
-                  <span v-if="sortIcon('description')" class="text-xs">{{ sortIcon('description') }}</span>
-                </button>
+                <TableColumnHeader
+                  v-model:filter-value="columnFilters.description"
+                  :active-sort-key="sortKey"
+                  :filter-placeholder="t('common.search')"
+                  :label="t('package.columns.text')"
+                  sort-key="description"
+                  :sort-direction="sortDirection"
+                  @sort="setColumnSort"
+                />
               </th>
               <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
-                <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('unitVolume')">
-                  <span>{{ t('package.columns.unitVolume') }}</span>
-                  <span v-if="sortIcon('unitVolume')" class="text-xs">{{ sortIcon('unitVolume') }}</span>
-                </button>
+                <TableColumnHeader
+                  v-model:filter-value="columnFilters.unitVolume"
+                  :active-sort-key="sortKey"
+                  :filter-placeholder="t('common.search')"
+                  :label="t('package.columns.unitVolume')"
+                  sort-key="unitVolume"
+                  :sort-direction="sortDirection"
+                  @sort="setColumnSort"
+                />
               </th>
               <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
-                <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('maxVolume')">
-                  <span>{{ t('package.columns.maxVolume') }}</span>
-                  <span v-if="sortIcon('maxVolume')" class="text-xs">{{ sortIcon('maxVolume') }}</span>
-                </button>
+                <TableColumnHeader
+                  v-model:filter-value="columnFilters.maxVolume"
+                  :active-sort-key="sortKey"
+                  :filter-placeholder="t('common.search')"
+                  :label="t('package.columns.maxVolume')"
+                  sort-key="maxVolume"
+                  :sort-direction="sortDirection"
+                  @sort="setColumnSort"
+                />
               </th>
               <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
-                <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('volumeFixFlg')">
-                  <span>{{ t('package.columns.volumeFixFlg') }}</span>
-                  <span v-if="sortIcon('volumeFixFlg')" class="text-xs">{{ sortIcon('volumeFixFlg') }}</span>
-                </button>
+                <TableColumnHeader
+                  v-model:filter-value="columnFilters.volumeFixFlg"
+                  :active-sort-key="sortKey"
+                  :all-label="t('common.all')"
+                  :filter-options="yesNoFilterOptions"
+                  filter-type="select"
+                  :label="t('package.columns.volumeFixFlg')"
+                  sort-key="volumeFixFlg"
+                  :sort-direction="sortDirection"
+                  @sort="setColumnSort"
+                />
               </th>
               <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
-                <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('volumeUom')">
-                  <span>{{ t('package.columns.volumeUom') }}</span>
-                  <span v-if="sortIcon('volumeUom')" class="text-xs">{{ sortIcon('volumeUom') }}</span>
-                </button>
+                <TableColumnHeader
+                  v-model:filter-value="columnFilters.volumeUom"
+                  :active-sort-key="sortKey"
+                  :all-label="t('common.all')"
+                  :filter-options="volumeUomFilterOptions"
+                  filter-type="select"
+                  :label="t('package.columns.volumeUom')"
+                  sort-key="volumeUom"
+                  :sort-direction="sortDirection"
+                  @sort="setColumnSort"
+                />
               </th>
               <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
-                <button class="flex items-center gap-1 cursor-pointer select-none" type="button" @click="setSort('createdAt')">
-                  <span>{{ t('package.columns.createdAt') }}</span>
-                  <span v-if="sortIcon('createdAt')" class="text-xs">{{ sortIcon('createdAt') }}</span>
-                </button>
+                <TableColumnHeader
+                  v-model:filter-value="columnFilters.createdAt"
+                  :active-sort-key="sortKey"
+                  :filter-placeholder="t('common.search')"
+                  :label="t('package.columns.createdAt')"
+                  sort-key="createdAt"
+                  :sort-direction="sortDirection"
+                  @sort="setColumnSort"
+                />
               </th>
               <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">{{ t('common.actions') }}</th>
             </tr>
@@ -97,7 +149,7 @@
                 </button>
               </td>
             </tr>
-            <tr v-if="!loading && rows.length === 0">
+            <tr v-if="!loading && sortedRows.length === 0">
               <td colspan="9" class="px-3 py-8 text-center text-gray-500">{{ t('common.noData') }}</td>
             </tr>
           </tbody>
@@ -224,9 +276,10 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import TableColumnHeader from '@/components/common/TableColumnHeader.vue'
 import { supabase } from '@/lib/supabase'
 import { formatVolumeNumber } from '@/lib/volumeFormat'
-import { useTableSort } from '@/composables/useTableSort'
+import { useColumnTableControls } from '@/composables/useColumnTableControls'
 
 type PackageRow = {
   id: string
@@ -241,6 +294,8 @@ type PackageRow = {
   volume_uom: string
   created_at: string | null
 }
+
+type PackageSourceRow = Record<string, unknown>
 
 type SortKey =
   | 'packageCode'
@@ -286,20 +341,44 @@ const volumeUomOptions = computed(() =>
   }))
 )
 
-const { sortedRows, setSort, sortIcon } = useTableSort<PackageRow, SortKey>(
+const {
+  sortKey,
+  sortDirection,
+  columnFilters,
+  sortedRows,
+  hasColumnFilters,
+  setSort,
+  clearColumnFilters,
+} = useColumnTableControls<PackageRow, SortKey>(
   rows,
-  {
-    packageCode: (row) => row.package_code,
-    name: (row) => resolveName(row),
-    description: (row) => row.description,
-    unitVolume: (row) => row.unit_volume,
-    maxVolume: (row) => row.max_volume,
-    volumeFixFlg: (row) => resolveVolumeFixFlag(row),
-    volumeUom: (row) => resolveUomLabel(row.volume_uom),
-    createdAt: (row) => (row.created_at ? Date.parse(row.created_at) : null),
-  },
+  [
+    { key: 'packageCode', sortValue: (row) => row.package_code, filterType: 'text' },
+    { key: 'name', sortValue: (row) => resolveName(row), filterType: 'text' },
+    { key: 'description', sortValue: (row) => row.description, filterType: 'text' },
+    { key: 'unitVolume', sortValue: (row) => row.unit_volume, filterValue: (row) => formatVolume(row.unit_volume), filterType: 'text' },
+    { key: 'maxVolume', sortValue: (row) => row.max_volume, filterValue: (row) => formatVolume(row.max_volume), filterType: 'text' },
+    { key: 'volumeFixFlg', sortValue: (row) => resolveVolumeFixFlag(row), filterType: 'select' },
+    { key: 'volumeUom', sortValue: (row) => resolveUomLabel(row.volume_uom), filterType: 'select' },
+    { key: 'createdAt', sortValue: (row) => (row.created_at ? Date.parse(row.created_at) : null), filterValue: (row) => formatTimestamp(row.created_at), filterType: 'text' },
+  ],
   'packageCode',
 )
+
+const yesNoFilterOptions = computed(() => [
+  { value: 'true', label: t('common.yes') },
+  { value: 'false', label: t('common.no') },
+])
+
+const volumeUomFilterOptions = computed(() =>
+  volumeUoms.value.map((row) => ({
+    value: row.name ? `${row.code} - ${row.name}`.toLowerCase() : row.code.toLowerCase(),
+    label: row.name ? `${row.code} - ${row.name}` : row.code,
+  })),
+)
+
+function setColumnSort(key: string) {
+  setSort(key as SortKey)
+}
 
 function resolveLang() {
   return String(locale.value ?? '').toLowerCase().startsWith('ja') ? 'ja' : 'en'
@@ -436,18 +515,18 @@ async function fetchPackages() {
       .select('*')
       .order('package_code', { ascending: true })
     if (error) throw error
-    rows.value = ((data ?? []) as any[]).map((row) => ({
+    rows.value = ((data ?? []) as PackageSourceRow[]).map((row) => ({
       id: String(row.id),
       package_code: String(row.package_code ?? ''),
       name_i18n: (row.name_i18n ?? null) as Record<string, string> | null,
-      description: row.description ?? null,
+      description: typeof row.description === 'string' ? row.description : null,
       unit_volume: row.unit_volume != null ? Number(row.unit_volume) : 0,
       max_volume: row.max_volume != null ? Number(row.max_volume) : null,
       volume_fix_flg: typeof row.volume_fix_flg === 'boolean' ? row.volume_fix_flg : null,
       qty_fix_flg: typeof row.qty_fix_flg === 'boolean' ? row.qty_fix_flg : null,
       fixed_qty: typeof row.fixed_qty === 'boolean' ? row.fixed_qty : null,
       volume_uom: String(row.volume_uom ?? ''),
-      created_at: row.created_at ?? null,
+      created_at: typeof row.created_at === 'string' ? row.created_at : null,
     }))
   } catch (err) {
     console.error(err)

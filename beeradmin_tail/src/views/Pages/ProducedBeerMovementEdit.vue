@@ -263,6 +263,10 @@
               </header>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
+                  <label class="block text-sm text-gray-600 mb-1">移動日時</label>
+                  <input v-model="movementForm.movedAt" type="datetime-local" class="w-full h-[40px] border rounded px-3" />
+                </div>
+                <div>
                   <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.movementWizard.fields.unitPrice') }}</label>
                   <input v-model="movementForm.unitPrice" type="number" step="0.01" min="0" class="w-full h-[40px] border rounded px-3 text-right" />
                 </div>
@@ -335,6 +339,7 @@ import {
   resolveBatchStyleName,
   resolveBatchTargetAbv,
 } from '@/lib/batchRecipeSnapshot'
+import { checkLotChronology, lotChronologyViolationMessage } from '@/lib/lotChronology'
 import { useRuleengineLabels } from '@/composables/useRuleengineLabels'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'vue3-toastify'
@@ -422,6 +427,7 @@ const alcoholTypeLabelMap = ref<Map<string, string>>(new Map())
 const saving = ref(false)
 
 const movementForm = reactive({
+  movedAt: formatDateTimeLocal(new Date()),
   intent: '',
   srcSite: '',
   dstSite: '',
@@ -476,6 +482,21 @@ const numberFormatter = computed(() => new Intl.NumberFormat(locale.value, { max
 function formatNumber(value: number | null | undefined) {
   if (value == null || Number.isNaN(value)) return '—'
   return numberFormatter.value.format(value)
+}
+
+function formatDateTimeLocal(value: Date) {
+  const yyyy = value.getFullYear()
+  const mm = String(value.getMonth() + 1).padStart(2, '0')
+  const dd = String(value.getDate()).padStart(2, '0')
+  const hh = String(value.getHours()).padStart(2, '0')
+  const mi = String(value.getMinutes()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}T${hh}:${mi}`
+}
+
+function toIsoDateTime(value: string) {
+  if (!value) return null
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? null : date.toISOString()
 }
 
 function formatAbv(value: number | null | undefined) {
@@ -623,6 +644,10 @@ async function saveMovement() {
     })
     if (errors.length) throw new Error(errors[0])
 
+    const movementAt = toIsoDateTime(movementForm.movedAt)
+    if (!movementAt) throw new Error('movement_at is required')
+    await assertSelectedLotChronology(rows.map((row) => row.lot), movementAt)
+
     saving.value = true
     const baseKey = `produced_beer_move:${Date.now()}`
     const createdIds: string[] = []
@@ -637,6 +662,7 @@ async function saveMovement() {
         unit: row.packageQty,
         uom_id: row.lot.uomId,
         tax_decision_code: movementForm.taxDecisionCode,
+        movement_at: movementAt,
         reason: movementForm.taxDecisionReason.trim() || null,
         notes: movementForm.notes.trim() || null,
         meta: {
@@ -658,6 +684,25 @@ async function saveMovement() {
     toast.error(err?.message ?? 'Failed to save movement')
   } finally {
     saving.value = false
+  }
+}
+
+async function assertSelectedLotChronology(lots: LotOption[], movementAt: string) {
+  const result = await checkLotChronology({
+    supabase,
+    movementAt,
+    lots: lots.map((lot) => ({
+      lotId: lot.id,
+      lotLabel: lot.lotCode || lot.label || lot.id,
+    })),
+  })
+  if (result.unavailableReason) {
+    console.warn('Lot chronology early-warning check unavailable', result.unavailableReason)
+    return
+  }
+  const violation = result.violations[0]
+  if (violation) {
+    throw new Error(lotChronologyViolationMessage(violation, locale.value))
   }
 }
 

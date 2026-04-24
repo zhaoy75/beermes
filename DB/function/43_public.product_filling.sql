@@ -163,6 +163,12 @@ begin
     raise exception 'PF007: source lot not found';
   end if;
 
+  perform public._assert_source_lot_not_after_movement(
+    v_movement_at,
+    array[v_from_lot_id],
+    'product_filling'
+  );
+
   if v_source_lot_uom is distinct from v_uom_id then
     raise exception 'PF001: source lot uom_id mismatch';
   end if;

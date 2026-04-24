@@ -156,6 +156,12 @@ begin
     raise exception 'PU003: source lot not found';
   end if;
 
+  perform public._assert_source_lot_not_after_movement(
+    v_movement_at,
+    array[v_src_lot_id],
+    'product_unpacking'
+  );
+
   if v_source_package_id is null then
     raise exception 'PU004: source lot is not packaged';
   end if;

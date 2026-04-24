@@ -259,6 +259,12 @@ begin
     raise exception 'PM006: source lot not found';
   end if;
 
+  perform public._assert_source_lot_not_after_movement(
+    v_movement_at,
+    array[v_src_lot_id],
+    'product_move'
+  );
+
   if v_source_lot_status <> 'active' then
     raise exception 'PM006: source lot is not movable. status=%', v_source_lot_status;
   end if;

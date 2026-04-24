@@ -970,3 +970,11 @@ Tax report editor remaining problem:
 
 Remaining risk: we still need the business rule for whether LIA130 always applies with category Ａ and rate 0.8, or whether that needs tenant/profile configuration.
 
+There is a very important thing, since movement and transaction happening date can be modify by UI, i want to add a validation to avoid movement happens before source lot is created. Please analyze the problem.
+
+for the 申告書作成/編集　page, 
+- the default mode will be preview mode
+- the preview contents should fit the width of the panel
+- hide the 廃棄 section
+- move 納税申告XML作成 to the right of mode change switch
+

@@ -727,6 +727,7 @@ import {
   normalizeBatchAttrDataType,
   validateBatchAttrField,
 } from '@/lib/batchAttrValidation'
+import { checkLotChronology, lotChronologyViolationMessage } from '@/lib/lotChronology'
 import { supabase } from '@/lib/supabase'
 import { VOLUME_DISPLAY_DECIMALS, formatVolume, formatVolumeNumber } from '@/lib/volumeFormat'
 
@@ -2810,12 +2811,13 @@ type RootSourceLot = {
   id: string
   uom_id: string
   site_id: string
+  lot_no: string | null
 }
 
 async function resolveRootSourceLot(batchIdValue: string, preferredSiteId?: string | null): Promise<RootSourceLot | null> {
   const { data: candidates, error: candidateError } = await supabase
     .from('lot')
-    .select('id, uom_id, site_id')
+    .select('id, uom_id, site_id, lot_no')
     .eq('batch_id', batchIdValue)
     .neq('status', 'void')
     .gt('qty', 0)
@@ -2854,6 +2856,7 @@ async function resolveRootSourceLot(batchIdValue: string, preferredSiteId?: stri
         id: candidate.id as string,
         uom_id: candidate.uom_id as string,
         site_id: candidate.site_id as string,
+        lot_no: typeof candidate.lot_no === 'string' ? candidate.lot_no : null,
       }
     }
   }
@@ -2869,7 +2872,7 @@ async function resolveFillingSourceLot(batchIdValue: string) {
 
   const { data: lotRow, error: lotError } = await supabase
     .from('lot')
-    .select('id, uom_id, site_id')
+    .select('id, uom_id, site_id, lot_no')
     .eq('id', sourceLotId)
     .maybeSingle()
   if (lotError) throw lotError
@@ -2879,6 +2882,26 @@ async function resolveFillingSourceLot(batchIdValue: string) {
     id: String(lotRow.id),
     uom_id: String(lotRow.uom_id),
     site_id: String(lotRow.site_id),
+    lot_no: typeof lotRow.lot_no === 'string' ? lotRow.lot_no : null,
+  }
+}
+
+async function assertPackingSourceLotChronology(sourceLot: RootSourceLot, movementAt: string) {
+  const result = await checkLotChronology({
+    supabase,
+    movementAt,
+    lots: [{
+      lotId: sourceLot.id,
+      lotLabel: sourceLot.lot_no || sourceLot.id,
+    }],
+  })
+  if (result.unavailableReason) {
+    console.warn('Lot chronology early-warning check unavailable', result.unavailableReason)
+    return
+  }
+  const violation = result.violations[0]
+  if (violation) {
+    throw new Error(lotChronologyViolationMessage(violation, locale.value))
   }
 }
 
@@ -2954,6 +2977,7 @@ async function persistPackingEvent(form: PackingFormState, isEditing: boolean) {
     if (!sourceLot) {
       throw new Error('Source lot for filling is not found. Run product_produce first.')
     }
+    await assertPackingSourceLotChronology(sourceLot, movementAt)
     const sourceSiteId = sourceLot.site_id
     const sourceUomId = sourceLot.uom_id
     const sourceUomCode = resolveUomCode(sourceUomId)
@@ -3034,6 +3058,7 @@ async function persistPackingEvent(form: PackingFormState, isEditing: boolean) {
     if (!sourceLot) {
       throw new Error('Root source lot for transfer is not found. Run product_produce first.')
     }
+    await assertPackingSourceLotChronology(sourceLot, movementAt)
 
     const movementQty = toNumber(form.movement_qty)
     if (movementQty == null || movementQty <= 0) {
@@ -3081,6 +3106,7 @@ async function persistPackingEvent(form: PackingFormState, isEditing: boolean) {
     if (!sourceLot) {
       throw new Error('Root source lot for ship is not found. Run product_produce first.')
     }
+    await assertPackingSourceLotChronology(sourceLot, movementAt)
 
     const movementQty = toNumber(form.movement_qty)
     if (movementQty == null || movementQty <= 0) {

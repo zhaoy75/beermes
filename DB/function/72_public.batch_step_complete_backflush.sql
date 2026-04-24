@@ -338,6 +338,12 @@ begin
           raise exception 'BSBC013: explicit lot % not found', v_current_lot_id;
         end if;
 
+        perform public._assert_source_lot_not_after_movement(
+          v_ended_at,
+          array[v_current_lot_id],
+          'batch_step_complete_backflush:explicit_lot'
+        );
+
         if v_explicit_lot_site_id is distinct from v_source_site_id then
           raise exception 'BSBC014: explicit lot % does not belong to the source site', v_explicit_lot_no;
         end if;
@@ -451,7 +457,8 @@ begin
           and l.status = 'active'
           and l.site_id = v_source_site_id
           and l.material_id = v_current_material_id
-          and l.uom_id = v_current_uom_id;
+          and l.uom_id = v_current_uom_id
+          and public.lot_effective_created_at(l.id) <= v_ended_at;
 
         if coalesce(array_length(v_candidate_lot_ids, 1), 0) = 0 then
           raise exception 'BSBC023: no candidate lots found for material % in source site %', v_current_material_id, v_source_site_id;

@@ -633,6 +633,7 @@ import {
   resolveReleasedRecipeCode,
   type BatchRecipeAttrFallback,
 } from '@/lib/batchRecipeSnapshot'
+import { checkLotChronology, lotChronologyViolationMessage } from '@/lib/lotChronology'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
@@ -2620,6 +2621,7 @@ async function submit(mode: SubmitMode) {
   saving.value = true
   try {
     const payloads = buildMovePayloads()
+    await assertMovePayloadChronology(payloads)
     const { data, error } = await supabase.rpc('product_move_fast_post', { p_docs: payloads })
     if (error) throw error
 
@@ -2645,13 +2647,34 @@ async function submit(mode: SubmitMode) {
   } catch (err: any) {
     console.error(err)
     const message = String(err?.message ?? '')
-    if (message.includes('product_move_fast_post') || message.includes('product_move')) {
+    if (message.includes('LOT_TIME')) {
+      toast.error(message)
+    } else if (message.includes('product_move_fast_post') || message.includes('product_move')) {
       toast.error(t('producedBeer.movementFast.errors.rpcUnavailable'))
     } else {
       toast.error(message || t('producedBeer.movementFast.errors.saveFailed'))
     }
   } finally {
     saving.value = false
+  }
+}
+
+async function assertMovePayloadChronology(payloads: Array<Record<string, any>>) {
+  const movementAt = payloads.find((payload) => payload.movement_at)?.movement_at
+  const lots = payloads
+    .map((payload) => ({
+      lotId: String(payload.src_lot_id || ''),
+      lotLabel: String(payload.meta?.lot_no || payload.src_lot_id || ''),
+    }))
+    .filter((lot) => lot.lotId)
+  const result = await checkLotChronology({ supabase, movementAt, lots })
+  if (result.unavailableReason) {
+    console.warn('Lot chronology early-warning check unavailable', result.unavailableReason)
+    return
+  }
+  const violation = result.violations[0]
+  if (violation) {
+    throw new Error(lotChronologyViolationMessage(violation, locale.value))
   }
 }
 

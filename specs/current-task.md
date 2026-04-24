@@ -1,6 +1,135 @@
 # Current Task
 
 ## Goal
+- Analyze and specify validation to prevent a movement/transaction date from being earlier than the source lot's business creation date.
+- Protect user-editable movement dates in UI flows from producing impossible lot chronology.
+
+## Scope
+- Identify the canonical source-lot creation timestamp for validation.
+- Identify backend entry points that create or update movements using source lots.
+- Identify UI pages where users can edit movement or transaction dates.
+- Recommend the safest implementation layer and edge-case behavior.
+- Add frontend early-warning checks on pages that expose user-editable movement/event timestamps.
+- Keep backend validation as the final authority.
+
+## Findings
+- `inv_movements.movement_at` is user-controlled in several flows and is the business effective timestamp used by tax/reporting and lot trace.
+- `lot.created_at` is not a sufficient business creation date because it is database insert time; backdated production can create a lot today with an earlier `movement_at`.
+- `lot.produced_at` is not sufficient for moved/split/fill lots because it can preserve the original product production date instead of the specific lot record's creation/movement date.
+- The best business creation timestamp for product lots is the first `inv_movements.movement_at` joined through `lot_edge.to_lot_id = lot.id`; fallback should be `lot.produced_at`, then `lot.created_at` for legacy/raw-material lots without edges.
+- Product beer flows with source lots include:
+  - `public.product_move(p_doc)`
+  - `public.product_move_fast_post(p_docs)` through `product_move`
+  - `public.product_filling(p_doc)`
+  - `public.product_unpacking(p_doc)`
+  - `public.domestic_removal_complete(...)` through `product_move`
+- Additional lot-consuming paths exist outside `lot_edge`:
+  - raw material inventory create/edit/move writes `inv_movements` and stores lot id in line `meta.lot_id`
+  - batch-step backflush consumes material lots and stores lot id in line `meta.lot_id`
+- `public.movement_save(p_movement_id, p_doc)` can update `inv_movements.movement_at` after posting. This can invalidate chronology unless it validates both source lots used by that movement and downstream movements that already use lots created by that movement.
+
+## Recommended Implementation Plan
+1. Add a DB helper to resolve lot business creation time:
+   - input: `p_lot_id uuid`
+   - primary source: earliest `m.movement_at` from `lot_edge e join inv_movements m on m.id = e.movement_id where e.to_lot_id = p_lot_id and m.status <> 'void'`
+   - fallback: `lot.produced_at`
+   - fallback: `lot.created_at`
+2. Add a DB assertion helper for source-lot chronology:
+   - input: `p_movement_at timestamptz`, `p_source_lot_ids uuid[]`, optional context
+   - reject if any source lot creation time is after `p_movement_at`
+   - error should include lot number and both dates for clear UI feedback
+3. Call the assertion inside all posting functions before stock/lot mutation:
+   - `product_move`: `v_src_lot_id`
+   - `product_filling`: `v_from_lot_id`
+   - `product_unpacking`: `v_src_lot_id`
+   - `batch_step_complete_backflush`: explicit and FIFO-selected material lot ids before consumption
+   - raw-material movement creation path should move to an RPC or add equivalent validation before direct insert/update
+4. Add trigger protection for posted data:
+   - `lot_edge` before insert/update: if `from_lot_id` exists, movement date must be on/after source lot creation time
+   - `inv_movements` before update of `movement_at`: validate source lots already used by this movement
+   - for movements that created lots, also validate that the new movement date is not later than any downstream non-void movement that uses those created lots as a source
+5. Add UI pre-checks only as convenience:
+   - ProductMoveFast and produced beer movement edit should compare selected movement date with selected/candidate source lot creation date when known
+   - Batch packing/filling dialogs should compare event time with resolved source lot creation date when known
+   - UI must still rely on backend errors as the final authority
+
+## Non-Goals
+- Do not use UI-only validation as the final safeguard.
+- Do not rewrite historical inventory quantities in this pass.
+- Do not allow `movement_save` to silently change lot graph chronology.
+- Do not use `lot.created_at` alone as the validation source.
+
+## Affected Files For Implementation
+- [DB/function/03_public.lot_chronology.sql](/Users/zhao/dev/other/beer/DB/function/03_public.lot_chronology.sql)
+- [DB/function/44_public.product_move.sql](/Users/zhao/dev/other/beer/DB/function/44_public.product_move.sql)
+- [DB/function/43_public.product_filling.sql](/Users/zhao/dev/other/beer/DB/function/43_public.product_filling.sql)
+- [DB/function/71_public.product_unpacking.sql](/Users/zhao/dev/other/beer/DB/function/71_public.product_unpacking.sql)
+- [DB/function/72_public.batch_step_complete_backflush.sql](/Users/zhao/dev/other/beer/DB/function/72_public.batch_step_complete_backflush.sql)
+- `DB/function/31_public.movement_save.sql` is protected indirectly by the new `inv_movements` update trigger.
+- raw material inventory movement path, currently [RawMaterialInventoryEdit.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/RawMaterialInventoryEdit.vue)
+- UI early-warning paths:
+  - [ProductMoveFast.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/ProductMoveFast.vue)
+  - [ProducedBeerMovementEdit.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/ProducedBeerMovementEdit.vue)
+  - [BatchPacking.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/BatchPacking.vue)
+  - [BatchStepExecution.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/BatchStepExecution.vue)
+- Shared frontend helper:
+  - [lotChronology.ts](/Users/zhao/dev/other/beer/beeradmin_tail/src/lib/lotChronology.ts)
+
+## Validation Plan
+- Add SQL tests or manual SQL cases:
+  - movement at same timestamp as source creation: allowed
+  - movement before source creation: rejected
+  - editing a posted movement earlier than source creation: rejected
+  - editing a lot-creating movement later than a downstream use of that lot: rejected
+  - void downstream movement should not block chronology update
+- Run frontend type-check/lint only if UI early warnings are implemented.
+- For frontend warning pass:
+  - run targeted ESLint for touched Vue/TS files
+  - run frontend type-check
+  - run unit tests if present
+  - run `npm run build:test`
+
+## Final Decisions
+- Added `public.lot_effective_created_at(p_lot_id uuid)` to resolve a lot's business creation timestamp from the first non-void `lot_edge.to_lot_id` movement, then `lot.produced_at`, then `lot.created_at`.
+- Added `public._assert_source_lot_not_after_movement(...)` to reject source lots created after the requested movement timestamp.
+- Added a `lot_edge` trigger to protect all edge-based source-lot movement paths.
+- Added an `inv_movement_lines` trigger to protect legacy/direct movement-line paths that store source lot ids in line `meta`.
+- Added an `inv_movements` update trigger to protect changing `movement_at` after posting:
+  - validates existing source lots for that movement
+  - rejects moving a lot-creating movement later than downstream movements that already use the created lot
+- Added explicit pre-mutation assertions in `product_move`, `product_filling`, and `product_unpacking`.
+- Updated `batch_step_complete_backflush`:
+  - explicit lot consumption rejects if the step completion time is before the lot creation time
+  - FIFO candidate selection ignores lots not yet created at the step completion time
+- Added a shared frontend helper `lotChronology.ts` that calls `lot_effective_created_at` and formats early-warning messages.
+- Added frontend early-warning checks before posting user-editable movement/event dates:
+  - `ProductMoveFast.vue` checks allocated source lots before bulk posting.
+  - `ProducedBeerMovementEdit.vue` exposes `movement_at`, sends it to `product_move`, and checks selected source lots before save.
+  - `BatchPacking.vue` checks the resolved source lot for filling, transfer, and ship packing events.
+  - `BatchStepExecution.vue` checks selected actual-material lots before direct actual-material save and before backflush completion.
+- Frontend early-warning RPC failures are logged and do not block posting; the database validation remains the final authority after the DB helper/trigger deployment.
+- `ProductMoveFast.vue` preserves `LOT_TIME...` backend validation messages instead of replacing them with the generic RPC unavailable message.
+- The `inv_movements` chronology update trigger now also fires on `src_site_id` changes, because line-based lot validation depends on source-site semantics.
+- Voiding a lot-creating movement no longer skips downstream chronology validation; source-lot validation is skipped for voided movement rows, but downstream created-lot protection still runs.
+
+## Validation Results
+- `git diff --check -- specs/current-task.md DB/function/03_public.lot_chronology.sql DB/function/43_public.product_filling.sql DB/function/44_public.product_move.sql DB/function/71_public.product_unpacking.sql DB/function/72_public.batch_step_complete_backflush.sql`: passed.
+- `git diff --check -- specs/current-task.md beeradmin_tail/src/lib/lotChronology.ts beeradmin_tail/src/views/Pages/ProductMoveFast.vue beeradmin_tail/src/views/Pages/ProducedBeerMovementEdit.vue beeradmin_tail/src/views/Pages/BatchPacking.vue`: passed.
+- `git diff --check -- specs/current-task.md DB/function/03_public.lot_chronology.sql beeradmin_tail/src/lib/lotChronology.ts beeradmin_tail/src/views/Pages/ProductMoveFast.vue beeradmin_tail/src/views/Pages/BatchStepExecution.vue beeradmin_tail/src/views/Pages/BatchPacking.vue beeradmin_tail/src/views/Pages/ProducedBeerMovementEdit.vue`: passed after review fixes.
+- `npx eslint src/lib/lotChronology.ts --no-fix`: passed.
+- `npx eslint src/views/Pages/BatchStepExecution.vue --no-fix`: passed.
+- `npx eslint src/lib/lotChronology.ts src/views/Pages/ProductMoveFast.vue src/views/Pages/ProducedBeerMovementEdit.vue src/views/Pages/BatchPacking.vue --no-fix`: failed because the touched Vue files already contain existing lint debt, mostly `@typescript-eslint/no-explicit-any` and unused-function errors. The new shared helper passes ESLint.
+- `npx eslint src/lib/lotChronology.ts src/views/Pages/ProductMoveFast.vue src/views/Pages/ProducedBeerMovementEdit.vue src/views/Pages/BatchPacking.vue src/views/Pages/BatchStepExecution.vue --no-fix`: failed because `ProductMoveFast.vue`, `ProducedBeerMovementEdit.vue`, and `BatchPacking.vue` still contain existing lint debt; `lotChronology.ts` and `BatchStepExecution.vue` pass individually.
+- `npm run type-check` in `beeradmin_tail`: passed.
+- `npm run test --if-present` in `beeradmin_tail`: passed with no test script configured.
+- `npm run build:test` in `beeradmin_tail`: passed with existing CSS minifier warnings and existing large-chunk warnings.
+- SQL runtime validation was not executed in this workspace because `psql` is not installed; the new DB helper/trigger file should be applied and tested against Supabase/Postgres before release.
+
+---
+
+# Previous Task: LIA260 XML Output
+
+## Goal
 - Add `LIA260` XML output to the generated `RLI0010_232` `.xtx` file.
 - Use existing `EXPORT_EXEMPT` report rows as the first source for `LIA260` detail rows.
 - Keep `LIA260` in `CATALOG` and `CONTENTS` only when export-exempt rows exist.

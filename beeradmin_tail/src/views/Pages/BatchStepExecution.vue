@@ -822,6 +822,7 @@ import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import { checkLotChronology, lotChronologyViolationMessage } from '@/lib/lotChronology'
 import { supabase } from '@/lib/supabase'
 
 type BatchHeaderRow = {
@@ -1709,6 +1710,7 @@ async function saveStepInputs() {
         showSuccess: false,
         reloadCollections: true,
       })
+      await assertActualMaterialLotChronology(actualMaterialForms.value, endedAt)
 
       const { error } = await supabase.rpc('batch_step_complete_backflush', {
         p_batch_step_id: step.value.id,
@@ -1882,11 +1884,12 @@ async function persistActualMaterials(options: PersistActualMaterialsOptions = {
   if (clearState) clearSectionState(actualMaterialsState)
   if (setSavingState) actualMaterialsState.saving = true
 
-  try {
-    const rows = actualMaterialForms.value.filter((row) => !isActualMaterialRowEmpty(row))
-    validateActualMaterialRows(rows)
-    await ensureCurrentUser()
-    const mes = mesClient()
+    try {
+      const rows = actualMaterialForms.value.filter((row) => !isActualMaterialRowEmpty(row))
+      validateActualMaterialRows(rows)
+      await assertActualMaterialLotChronology(rows)
+      await ensureCurrentUser()
+      const mes = mesClient()
     const existingIds = new Set(loadedActualMaterialIds.value)
     const keptIds = new Set(rows.map((row) => row.id).filter((value): value is string => Boolean(value)))
     const deleteIds = [...existingIds].filter((id) => !keptIds.has(id))
@@ -2761,6 +2764,47 @@ function validateActualMaterialRows(rows: ActualMaterialFormRow[]) {
     }
     if (!row.material_id && !row.lot_id) {
       throw new Error(t('batch.edit.stepMaterialOrLotRequired'))
+    }
+  }
+}
+
+async function assertActualMaterialLotChronology(rows: ActualMaterialFormRow[], fallbackMovementAt?: string | null) {
+  const candidates = rows
+    .map((row) => {
+      if (!row.lot_id) return null
+      const lot = lotOptions.value.find((option) => option.id === row.lot_id)
+      const movementAt = fallbackMovementAt || toIsoDateTime(row.consumed_at)
+      if (!movementAt) return null
+      return {
+        movementAt,
+        lot: {
+          lotId: row.lot_id,
+          lotLabel: lot?.lot_no || lot?.label || row.lot_id,
+        },
+      }
+    })
+    .filter((candidate): candidate is { movementAt: string, lot: { lotId: string, lotLabel: string } } => candidate !== null)
+
+  const groups = new Map<string, Array<{ lotId: string, lotLabel: string }>>()
+  candidates.forEach((candidate) => {
+    const lots = groups.get(candidate.movementAt) ?? []
+    lots.push(candidate.lot)
+    groups.set(candidate.movementAt, lots)
+  })
+
+  for (const [movementAt, lots] of groups) {
+    const result = await checkLotChronology({
+      supabase,
+      movementAt,
+      lots,
+    })
+    if (result.unavailableReason) {
+      console.warn('Lot chronology early-warning check unavailable', result.unavailableReason)
+      return
+    }
+    const violation = result.violations[0]
+    if (violation) {
+      throw new Error(lotChronologyViolationMessage(violation, locale.value))
     }
   }
 }

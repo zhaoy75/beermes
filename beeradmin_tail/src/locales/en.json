@@ -32,6 +32,67 @@
     "inactive": "Inactive",
     "unknown": "Unknown"
   },
+  "rpcErrors": {
+    "fallback": {
+      "unknown": "The operation could not be completed. Please try again later.",
+      "network": "Network error. Please check your connection.",
+      "auth": "Your session has expired. Please sign in again.",
+      "permission": "You do not have permission to perform this action.",
+      "notFound": "The requested data was not found.",
+      "conflict": "This value already exists.",
+      "validation": "Please check the input values.",
+      "rateLimit": "Too many requests. Please wait and try again.",
+      "server": "A server error occurred. Please try again later.",
+      "business": "The operation could not be completed. ({code})"
+    },
+    "families": {
+      "BSEA": { "message": "Check the equipment assignment values. ({code})" },
+      "BSBC": { "message": "The material backflush could not be completed. Check the input values and inventory. ({code})" },
+      "DRC": { "message": "The domestic taxable removal could not be completed. Check the target lot and destination. ({code})" },
+      "GTR": { "message": "The alcohol tax rate could not be resolved. Check the tax master data. ({code})" },
+      "ILV": { "message": "The lot could not be voided. Check the target lot and inventory. ({code})" },
+      "LOT_TIME": { "message": "The movement date conflicts with lot chronology. Check the date and time. ({code})" },
+      "PF": { "message": "The filling record could not be saved. Check the input values and source-lot inventory. ({code})" },
+      "PFR": { "message": "The filling record could not be reversed. Check the target movement and downstream usage. ({code})" },
+      "PM": { "message": "The movement could not be saved. Check the input values and source-lot inventory. ({code})" },
+      "PMF": { "message": "The fast movement could not be saved. Check the input values. ({code})" },
+      "PP": { "message": "The production record could not be saved. Check the input values. ({code})" },
+      "PPR": { "message": "The production record could not be reversed. Check the target lot and downstream usage. ({code})" },
+      "PU": { "message": "The unpacking record could not be saved. Check the input values and source-lot inventory. ({code})" },
+      "RSG": { "message": "The recipe definition could not be loaded. Check the recipe settings. ({code})" },
+      "TRG": { "message": "The tax report could not be generated. Check the report period and source data. ({code})" },
+      "TRM": { "message": "The tax-report-related movement could not be updated. ({code})" },
+      "TRS": { "message": "The tax report status could not be changed. ({code})" }
+    },
+    "codes": {
+      "PF003": { "message": "A filling record with the same document number already exists." },
+      "PFR005": { "message": "This filled lot is already used by downstream movements and cannot be reversed." },
+      "PFR007": { "message": "A reversal document with the same document number already exists." },
+      "PM010": { "message": "The beer category or tax category required for taxable movement could not be resolved." },
+      "PM012": { "message": "The return destination inventory row could not be created. Check the destination site." },
+      "PMF500": { "message": "Fast movement segment {segment} could not be saved." },
+      "PP002": { "message": "Production quantity must be greater than zero." },
+      "PP003": { "message": "A production record with the same document number already exists." },
+      "PP005": { "message": "The production source and destination sites do not match." },
+      "PP007": { "message": "The production destination site was not found or has an invalid type." },
+      "PP008": { "message": "The production destination must be a manufacturing site." },
+      "PPR005": { "message": "This produced lot is already used by downstream movements and cannot be reversed." },
+      "PPR007": { "message": "A reversal document with the same document number already exists." },
+      "PU003": { "message": "The source lot for unpacking was not found." },
+      "PU006": { "message": "The target production batch for unpacking was not found." },
+      "PU008": { "message": "The selected tank is invalid." },
+      "PU010": { "message": "An unpacking record with the same document number already exists." },
+      "TRG001": { "message": "Tax report generation input is missing." },
+      "TRG003": { "message": "Tax report generation can only save draft or stale reports." },
+      "TRG004": { "message": "Submitted or approved tax reports cannot be regenerated." },
+      "TRM001": { "message": "The target movement was not specified." },
+      "TRM002": { "message": "This movement is included in tax report ({report}) and cannot be reversed." },
+      "TRS001": { "message": "The target tax report was not specified." },
+      "TRS002": { "message": "The specified tax report status is not allowed." },
+      "TRS003": { "message": "The target tax report was not found." },
+      "TRS006": { "message": "Only submitted tax reports can be approved." }
+    }
+  },
   "equipment": {
     "title": "Equipment",
     "subtitle": "Manage tanks and non-tank equipment assets.",
@@ -243,6 +304,7 @@
       "colActualStart": "Actual start",
       "colActualEnd": "Actual end",
       "summary": "Summary",
+      "loadFailed": "Failed to load batches.",
       "deleteBlocked": "This batch cannot be deleted in its current status.",
       "errors": {
         "attrMin": "{field} must be greater than or equal to {min}.",
@@ -271,7 +333,8 @@
       "parentBatchCode": "Parent batch code",
       "parentBatchQuantity": "Quantity (L)",
       "autoCodeHint": "If blank, a batch code will be generated like BATCH-YYYYMMDD-XXXX.",
-      "createButton": "Create Batch"
+      "createButton": "Create Batch",
+      "createFailed": "Failed to create batch."
     },
     "delete": {
       "title": "Delete Batch",
@@ -1516,6 +1579,10 @@
         "reverseConfirm": "Reverse document {docNo}?",
         "reverseSuccess": "Movement reversed.",
         "exportExcel": "Export Excel"
+      },
+      "errors": {
+        "reverseFailed": "Failed to reverse the movement.",
+        "lockedByTaxReport": "This movement is included in tax report ({report}) and cannot be reversed."
       },
       "export": {
         "exporting": "Exporting…",
@@ -3029,7 +3096,7 @@
       "attachmentsHint": "Upload attachment files to list them here."
     },
     "emptyBreakdown": "No reportable movement data found for this period.",
-    "deleteDraftOnly": "Only draft tax reports can be deleted.",
+    "deleteDraftOnly": "Only draft or regenerate-required tax reports can be deleted.",
     "deleteConfirm": "Delete the tax report for {period}? This action cannot be undone.",
     "deleted": "Tax report deleted.",
     "deleteFailed": "Failed to delete tax report: {message}",
@@ -3083,6 +3150,7 @@
     },
     "statusMap": {
       "draft": "Draft",
+      "stale": "Regenerate",
       "submitted": "Submitted",
       "approved": "Approved"
     },

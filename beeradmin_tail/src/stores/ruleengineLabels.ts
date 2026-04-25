@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { toRpcUserError } from '@/lib/rpcErrors'
 import { supabase } from '@/lib/supabase'
 
 export type RuleengineLabelGroup =
@@ -92,7 +93,7 @@ export const useRuleengineLabelsStore = defineStore('ruleengineLabels', {
       this.lastError = null
       try {
         const { data, error } = await supabase.rpc('ruleengine_get_ui_labels')
-        if (error) throw error
+        if (error) throw toRpcUserError(error)
         const payload = normalizePayload(Array.isArray(data) ? data[0] : data)
         this.payload = payload
         this.tenantId = tenantId

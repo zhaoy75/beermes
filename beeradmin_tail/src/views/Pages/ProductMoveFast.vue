@@ -634,6 +634,7 @@ import {
   type BatchRecipeAttrFallback,
 } from '@/lib/batchRecipeSnapshot'
 import { checkLotChronology, lotChronologyViolationMessage } from '@/lib/lotChronology'
+import { formatRpcErrorMessage } from '@/lib/rpcErrors'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
@@ -2646,14 +2647,9 @@ async function submit(mode: SubmitMode) {
     }
   } catch (err: any) {
     console.error(err)
-    const message = String(err?.message ?? '')
-    if (message.includes('LOT_TIME')) {
-      toast.error(message)
-    } else if (message.includes('product_move_fast_post') || message.includes('product_move')) {
-      toast.error(t('producedBeer.movementFast.errors.rpcUnavailable'))
-    } else {
-      toast.error(message || t('producedBeer.movementFast.errors.saveFailed'))
-    }
+    toast.error(formatRpcErrorMessage(err, {
+      fallbackKey: 'producedBeer.movementFast.errors.saveFailed',
+    }))
   } finally {
     saving.value = false
   }

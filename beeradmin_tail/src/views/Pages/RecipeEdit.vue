@@ -834,6 +834,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import { formatRpcErrorMessage } from '@/lib/rpcErrors'
 import { supabase } from '@/lib/supabase'
 import { normalizeBatchAttrDataType, validateBatchAttrField } from '@/lib/batchAttrValidation'
 import { toast } from 'vue3-toastify'
@@ -1821,7 +1822,7 @@ async function loadSchema() {
     schemaMeta.def_id = ''
     schemaMeta.def_key = activeSchemaKey.value
     schemaMeta.scope = ''
-    schemaError.value = error instanceof Error ? error.message : String(error)
+    schemaError.value = formatRpcErrorMessage(error)
     toast.error(t('recipe.edit.loadSchemaFailed', { message: schemaError.value }))
   } finally {
     schemaLoading.value = false

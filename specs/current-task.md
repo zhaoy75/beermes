@@ -1,28 +1,54 @@
 # Current Task
 
 ## Active Goal
-- Specify staged tax-report source movement tracking so submitted tax reports can block product-move rollback safely.
+- Define the final tax-report source movement tracking process so submitted tax reports can block product-move rollback safely.
 
 ## Active Scope
-- Stage 1: add a narrow source-reference table that records which `inv_movements` / `inv_movement_lines` contributed to each saved tax report.
-- Stage 1: update tax-report save flow to replace refs for the saved report using the same source rows used for the breakdown.
-- Stage 1: define rollback blocking rules for submitted/approved reports.
-- Stage 1: define draft stale handling when source movements change after draft creation.
-- Stage 2: move tax-report generation and source-ref persistence into backend RPCs so the browser no longer owns the authoritative report source selection.
+- Add a narrow source-reference table that records which `inv_movements` / `inv_movement_lines` contributed to each saved tax report.
+- Make backend RPCs the authority for tax-report source movement selection, tax breakdown calculation, `tax_reports` save/update, and movement-ref persistence.
+- Define report status transitions and immutability rules for draft, stale, submitted, and approved reports.
+- Define rollback blocking rules for submitted/approved reports.
+- Define stale-draft handling when referenced source movements are changed or rolled back.
+- Translate the submitted/approved tax-report movement lock error in movement cancellation UI.
+- Generate a stored-function error catalog from active `raise exception` statements and classify translation readiness.
+- Clean the stored-function error catalog wording so it can be used as a translation and cleanup checklist.
+- Implement the frontend stored-function error formatter and apply it to main RPC-backed pages.
 
 ## Active Non-Goals
-- Do not add a full `tax_report_lines` detail table in this phase.
-- Do not implement correction/amendment workflows for already submitted reports in this phase.
-- Do not change e-Tax XML schemas in this phase.
-- Do not implement programming changes until this spec is reviewed.
+- Do not add a full `tax_report_lines` detail table.
+- Do not implement correction/amendment workflows for already submitted reports in this task.
+- Do not change e-Tax XML schemas.
 
 ## Active Affected Files
-- [DB/ddl/taxreport.sql](/Users/zhao/dev/other/beer/DB/ddl/taxreport.sql), or a new tax-report refs DDL file.
-- Future RPC files under [DB/function](/Users/zhao/dev/other/beer/DB/function).
+- New DDL file: `DB/ddl/tax_report_movement_refs.sql`
+- [DB/ddl/taxreport.sql](/Users/zhao/dev/other/beer/DB/ddl/taxreport.sql)
+- RPC files under [DB/function](/Users/zhao/dev/other/beer/DB/function).
+- [DB/function/31_public.movement_save.sql](/Users/zhao/dev/other/beer/DB/function/31_public.movement_save.sql)
 - [TaxReportEditor.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/TaxReportEditor.vue)
-- [taxReport.ts](/Users/zhao/dev/other/beer/beeradmin_tail/src/lib/taxReport.ts)
+- [TaxReport.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/TaxReport.vue)
+- [ProducedBeer.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/ProducedBeer.vue)
+- Main RPC-backed UI pages:
+  - `BatchEdit.vue`
+  - `BatchList.vue`
+  - `BatchLotDag.vue`
+  - `BatchPacking.vue`
+  - `BatchStepExecution.vue`
+  - `ProductMoveFast.vue`
+  - `ProducedBeerInventory.vue`
+  - `ProducedBeerMovementEdit.vue`
+  - `ProducedBeerUnpacking.vue`
+  - `RecipeEdit.vue`
+  - `RecipeList.vue`
+  - `RecipeStepEditor.vue`
+- RPC helper consumers:
+  - `beeradmin_tail/src/lib/lotChronology.ts`
+  - `beeradmin_tail/src/stores/ruleengineLabels.ts`
+- New frontend helper: `beeradmin_tail/src/lib/rpcErrors.ts`
+- [ja.json](/Users/zhao/dev/other/beer/beeradmin_tail/src/locales/ja.json)
+- [en.json](/Users/zhao/dev/other/beer/beeradmin_tail/src/locales/en.json)
 - [tax-report-editor.md](/Users/zhao/dev/other/beer/docs/UI/tax-report-editor.md)
 - [tax-report.md](/Users/zhao/dev/other/beer/docs/UI/tax-report.md)
+- New catalog: `docs/db/function/stored-function-error-catalog.md`
 - [specs/current-task.md](/Users/zhao/dev/other/beer/specs/current-task.md)
 
 ## Active Data Model / API Changes
@@ -42,47 +68,111 @@
   - `(tenant_id, movement_id)`
   - `(tenant_id, tax_report_id)`
   - optionally `(tenant_id, movement_line_id)` when line-level checks are used.
-- Enable tenant RLS using the same tenant policy style as `tax_reports`.
-- Extend `tax_reports.status` to include `stale` if draft invalidation is implemented as a status.
-- Stage 1 RPC option:
-  - `public.tax_report_replace_movement_refs(p_tax_report_id uuid, p_refs jsonb) returns void`
-  - validates tenant ownership of the report and referenced movement rows.
-  - deletes existing refs for the report and inserts the supplied refs atomically.
-- Stage 2 RPC option:
+- Enable tenant RLS and require inserted refs to point to same-tenant `tax_reports`, `inv_movements`, and `inv_movement_lines`.
+- Extend `tax_reports.status` to include `stale`.
+- Add backend RPCs:
   - `public.tax_report_generate(p_doc jsonb) returns jsonb`
-  - reads source movements, calculates report breakdown, writes/updates `tax_reports`, writes refs, and returns saved report data.
+    - inputs: optional `report_id`, `tax_type`, `tax_year`, `tax_month`, optional requested `status`, optional attachment/file metadata.
+    - reads source movements and movement lines for the period.
+    - calculates `volume_breakdown` and `total_tax_amount`.
+    - upserts `tax_reports`.
+    - replaces `tax_report_movement_refs` for the report in the same transaction.
+    - returns the saved report row and a source-ref summary.
+  - `public.tax_report_set_status(p_tax_report_id uuid, p_status text, p_reason text default null) returns uuid`
+    - controls transitions to `submitted` and `approved`.
+    - rejects submission if the report is `stale` or has no refs for a non-empty report.
+    - submitted/approved reports are read-only except status advancement and file metadata explicitly allowed by policy.
+  - `public.tax_report_mark_stale_for_movement(p_movement_id uuid) returns int`
+    - rejects movements already referenced by a `submitted` or `approved` report.
+    - marks draft reports that reference the movement as `stale`.
+    - used by rollback/update functions before mutating referenced source movements.
+- Update `public.movement_save(...)`:
+  - call `tax_report_mark_stale_for_movement` before changing the movement.
+- Add a stored-function error catalog that records:
+  - code/message source line.
+  - translation readiness: safe, duplicate/ambiguous, missing-details, uncoded.
+  - cleanup needed before a high-quality localized message can be produced.
+- Add message-writing rules for stored-function translations:
+  - user-facing message first, technical detail only in logs/details.
+  - translate by stable code, not raw SQL text.
+  - avoid table/function names unless the user needs them.
+  - use JSON `DETAIL` for dynamic values.
+- Add frontend `rpcErrors` helper:
+  - parse stored-function code prefixes from Supabase/PostgREST errors.
+  - read JSON `details` when available.
+  - map known codes to `rpcErrors.codes.<CODE>.message`.
+  - fall back to categorized messages for network/auth/permission/conflict/validation/server/unknown.
+  - expose a single `formatRpcErrorMessage(...)` function for pages.
+  - preserve plain local validation errors so page-level validation messages are not replaced by generic RPC fallbacks.
+
+## Active Final Process
+1. User chooses a report period in the editor.
+2. The UI calls `tax_report_generate`.
+3. The backend selects reportable movements from `inv_movements` / `inv_movement_lines` using tenant, period, non-void status, and reportable tax-event/doc-type rules.
+4. The backend calculates the report breakdown and tax total from the selected source rows.
+5. The backend upserts `tax_reports`.
+6. The backend deletes old refs for the report and inserts new `tax_report_movement_refs` for every source movement line included in the calculation.
+7. The frontend uses the returned saved report data for edit/preview and XML/file generation.
+8. When the user marks the report submitted, the UI calls `tax_report_set_status(..., 'submitted')`.
+9. Once submitted or approved, the report refs become hard locks for normal movement update/rollback.
+10. If a draft report references a movement that is later corrected, the movement update/rollback marks that report `stale`; stale reports must be regenerated before XML export or submission.
 
 ## Active Validation Plan
 - Spec-only pass: run `git diff --check`.
-- Future Stage 1 implementation validation:
+- Implementation validation:
   - create a draft report and confirm refs are inserted for contributing movements.
   - update an existing draft and confirm refs are replaced, not duplicated.
-  - confirm submitted/approved report refs block `product_move_rollback`.
-  - confirm draft refs do not block rollback, but the draft becomes stale or must be regenerated.
-  - confirm RLS prevents cross-tenant report ref reads/writes.
-- Future Stage 2 implementation validation:
-  - compare backend-generated breakdown against current frontend-generated breakdown for the same period.
+  - compare backend-generated breakdown against the current frontend-generated breakdown for the same period.
   - confirm source refs are generated from the same movement lines as the breakdown.
-  - confirm frontend can save reports without directly constructing authoritative refs.
+  - confirm frontend cannot submit a stale report.
+  - confirm submitted/approved report refs block `product_move_rollback`.
+  - confirm draft refs do not block rollback, but the draft becomes stale.
+  - confirm RLS prevents cross-tenant report ref reads/writes.
 
 ## Active Findings
 - Current `tax_reports` stores aggregate `volume_breakdown`, files, and status, but does not preserve source movement IDs.
 - Current report generation in `TaxReportEditor.vue` queries `inv_movements` and `inv_movement_lines`; movement IDs are available during generation and then lost during aggregation.
 - Without a source-reference table, rollback can only use a period-level lock, which is safe but overly broad.
 - A narrow `tax_report_movement_refs` table gives accurate blocking without forcing a full report-line model.
+- The browser should not be the final authority for report source selection because rollback locks must be trustworthy.
 - Submitted/approved reports should make included source movements immutable for normal operational rollback.
 - Draft reports should not permanently block rollback, but any rollback/source movement change should force draft regeneration.
+- Bug found after implementation: backend generation joined `entity_attr` to `attr_def` by both `attr_id` and `tenant_id`; batch attribute definitions are system/zero-tenant rows while `entity_attr` values are tenant rows, so all beer-category lookups returned null and the generated report became empty.
 
 ## Active Final Decisions
-- Use Stage 1 first: add `tax_report_movement_refs` and write refs from the current report-save flow.
-- Use Stage 2 later: move authoritative report generation/ref persistence to backend RPC.
+- Use `tax_report_movement_refs` as the final source/audit lock table.
+- Use backend RPCs as the final authority for source movement selection, report calculation, report save, and ref persistence.
 - Do not use JSON-only movement ID storage inside `tax_reports.volume_breakdown` as the long-term lock mechanism.
 - Do not block rollback from draft refs; block only from refs attached to `submitted` or `approved` reports.
+- Mark draft reports `stale` when their referenced source movements are corrected or rolled back.
 - Keep `tax_report_movement_refs` as a source/audit lock table, not as official e-Tax detail rows.
+- Exclude `tax_event = NONE` and `RETURN_TO_FACTORY_NON_TAXABLE` from backend report rows and source refs.
+- Keep submitted/approved report rows immutable through the editor; only status advancement through `tax_report_set_status` is allowed.
+- Allow `draft` and `stale` reports to be deleted from the list page; submitted/approved reports remain protected.
+- Join `entity_attr` to `attr_def` by global `attr_id`; do not require matching `tenant_id` for system attribute definitions.
+- Map `TRM002: movement is locked by tax report (...)` to a localized movement-cancel message in the UI; keep unknown database errors visible as fallback.
+- Use the stored-function error catalog as the working list before adding broad locale coverage.
+- Prefer `formatRpcErrorMessage` at RPC catch boundaries; keep local validation errors unchanged.
+- Use `toRpcUserError` when a lower-level RPC helper should throw a UI-safe message to its caller.
+- Apply the new formatter first to the main operational RPC flows: tax report generation/save, movement cancel/save, fast movement, batch production/filling rollback, batch step backflush/equipment assignment, inventory trace/domestic removal, recipe schema lookup, ruleengine labels, and lot chronology warnings.
 
 ## Active Validation Results
-- `git diff --check -- specs/current-task.md docs/UI/tax-report-editor.md docs/UI/tax-report.md`: passed.
-- No code implementation was started.
+- `git diff --check`: passed.
+- `npm run type-check` in `beeradmin_tail`: passed.
+- `npx eslint src/views/Pages/TaxReportEditor.vue src/views/Pages/TaxReport.vue --no-fix`: passed.
+- `npm run test --if-present` in `beeradmin_tail`: passed with no test script configured.
+- `npm run build:test` in `beeradmin_tail`: passed with existing CSS minifier warnings.
+- After fixing backend beer-category lookup, `git diff --check`, targeted ESLint, and `npm run type-check` passed.
+- After adding the localized `TRM002` cancellation message, `git diff --check`, `npx eslint src/views/Pages/ProducedBeer.vue --no-fix`, and `npm run type-check` passed.
+- After adding the stored-function error catalog, `git diff --check` passed.
+- After cleaning the stored-function error catalog wording, `git diff --check` passed.
+- After implementing the shared stored-function error formatter:
+  - `git diff --check`: passed.
+  - targeted ESLint for `rpcErrors.ts`, `lotChronology.ts`, `ruleengineLabels.ts`, `BatchList.vue`, `BatchLotDag.vue`, `RecipeEdit.vue`, `RecipeList.vue`, `RecipeStepEditor.vue`, and `ProducedBeerInventory.vue`: passed.
+  - `npm run type-check` in `beeradmin_tail`: passed.
+  - `npm run test --if-present` in `beeradmin_tail`: passed with no test script configured.
+  - `npm run build:test` in `beeradmin_tail`: passed with existing CSS minifier warnings.
+- SQL runtime validation was not executed in this workspace because `psql` is not installed.
 
 ## Previous Task: Source-Lot Chronology And Filling Rollback
 

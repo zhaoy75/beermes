@@ -14,6 +14,7 @@ begin
   end if;
 
   v_tenant := public._assert_tenant();
+  perform public.tax_report_mark_stale_for_movement(p_movement_id);
 
   update public.inv_movements m
      set doc_no = coalesce(p_doc ->> 'doc_no', m.doc_no),

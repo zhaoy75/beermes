@@ -340,6 +340,7 @@ import {
   resolveBatchTargetAbv,
 } from '@/lib/batchRecipeSnapshot'
 import { checkLotChronology, lotChronologyViolationMessage } from '@/lib/lotChronology'
+import { formatRpcErrorMessage } from '@/lib/rpcErrors'
 import { useRuleengineLabels } from '@/composables/useRuleengineLabels'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'vue3-toastify'
@@ -681,7 +682,9 @@ async function saveMovement() {
     router.push({ path: '/producedBeer' })
   } catch (err: any) {
     console.error(err)
-    toast.error(err?.message ?? 'Failed to save movement')
+    toast.error(formatRpcErrorMessage(err, {
+      fallbackKey: 'producedBeer.movementFast.errors.saveFailed',
+    }))
   } finally {
     saving.value = false
   }

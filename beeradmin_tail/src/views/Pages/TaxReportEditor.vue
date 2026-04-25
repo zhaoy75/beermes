@@ -1085,12 +1085,9 @@ import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
-import {
-  buildAlcoholTypeLookupKeys,
-  loadAlcoholTypeReferenceData,
-} from '@/lib/alcoholTypeRegistry'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import { formatRpcErrorMessage } from '@/lib/rpcErrors'
 import { supabase } from '@/lib/supabase'
 import {
   createEmptyTaxReportProfile,
@@ -1098,7 +1095,6 @@ import {
   type TaxReportProfile,
 } from '@/lib/taxReportProfile'
 import {
-  calculateTaxAmount,
   calculateTaxTotalAmount,
   buildLia110ReportRows,
   buildTaxReductionPreview,
@@ -1135,23 +1131,8 @@ import { formatYen, nonNegativeYen, taxAmountFromLiters, truncateYen } from '@/l
 import {
   formatMilliliters as formatMillilitersValue,
   litersToMilliliters,
-  millilitersToLiters,
-  quantityToMilliliters,
 } from '@/lib/volumeFormat'
 import { useRuleengineLabels } from '@/composables/useRuleengineLabels'
-
-interface CategoryRow {
-  id: string
-  code: string
-  name: string | null
-  lookupKeys: string[]
-}
-
-interface TaxRateRecord {
-  taxrate: number
-  effectDate: Date | null
-  expireDate: Date | null
-}
 
 type MovementSortKey = 'kubun' | 'taxEvent' | 'category' | 'abv' | 'volume'
 type MovementSortDirection = 'asc' | 'desc'
@@ -1171,57 +1152,10 @@ interface EditorField {
   highlight?: boolean
 }
 
-interface MovementHeader {
-  id: string
-  movement_at: string | null
-  doc_type: string
-  meta?: JsonMap | null
-}
-
-interface MovementLine {
-  movement_id: string
-  package_id: string | null
-  batch_id: string | null
-  qty: number | null
-  uom_id: string | null
-  meta?: JsonMap | null
-}
-
-interface PackageCategoryInfo {
-  id: string
-  unit_size_l: number | null
-}
-
-interface PackageLookupRow {
-  id: string
-  unit_volume: unknown
-  volume_uom: unknown
-}
-
-interface BatchLookupRow {
-  id: string
-}
-
-interface AttrDefRow {
-  attr_id: number | string
-  code: string | null
-}
-
-interface EntityAttrRow {
-  entity_id: string | number | null
-  attr_id: number | string | null
-  value_text?: string | null
-  value_num: unknown
-  value_ref_type_id?: string | number | null
-  value_json?: Record<string, unknown> | null
-}
-
 const TABLE = 'tax_reports'
-const STATUS_OPTIONS = ['draft', 'submitted', 'approved'] as const
+const STATUS_OPTIONS = ['draft', 'stale', 'submitted', 'approved'] as const
+type TaxReportStatus = (typeof STATUS_OPTIONS)[number]
 const TAX_TYPE_OPTIONS = ['monthly'] as const
-const SUMMARY_DOC_TYPES = ['sale', 'tax_transfer', 'return', 'transfer'] as const
-const DISPOSE_DOC_TYPES = ['waste'] as const
-const REPORT_DOC_TYPES = [...SUMMARY_DOC_TYPES, ...DISPOSE_DOC_TYPES] as const
 const PREVIEW_PAGE_WIDTH_MM = 297
 const PREVIEW_PAGE_HEIGHT_MM = 210
 const PREVIEW_MIN_ZOOM = 0.4
@@ -1242,10 +1176,6 @@ const tenantId = ref<string | null>(null)
 const tenantName = ref('')
 const tenantProfile = ref<TaxReportProfile>(createEmptyTaxReportProfile())
 
-const categories = ref<CategoryRow[]>([])
-const uoms = ref<Array<{ id: string; code: string | null }>>([])
-const taxRateIndex = ref<Record<string, TaxRateRecord[]>>({})
-
 const form = reactive({
   id: '',
   tax_type: 'monthly',
@@ -1254,6 +1184,7 @@ const form = reactive({
   status: 'draft',
   attachment_files: '',
 })
+const savedReportStatus = ref<TaxReportStatus>('draft')
 
 const errors = reactive<Record<string, string>>({})
 const reportBreakdown = ref<TaxVolumeItem[]>([])
@@ -1827,10 +1758,6 @@ function toWarekiYearParts(year: number) {
   return { eraName: '昭和', yy: year - 1925 }
 }
 
-function isSummaryDocType(value: string): value is (typeof SUMMARY_DOC_TYPES)[number] {
-  return (SUMMARY_DOC_TYPES as readonly string[]).includes(value)
-}
-
 function recalcTotalTax() {
   totalTaxAmount.value = calculateTaxTotalAmount(reportBreakdown.value)
 }
@@ -1883,11 +1810,6 @@ function setXmlLink(kind: 'summary' | 'dispose', name: string, xml: string) {
   }
 }
 
-function resolveMetaString(meta: JsonMap | null | undefined, key: string) {
-  const value = meta?.[key]
-  return typeof value === 'string' && value.trim() ? value.trim() : null
-}
-
 function downloadBlob(filename: string, blob: Blob) {
   const url = URL.createObjectURL(blob)
   const anchor = document.createElement('a')
@@ -1901,25 +1823,6 @@ function downloadBlob(filename: string, blob: Blob) {
 
 function downloadTextFile(filename: string, content: string, mime = 'application/xml') {
   downloadBlob(filename, new Blob([content], { type: mime }))
-}
-
-function createReportId() {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID()
-  }
-
-  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
-    const bytes = crypto.getRandomValues(new Uint8Array(16))
-    bytes[6] = (bytes[6] & 0x0f) | 0x40
-    bytes[8] = (bytes[8] & 0x3f) | 0x80
-    const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('')
-    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
-  }
-
-  const timestamp = Date.now().toString(16).padStart(12, '0').slice(-12)
-  const randomHex = Array.from({ length: 20 }, () => Math.floor(Math.random() * 16).toString(16)).join('')
-  const hex = `${randomHex}${timestamp}`.slice(0, 32)
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20)}`
 }
 
 async function downloadSavedReportFile(entry: {
@@ -1965,48 +1868,6 @@ async function downloadSavedReportFile(entry: {
   }
 }
 
-function toNullableNumber(value: unknown) {
-  if (value == null || value === '') return null
-  const numeric = Number(value)
-  return Number.isFinite(numeric) ? numeric : null
-}
-
-function normalizeTaxCategoryCode(value: unknown) {
-  if (value == null) return ''
-  if (typeof value === 'number' && Number.isFinite(value)) return String(Math.trunc(value))
-  const text = String(value).trim()
-  if (!text) return ''
-  const num = Number(text)
-  return Number.isFinite(num) ? String(Math.trunc(num)) : text
-}
-
-function convertToLiters(size: number | null, uomCode: string | null | undefined) {
-  return millilitersToLiters(quantityToMilliliters(size, uomCode))
-}
-
-function resolvePackageSizeLiters(row: PackageCategoryInfo | undefined) {
-  return row?.unit_size_l ?? null
-}
-
-const categoryLookup = computed(() => {
-  const map = new Map<string, CategoryRow>()
-  categories.value.forEach((row) => {
-    row.lookupKeys.forEach((key) => {
-      const normalized = String(key ?? '').trim()
-      if (normalized) map.set(normalized, row)
-    })
-    if (row.id) map.set(row.id, row)
-    if (row.code) map.set(row.code, row)
-  })
-  return map
-})
-
-const uomLookup = computed(() => {
-  const map = new Map<string, string>()
-  uoms.value.forEach((row) => map.set(row.id, row.code ?? ''))
-  return map
-})
-
 async function ensureTenant() {
   if (tenantId.value) return tenantId.value
   const { data, error } = await supabase.auth.getUser()
@@ -2024,343 +1885,113 @@ async function loadTenantTaxReportProfile() {
   tenantProfile.value = loaded.profile
 }
 
-async function loadCategories() {
-  const { optionRows, fallbackRows } = await loadAlcoholTypeReferenceData(supabase)
-  categories.value = optionRows.map((row: { def_id?: unknown; def_key?: unknown; spec?: Record<string, unknown> | null }) => ({
-    id: String(row.def_id ?? ''),
-    code: String(row.spec?.tax_category_code ?? row.spec?.code ?? row.def_key ?? ''),
-    name: typeof row.spec?.name === 'string' ? row.spec.name : (typeof row.def_key === 'string' ? row.def_key : null),
-    lookupKeys: buildAlcoholTypeLookupKeys(row, fallbackRows),
-  }))
+function applySavedReport(row: JsonMap) {
+  const normalized = normalizeReport(row)
+  form.id = normalized.id
+  form.tax_type = normalized.tax_type || 'monthly'
+  form.tax_year = normalized.tax_year
+  form.tax_month = normalized.tax_month
+  form.status = normalized.status
+  savedReportStatus.value = STATUS_OPTIONS.includes(normalized.status as TaxReportStatus)
+    ? (normalized.status as TaxReportStatus)
+    : 'draft'
+  form.attachment_files = normalized.attachment_files.join('\n')
+  storedReportFiles.value = normalized.report_files
+  reportBreakdown.value = sortTaxVolumeItems(summaryItemsFromBreakdown(normalized.volume_breakdown)).map((item) => ({ ...item }))
+  disposeBreakdown.value = sortTaxVolumeItems(disposeItemsFromBreakdown(normalized.volume_breakdown)).map((item) => ({ ...item }))
+  sortMovementBreakdown(reportBreakdown.value)
+  totalTaxAmount.value = normalized.total_tax_amount
+  return normalized
 }
 
-async function loadUoms() {
-  const { data, error } = await supabase.from('mst_uom').select('id, code').order('code', { ascending: true })
-  if (error) throw error
-  uoms.value = data ?? []
-}
-
-function buildTaxRateIndex(rows: Array<{ spec?: Record<string, unknown> | null }>) {
-  const index: Record<string, TaxRateRecord[]> = {}
-  rows.forEach((row) => {
-    const spec = row.spec && typeof row.spec === 'object' ? row.spec : {}
-    const categoryCode = normalizeTaxCategoryCode(spec.tax_category_code)
-    if (!categoryCode) return
-
-    const taxRateRaw = Number(spec.tax_rate ?? 0)
-    if (!Number.isFinite(taxRateRaw)) return
-
-    const entry: TaxRateRecord = {
-      taxrate: taxRateRaw,
-      effectDate: spec.start_date ? new Date(String(spec.start_date)) : null,
-      expireDate: spec.expiration_date ? new Date(String(spec.expiration_date)) : null,
-    }
-    if (!index[categoryCode]) index[categoryCode] = []
-    index[categoryCode].push(entry)
-  })
-
-  Object.values(index).forEach((list) => {
-    list.sort((a, b) => {
-      if (!a.effectDate || !b.effectDate) return 0
-      return a.effectDate.getTime() - b.effectDate.getTime()
-    })
-  })
-  taxRateIndex.value = index
-}
-
-async function loadTaxRates() {
-  const { data, error } = await supabase
-    .from('registry_def')
-    .select('spec')
-    .eq('kind', 'alcohol_tax')
-    .eq('is_active', true)
-  if (error) throw error
-  buildTaxRateIndex((data ?? []) as Array<{ spec?: Record<string, unknown> | null }>)
-}
-
-function applicableTaxRate(categoryCode: string | null | undefined, dateStr: string | null | undefined) {
-  const code = normalizeTaxCategoryCode(categoryCode)
-  if (!code) return 0
-  const records = taxRateIndex.value[code]
-  if (!records || records.length === 0) return 0
-  if (!dateStr) return records[records.length - 1]?.taxrate ?? 0
-  const date = new Date(dateStr)
-  let candidate: TaxRateRecord | null = null
-  for (const record of records) {
-    const effectOk = !record.effectDate || date >= record.effectDate
-    const expireOk = !record.expireDate || date <= record.expireDate
-    if (effectOk && expireOk) {
-      candidate = record
-    }
-    if (record.effectDate && date < record.effectDate) break
+function reportRowFromGenerateResponse(data: unknown) {
+  const response = data && typeof data === 'object' ? (data as JsonMap) : {}
+  const report = response.report
+  if (!report || typeof report !== 'object') {
+    throw new Error('tax_report_generate did not return a report row')
   }
-  return candidate?.taxrate ?? records[records.length - 1]?.taxrate ?? 0
+  return report as JsonMap
 }
 
-async function loadPackageCategories(packageIds: string[]) {
-  const map = new Map<string, PackageCategoryInfo>()
-  if (packageIds.length === 0) return map
-  const tenant = await ensureTenant()
-  const { data, error } = await supabase
-    .from('mst_package')
-    .select('id, unit_volume, volume_uom, is_active')
-    .eq('tenant_id', tenant)
-    .eq('is_active', true)
-    .in('id', packageIds)
-  if (error) throw error
-  ;((data ?? []) as PackageLookupRow[]).forEach((row) => {
-    map.set(row.id, {
-      id: row.id,
-      unit_size_l: convertToLiters(
-        toNullableNumber(row.unit_volume),
-        typeof row.volume_uom === 'string' ? row.volume_uom : null,
-      ),
-    })
-  })
-  return map
-}
-
-async function loadBatchEntityAttrsByBatchIds(batchIds: string[]) {
-  const map = new Map<string, { categoryId: string | null; abv: number | null }>()
-  if (batchIds.length === 0) return map
-
-  const uniqueIds = Array.from(new Set(batchIds))
-  const { data: attrDefs, error: attrDefError } = await supabase
-    .from('attr_def')
-    .select('attr_id, code')
-    .eq('domain', 'batch')
-    .in('code', ['beer_category', 'actual_abv', 'target_abv'])
-    .eq('is_active', true)
-  if (attrDefError) throw attrDefError
-
-  const attrIdToCode = new Map<string, string>()
-  const attrIds = ((attrDefs ?? []) as AttrDefRow[])
-    .map((row) => {
-      const id = Number(row.attr_id)
-      if (!Number.isFinite(id)) return null
-      const code = typeof row.code === 'string' ? row.code : null
-      if (code) attrIdToCode.set(String(row.attr_id), code)
-      return id
-    })
-    .filter((id): id is number => id != null)
-  if (!attrIds.length) return map
-
-  const { data: attrValues, error: attrValueError } = await supabase
-    .from('entity_attr')
-    .select('entity_id, attr_id, value_text, value_num, value_ref_type_id, value_json')
-    .eq('entity_type', 'batch')
-    .in('entity_id', uniqueIds)
-    .in('attr_id', attrIds)
-  if (attrValueError) throw attrValueError
-
-  ;((attrValues ?? []) as EntityAttrRow[]).forEach((row) => {
-    const batchId = String(row.entity_id ?? '')
-    if (!batchId) return
-    if (!map.has(batchId)) {
-      map.set(batchId, { categoryId: null, abv: null })
-    }
-    const entry = map.get(batchId)
-    if (!entry) return
-
-    const code = attrIdToCode.get(String(row.attr_id))
-    if (!code) return
-
-    if (code === 'beer_category') {
-      const jsonDefId = row.value_json?.def_id
-      if (typeof jsonDefId === 'string' && jsonDefId.trim()) entry.categoryId = jsonDefId.trim()
-      else if (typeof row.value_text === 'string' && row.value_text.trim()) entry.categoryId = row.value_text.trim()
-      else if (row.value_ref_type_id != null) entry.categoryId = String(row.value_ref_type_id)
-    }
-
-    if (code === 'actual_abv') {
-      const abv = toNullableNumber(row.value_num)
-      if (abv != null) entry.abv = abv
-    }
-
-    if (code === 'target_abv' && entry.abv == null) {
-      const abv = toNullableNumber(row.value_num)
-      if (abv != null) entry.abv = abv
-    }
-  })
-
-  return map
-}
-
-async function generateReportForPeriod(taxType: string, year: number, month: number) {
+async function generateReportForPeriod(
+  taxType: string,
+  year: number,
+  month: number,
+  options: {
+    status?: 'draft' | 'stale'
+    reportFiles?: TaxReportStoredFile[]
+    attachmentFiles?: string[]
+    silent?: boolean
+  } = {},
+) {
   try {
     generating.value = true
     reportBreakdown.value = []
     disposeBreakdown.value = []
     totalTaxAmount.value = 0
 
-    const tenant = await ensureTenant()
-    const start = taxType === 'yearly' ? new Date(year, 0, 1) : new Date(year, month - 1, 1)
-    const end = taxType === 'yearly' ? new Date(year + 1, 0, 1) : new Date(year, month, 1)
-    const startDate = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-01`
-    const endDate = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-01`
-
-    const { data: movementHeaders, error: headerError } = await supabase
-      .from('inv_movements')
-      .select('id, movement_at, doc_type, meta')
-      .eq('tenant_id', tenant)
-      .in('doc_type', REPORT_DOC_TYPES as unknown as string[])
-      .gte('movement_at', startDate)
-      .lt('movement_at', endDate)
-
-    if (headerError) throw headerError
-    const headers = (movementHeaders ?? []) as MovementHeader[]
-    if (headers.length === 0) {
-      reportBreakdown.value = []
-      disposeBreakdown.value = []
-      totalTaxAmount.value = 0
-      return
-    }
-
-    const headerMap = new Map(
-      headers.map((row) => [
-        row.id,
-        {
-          movementAt: row.movement_at,
-          docType: row.doc_type,
-          taxEvent: resolveTaxEvent(
-            row.doc_type,
-            resolveMetaString(row.meta, 'tax_event'),
-            resolveMetaString(row.meta, 'tax_decision_code'),
-          ),
-        },
-      ]),
-    )
-    const movementIds = headers.map((row) => row.id)
-
-    const { data: movementLines, error: lineError } = await supabase
-      .from('inv_movement_lines')
-      .select('movement_id, package_id, batch_id, qty, uom_id, meta')
-      .in('movement_id', movementIds)
-
-    if (lineError) throw lineError
-
-    const lines = ((movementLines ?? []) as MovementLine[]).filter((row) => row.package_id || row.batch_id)
-    if (lines.length === 0) {
-      reportBreakdown.value = []
-      disposeBreakdown.value = []
-      totalTaxAmount.value = 0
-      return
-    }
-
-    const packageIds = Array.from(new Set(lines.map((line) => line.package_id).filter(Boolean))) as string[]
-    const batchIds = Array.from(new Set(lines.map((line) => line.batch_id).filter(Boolean))) as string[]
-
-    const packageMap = await loadPackageCategories(packageIds)
-    const batchAttrMap = await loadBatchEntityAttrsByBatchIds(batchIds)
-
-    const batchMap = new Map<string, { categoryId: string | null; categoryName: string; abv: number | null }>()
-    if (batchIds.length > 0) {
-      const { data: batches, error: batchError } = await supabase
-        .from('mes_batches')
-        .select('id')
-        .eq('tenant_id', tenant)
-        .in('id', batchIds)
-      if (batchError) throw batchError
-      ;((batches ?? []) as BatchLookupRow[]).forEach((row) => {
-        const attr = batchAttrMap.get(String(row.id))
-        const categoryId = attr?.categoryId ?? null
-        const category = categoryId ? categoryLookup.value.get(categoryId) : null
-        batchMap.set(String(row.id), {
-          categoryId,
-          categoryName: category?.name || category?.code || categoryId || '—',
-          abv: attr?.abv ?? null,
-        })
-      })
-    }
-
-    const breakdownMap = new Map<string, TaxVolumeItem>()
-    const taxTotalMap = new Map<string, number>()
-    const taxRateWeightedMap = new Map<string, number>()
-    let totalTax = 0
-
-    lines.forEach((line) => {
-      const header = headerMap.get(line.movement_id)
-      const movementAt = header?.movementAt ?? null
-      const moveType = header?.docType ?? 'unknown'
-      const taxEvent = header?.taxEvent ?? resolveTaxEvent(moveType)
-      const packageRow = line.package_id ? packageMap.get(line.package_id) : undefined
-      const batchId = line.batch_id ?? null
-      const batchInfo = batchId ? batchMap.get(batchId) : undefined
-
-      const categoryId = batchInfo?.categoryId ?? null
-      if (!categoryId) return
-      const category = categoryLookup.value.get(categoryId)
-      const categoryName = category?.name || category?.code || categoryId
-      const categoryCode = category?.code ?? ''
-      const abv = batchInfo?.abv ?? null
-
-      if (!(REPORT_DOC_TYPES as readonly string[]).includes(moveType)) return
-
-      const uomCode = line.uom_id ? uomLookup.value.get(line.uom_id) : null
-      let volume = line.qty != null ? convertToLiters(Number(line.qty), uomCode) : null
-
-      if (!volume || volume <= 0) {
-        const unitSize = resolvePackageSizeLiters(packageRow)
-        const pkgQty = Number(line.meta?.package_qty ?? 0)
-        if (unitSize && pkgQty > 0) {
-          volume = pkgQty * unitSize
-        }
-      }
-
-      if (!volume || Number.isNaN(volume)) return
-
-      const key = isSummaryDocType(moveType)
-        ? `${taxEvent ?? 'unknown'}-${categoryId}-${abv ?? 'na'}`
-        : `${moveType}-${taxEvent ?? 'unknown'}-${categoryId}-${abv ?? 'na'}`
-      const existing = breakdownMap.get(key)
-      if (existing) {
-        existing.volume_l += volume
-        existing.volume_ml = (existing.volume_ml ?? litersToMilliliters(existing.volume_l - volume) ?? 0)
-          + (litersToMilliliters(volume) ?? 0)
-      } else {
-        breakdownMap.set(key, {
-          key,
-          move_type: moveType,
-          tax_event: taxEvent,
-          categoryId,
-          categoryCode,
-          categoryName,
-          abv: abv != null ? Number(abv) : null,
-          volume_l: volume,
-          volume_ml: litersToMilliliters(volume),
-          tax_rate: null,
-        })
-      }
-
-      const taxRate = applicableTaxRate(categoryCode, movementAt)
-      const lineTaxAmount = calculateTaxAmount(moveType, volume, taxRate, taxEvent)
-      if (isSummaryDocType(moveType)) {
-        totalTax += lineTaxAmount
-      }
-      taxTotalMap.set(key, (taxTotalMap.get(key) ?? 0) + lineTaxAmount)
-      taxRateWeightedMap.set(key, (taxRateWeightedMap.get(key) ?? 0) + (taxRate * volume))
+    await ensureTenant()
+    const { data, error } = await supabase.rpc('tax_report_generate', {
+      p_doc: {
+        report_id: form.id || null,
+        tax_type: taxType,
+        tax_year: year,
+        tax_month: month,
+        status: options.status ?? 'draft',
+        report_files: options.reportFiles ?? storedReportFiles.value,
+        attachment_files: options.attachmentFiles ?? parseFileList(form.attachment_files),
+      },
     })
 
-    breakdownMap.forEach((item, key) => {
-      const taxTotal = taxTotalMap.get(key) ?? 0
-      const direction = Math.sign(calculateTaxAmount(item.move_type, item.volume_l, 1, item.tax_event))
-      const weightedRate = item.volume_l > 0 ? (taxRateWeightedMap.get(key) ?? 0) / item.volume_l : 0
-      item.tax_rate =
-        item.volume_l > 0 && direction !== 0
-          ? (taxTotal * 1000) / (item.volume_l * direction)
-          : weightedRate
-    })
-
-    const generatedItems = sortTaxVolumeItems(Array.from(breakdownMap.values()))
-    reportBreakdown.value = summaryItemsFromBreakdown(generatedItems)
-    disposeBreakdown.value = disposeItemsFromBreakdown(generatedItems)
-    sortMovementBreakdown(reportBreakdown.value)
-    totalTaxAmount.value = totalTax
+    if (error) throw error
+    applySavedReport(reportRowFromGenerateResponse(data))
   } catch (err) {
     console.error(err)
-    toast.error(err instanceof Error ? err.message : String(err))
+    if (!options.silent) toast.error(formatRpcErrorMessage(err))
+    throw err
   } finally {
     generating.value = false
+  }
+}
+
+async function ensureFreshReportForXml() {
+  if (form.status !== 'stale') return
+  await generateReportForPeriod(form.tax_type, form.tax_year, form.tax_month, {
+    status: 'draft',
+    silent: true,
+  })
+}
+
+function isTaxReportStatus(value: string): value is TaxReportStatus {
+  return STATUS_OPTIONS.includes(value as TaxReportStatus)
+}
+
+async function setReportStatus(status: TaxReportStatus) {
+  if (!form.id) throw new Error('Tax report has not been generated')
+  const { error } = await supabase.rpc('tax_report_set_status', {
+    p_tax_report_id: form.id,
+    p_status: status,
+    p_reason: null,
+  })
+  if (error) throw error
+  form.status = status
+  savedReportStatus.value = status
+}
+
+async function applyRequestedFinalStatus(requestedStatus: string) {
+  if (requestedStatus === 'stale') {
+    await setReportStatus('stale')
+    return
+  }
+
+  if (requestedStatus === 'submitted') {
+    await setReportStatus('submitted')
+    return
+  }
+
+  if (requestedStatus === 'approved') {
+    if (form.status !== 'submitted') await setReportStatus('submitted')
+    await setReportStatus('approved')
   }
 }
 
@@ -2464,15 +2095,33 @@ async function buildTaxableRemovalExcelFile() {
 }
 
 async function saveReport() {
-  if (!validateForm()) return
   let uploadedFiles: TaxReportStoredFile[] = []
+  let filesPersisted = false
   try {
     saving.value = true
-    const tenant = await ensureTenant()
-    const reportId = form.id || createReportId()
-    const isNew = !editing.value
-    const status = isNew ? 'draft' : form.status
+    const requestedStatus = form.status
+    if (!isTaxReportStatus(requestedStatus)) {
+      errors.status = t('taxReport.errors.statusRequired')
+      return
+    }
+
+    if (savedReportStatus.value === 'submitted' || savedReportStatus.value === 'approved') {
+      if (requestedStatus !== savedReportStatus.value) await setReportStatus(requestedStatus)
+      await router.push({ name: 'TaxReport' })
+      return
+    }
+
     if (form.tax_type === 'yearly') form.tax_month = 12
+    await generateReportForPeriod(form.tax_type, form.tax_year, form.tax_month, {
+      status: 'draft',
+      silent: true,
+    })
+
+    if (!validateForm()) return
+
+    const tenant = await ensureTenant()
+    const reportId = form.id
+    if (!reportId) throw new Error('Tax report has not been generated')
     const generatedFiles: GeneratedTaxReportFile[] = []
 
     const summaryFile = await buildSummaryXmlFile()
@@ -2499,28 +2148,16 @@ async function saveReport() {
       tenantId: tenant,
     })
 
-    const payload = {
-      id: reportId,
-      tenant_id: tenant,
-      tax_type: form.tax_type,
-      tax_year: form.tax_year,
-      tax_month: form.tax_month,
-      status,
-      total_tax_amount: totalTaxAmount.value,
-      volume_breakdown: [...reportBreakdown.value, ...disposeBreakdown.value],
-      report_files: mergeStoredFiles(retainedStoredFiles, uploadedFiles),
-      attachment_files: parseFileList(form.attachment_files),
-    }
-
-    if (editing.value && form.id) {
-      const { error } = await supabase.from(TABLE).update(payload).eq('id', form.id)
-      if (error) throw error
-    } else {
-      const { error } = await supabase.from(TABLE).insert(payload)
-      if (error) throw error
-    }
-
-    storedReportFiles.value = payload.report_files
+    const reportFiles = mergeStoredFiles(retainedStoredFiles, uploadedFiles)
+    await generateReportForPeriod(form.tax_type, form.tax_year, form.tax_month, {
+      status: 'draft',
+      reportFiles,
+      attachmentFiles: parseFileList(form.attachment_files),
+      silent: true,
+    })
+    filesPersisted = true
+    await applyRequestedFinalStatus(requestedStatus)
+    storedReportFiles.value = reportFiles
     if (obsoleteStoredFiles.length > 0) {
       try {
         await removeStoredTaxReportFiles({
@@ -2533,49 +2170,49 @@ async function saveReport() {
     }
     await router.push({ name: 'TaxReport' })
   } catch (err) {
-    if (uploadedFiles.length > 0) {
+    if (uploadedFiles.length > 0 && !filesPersisted) {
       await removeStoredTaxReportFiles({
         supabase,
         files: uploadedFiles,
       })
     }
     console.error(err)
-    toast.error(err instanceof Error ? err.message : String(err))
+    toast.error(formatRpcErrorMessage(err))
   } finally {
     saving.value = false
   }
 }
 
 async function createXmlForSummary() {
-  const summaryFile = await buildSummaryXmlFile()
-  if (!summaryFile) {
-    toast.info(t('taxReport.emptyBreakdown'))
-    return
-  }
-
   try {
+    await ensureFreshReportForXml()
+    const summaryFile = await buildSummaryXmlFile()
+    if (!summaryFile) {
+      toast.info(t('taxReport.emptyBreakdown'))
+      return
+    }
     const xml = await summaryFile.blob.text()
     downloadTextFile(summaryFile.fileName, xml)
     setXmlLink('summary', summaryFile.fileName, xml)
   } catch (err) {
-    toast.error(err instanceof Error ? err.message : String(err))
+    toast.error(formatRpcErrorMessage(err))
     console.error(err)
   }
 }
 
 async function createXmlForDispose() {
-  const disposeFile = await buildDisposeXmlFile()
-  if (!disposeFile) {
-    toast.info(t('taxReport.emptyBreakdown'))
-    return
-  }
-
   try {
+    await ensureFreshReportForXml()
+    const disposeFile = await buildDisposeXmlFile()
+    if (!disposeFile) {
+      toast.info(t('taxReport.emptyBreakdown'))
+      return
+    }
     const xml = await disposeFile.blob.text()
     downloadTextFile(disposeFile.fileName, xml)
     setXmlLink('dispose', disposeFile.fileName, xml)
   } catch (err) {
-    toast.error(err instanceof Error ? err.message : String(err))
+    toast.error(formatRpcErrorMessage(err))
     console.error(err)
   }
 }
@@ -2618,18 +2255,7 @@ async function loadExistingReport(id: string) {
   if (error) throw error
   if (!data) throw new Error('Tax report not found')
 
-  const row = normalizeReport(data as JsonMap)
-  form.id = row.id
-  form.tax_type = row.tax_type || 'monthly'
-  form.tax_year = row.tax_year
-  form.tax_month = row.tax_month
-  form.status = row.status
-  form.attachment_files = row.attachment_files.join('\n')
-  storedReportFiles.value = row.report_files
-  reportBreakdown.value = sortTaxVolumeItems(summaryItemsFromBreakdown(row.volume_breakdown)).map((item) => ({ ...item }))
-  disposeBreakdown.value = sortTaxVolumeItems(disposeItemsFromBreakdown(row.volume_breakdown)).map((item) => ({ ...item }))
-  sortMovementBreakdown(reportBreakdown.value)
-  totalTaxAmount.value = row.total_tax_amount
+  applySavedReport(data as JsonMap)
 }
 
 async function refreshReductionPreview() {
@@ -2688,9 +2314,6 @@ onMounted(async () => {
     loadingInitial.value = true
     await ensureTenant()
     await Promise.all([
-      loadCategories(),
-      loadUoms(),
-      loadTaxRates(),
       loadRuleengineLabels({ tenantId: tenantId.value }),
       loadTenantTaxReportProfile(),
     ])

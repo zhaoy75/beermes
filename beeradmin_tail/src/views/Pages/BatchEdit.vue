@@ -546,6 +546,7 @@ import {
   validateBatchAttrField,
 } from '@/lib/batchAttrValidation'
 import { DEVELOPMENT_MODE_ENABLED } from '@/lib/devMode'
+import { toRpcUserError } from '@/lib/rpcErrors'
 import { supabase } from '@/lib/supabase'
 import { formatVolume } from '@/lib/volumeFormat'
 
@@ -1052,7 +1053,7 @@ async function fetchBatch() {
     const { data, error } = await supabase.rpc('batch_get_detail', {
       p_batch_id: batchId.value,
     })
-    if (error) throw error
+    if (error) throw toRpcUserError(error)
     const detail = (data ?? null) as any
     const header = detail?.batch ?? null
     batch.value = header
@@ -1772,7 +1773,7 @@ async function saveBatch() {
       p_batch_id: batchId.value,
       p_patch: update,
     })
-    if (error) throw error
+    if (error) throw toRpcUserError(error, { fallbackKey: 'batch.edit.errors.saveFailed' })
     await saveBatchAttributes(batchId.value)
     await fetchBatch()
   } catch (err) {
@@ -1911,7 +1912,7 @@ async function rollbackActualYieldProduceMovement(
   const { error } = await supabase.rpc('product_produce_rollback', {
     p_doc: rollbackDoc,
   })
-  if (error) throw error
+  if (error) throw toRpcUserError(error)
 }
 
 async function saveActualYieldDialog() {
@@ -1986,7 +1987,9 @@ async function saveActualYieldDialog() {
       const { error: produceError } = await supabase.rpc('product_produce', {
         p_doc: produceDoc,
       })
-      if (produceError) throw produceError
+      if (produceError) throw toRpcUserError(produceError, {
+        fallbackKey: 'batch.edit.actualYieldProduceFailed',
+      })
     }
 
     failedStage = 'save'
@@ -2002,7 +2005,9 @@ async function saveActualYieldDialog() {
       p_batch_id: batchId.value,
       p_patch: patch,
     })
-    if (batchSaveError) throw batchSaveError
+    if (batchSaveError) throw toRpcUserError(batchSaveError, {
+      fallbackKey: 'batch.edit.actualYieldSaveFailed',
+    })
 
     batchForm.actual_yield = String(qty)
     batchForm.actual_yield_uom = uomId
@@ -2197,7 +2202,7 @@ async function rollbackFillingPackingEvent(event: PackingEvent) {
   const { error } = await supabase.rpc('product_filling_rollback', {
     p_doc: rollbackDoc,
   })
-  if (error) throw error
+  if (error) throw toRpcUserError(error)
 }
 
 function resolvePackageUnitVolume(packageTypeId: string) {

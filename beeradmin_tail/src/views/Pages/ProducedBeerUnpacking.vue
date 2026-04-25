@@ -294,6 +294,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { toast } from 'vue3-toastify'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import { formatRpcErrorMessage } from '@/lib/rpcErrors'
 import { supabase } from '@/lib/supabase'
 import { formatVolume } from '@/lib/volumeFormat'
 
@@ -792,12 +793,10 @@ async function saveUnpacking() {
     toast.success(t('producedBeerUnpacking.saveSuccess'))
     await router.push({ name: 'ProducedBeerInventory' })
   } catch (err) {
-    const detail = extractErrorMessage(err)
-    toast.error(
-      detail
-        ? `${t('producedBeerUnpacking.saveFailed')} (${detail})`
-        : t('producedBeerUnpacking.saveFailed'),
-    )
+    console.error(err)
+    toast.error(formatRpcErrorMessage(err, {
+      fallbackKey: 'producedBeerUnpacking.saveFailed',
+    }))
   } finally {
     saving.value = false
   }

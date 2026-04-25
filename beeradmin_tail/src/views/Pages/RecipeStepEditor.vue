@@ -445,6 +445,7 @@ import { useI18n } from 'vue-i18n'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { openTypeDefGraph, type TypeDefGraphSelection } from '@/composables/useTypeDefGraphModal'
+import { formatRpcErrorMessage } from '@/lib/rpcErrors'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
@@ -1502,7 +1503,7 @@ async function loadSchema() {
   } catch (error: unknown) {
     recipeSchema.value = null
     schemaError.value = t('recipe.edit.loadSchemaFailed', {
-      message: error instanceof Error ? error.message : String(error),
+      message: formatRpcErrorMessage(error),
     })
   }
 }

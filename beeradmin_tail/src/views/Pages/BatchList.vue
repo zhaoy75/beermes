@@ -178,6 +178,7 @@ import {
   resolveAlcoholTypeLabel,
 } from '@/lib/alcoholTypeRegistry'
 import { validateBatchAttrField } from '@/lib/batchAttrValidation'
+import { formatRpcErrorMessage } from '@/lib/rpcErrors'
 import { supabase } from '@/lib/supabase'
 import BatchSummaryDialog from '@/views/Pages/components/BatchSummaryDialog.vue'
 import BatchCreateDialog from '@/views/Pages/components/BatchCreateDialog.vue'
@@ -490,6 +491,9 @@ async function fetchBatches() {
     await fetchAttrValues(batches.value.map((row) => row.id))
   } catch (err) {
     console.error(err)
+    toast.error(formatRpcErrorMessage(err, {
+      fallbackKey: 'batch.list.loadFailed',
+    }))
   } finally {
     loading.value = false
   }
@@ -927,6 +931,9 @@ async function deleteBatch() {
     fetchBatches()
   } catch (err) {
     console.error(err)
+    toast.error(formatRpcErrorMessage(err, {
+      fallbackKey: 'batch.create.createFailed',
+    }))
   } finally {
     loading.value = false
   }

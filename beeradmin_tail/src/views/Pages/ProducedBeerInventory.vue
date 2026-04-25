@@ -445,6 +445,7 @@ import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import Modal from '@/components/ui/Modal.vue'
 import { useConfirmDialog } from '@/composables/useConfirmDialog'
 import { useRuleengineLabels } from '@/composables/useRuleengineLabels'
+import { formatRpcErrorMessage } from '@/lib/rpcErrors'
 import { supabase } from '@/lib/supabase'
 import { useProducedBeerInventory } from '@/composables/useProducedBeerInventory'
 import { toast } from 'vue3-toastify'
@@ -708,17 +709,6 @@ function formatDateTime(value: string | null | undefined) {
   }
 }
 
-function extractErrorMessage(err: unknown) {
-  if (!err) return ''
-  if (typeof err === 'string') return err
-  if (err instanceof Error) return err.message
-  const rec = err as Record<string, unknown>
-  if (typeof rec.message === 'string' && rec.message.trim()) return rec.message
-  if (typeof rec.details === 'string' && rec.details.trim()) return rec.details
-  if (typeof rec.hint === 'string' && rec.hint.trim()) return rec.hint
-  return ''
-}
-
 function canUnpack(row: InventoryPageRow) {
   return Boolean(row.packageId && row.lotIds.length === 1 && row.siteId)
 }
@@ -855,10 +845,9 @@ async function openDagDialog(row: InventoryPageRow) {
         return bValue - aValue
       })
   } catch (err) {
-    const detail = extractErrorMessage(err)
-    dagDialog.error = detail
-      ? `${t('producedBeerInventory.dag.loadFailed')} (${detail})`
-      : t('producedBeerInventory.dag.loadFailed')
+    dagDialog.error = formatRpcErrorMessage(err, {
+      fallbackKey: 'producedBeerInventory.dag.loadFailed',
+    })
   } finally {
     dagDialog.loading = false
   }
@@ -888,12 +877,9 @@ async function completeDomesticRemoval(row: InventoryPageRow) {
     await loadInventory()
     toast.success(t('producedBeerInventory.cancelRemovalSuccess'))
   } catch (err) {
-    const detail = extractErrorMessage(err)
-    toast.error(
-      detail
-        ? `${t('producedBeerInventory.cancelRemovalFailed')} (${detail})`
-        : t('producedBeerInventory.cancelRemovalFailed'),
-    )
+    toast.error(formatRpcErrorMessage(err, {
+      fallbackKey: 'producedBeerInventory.cancelRemovalFailed',
+    }))
   } finally {
     processingRowId.value = ''
   }

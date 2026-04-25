@@ -823,6 +823,7 @@ import { useRoute, useRouter } from 'vue-router'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { checkLotChronology, lotChronologyViolationMessage } from '@/lib/lotChronology'
+import { toRpcUserError } from '@/lib/rpcErrors'
 import { supabase } from '@/lib/supabase'
 
 type BatchHeaderRow = {
@@ -1425,7 +1426,7 @@ async function loadPage() {
         .order('lot_no'),
     ])
 
-    if (batchResult.error) throw batchResult.error
+    if (batchResult.error) throw toRpcUserError(batchResult.error)
     if (stepResult.error) throw stepResult.error
     if (uomResult.error) throw uomResult.error
     if (materialResult.error) throw materialResult.error
@@ -1725,7 +1726,7 @@ async function saveStepInputs() {
           auto_ready_next_step: shouldReadyNextStep,
         },
       })
-      if (error) throw error
+      if (error) throw toRpcUserError(error, { fallbackKey: 'batch.edit.stepSaveFailed' })
 
       await loadPage()
       stepSaveState.success = t('batch.edit.stepSavedWithBackflush')
@@ -2057,7 +2058,7 @@ async function saveEquipmentAssignments() {
       p_batch_step_id: step.value.id,
       p_rows: payloadRows,
     })
-    if (error) throw error
+    if (error) throw toRpcUserError(error, { fallbackKey: 'batch.edit.stepSectionSaveFailed' })
 
     await loadStepCollections(step.value.id)
     equipmentState.success = t('common.saved')

@@ -258,6 +258,7 @@ import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import { formatRpcErrorMessage } from '@/lib/rpcErrors'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
@@ -702,7 +703,7 @@ async function createRecipe() {
       schema_code: versionRow.schema_code,
     }))
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error)
+    const message = formatRpcErrorMessage(error)
     toast.error(t('recipe.list.createError', { message }))
   } finally {
     saving.value = false
@@ -765,7 +766,7 @@ async function copyRecipe() {
       schema_code: versionRow.schema_code,
     }))
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error)
+    const message = formatRpcErrorMessage(error)
     toast.error(t('recipe.list.copyErrorToast', { message }))
   } finally {
     copying.value = false

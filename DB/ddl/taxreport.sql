@@ -11,9 +11,16 @@ create table if not exists tax_reports (
   attachment_files jsonb default '[]'::jsonb,
   created_at timestamptz default now(),
   unique (tenant_id, tax_year, tax_month),
-  constraint tax_reports_status_check check (status in ('draft','submitted','approved')),
+  constraint tax_reports_status_check check (status in ('draft','stale','submitted','approved')),
   constraint tax_reports_month_check check (tax_month between 1 and 12)
 );
+
+alter table public.tax_reports
+  drop constraint if exists tax_reports_status_check;
+
+alter table public.tax_reports
+  add constraint tax_reports_status_check
+  check (status in ('draft','stale','submitted','approved'));
 
 alter table tax_reports   enable row level security;
 

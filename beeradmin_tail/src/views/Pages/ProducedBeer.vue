@@ -410,6 +410,7 @@ import { useConfirmDialog } from '@/composables/useConfirmDialog'
 import { useColumnTableControls } from '@/composables/useColumnTableControls'
 import { useRuleengineLabels } from '@/composables/useRuleengineLabels'
 import { createWorkbookBlob, type WorkbookCell, type WorkbookSheet } from '@/lib/fillingReportExport'
+import { extractErrorMessage, formatRpcErrorMessage } from '@/lib/rpcErrors'
 import { supabase } from '@/lib/supabase'
 import {
   formatTotalVolumeFromLiters,
@@ -947,11 +948,6 @@ function downloadBlob(blob: Blob, fileName: string) {
   URL.revokeObjectURL(url)
 }
 
-function extractErrorMessage(err: unknown) {
-  if (err instanceof Error && err.message) return err.message
-  return typeof err === 'string' ? err : ''
-}
-
 function matchesMovementType(header: MovementHeader) {
   const taxEvent = resolveHeaderTaxEvent(header)
   if (movementFilters.taxMovementOnly && (!taxEvent || taxEvent === 'NONE')) return false
@@ -1301,7 +1297,9 @@ async function reverseMovement(card: MovementCard) {
     await fetchMovements()
   } catch (err) {
     console.error(err)
-    toast.error(err instanceof Error ? err.message : String(err))
+    toast.error(formatRpcErrorMessage(err, {
+      fallbackKey: 'producedBeer.movement.errors.reverseFailed',
+    }))
   } finally {
     movementLoading.value = false
   }

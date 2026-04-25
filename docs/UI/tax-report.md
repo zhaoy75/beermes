@@ -72,7 +72,7 @@
 - `ステータス`
   - values:
     - `draft`
-    - `stale` (future status for drafts whose source movements changed after generation)
+    - `stale`
     - `submitted`
     - `approved`
 
@@ -112,8 +112,11 @@
   - `tax_report_movement_refs`
   - records the `inv_movements` / `inv_movement_lines` included in the saved report
   - used by rollback functions to decide whether a movement is already reported
+- Report generation rule:
+  - the backend is the authority for selecting source movements, calculating report totals, saving `tax_reports`, and writing `tax_report_movement_refs`
+  - the frontend uses the saved backend result for display, preview, and file generation
 - Delete rule:
-  - only `draft` rows can be deleted
+  - only `draft` or `stale` rows can be deleted
 - Rollback lock rule:
   - refs attached to `draft` or `stale` reports do not block rollback
   - refs attached to `submitted` or `approved` reports block normal operational rollback

@@ -310,7 +310,7 @@ import {
 } from '@/lib/taxReport'
 
 const TABLE = 'tax_reports'
-const STATUS_OPTIONS = ['draft', 'submitted', 'approved'] as const
+const STATUS_OPTIONS = ['draft', 'stale', 'submitted', 'approved'] as const
 const TAX_TYPE_OPTIONS = ['monthly'] as const
 type ReportTableSortKey =
   | 'taxType'
@@ -464,7 +464,7 @@ function displayTotalTax(row: TaxReportRow) {
 }
 
 function canDeleteReport(row: TaxReportRow) {
-  return row.status === 'draft'
+  return row.status === 'draft' || row.status === 'stale'
 }
 
 function downloadBlob(filename: string, blob: Blob) {

@@ -123,6 +123,7 @@ import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import { formatRpcErrorMessage } from '@/lib/rpcErrors'
 import { supabase } from '@/lib/supabase'
 
 type LotDagNode = {
@@ -171,7 +172,7 @@ const batchId = computed(() => route.params.batchId as string | undefined)
 const fromPage = computed(() => (typeof route.query.from === 'string' ? route.query.from : 'edit'))
 const pageTitle = computed(() => t('batch.edit.lotDagButton'))
 const loadingBatch = ref(false)
-const batch = ref<any>(null)
+const batch = ref<Record<string, unknown> | null>(null)
 const graphSvg = ref<SVGSVGElement | null>(null)
 
 const dragState = reactive({
@@ -196,8 +197,10 @@ const lotDag = reactive({
 })
 
 const batchSummaryText = computed(() => {
-  const code = batch.value?.batch_code ?? '—'
-  const name = batch.value?.batch_label ?? batch.value?.product_name ?? '—'
+  const code = toDisplayString(batch.value?.batch_code) || '—'
+  const name = toDisplayString(batch.value?.batch_label)
+    || toDisplayString(batch.value?.product_name)
+    || '—'
   return `${code} / ${name}`
 })
 
@@ -220,8 +223,8 @@ async function fetchBatchAndDag() {
   try {
     const { data, error } = await supabase.rpc('batch_get_detail', { p_batch_id: batchId.value })
     if (error) throw error
-    const detail = (data ?? null) as any
-    batch.value = detail?.batch ?? null
+    const detail = toRecord(data)
+    batch.value = toRecord(detail?.batch)
     await loadLotDag()
   } catch (err) {
     console.error(err)
@@ -244,36 +247,43 @@ async function loadLotDag() {
     const { data, error } = await supabase.rpc('lot_dag_get_by_batch', { p_batch_id: batchId.value })
     if (error) throw error
     const payload = Array.isArray(data)
-      ? ((data[0] && typeof data[0] === 'object') ? data[0] as Record<string, any> : {})
-      : ((data && typeof data === 'object') ? data as Record<string, any> : {})
+      ? (toRecord(data[0]) ?? {})
+      : (toRecord(data) ?? {})
     lotDag.sourceLotId = typeof payload.source_lot_id === 'string' ? payload.source_lot_id : null
     lotDag.nodes = Array.isArray(payload.nodes)
-      ? payload.nodes.map((row: any) => ({
-        id: String(row?.id ?? ''),
-        lot_no: row?.lot_no != null ? String(row.lot_no) : null,
-        site_name: row?.site_name != null ? String(row.site_name) : null,
-        lot_tax_type: row?.lot_tax_type != null ? String(row.lot_tax_type) : null,
-        qty: toNumber(row?.qty),
-        status: row?.status != null ? String(row.status) : null,
-      })).filter((row: LotDagNode) => row.id)
+      ? payload.nodes.map((value): LotDagNode | null => {
+        const row = toRecord(value)
+        if (!row) return null
+        return {
+          id: String(row.id ?? ''),
+          lot_no: toDisplayString(row.lot_no),
+          site_name: toDisplayString(row.site_name),
+          lot_tax_type: toDisplayString(row.lot_tax_type),
+          qty: toNumber(row.qty),
+          status: toDisplayString(row.status),
+        }
+      }).filter((row): row is LotDagNode => Boolean(row?.id))
       : []
     lotDag.edges = Array.isArray(payload.edges)
-      ? payload.edges.map((row: any) => ({
-        id: String(row?.id ?? generateLocalId()),
-        source: row?.source != null ? String(row.source) : null,
-        target: row?.target != null ? String(row.target) : null,
-        edge_type: row?.edge_type != null ? String(row.edge_type) : null,
-        movement_tax_type: row?.movement_tax_type != null ? String(row.movement_tax_type) : null,
-        qty: toNumber(row?.qty),
-      }))
+      ? payload.edges.map((value): LotDagEdge | null => {
+        const row = toRecord(value)
+        if (!row) return null
+        return {
+          id: toDisplayString(row.id) || generateLocalId(),
+          source: toDisplayString(row.source),
+          target: toDisplayString(row.target),
+          edge_type: toDisplayString(row.edge_type),
+          movement_tax_type: toDisplayString(row.movement_tax_type),
+          qty: toNumber(row.qty),
+        }
+      }).filter((row): row is LotDagEdge => Boolean(row))
       : []
     buildLotDagLayout()
   } catch (err) {
     console.error(err)
-    const detail = extractErrorMessage(err)
-    lotDag.globalError = detail
-      ? `${t('batch.edit.lotDagLoadFailed')} (${detail})`
-      : t('batch.edit.lotDagLoadFailed')
+    lotDag.globalError = formatRpcErrorMessage(err, {
+      fallbackKey: 'batch.edit.lotDagLoadFailed',
+    })
   } finally {
     lotDag.loading = false
   }
@@ -531,10 +541,20 @@ function endNodeDrag(event: PointerEvent) {
   dragState.nodeId = null
 }
 
-function toNumber(value: any): number | null {
+function toNumber(value: unknown): number | null {
   if (value === null || value === undefined || value === '') return null
   const num = Number(value)
   return Number.isFinite(num) ? num : null
+}
+
+function toRecord(value: unknown): Record<string, unknown> | null {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null
+}
+
+function toDisplayString(value: unknown) {
+  return value === null || value === undefined ? null : String(value)
 }
 
 function generateLocalId() {
@@ -544,17 +564,4 @@ function generateLocalId() {
   return `tmp-${rng}`
 }
 
-function extractErrorMessage(err: unknown) {
-  if (!err) return ''
-  if (typeof err === 'string') return err
-  if (err instanceof Error) return err.message
-  const rec = err as Record<string, unknown>
-  const message = rec.message
-  if (typeof message === 'string' && message.trim()) return message
-  const details = rec.details
-  if (typeof details === 'string' && details.trim()) return details
-  const hint = rec.hint
-  if (typeof hint === 'string' && hint.trim()) return hint
-  return ''
-}
 </script>

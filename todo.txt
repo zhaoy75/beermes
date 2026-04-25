@@ -978,3 +978,14 @@ for the 申告書作成/編集　page,
 - hide the 廃棄 section
 - move 納税申告XML作成 to the right of mode change switch
 
+https://www.nta.go.jp/taxes/shiraberu/shinkoku/tebiki/2025/01/1_10.htm
+https://www.nta.go.jp/taxes/tetsuzuki/shinsei/annai/kosei/annai/23100010.htm
+
+High: tax_reports is still directly mutable through RLS, so tax_report_set_status is not the only authority. Current policy allows tenant for all update/delete on every report row, including submitted / approved. That means a client can still edit/delete submitted reports outside the RPC. See taxreport.sql (line 31).
+
+High: movement locks can be bypassed by direct inv_movements updates. movement_save calls tax_report_mark_stale_for_movement, but inv_movements RLS still allows direct tenant updates, and existing UI still voids movements directly in BatchPacking.vue (line 2804) and BatchEdit.vue (line 2169). Those paths bypass the new submitted/approved lock and stale-draft marking.
+
+High: editor manual changes are discarded on save. saveReport() regenerates from tax_report_generate before building files, which calls applySavedReport() and overwrites edited reportBreakdown; then it regenerates again after upload. So editable quantities/fields in edit mode do not persist or affect XML. See TaxReportEditor.vue (line 2114) and TaxReportEditor.vue (line 2151).
+
+Medium: SQL file order is fragile. 31_public.movement_save.sql (line 17) now depends on 76_public.tax_report_mark_stale_for_movement.sql (line 1). If function files are applied by numeric order, 31 is applied before 76, so deployment can fail or leave a runtime dependency missing.
+

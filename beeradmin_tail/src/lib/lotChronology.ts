@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { formatRpcErrorMessage } from '@/lib/rpcErrors'
 
 export type LotChronologyCandidate = {
   lotId: string
@@ -39,7 +40,7 @@ export async function checkLotChronology(options: {
       p_lot_id: lot.lotId,
     })
     if (error) {
-      return { violations: [], unavailableReason: error.message }
+      return { violations: [], unavailableReason: formatRpcErrorMessage(error) }
     }
 
     const createdAt = parseDate(typeof data === 'string' ? data : null)

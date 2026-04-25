@@ -279,7 +279,7 @@ import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import TableColumnHeader from '@/components/common/TableColumnHeader.vue'
 import { supabase } from '@/lib/supabase'
 import { formatVolumeNumber } from '@/lib/volumeFormat'
-import { useColumnTableControls } from '@/composables/useColumnTableControls'
+import { useColumnTableControls, type ColumnSortDirection } from '@/composables/useColumnTableControls'
 
 type PackageRow = {
   id: string
@@ -376,8 +376,8 @@ const volumeUomFilterOptions = computed(() =>
   })),
 )
 
-function setColumnSort(key: string) {
-  setSort(key as SortKey)
+function setColumnSort(key: string, direction?: ColumnSortDirection) {
+  setSort(key as SortKey, direction)
 }
 
 function resolveLang() {

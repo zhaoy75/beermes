@@ -321,7 +321,7 @@ import { toast } from 'vue3-toastify'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import TableColumnHeader from '@/components/common/TableColumnHeader.vue'
-import { useColumnTableControls } from '@/composables/useColumnTableControls'
+import { useColumnTableControls, type ColumnSortDirection } from '@/composables/useColumnTableControls'
 import { supabase } from '@/lib/supabase'
 import { formatYen } from '@/lib/moneyFormat'
 import { formatTotalVolumeFromMilliliters } from '@/lib/volumeFormat'
@@ -482,8 +482,8 @@ const {
   'desc',
 )
 
-function setColumnSort(key: string) {
-  setSort(key as DetailTableSortKey)
+function setColumnSort(key: string, direction?: ColumnSortDirection) {
+  setSort(key as DetailTableSortKey, direction)
 }
 
 const businessYearDetailRows = computed(() =>

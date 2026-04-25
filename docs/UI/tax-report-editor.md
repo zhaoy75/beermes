@@ -71,6 +71,9 @@
   - summarize that the page edits report details and related file output
 - Actions:
   - `一覧へ戻る`
+  - `保存`
+- The `保存` button is placed immediately to the right of `一覧へ戻る`.
+- The header `保存` button uses the same save handler and disabled/loading state as the footer `Save` action.
 
 ### Summary Area
 - Show compact report metadata:
@@ -253,6 +256,8 @@
 ### Footer Actions
 - `Cancel`
 - `Save`
+- Keep the footer `Save` action for users who finish editing at the bottom of the page.
+- The header `保存` action is an additional shortcut and does not replace the footer action.
 
 ## UI Flow Line
 1. User enters the page from the list page create prompt or an existing saved row.

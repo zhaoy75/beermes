@@ -95,6 +95,7 @@ These codes have one clear user meaning. They can receive locale entries now. Co
 | `PF003`, `PF005`, `PF007` | `43_public.product_filling.sql` | Ready + details | Duplicate doc, insufficient source, source lot not found. `PF005` should include lot/inventory/source quantity context. |
 | `PFR001`, `PFR002`, `PFR005`, `PFR007` | `47_public.product_filling_rollback.sql` | Ready / Ready + details | Filling rollback required input, target not found, downstream block, duplicate doc. |
 | `PM003`, `PM010`, `PM011`, `PM012` | `44_public.product_move.sql` | Ready / Ready + details | Rule missing, category/tax missing, tax-rate wrapper, return inventory landing check. |
+| `PMR002`, `PMR005`, `PMR007` | `48_public.product_move_rollback.sql` | Ready / Ready + details | Product-move rollback target missing, downstream block, duplicate rollback doc. |
 | `PMF500` | `46_public.product_move_fast_post.sql` | Ready + details | Segment wrapper. Should expose segment index and nested error code separately. |
 | `PP002`, `PP003`, `PP005`-`PP008` | `42_public.product_produce.sql` | Ready | Production validation and duplicate document errors. |
 | `PPR002`, `PPR005`, `PPR007` | `45_public.product_produce_rollback.sql` | Ready / Ready + details | Produce rollback target missing, downstream block, duplicate doc. |
@@ -124,6 +125,10 @@ These codes currently represent multiple user-visible meanings. Translating them
 | `PM006` | `44_public.product_move.sql:259,269,273,277` | Source lot not found; not movable; site mismatch; uom mismatch. | Split lot missing/status/site/uom. |
 | `PM007` | `44_public.product_move.sql:281,285,340,685,689` | Source lot quantity insufficient; unit insufficient; inventory insufficient; after-update invariant failure. | Split lot qty, unit qty, inventory qty, invariant failure. |
 | `PM008` | `44_public.product_move.sql:320,324` | Full-lot movement required; partial quantity disallowed. | Split or add detail `rule`. |
+| `PMR001` | `48_public.product_move_rollback.sql` | `p_doc` required; required fields missing. | Split or keep a generic rollback input message. |
+| `PMR003` | `48_public.product_move_rollback.sql` | Unsupported adjustment doc type; target not posted; rollback time invalid; already reversed; wrong movement type. | Split config/state/time/type/already-rolled-back. |
+| `PMR004` | `48_public.product_move_rollback.sql` | Missing lot edge; source/destination lot missing; site/uom mismatch. | Split graph missing from lot metadata mismatch. |
+| `PMR006` | `48_public.product_move_rollback.sql` | Destination lot/inventory insufficient; post-update invariant failure; source invariant failure. | Split stock shortage from invariant failure. |
 | `PMF001` | `46_public.product_move_fast_post.sql:16,20` | Payload is not array; array is empty. | Split or add detail `reason`. |
 | `PP001` | `42_public.product_produce.sql:32,57` | `p_doc` required; required fields missing. | Can translate generically, but better split required document vs missing fields. |
 | `PPR001` | `45_public.product_produce_rollback.sql:38,52` | `p_doc` required; required fields missing. | Same cleanup as `PP001`. |
@@ -238,6 +243,13 @@ These exceptions need stable codes before they can participate in the translatio
 | `44_public.product_move.sql:373,405,424,444` | `PM010` | beer category or tax category missing for taxable movement | Ready |
 | `44_public.product_move.sql:451` | `PM011` | wrapped tax-rate error | Ready + details |
 | `44_public.product_move.sql:666` | `PM012` | customer return must land in inventory | Ready + details |
+| `48_public.product_move_rollback.sql` | `PMR001` | `p_doc is required`; `missing required field` | Ambiguous minor |
+| `48_public.product_move_rollback.sql` | `PMR002` | target movement not found | Ready |
+| `48_public.product_move_rollback.sql` | `PMR003` | adjustment unsupported; target not posted; rollback time invalid; already reversed; wrong movement type | Ambiguous |
+| `48_public.product_move_rollback.sql` | `PMR004` | movement edge/lot/site/uom missing or mismatched | Ambiguous |
+| `48_public.product_move_rollback.sql` | `PMR005` | destination lot has downstream movement usage | Ready + details |
+| `48_public.product_move_rollback.sql` | `PMR006` | lot/inventory insufficient or invariant failure | Ambiguous |
+| `48_public.product_move_rollback.sql` | `PMR007` | duplicate rollback doc number | Ready |
 | `46_public.product_move_fast_post.sql:16,20` | `PMF001` | payload not array; payload empty | Ambiguous |
 | `46_public.product_move_fast_post.sql:31` | `PMF500` | failed to post segment | Ready + details |
 

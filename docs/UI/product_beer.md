@@ -32,8 +32,13 @@
 - Subtitle: `producedBeer.movement.subtitle`
 - View: table only
 - Table controls:
-  - single-column sort by clicking a column header.
-  - multi-column filters in the table header.
+  - each sortable/filterable column header shows one compact action icon.
+  - clicking the icon opens a popup menu with:
+    - sort ascending
+    - sort descending
+    - column filter
+  - column labels are not direct sort buttons.
+  - active sort/filter state is indicated on the icon and inside the popup menu.
   - column filters apply after page-level filters.
   - Clear filters clears table column filters only.
 - Actions:
@@ -91,6 +96,10 @@
   - navigate to `/producedBeerMovement`.
 - Edit movement:
   - navigate to `/producedBeerMovement?id=<movement_id>`.
+- Reverse movement:
+  - call `public.product_move_rollback`.
+  - do not call `movement_save(status='void')` because that only changes the movement header and does not reverse `inv_inventory` or lot balances.
+  - on success, reload the movement list.
 
 ## Business Rules
 - Tenant isolation:
@@ -108,6 +117,13 @@
   - Movement rows with zero remaining lines after client-side filtering are hidden.
 - Totals:
   - movement row totals are recalculated from the filtered visible lines.
+- Cancellation:
+  - creates a compensating adjustment movement.
+  - restores source lot quantity and source inventory when the original move deducted source inventory.
+  - reduces destination lot quantity and destination inventory when the original move created or reused a destination lot.
+  - blocks cancellation if the destination lot has downstream non-void movement usage.
+  - blocks cancellation when the movement is locked by a submitted or approved tax report.
+  - marks draft tax reports that referenced the movement as stale.
 - Tax rate label:
   - prefer `inv_movements.meta.tax_rate`.
   - if tax type is `notax`, show `0/kl`.

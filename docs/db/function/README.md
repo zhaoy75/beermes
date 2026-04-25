@@ -15,7 +15,7 @@ Source list: `docs/db/dbfunction.md`
 
 ## Function Groups
 - Batch: `batch_create`, `batch_save`, `batch_search`, `batch_get_detail`
-- Product Movement: `product_produce`, `product_filling`, `product_move`, `product_move_fast_post`, `product_produce_rollback`, `product_filling_rollback`, `product_unpacking`, `domestic_removal_complete`
+- Product Movement: `product_produce`, `product_filling`, `product_move`, `product_move_fast_post`, `product_produce_rollback`, `product_filling_rollback`, `product_move_rollback`, `product_unpacking`, `domestic_removal_complete`
 - Movement: `movement_save`, `movement_get_movement_ui_intent`, `movement_get_rules`
 - Rule/UI labels: `ruleengine_get_ui_labels`
 - Lot Trace: `lot_trace_upstream`, `lot_trace_downstream`, `lot_trace_full`

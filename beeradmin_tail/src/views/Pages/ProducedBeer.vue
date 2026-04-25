@@ -407,7 +407,7 @@ import {
   type BatchRecipeSource,
 } from '@/lib/batchRecipeSnapshot'
 import { useConfirmDialog } from '@/composables/useConfirmDialog'
-import { useColumnTableControls } from '@/composables/useColumnTableControls'
+import { useColumnTableControls, type ColumnSortDirection } from '@/composables/useColumnTableControls'
 import { useRuleengineLabels } from '@/composables/useRuleengineLabels'
 import { createWorkbookBlob, type WorkbookCell, type WorkbookSheet } from '@/lib/fillingReportExport'
 import { extractErrorMessage, formatRpcErrorMessage } from '@/lib/rpcErrors'
@@ -682,8 +682,8 @@ const movementTaxEventColumnFilterOptions = computed(() => {
   return options
 })
 
-function setMovementColumnSort(key: string) {
-  setMovementSort(key as MovementTableSortKey)
+function setMovementColumnSort(key: string, direction?: ColumnSortDirection) {
+  setMovementSort(key as MovementTableSortKey, direction)
 }
 
 const numberFormatter = computed(
@@ -1287,9 +1287,16 @@ async function reverseMovement(card: MovementCard) {
 
   try {
     movementLoading.value = true
-    const { error } = await supabase.rpc('movement_save', {
-      p_movement_id: card.id,
-      p_doc: { status: 'void' },
+    const { error } = await supabase.rpc('product_move_rollback', {
+      p_doc: {
+        product_movement_id: card.id,
+        doc_no: `PMR-${card.docNo || card.id}`,
+        movement_at: new Date().toISOString(),
+        reason: 'cancelled_from_movement_register',
+        meta: {
+          idempotency_key: `product_move_rollback:${card.id}`,
+        },
+      },
     })
     if (error) throw error
 

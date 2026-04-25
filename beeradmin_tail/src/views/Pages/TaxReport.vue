@@ -283,7 +283,7 @@ import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import TableColumnHeader from '@/components/common/TableColumnHeader.vue'
 import { useConfirmDialog } from '@/composables/useConfirmDialog'
-import { useColumnTableControls } from '@/composables/useColumnTableControls'
+import { useColumnTableControls, type ColumnSortDirection } from '@/composables/useColumnTableControls'
 import { formatYen } from '@/lib/moneyFormat'
 import { formatTotalVolumeFromLiters } from '@/lib/volumeFormat'
 import { supabase } from '@/lib/supabase'
@@ -444,8 +444,8 @@ function reportFileText(row: Pick<TaxReportRow, 'report_files'>) {
   return row.report_files.map((file) => file.fileName).join(' ')
 }
 
-function setColumnSort(key: string) {
-  setSort(key as ReportTableSortKey)
+function setColumnSort(key: string, direction?: ColumnSortDirection) {
+  setSort(key as ReportTableSortKey, direction)
 }
 
 function visibleBreakdownItems(row: Pick<TaxReportRow, 'volume_breakdown'>) {

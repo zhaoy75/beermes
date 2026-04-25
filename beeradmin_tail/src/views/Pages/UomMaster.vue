@@ -229,7 +229,7 @@ import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import TableColumnHeader from '@/components/common/TableColumnHeader.vue'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
-import { useColumnTableControls } from '@/composables/useColumnTableControls'
+import { useColumnTableControls, type ColumnSortDirection } from '@/composables/useColumnTableControls'
 
 type UomMeta = {
   label?: {
@@ -324,8 +324,8 @@ const yesNoFilterOptions = computed(() => [
   { value: 'false', label: t('common.no') },
 ])
 
-function setColumnSort(key: string) {
-  setSort(key as SortKey)
+function setColumnSort(key: string, direction?: ColumnSortDirection) {
+  setSort(key as SortKey, direction)
 }
 
 watch(

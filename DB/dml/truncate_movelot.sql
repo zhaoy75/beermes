@@ -7,3 +7,7 @@ truncate table public.inv_movements cascade;
 truncate table public.inv_inventory cascade;
 
 truncate table public.lot cascade;
+
+truncate table public.tax_report_movement_refs cascade;
+
+truncate table public.tax_reports cascade;

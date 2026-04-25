@@ -9,8 +9,16 @@
             <p class="text-sm text-gray-500">{{ t('taxReportEditor.subtitle') }}</p>
           </div>
           <div class="flex flex-wrap items-center gap-2">
-            <button class="rounded border border-gray-300 px-3 py-2 hover:bg-gray-50" @click="goBack">
+            <button type="button" class="rounded border border-gray-300 px-3 py-2 hover:bg-gray-50" @click="goBack">
               {{ t('taxReportEditor.actions.back') }}
+            </button>
+            <button
+              type="button"
+              class="rounded bg-blue-600 px-3 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
+              :disabled="saving || generating || loadingInitial"
+              @click="saveReport"
+            >
+              {{ saving ? t('common.saving') : t('common.save') }}
             </button>
           </div>
         </header>

@@ -18,7 +18,8 @@ Update movement header/lines and status.
 ## Behavior
 - Patch header.
 - If `lines` present, use `_upsert_movement_lines`.
-- If posting/voiding, apply reverse/reapply inventory deltas.
+- Does not apply product lot/inventory rollback deltas.
+- Product movement cancellation must call `product_move_rollback` instead of setting `status = void` here.
 
 ## Output
 - Return `p_movement_id`.

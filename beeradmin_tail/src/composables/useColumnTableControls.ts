@@ -103,7 +103,13 @@ export function useColumnTableControls<T, K extends string>(
     columns.some((column) => (columnFilters[column.key] ?? '').trim().length > 0),
   )
 
-  function setSort(key: K) {
+  function setSort(key: K, direction?: ColumnSortDirection) {
+    if (direction) {
+      sortKey.value = key
+      sortDirection.value = direction
+      return
+    }
+
     if (sortKey.value === key) {
       sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc'
       return

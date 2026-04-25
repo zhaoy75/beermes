@@ -13,6 +13,9 @@
 - Generate a stored-function error catalog from active `raise exception` statements and classify translation readiness.
 - Clean the stored-function error catalog wording so it can be used as a translation and cleanup checklist.
 - Implement the frontend stored-function error formatter and apply it to main RPC-backed pages.
+- Add a header-level save action on the `申告書作成/編集` page next to `一覧へ戻る`.
+- Redesign shared table column sort/filter controls to use one column action icon with a popup menu for ascending sort, descending sort, and filter.
+- Fix `移入出登録` cancellation so it reverses product-move lot and inventory effects instead of only voiding the movement header.
 
 ## Active Non-Goals
 - Do not add a full `tax_report_lines` detail table.
@@ -24,9 +27,16 @@
 - [DB/ddl/taxreport.sql](/Users/zhao/dev/other/beer/DB/ddl/taxreport.sql)
 - RPC files under [DB/function](/Users/zhao/dev/other/beer/DB/function).
 - [DB/function/31_public.movement_save.sql](/Users/zhao/dev/other/beer/DB/function/31_public.movement_save.sql)
+- New rollback RPC: `DB/function/48_public.product_move_rollback.sql`
+- New function spec: `docs/db/function/ProductMoveRollback.md`
+- [public.movement_save.md](/Users/zhao/dev/other/beer/docs/db/function/public.movement_save.md)
 - [TaxReportEditor.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/TaxReportEditor.vue)
 - [TaxReport.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/TaxReport.vue)
 - [ProducedBeer.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/ProducedBeer.vue)
+- Shared table controls:
+  - `beeradmin_tail/src/components/common/TableColumnHeader.vue`
+  - `beeradmin_tail/src/composables/useColumnTableControls.ts`
+  - Pages that consume `TableColumnHeader.vue`
 - Main RPC-backed UI pages:
   - `BatchEdit.vue`
   - `BatchList.vue`
@@ -48,6 +58,7 @@
 - [en.json](/Users/zhao/dev/other/beer/beeradmin_tail/src/locales/en.json)
 - [tax-report-editor.md](/Users/zhao/dev/other/beer/docs/UI/tax-report-editor.md)
 - [tax-report.md](/Users/zhao/dev/other/beer/docs/UI/tax-report.md)
+- [product_beer.md](/Users/zhao/dev/other/beer/docs/UI/product_beer.md)
 - New catalog: `docs/db/function/stored-function-error-catalog.md`
 - [specs/current-task.md](/Users/zhao/dev/other/beer/specs/current-task.md)
 
@@ -104,6 +115,14 @@
   - fall back to categorized messages for network/auth/permission/conflict/validation/server/unknown.
   - expose a single `formatRpcErrorMessage(...)` function for pages.
   - preserve plain local validation errors so page-level validation messages are not replaced by generic RPC fallbacks.
+- Add backend RPC:
+  - `public.product_move_rollback(p_doc jsonb) returns uuid`
+    - inputs: `product_movement_id`, `doc_no`, optional `movement_at`, `reason`, `notes`, `meta.idempotency_key`.
+    - rejects non-posted, missing, already reversed, or non-product-move target movements.
+    - calls `tax_report_mark_stale_for_movement` before changing the target movement.
+    - blocks rollback when a destination lot has downstream non-void movement use.
+    - reverses `inv_inventory` and `lot` balances for source and destination lots.
+    - marks the original product movement `void` and stores `reversed_by_movement_id`.
 
 ## Active Final Process
 1. User chooses a report period in the editor.
@@ -128,6 +147,8 @@
   - confirm submitted/approved report refs block `product_move_rollback`.
   - confirm draft refs do not block rollback, but the draft becomes stale.
   - confirm RLS prevents cross-tenant report ref reads/writes.
+  - cancel a normal `移入出登録` move and confirm source inventory is restored, destination inventory is reduced, affected lot balances are restored, and the original movement becomes `void`.
+  - attempt to cancel a move whose destination lot has downstream non-void use and confirm rollback is rejected.
 
 ## Active Findings
 - Current `tax_reports` stores aggregate `volume_breakdown`, files, and status, but does not preserve source movement IDs.
@@ -155,6 +176,16 @@
 - Prefer `formatRpcErrorMessage` at RPC catch boundaries; keep local validation errors unchanged.
 - Use `toRpcUserError` when a lower-level RPC helper should throw a UI-safe message to its caller.
 - Apply the new formatter first to the main operational RPC flows: tax report generation/save, movement cancel/save, fast movement, batch production/filling rollback, batch step backflush/equipment assignment, inventory trace/domestic removal, recipe schema lookup, ruleengine labels, and lot chronology warnings.
+- Keep the existing footer save button on the tax report editor, and add the same save action to the header so users can save without scrolling to the bottom.
+- For shared sortable/filterable table headers, show the column label as plain text and a single icon button as the only control in the header.
+- Clicking the icon opens a compact popup with:
+  - sort ascending
+  - sort descending
+  - filter input/select for that column
+- The popup should visually indicate the active sort direction and whether the column has an active filter.
+- `移入出登録` cancellation must call `product_move_rollback`; using `movement_save(status='void')` is not sufficient because it leaves `inv_inventory` and lot balances unchanged.
+- Product-move rollback writes a posted adjustment movement for audit, reverses inventory/lot quantities, then voids the original movement.
+- Product-move rollback does not insert rollback `lot_edge` rows; the audit relation is stored on rollback movement-line metadata so rollback does not change `lot_effective_created_at` for existing source lots.
 
 ## Active Validation Results
 - `git diff --check`: passed.
@@ -172,7 +203,21 @@
   - `npm run type-check` in `beeradmin_tail`: passed.
   - `npm run test --if-present` in `beeradmin_tail`: passed with no test script configured.
   - `npm run build:test` in `beeradmin_tail`: passed with existing CSS minifier warnings.
-- SQL runtime validation was not executed in this workspace because `psql` is not installed.
+- After adding the tax report editor header save button:
+  - `git diff --check`: passed.
+  - `npx eslint src/views/Pages/TaxReportEditor.vue --no-fix`: passed.
+  - `npm run type-check` in `beeradmin_tail`: passed.
+- After redesigning shared table column sort/filter controls:
+  - `git diff --check`: passed.
+  - targeted ESLint for `TableColumnHeader.vue`, `useColumnTableControls.ts`, `UomMaster.vue`, `PackageMaster.vue`, `TaxReport.vue`, `TaxableRemovalReport.vue`, and `ProducedBeer.vue`: passed.
+  - `npm run type-check` in `beeradmin_tail`: passed.
+  - `npm run test --if-present` in `beeradmin_tail`: passed with no test script configured.
+- After adding `product_move_rollback` and switching `移入出登録` cancellation to it:
+  - `git diff --check`: passed.
+  - `npx eslint src/views/Pages/ProducedBeer.vue --no-fix`: passed.
+  - `npm run type-check` in `beeradmin_tail`: passed.
+  - `npm run test --if-present` in `beeradmin_tail`: passed with no test script configured.
+  - SQL runtime validation was not executed because `psql` is not installed in this workspace.
 
 ## Previous Task: Source-Lot Chronology And Filling Rollback
 

@@ -1,47 +1,88 @@
 # Current Task
 
 ## Active Goal
-- Make the `詰口を追加` button easier to see on the `移送詰口管理` page.
+- Specify staged tax-report source movement tracking so submitted tax reports can block product-move rollback safely.
 
 ## Active Scope
-- Update the Batch Packing filling section button styling.
-- Update the Batch Packing UI spec to document that the add-filling action should be visually prominent.
+- Stage 1: add a narrow source-reference table that records which `inv_movements` / `inv_movement_lines` contributed to each saved tax report.
+- Stage 1: update tax-report save flow to replace refs for the saved report using the same source rows used for the breakdown.
+- Stage 1: define rollback blocking rules for submitted/approved reports.
+- Stage 1: define draft stale handling when source movements change after draft creation.
+- Stage 2: move tax-report generation and source-ref persistence into backend RPCs so the browser no longer owns the authoritative report source selection.
 
 ## Active Non-Goals
-- Do not change filling-line behavior or validation.
-- Do not change save payloads or database behavior.
-- Do not redesign the full page.
+- Do not add a full `tax_report_lines` detail table in this phase.
+- Do not implement correction/amendment workflows for already submitted reports in this phase.
+- Do not change e-Tax XML schemas in this phase.
+- Do not implement programming changes until this spec is reviewed.
 
 ## Active Affected Files
-- [beeradmin_tail/src/views/Pages/BatchPacking.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/BatchPacking.vue)
-- [docs/UI/batchpacking.md](/Users/zhao/dev/other/beer/docs/UI/batchpacking.md)
+- [DB/ddl/taxreport.sql](/Users/zhao/dev/other/beer/DB/ddl/taxreport.sql), or a new tax-report refs DDL file.
+- Future RPC files under [DB/function](/Users/zhao/dev/other/beer/DB/function).
+- [TaxReportEditor.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/TaxReportEditor.vue)
+- [taxReport.ts](/Users/zhao/dev/other/beer/beeradmin_tail/src/lib/taxReport.ts)
+- [tax-report-editor.md](/Users/zhao/dev/other/beer/docs/UI/tax-report-editor.md)
+- [tax-report.md](/Users/zhao/dev/other/beer/docs/UI/tax-report.md)
 - [specs/current-task.md](/Users/zhao/dev/other/beer/specs/current-task.md)
 
 ## Active Data Model / API Changes
-- No API changes.
-- No data model changes.
+- Add table `public.tax_report_movement_refs`:
+  - `id uuid primary key default gen_random_uuid()`
+  - `tenant_id uuid not null`
+  - `tax_report_id uuid not null references public.tax_reports(id) on delete cascade`
+  - `movement_id uuid not null references public.inv_movements(id)`
+  - `movement_line_id uuid null references public.inv_movement_lines(id)`
+  - `tax_event text null`
+  - `role text not null default 'source'`
+  - `source_period_year int null`
+  - `source_period_month int null`
+  - `created_at timestamptz default now()`
+  - unique key on `(tenant_id, tax_report_id, movement_id, movement_line_id)`
+- Add indexes:
+  - `(tenant_id, movement_id)`
+  - `(tenant_id, tax_report_id)`
+  - optionally `(tenant_id, movement_line_id)` when line-level checks are used.
+- Enable tenant RLS using the same tenant policy style as `tax_reports`.
+- Extend `tax_reports.status` to include `stale` if draft invalidation is implemented as a status.
+- Stage 1 RPC option:
+  - `public.tax_report_replace_movement_refs(p_tax_report_id uuid, p_refs jsonb) returns void`
+  - validates tenant ownership of the report and referenced movement rows.
+  - deletes existing refs for the report and inserts the supplied refs atomically.
+- Stage 2 RPC option:
+  - `public.tax_report_generate(p_doc jsonb) returns jsonb`
+  - reads source movements, calculates report breakdown, writes/updates `tax_reports`, writes refs, and returns saved report data.
 
 ## Active Validation Plan
-- Run `git diff --check` for the touched files.
-- Run targeted ESLint for `BatchPacking.vue`.
-- Run frontend type-check.
-- Run `npm run build:test`.
+- Spec-only pass: run `git diff --check`.
+- Future Stage 1 implementation validation:
+  - create a draft report and confirm refs are inserted for contributing movements.
+  - update an existing draft and confirm refs are replaced, not duplicated.
+  - confirm submitted/approved report refs block `product_move_rollback`.
+  - confirm draft refs do not block rollback, but the draft becomes stale or must be regenerated.
+  - confirm RLS prevents cross-tenant report ref reads/writes.
+- Future Stage 2 implementation validation:
+  - compare backend-generated breakdown against current frontend-generated breakdown for the same period.
+  - confirm source refs are generated from the same movement lines as the breakdown.
+  - confirm frontend can save reports without directly constructing authoritative refs.
 
 ## Active Findings
-- The `詰口を追加` button is currently a small gray-outline text button placed above the filling-line table.
-- It has low visual contrast compared with primary page actions, so it is easy to miss.
+- Current `tax_reports` stores aggregate `volume_breakdown`, files, and status, but does not preserve source movement IDs.
+- Current report generation in `TaxReportEditor.vue` queries `inv_movements` and `inv_movement_lines`; movement IDs are available during generation and then lost during aggregation.
+- Without a source-reference table, rollback can only use a period-level lock, which is safe but overly broad.
+- A narrow `tax_report_movement_refs` table gives accurate blocking without forcing a full report-line model.
+- Submitted/approved reports should make included source movements immutable for normal operational rollback.
+- Draft reports should not permanently block rollback, but any rollback/source movement change should force draft regeneration.
 
 ## Active Final Decisions
-- The `詰口を追加` button is now a filled primary blue action with larger padding, stronger font weight, shadow, and keyboard focus ring.
-- Added a visible `+` symbol before the label.
-- Updated the Batch Packing spec to require this add-filling action to be visually prominent.
+- Use Stage 1 first: add `tax_report_movement_refs` and write refs from the current report-save flow.
+- Use Stage 2 later: move authoritative report generation/ref persistence to backend RPC.
+- Do not use JSON-only movement ID storage inside `tax_reports.volume_breakdown` as the long-term lock mechanism.
+- Do not block rollback from draft refs; block only from refs attached to `submitted` or `approved` reports.
+- Keep `tax_report_movement_refs` as a source/audit lock table, not as official e-Tax detail rows.
 
 ## Active Validation Results
-- `git diff --check -- specs/current-task.md docs/UI/batchpacking.md beeradmin_tail/src/views/Pages/BatchPacking.vue`: passed.
-- `npx eslint src/views/Pages/BatchPacking.vue --no-fix`: failed on existing `@typescript-eslint/no-explicit-any` lint debt in `BatchPacking.vue`; this button-only change did not introduce those errors.
-- `npm run type-check` in `beeradmin_tail`: passed.
-- `npm run test --if-present` in `beeradmin_tail`: passed with no test script configured.
-- `npm run build:test` in `beeradmin_tail`: passed with existing CSS minifier warnings for `::-webkit-scrollbar-thumb:is()`.
+- `git diff --check -- specs/current-task.md docs/UI/tax-report-editor.md docs/UI/tax-report.md`: passed.
+- No code implementation was started.
 
 ## Previous Task: Source-Lot Chronology And Filling Rollback
 

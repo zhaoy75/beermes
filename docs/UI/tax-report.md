@@ -72,6 +72,7 @@
 - `ステータス`
   - values:
     - `draft`
+    - `stale` (future status for drafts whose source movements changed after generation)
     - `submitted`
     - `approved`
 
@@ -107,8 +108,16 @@
   - all reads and deletes are scoped by the current session tenant
 - Saved data source:
   - `tax_reports`
+- Source movement lock source:
+  - `tax_report_movement_refs`
+  - records the `inv_movements` / `inv_movement_lines` included in the saved report
+  - used by rollback functions to decide whether a movement is already reported
 - Delete rule:
   - only `draft` rows can be deleted
+- Rollback lock rule:
+  - refs attached to `draft` or `stale` reports do not block rollback
+  - refs attached to `submitted` or `approved` reports block normal operational rollback
+  - reported movements must be corrected by a correction/amendment workflow, not by canceling the historical movement
 - Editor separation:
   - create and edit form content is not rendered on this page
   - the page only launches the dedicated editor route

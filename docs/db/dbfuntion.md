@@ -30,82 +30,51 @@ All functions are expected in `public` schema and tenant-aware via existing RLS/
 - Purpose: retrieve one batch with steps and lineage summary.
 - Main tables: `mes_batches`, `mes_batch_steps`, `mes_batch_relation`.
 
-## 2) Filling + inventory retrieve
+## 2) Movement
 
-1. `public.filling_create(p_doc jsonb) returns uuid`
-- Purpose: register filling/packaging event.
-- Main tables: `inv_movements`, `inv_movement_lines`, `lot_event`, `lot_event_line`, `lot`.
-- Notes: should write movement and lot event together (atomic transaction).
-
-2. `public.filling_save(p_movement_id uuid, p_doc jsonb) returns uuid`
-- Purpose: update/void/repost a filling movement.
-- Main tables: `inv_movements`, `inv_movement_lines`, linked `lot_event*`.
-
-3. `public.inventory_retrieve(p_filter jsonb) returns table (inventory_id uuid, material_id uuid, site_id uuid, qty numeric, uom_id uuid, batch_code text, created_at timestamptz)`
-- Purpose: inventory list for UI.
-- Main tables: `inv_inventory`.
-
-4. `public.inventory_retrieve_by_lot(p_filter jsonb) returns table (lot_id uuid, lot_no text, material_id uuid, package_id uuid, batch_id uuid, site_id uuid, qty numeric, uom_id uuid, status text, produced_at timestamptz, expires_at timestamptz)`
-- Purpose: lot-level inventory view for packing/shipping UI.
-- Main tables: `lot`.
-
-## 3) Movement: create/save/search
-
-1. `public.movement_create(p_doc jsonb) returns uuid`
-- Purpose: create movement header + lines.
-- Main tables: `inv_movements`, `inv_movement_lines`.
-- Notes: supports `doc_type`, `src_site_id`, `dest_site_id`, `movement_at`, lines array.
-
-2. `public.movement_save(p_movement_id uuid, p_doc jsonb) returns uuid`
+1. `public.movement_save(p_movement_id uuid, p_doc jsonb) returns uuid`
 - Purpose: update movement (open/posted/void, metadata, lines).
 - Main tables: `inv_movements`, `inv_movement_lines`.
 
-3. `public.movement_search(p_filter jsonb) returns table (id uuid, doc_no text, doc_type inv_doc_type, status text, movement_at timestamptz, src_site_id uuid, dest_site_id uuid, created_at timestamptz)`
-- Purpose: searchable movement list API.
-- Main tables: `inv_movements`.
+2. `public.movement_get_movement_ui_intent() returns table`
+- Purpose: return movement intents for movement UI.
 
-4. `public.movement_get_detail(p_movement_id uuid) returns jsonb`
-- Purpose: retrieve header with lines, lot links, and site names.
-- Main tables: `inv_movements`, `inv_movement_lines`, `mst_sites`, `lot_event`.
+3. `public.movement_get_rules(p_movement_intent text) returns jsonb`
+- Purpose: return active movement-rule data for a movement intent.
 
-## 4) Get movement rules for UI
+## 3) Product movement
 
-Current DDL has no dedicated movement-rule table. Rules are in `docs/data/movementrule.jsonc`.
+1. `public.product_produce(p_doc jsonb) returns uuid`
+- Purpose: post produced beer lot receipt.
 
-1. `public.movement_rules_get_ui() returns jsonb`
-- Purpose: return rule payload for UI wizard.
-- Implementation options:
-- `A)` hardcoded JSONB constant in function (deployed from `movementrule.jsonc`).
-- `B)` preferred: add a config table later and read latest active rule version.
+2. `public.product_filling(p_doc jsonb) returns uuid`
+- Purpose: split a source lot into packaged/filling lots.
 
-2. `public.movement_rules_get_tax_decisions(p_movement_intent text, p_src_site_type text, p_dst_site_type text, p_lot_tax_type text) returns jsonb`
-- Purpose: return allowed tax decisions for selected context.
-- Notes: helper API for UI dependent dropdowns.
+3. `public.product_move(p_doc jsonb) returns uuid`
+- Purpose: move/ship product lots with tax-rule metadata.
 
-## 5) Retrieve tax event
+4. `public.product_move_fast_post(p_docs jsonb) returns jsonb`
+- Purpose: post multiple product move documents.
 
-`tax_event` is not a native column in current DDL tables; it is represented by rule data and/or stored in `meta`.
+5. `public.product_produce_rollback(p_doc jsonb) returns uuid`
+- Purpose: rollback a produced beer receipt when no downstream usage blocks it.
 
-1. `public.tax_event_retrieve(p_filter jsonb) returns table (lot_event_id uuid, event_no text, event_type lot_event_type, event_at timestamptz, status text, src_site_id uuid, dest_site_id uuid, tax_event text, reason text)`
-- Purpose: list tax-related event records for report screens.
-- Main tables: `lot_event`.
-- Notes: `tax_event` can be read from `lot_event.meta ->> 'tax_event'`.
+6. `public.product_filling_rollback(p_doc jsonb) returns uuid`
+- Purpose: rollback a filling movement and restore source lot quantity.
 
-2. `public.tax_event_retrieve_lines(p_lot_event_id uuid) returns jsonb`
-- Purpose: return tax-event header with line-level quantities/lots.
-- Main tables: `lot_event`, `lot_event_line`, `lot`.
+7. `public.product_unpacking(p_doc jsonb) returns uuid`
+- Purpose: unpack product lot quantities.
 
-3. `public.tax_report_retrieve(p_year int, p_month int) returns jsonb`
-- Purpose: read stored tax report summary.
-- Main tables: `tax_reports`.
+8. `public.domestic_removal_complete(...) returns uuid`
+- Purpose: complete domestic removal through standard movement logic.
 
-## 6) Trace lot
+## 4) Trace lot
 
-1. `public.lot_trace_upstream(p_lot_id uuid) returns table (depth int, lot_id uuid, related_lot_id uuid, relation_type text, movement_id uuid, lot_event_id uuid, occurred_at timestamptz)`
+1. `public.lot_trace_upstream(p_lot_id uuid) returns table (...)`
 - Purpose: trace where lot came from (parents/source).
 - Main tables: `lot`, `lot_event`, `lot_event_line`, `inv_movements`, `inv_movement_lines`, `mes_batch_relation`.
 
-2. `public.lot_trace_downstream(p_lot_id uuid) returns table (depth int, lot_id uuid, related_lot_id uuid, relation_type text, movement_id uuid, lot_event_id uuid, occurred_at timestamptz)`
+2. `public.lot_trace_downstream(p_lot_id uuid) returns table (...)`
 - Purpose: trace where lot went (consumption/shipment/split).
 - Main tables: same as upstream.
 
@@ -113,14 +82,19 @@ Current DDL has no dedicated movement-rule table. Rules are in `docs/data/moveme
 - Purpose: full lot genealogy graph for UI.
 - Notes: use recursive CTE internally, return nodes/edges JSON.
 
-## 7) Shared internal helper functions (recommended)
+## 5) Shared internal helper functions
 
 1. `public._assert_tenant() returns uuid`
 2. `public._lock_lots(p_lot_ids uuid[]) returns void`
 3. `public._assert_non_negative_lot_qty(p_lot_id uuid) returns void`
-4. `public._derive_tax_event(p_context jsonb) returns text`
-5. `public._apply_inventory_delta(p_lines jsonb, p_direction text) returns void`
-6. `public._upsert_movement_lines(p_movement_id uuid, p_lines jsonb) returns void`
-7. `public._upsert_batch_steps(p_batch_id uuid, p_steps jsonb) returns void`
+4. `public._upsert_movement_lines(p_movement_id uuid, p_lines jsonb) returns void`
+5. `public._upsert_batch_steps(p_batch_id uuid, p_steps jsonb) returns void`
 
-These helpers keep the public API stable and reduce duplicated validation logic.
+## Removed legacy functions
+
+The following old generic RPCs/helpers were removed from the active source list:
+`filling_create`, `filling_save`, `inventory_retrieve`, `inventory_retrieve_by_lot`,
+`movement_create`, `movement_search`, `movement_get_detail`,
+`movement_rules_get_ui`, `movement_rules_get_tax_decisions`,
+`tax_event_retrieve`, `tax_event_retrieve_lines`, `tax_report_retrieve`,
+`_derive_tax_event`, and `_apply_inventory_delta`.

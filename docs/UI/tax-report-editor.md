@@ -6,6 +6,7 @@
 - Generate XML files for the main report and disposal section.
 - Generate a month-scoped `課税移出一覧表` Excel from the shared taxable-removal export source when creating a new monthly draft.
 - Persist generated XML/XLSX files in Supabase Storage and save file metadata in `tax_reports.report_files`.
+- Persist the source movement references used by the report so submitted/approved reports can block operational rollback of reported movements.
 
 ## Entry Points
 - Route from `酒税申告` list page create prompt
@@ -19,6 +20,23 @@
 - Tenant user: edit an existing saved tax report.
 - Tenant user: generate XML files from the current editor data.
 - Tenant user: save the generated report files and related metadata.
+
+## Source Movement Tracking
+### Stage 1
+- When a tax report is saved, the editor must preserve the source movement IDs and movement-line IDs used to build the report.
+- Source references are stored in `tax_report_movement_refs`, not embedded only in `tax_reports.volume_breakdown`.
+- Current frontend generation already reads `inv_movements.id` and `inv_movement_lines.movement_id`; save flow must carry those IDs through aggregation and write them as refs.
+- Saving an existing report replaces its refs atomically:
+  - delete old refs for `tax_report_id`
+  - insert refs for the current generated source rows
+- Draft refs do not block movement rollback.
+- Submitted/approved refs block movement rollback for included movements.
+- If a source movement is rolled back or materially changed while a draft report exists, the draft must be marked stale or the user must regenerate before XML export/submission.
+
+### Stage 2
+- Move authoritative tax-report generation to backend RPC so source movement selection, tax breakdown calculation, report save, and ref persistence happen in one backend transaction.
+- The frontend may still provide preview/edit UI, but it must not be the final authority for which movements are locked by a submitted report.
+- A future RPC such as `tax_report_generate(p_doc jsonb)` should return the saved `tax_reports` row, generated breakdown, and source-ref summary.
 
 ## PDF / Guide References
 - Use only the PDFs directly under `docs/taxpdf` as the primary local visual samples for this redesign:

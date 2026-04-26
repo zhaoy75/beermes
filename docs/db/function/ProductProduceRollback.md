@@ -35,7 +35,7 @@ Required fields:
 - `produce_movement_id` uuid: target movement id created by `product_produce`
 
 Optional fields:
-- `movement_at` timestamptz: rollback timestamp (defaults to `now()`)
+- `movement_at` timestamptz: requested rollback effective timestamp (defaults to `now()`)
 - `reason` text
 - `notes` text
 - `meta` jsonb
@@ -67,6 +67,10 @@ Optional idempotency:
 - Target movement is a produce transaction:
   - `meta.movement_intent = 'BREW_PRODUCE'`.
 - Target movement must not already contain `meta.reversed_by_movement_id`.
+- Rollback effective timestamp must not be before the target movement timestamp:
+  - if the requested/default timestamp is earlier than the target movement timestamp, use the target movement timestamp.
+  - do not use `9999/12/31` or another sentinel date.
+  - the real cancellation operation time remains available from the rollback movement `created_at` and original movement `meta.voided_at`.
 - Produced lot and produce edge (`edge_type = 'PRODUCE'`, `from_lot_id IS NULL`) exist for the target movement.
 - Produced lot site is resolved from lot site, or fallback to target movement destination/source site.
 - Produced lot has enough inventory to rollback the current lot qty.
@@ -77,25 +81,26 @@ Optional idempotency:
 ## Transaction Behavior (Atomic)
 1. Resolve tenant id (`v_tenant`) and normalize payload.
 2. Lock target movement (`produce_movement_id`) `FOR UPDATE`.
-3. Resolve and lock produced lot row and produced inventory row `FOR UPDATE`.
-4. Check downstream usage:
+3. Normalize rollback `movement_at` so it is not before the target movement timestamp.
+4. Resolve and lock produced lot row and produced inventory row `FOR UPDATE`.
+5. Check downstream usage:
    - if any non-void movement has `lot_edge.from_lot_id = produced_lot_id`, reject rollback.
-5. Compute rollback qty = current produced lot qty (`lot.qty`, must be `> 0`).
-6. Insert rollback movement (`inv_movements`) with `doc_type='adjustment'`, `status='posted'`, and rollback metadata:
+6. Compute rollback qty = current produced lot qty (`lot.qty`, must be `> 0`).
+7. Insert rollback movement (`inv_movements`) with `doc_type='adjustment'`, `status='posted'`, and rollback metadata:
    - `movement_intent = 'BREW_PRODUCE_ROLLBACK'`
    - `rollback_of_movement_id = produce_movement_id`
    - `rollback_of_lot_id = produced_lot_id`
-7. Insert one rollback movement line (`inv_movement_lines`) for rollback qty.
-8. Insert one rollback `lot_edge` row (`CONSUME`) tied to rollback movement/line.
-9. Decrement inventory for produced lot (`inv_inventory.qty -= rollback_qty`).
-10. Decrement lot qty and close lot:
+8. Insert one rollback movement line (`inv_movement_lines`) for rollback qty.
+9. Insert one rollback `lot_edge` row (`CONSUME`) tied to rollback movement/line.
+10. Decrement inventory for produced lot (`inv_inventory.qty -= rollback_qty`).
+11. Decrement lot qty and close lot:
     - `lot.qty -= rollback_qty` (expected to become `0`)
     - `lot.status = 'void'` when remaining qty is `<= 0`
-11. Mark original produce movement as void:
+12. Mark original produce movement as void:
     - `inv_movements.status = 'void'`
     - `reason/notes` are updated when provided
     - append metadata: `voided_at`, `void_reason`, `reversed_by_movement_id`
-12. Return rollback movement id.
+13. Return rollback movement id.
 
 ## Suggested Return
 Return `rollback_movement_id uuid`.

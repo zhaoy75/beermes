@@ -78,7 +78,7 @@
   - Lot Tax Type
   - Batch No
   - Beer Category
-  - Target ABV
+  - ABV
   - Style Name
   - Package Type
   - Production Date
@@ -89,6 +89,10 @@
 - The grid should update from the active filter state.
 - The grid can be sort by each column
 - The grid should support keyboard row navigation.
+- ABV column displays actual ABV, not target ABV:
+  - prefer batch `actual_abv`
+  - fallback only to actual-like snapshot/meta `actual_abv` or generic `abv`
+  - do not fallback to `target_abv`
 - Rows are merged only when manufacturing batch, lot code, lot tax type, package type, and site all match.
 - When a merged row represents multiple underlying lots, show an unfold toggle on the right side of the `Lot Code` cell.
 - Expanding a merged row shows the underlying lot detail directly below the parent row.

@@ -10,6 +10,8 @@ declare
   v_target_movement_id uuid;
   v_doc_no text;
   v_movement_at timestamptz;
+  v_requested_movement_at timestamptz;
+  v_movement_at_adjusted boolean := false;
   v_reason text;
   v_notes text;
   v_meta jsonb;
@@ -39,6 +41,7 @@ declare
   v_dest_lot_unit numeric;
   v_dest_lot_remaining_qty numeric;
   v_dest_lot_remaining_unit numeric;
+  v_dest_inventory_required boolean;
   v_dest_inv_id uuid;
   v_dest_inv_qty numeric;
   v_dest_inv_remaining numeric;
@@ -51,7 +54,8 @@ begin
   v_tenant := public._assert_tenant();
 
   v_doc_no := nullif(btrim(coalesce(p_doc ->> 'doc_no', '')), '');
-  v_movement_at := coalesce(nullif(p_doc ->> 'movement_at', '')::timestamptz, now());
+  v_requested_movement_at := nullif(p_doc ->> 'movement_at', '')::timestamptz;
+  v_movement_at := coalesce(v_requested_movement_at, now());
   v_target_movement_id := coalesce(
     nullif(p_doc ->> 'product_movement_id', '')::uuid,
     nullif(p_doc ->> 'movement_id', '')::uuid
@@ -107,7 +111,8 @@ begin
   end if;
 
   if v_movement_at < v_target_movement_at then
-    raise exception 'PMR003: rollback movement_at is before target movement_at';
+    v_movement_at := v_target_movement_at;
+    v_movement_at_adjusted := true;
   end if;
 
   if nullif(v_target_meta ->> 'reversed_by_movement_id', '') is not null then
@@ -263,19 +268,41 @@ begin
         raise exception 'PMR006: destination lot unit is insufficient';
       end if;
 
-      select i.id, i.qty
-        into v_dest_inv_id, v_dest_inv_qty
-      from public.inv_inventory i
-      where i.tenant_id = v_tenant
-        and i.site_id = v_dest_lot_site_id
-        and i.lot_id = v_edge.to_lot_id
-        and i.uom_id = v_edge.uom_id
-      order by i.created_at, i.id
-      limit 1
-      for update;
+      select coalesce((r.spec ->> 'inventory_count_flg')::boolean, true) = true
+        into v_dest_inventory_required
+      from public.mst_sites s
+      join public.registry_def r
+        on r.def_id = s.site_type_id
+       and r.kind = 'site_type'
+       and r.is_active = true
+      where s.tenant_id = v_tenant
+        and s.id = v_dest_lot_site_id;
 
-      if v_dest_inv_id is null or coalesce(v_dest_inv_qty, 0) < v_edge.qty then
-        raise exception 'PMR006: destination inventory is insufficient';
+      if not found then
+        v_dest_inventory_required := false;
+      end if;
+
+      if v_dest_inventory_required then
+        v_dest_inv_id := null;
+        v_dest_inv_qty := null;
+        select i.id, i.qty
+          into v_dest_inv_id, v_dest_inv_qty
+        from public.inv_inventory i
+        where i.tenant_id = v_tenant
+          and i.site_id = v_dest_lot_site_id
+          and i.lot_id = v_edge.to_lot_id
+          and i.uom_id = v_edge.uom_id
+        order by i.created_at, i.id
+        limit 1
+        for update;
+
+        if v_dest_inv_id is null then
+          raise exception 'PMR006: destination inventory is insufficient';
+        end if;
+
+        if coalesce(v_dest_inv_qty, 0) < v_edge.qty then
+          raise exception 'PMR006: destination inventory is insufficient';
+        end if;
       end if;
     end if;
   end loop;
@@ -292,12 +319,14 @@ begin
     v_target_dest_site_id,
     v_target_src_site_id,
     v_reason,
-    v_meta || jsonb_build_object(
+    v_meta || jsonb_strip_nulls(jsonb_build_object(
       'movement_intent', 'PRODUCT_MOVE_ROLLBACK',
       'rollback_of_movement_id', v_target_movement_id,
       'rollback_of_doc_type', v_target_doc_type::text,
-      'rollback_of_movement_intent', v_target_intent
-    ),
+      'rollback_of_movement_intent', v_target_intent,
+      'rollback_requested_movement_at', v_requested_movement_at,
+      'rollback_effective_at_adjusted', case when v_movement_at_adjusted then true else null end
+    )),
     v_notes
   )
   returning id into v_rollback_movement_id;
@@ -379,20 +408,50 @@ begin
 
       v_dest_lot_site_id := coalesce(v_dest_lot_site_id, v_target_dest_site_id);
 
-      update public.inv_inventory i
-         set qty = i.qty - v_edge.qty
-       where i.tenant_id = v_tenant
-         and i.site_id = v_dest_lot_site_id
-         and i.lot_id = v_edge.to_lot_id
-         and i.uom_id = v_edge.uom_id
-      returning i.qty into v_dest_inv_remaining;
+      select coalesce((r.spec ->> 'inventory_count_flg')::boolean, true) = true
+        into v_dest_inventory_required
+      from public.mst_sites s
+      join public.registry_def r
+        on r.def_id = s.site_type_id
+       and r.kind = 'site_type'
+       and r.is_active = true
+      where s.tenant_id = v_tenant
+        and s.id = v_dest_lot_site_id;
 
       if not found then
-        raise exception 'PMR006: destination inventory is insufficient after update';
+        v_dest_inventory_required := false;
       end if;
 
-      if v_dest_inv_remaining < 0 then
-        raise exception 'PMR006: destination inventory is insufficient after update';
+      if v_dest_inventory_required then
+        v_dest_inv_id := null;
+        v_dest_inv_qty := null;
+        select i.id, i.qty
+          into v_dest_inv_id, v_dest_inv_qty
+        from public.inv_inventory i
+        where i.tenant_id = v_tenant
+          and i.site_id = v_dest_lot_site_id
+          and i.lot_id = v_edge.to_lot_id
+          and i.uom_id = v_edge.uom_id
+        order by i.created_at, i.id
+        limit 1
+        for update;
+
+        if v_dest_inv_id is null then
+          raise exception 'PMR006: destination inventory is insufficient after update';
+        end if;
+
+        if coalesce(v_dest_inv_qty, 0) < v_edge.qty then
+          raise exception 'PMR006: destination inventory is insufficient after update';
+        end if;
+
+        update public.inv_inventory i
+           set qty = i.qty - v_edge.qty
+         where i.id = v_dest_inv_id
+        returning i.qty into v_dest_inv_remaining;
+
+        if v_dest_inv_remaining < 0 then
+          raise exception 'PMR006: destination inventory is insufficient after update';
+        end if;
       end if;
 
       update public.lot l

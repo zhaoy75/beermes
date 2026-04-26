@@ -10,6 +10,8 @@ declare
   v_target_movement_id uuid;
   v_doc_no text;
   v_movement_at timestamptz;
+  v_requested_movement_at timestamptz;
+  v_movement_at_adjusted boolean := false;
   v_reason text;
   v_notes text;
   v_meta jsonb;
@@ -20,6 +22,7 @@ declare
   v_target_meta jsonb;
   v_target_src_site_id uuid;
   v_target_dest_site_id uuid;
+  v_target_movement_at timestamptz;
 
   v_produced_lot_id uuid;
   v_produced_qty numeric;
@@ -41,7 +44,8 @@ begin
   v_tenant := public._assert_tenant();
 
   v_doc_no := nullif(btrim(coalesce(p_doc ->> 'doc_no', '')), '');
-  v_movement_at := coalesce(nullif(p_doc ->> 'movement_at', '')::timestamptz, now());
+  v_requested_movement_at := nullif(p_doc ->> 'movement_at', '')::timestamptz;
+  v_movement_at := coalesce(v_requested_movement_at, now());
   v_target_movement_id := nullif(p_doc ->> 'produce_movement_id', '')::uuid;
   v_reason := nullif(p_doc ->> 'reason', '');
   v_notes := nullif(p_doc ->> 'notes', '');
@@ -77,8 +81,9 @@ begin
     end if;
   end if;
 
-  select m.status, m.meta, m.src_site_id, m.dest_site_id
-    into v_target_status, v_target_meta, v_target_src_site_id, v_target_dest_site_id
+  select m.status, m.meta, m.src_site_id, m.dest_site_id, m.movement_at
+    into v_target_status, v_target_meta, v_target_src_site_id, v_target_dest_site_id,
+         v_target_movement_at
   from public.inv_movements m
   where m.tenant_id = v_tenant
     and m.id = v_target_movement_id
@@ -98,6 +103,11 @@ begin
 
   if nullif(v_target_meta ->> 'reversed_by_movement_id', '') is not null then
     raise exception 'PPR003: target movement is already rolled back';
+  end if;
+
+  if v_movement_at < v_target_movement_at then
+    v_movement_at := v_target_movement_at;
+    v_movement_at_adjusted := true;
   end if;
 
   select e.to_lot_id
@@ -176,11 +186,13 @@ begin
     v_produced_site_id,
     null,
     v_reason,
-    v_meta || jsonb_build_object(
+    v_meta || jsonb_strip_nulls(jsonb_build_object(
       'movement_intent', 'BREW_PRODUCE_ROLLBACK',
       'rollback_of_movement_id', v_target_movement_id,
-      'rollback_of_lot_id', v_produced_lot_id
-    ),
+      'rollback_of_lot_id', v_produced_lot_id,
+      'rollback_requested_movement_at', v_requested_movement_at,
+      'rollback_effective_at_adjusted', case when v_movement_at_adjusted then true else null end
+    )),
     v_notes
   )
   returning id into v_rollback_movement_id;

@@ -25,7 +25,7 @@ Required fields:
 - `product_movement_id` uuid: target movement id created by `product_move`
 
 Optional fields:
-- `movement_at` timestamptz: rollback timestamp, defaults to `now()`
+- `movement_at` timestamptz: requested rollback effective timestamp, defaults to `now()`
 - `reason` text
 - `notes` text
 - `meta` jsonb
@@ -40,33 +40,41 @@ Optional idempotency:
 - `inv_doc_type` supports `adjustment`.
 - Target movement exists, is tenant-visible, and `status = posted`.
 - Target movement is not already reversed.
-- Rollback timestamp must not be before the target movement timestamp.
+- Rollback effective timestamp must not be before the target movement timestamp:
+  - if the requested/default timestamp is earlier than the target movement timestamp, use the target movement timestamp.
+  - do not use `9999/12/31` or another sentinel date.
+  - the real cancellation operation time remains available from the rollback movement `created_at` and original movement `meta.voided_at`.
 - Target movement must be a `product_move` movement, not produce, filling, unpacking, or rollback.
 - Target movement must have at least one source `lot_edge`.
 - `tax_report_mark_stale_for_movement(target)` must run before mutation:
   - submitted/approved report refs block rollback
   - draft report refs become `stale`
 - Destination lots must not have downstream non-void movement usage.
-- Destination lot and inventory must have enough quantity to subtract.
+- Destination lot must have enough quantity to subtract.
+- Destination inventory handling follows the destination site's inventory policy:
+  - when the destination site type maintains `inv_inventory`, an inventory row must exist with enough quantity and is decremented.
+  - when the destination site type suppresses `inv_inventory`, rollback ignores destination inventory rows and only reverses the destination lot balance.
 
 ## Transaction Behavior
 1. Lock the target movement.
 2. Validate target movement status/type and tax-report lock state.
-3. Lock and validate source and destination lots/inventory.
-4. Reject rollback when destination lots have downstream non-void use.
-5. Insert a posted adjustment movement with `movement_intent = PRODUCT_MOVE_ROLLBACK`.
-6. Insert rollback movement lines.
-7. Do not insert rollback `lot_edge` rows:
+3. Normalize rollback `movement_at` so it is not before the target movement timestamp.
+4. Lock and validate source and destination lots/inventory.
+5. Reject rollback when destination lots have downstream non-void use.
+6. Insert a posted adjustment movement with `movement_intent = PRODUCT_MOVE_ROLLBACK`.
+7. Insert rollback movement lines.
+8. Do not insert rollback `lot_edge` rows:
    - rollback audit is stored on the adjustment movement lines.
    - adding incoming rollback edges to existing source lots would change `lot_effective_created_at` and break chronology checks.
-8. Reverse inventory:
-   - decrement destination inventory when destination lot exists
+9. Reverse inventory:
+   - decrement destination inventory only when the destination site type maintains `inv_inventory`
+   - ignore destination inventory for site types where the inventory trigger suppresses `inv_inventory`
    - restore source inventory except for `RETURN_FROM_CUSTOMER`
-9. Reverse lot balances:
+10. Reverse lot balances:
    - decrement destination lot
    - increment source lot and reactivate it when it was consumed
-10. Mark the original movement `void` and set `meta.reversed_by_movement_id`.
-11. Return rollback movement id.
+11. Mark the original movement `void` and set `meta.reversed_by_movement_id`.
+12. Return rollback movement id.
 
 ## Error Codes
 - `PMR001`: missing rollback input

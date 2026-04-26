@@ -2,6 +2,7 @@ type JsonRecord = Record<string, unknown>
 
 export type BatchRecipeAttrFallback = {
   beerCategoryId?: string | null
+  actualAbv?: number | null
   targetAbv?: number | null
   styleName?: string | null
 }
@@ -161,4 +162,19 @@ export function resolveBatchTargetAbv(
     ?? getNestedNumber(recipeInfo, 'abv')
     ?? resolveMetaNumber(batch.meta, 'actual_abv')
     ?? resolveMetaNumber(batch.meta, 'target_abv')
+}
+
+export function resolveBatchActualAbv(
+  batch: BatchRecipeSource | null | undefined,
+  attr?: BatchRecipeAttrFallback | null,
+): number | null {
+  if (attr?.actualAbv != null) return asNumber(attr.actualAbv)
+  if (!batch) return null
+  const recipeInfo = getNestedRecord(batch.recipe_json, 'recipe_info')
+  return getNestedNumber(batch.released_reference_json, 'actual_abv')
+    ?? getNestedNumber(recipeInfo, 'actual_abv')
+    ?? resolveMetaNumber(batch.meta, 'actual_abv')
+    ?? getNestedNumber(batch.released_reference_json, 'abv')
+    ?? getNestedNumber(recipeInfo, 'abv')
+    ?? resolveMetaNumber(batch.meta, 'abv')
 }

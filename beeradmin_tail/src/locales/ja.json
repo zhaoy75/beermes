@@ -1540,6 +1540,7 @@
         "lotNo": "ロットコード",
         "lotTaxType": "ロット税区分",
         "beerCategory": "酒類分類",
+        "actualAbv": "ABV",
         "targetAbv": "目標ABV",
         "styleName": "スタイル名",
         "beerName": "ビール名",

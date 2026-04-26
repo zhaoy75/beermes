@@ -130,8 +130,8 @@
                   </button>
                 </th>
                 <th class="px-3 py-2 text-right">
-                  <button class="font-medium" type="button" @click="toggleSort('targetAbv')">
-                    {{ t('producedBeer.inventory.table.targetAbv') }} {{ sortIndicator('targetAbv') }}
+                  <button class="font-medium" type="button" @click="toggleSort('actualAbv')">
+                    {{ t('producedBeer.inventory.table.actualAbv') }} {{ sortIndicator('actualAbv') }}
                   </button>
                 </th>
                 <th class="px-3 py-2 text-left">
@@ -208,7 +208,7 @@
                     {{ row.batchCode || '—' }}
                   </td>
                   <td class="px-3 py-2">{{ categoryLabel(row.beerCategoryId) }}</td>
-                  <td class="px-3 py-2 text-right">{{ formatAbv(row.targetAbv) }}</td>
+                  <td class="px-3 py-2 text-right">{{ formatAbv(row.actualAbv) }}</td>
                   <td class="px-3 py-2">{{ row.styleName || row.productName || '—' }}</td>
                   <td class="px-3 py-2">{{ row.packageTypeLabel || '—' }}</td>
                   <td class="px-3 py-2 text-xs text-gray-500">
@@ -478,7 +478,7 @@ type SortKey =
   | 'lotTaxType'
   | 'batchCode'
   | 'beerCategory'
-  | 'targetAbv'
+  | 'actualAbv'
   | 'styleName'
   | 'packageType'
   | 'productionDate'
@@ -638,8 +638,8 @@ function sortValue(row: InventoryPageRow, key: SortKey): string | number {
       return normalizeString(row.batchCode)
     case 'beerCategory':
       return normalizeString(categoryLabel(row.beerCategoryId))
-    case 'targetAbv':
-      return row.targetAbv ?? Number.NEGATIVE_INFINITY
+    case 'actualAbv':
+      return row.actualAbv ?? Number.NEGATIVE_INFINITY
     case 'styleName':
       return normalizeString(row.styleName || row.productName)
     case 'packageType':

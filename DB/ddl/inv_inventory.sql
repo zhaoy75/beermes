@@ -53,7 +53,7 @@ create policy "inv_inventory_tenant_all"
   with check (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid);
 
 
--- Enforce: inv_inventory only stores lots for sites whose site_type inventory_count_flg is false.
+-- Enforce: inv_inventory only stores lots for sites whose site_type inventory_count_flg is true.
 create or replace function public.trg_inv_inventory_site_inventory_count_flg()
 returns trigger
 language plpgsql
@@ -76,8 +76,8 @@ begin
     return NULL;
   end if;
 
-  if coalesce(v_inventory_count_flg, true) <> false then
-    -- raise exception 'inv_inventory.site_id must reference site_type where inventory_count_flg=false';
+  if coalesce(v_inventory_count_flg, true) <> true then
+    -- raise exception 'inv_inventory.site_id must reference site_type where inventory_count_flg=true';
     return NULL;
   end if;
 

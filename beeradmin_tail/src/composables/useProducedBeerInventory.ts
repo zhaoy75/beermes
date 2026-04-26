@@ -11,7 +11,7 @@ import {
   resolveBatchBeerCategoryId,
   resolveBatchDisplayName,
   resolveBatchStyleName,
-  resolveBatchTargetAbv,
+  resolveBatchActualAbv,
 } from '@/lib/batchRecipeSnapshot'
 import { formatTotalVolumeFromLiters, millilitersToLiters, quantityToMilliliters } from '@/lib/volumeFormat'
 
@@ -52,7 +52,7 @@ interface InventoryRow {
   batchId: string | null
   batchCode: string | null
   beerCategoryId: string | null
-  targetAbv: number | null
+  actualAbv: number | null
   styleName: string | null
   productName: string | null
   packageId: string | null
@@ -98,7 +98,7 @@ interface PackageInfo {
 interface BatchInfo {
   batchCode: string | null
   beerCategoryId: string | null
-  targetAbv: number | null
+  actualAbv: number | null
   styleName: string | null
   productName: string | null
   keywordText: string
@@ -398,7 +398,7 @@ export function useProducedBeerInventory() {
       string,
       {
         beerCategoryId: string | null
-        targetAbv: number | null
+        actualAbv: number | null
         styleName: string | null
       }
     >()
@@ -414,7 +414,7 @@ export function useProducedBeerInventory() {
         .from('attr_def')
         .select('attr_id, code')
         .eq('domain', 'batch')
-        .in('code', ['beer_category', 'actual_abv', 'target_abv', 'style_name'])
+        .in('code', ['beer_category', 'actual_abv', 'style_name'])
         .eq('is_active', true)
       if (attrDefError) throw attrDefError
 
@@ -440,7 +440,7 @@ export function useProducedBeerInventory() {
           if (!attrValueByBatch.has(batchId)) {
             attrValueByBatch.set(batchId, {
               beerCategoryId: null,
-              targetAbv: null,
+              actualAbv: null,
               styleName: null,
             })
           }
@@ -467,12 +467,7 @@ export function useProducedBeerInventory() {
 
           if (code === 'actual_abv') {
             const num = toNumber(row.value_num)
-            if (num != null) entry.targetAbv = num
-          }
-
-          if (code === 'target_abv' && entry.targetAbv == null) {
-            const num = toNumber(row.value_num)
-            if (num != null) entry.targetAbv = num
+            if (num != null) entry.actualAbv = num
           }
 
           if (code === 'style_name') {
@@ -529,7 +524,7 @@ export function useProducedBeerInventory() {
       infoMap.set(rowId, {
         batchCode: toStringOrNull(row.batch_code) ?? resolveBatchLabel(meta) ?? null,
         beerCategoryId: resolveBatchBeerCategoryId(row, attr),
-        targetAbv: resolveBatchTargetAbv(row, attr),
+        actualAbv: resolveBatchActualAbv(row, attr),
         styleName: resolveBatchStyleName(row, attr),
         productName,
         keywordText,
@@ -613,7 +608,7 @@ export function useProducedBeerInventory() {
         batchId: string | null
         batchCode: string | null
         beerCategoryId: string | null
-        targetAbv: number | null
+        actualAbv: number | null
         styleName: string | null
         productName: string | null
         packageId: string | null
@@ -698,7 +693,7 @@ export function useProducedBeerInventory() {
             batchId,
             batchCode: batchInfo?.batchCode ?? null,
             beerCategoryId: batchInfo?.beerCategoryId ?? null,
-            targetAbv: batchInfo?.targetAbv ?? null,
+            actualAbv: batchInfo?.actualAbv ?? null,
             styleName: batchInfo?.styleName ?? null,
             productName: batchInfo?.productName ?? null,
             packageId: pkgInfo?.packageId ?? null,
@@ -771,7 +766,7 @@ export function useProducedBeerInventory() {
           batchId: row.batchId,
           batchCode: row.batchCode,
           beerCategoryId: row.beerCategoryId,
-          targetAbv: row.targetAbv,
+          actualAbv: row.actualAbv,
           styleName: row.styleName,
           productName: row.productName,
           packageId: row.packageId,

@@ -1,4 +1,4 @@
--- Enforce inv_inventory rows only for site_type where spec.inventory_count_flg = false
+-- Enforce inv_inventory rows only for site_type where spec.inventory_count_flg = true
 
 create or replace function public.trg_inv_inventory_site_inventory_count_flg()
 returns trigger
@@ -22,7 +22,7 @@ begin
   end if;
 
   if coalesce(v_inventory_count_flg, true) <> true then
-    return NULL; -- skip trigger if inventory_count_flg is not false
+    return NULL; -- skip trigger if inventory_count_flg is not true
   end if;
 
   return new;

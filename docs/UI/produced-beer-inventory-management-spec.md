@@ -45,7 +45,7 @@
   - Lot Code
   - Batch No
   - Beer Category
-  - Target ABV
+  - ABV
   - Style Name
   - Package Type
   - Production Date
@@ -55,6 +55,11 @@
 - Add one more column:
   - Actions
 - Keep the existing empty state and refresh behavior.
+- ABV column:
+  - display actual ABV, not target ABV.
+  - resolve from batch `actual_abv` first.
+  - fallback only to actual-like snapshot/meta `actual_abv` or generic `abv`.
+  - do not fallback to `target_abv`.
 
 ### Search / Filter Section
 - Add a compact search section similar to `inventory-search-shortcut-modal-spec.md`.

@@ -1540,6 +1540,7 @@
         "lotNo": "Lot Code",
         "lotTaxType": "Lot tax type",
         "beerCategory": "Beer category",
+        "actualAbv": "ABV",
         "targetAbv": "Target ABV",
         "styleName": "Style name",
         "beerName": "Beer name",

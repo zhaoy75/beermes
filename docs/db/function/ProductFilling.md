@@ -92,6 +92,14 @@ Optional header fields:
 - `doc_no` unique per tenant in `inv_movements`.
 - `uom_id` consistency across movement lines, lot, lot_edge, inventory.
 
+## Filling Rollback Timestamp Rule
+`public.product_filling_rollback(p_doc jsonb)` uses the same rollback timestamp rule as other product rollback RPCs:
+- `movement_at` is the requested rollback effective timestamp and defaults to `now()`.
+- If the requested/default timestamp is earlier than the target filling movement timestamp, use the target filling movement timestamp.
+- Do not use `9999/12/31` or another sentinel date.
+- The real cancellation operation time remains available from the rollback movement `created_at` and original movement `meta.voided_at`.
+- This matters because filling rollback writes a `MERGE` edge from the filled child lot back to the source lot; the rollback effective timestamp must not be before the filled child lot's creation timestamp.
+
 ## Transaction Behavior (Atomic)
 1. Resolve tenant id (`v_tenant`) and normalize payload.
 2. Lock source lot row (`from_lot_id`) for update.

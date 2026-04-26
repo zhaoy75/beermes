@@ -16,19 +16,35 @@
 - Add a header-level save action on the `申告書作成/編集` page next to `一覧へ戻る`.
 - Redesign shared table column sort/filter controls to use one column action icon with a popup menu for ascending sort, descending sort, and filter.
 - Fix `移入出登録` cancellation so it reverses product-move lot and inventory effects instead of only voiding the movement header.
+- Change `ビール在庫管理` and the inventory search modal to display actual ABV instead of target ABV.
+- Fix product-move rollback timestamp handling so future-dated movements can be cancelled without using a sentinel date.
+- Apply the same rollback timestamp normalization to produce and filling rollback functions for consistency.
+- Fix product-move rollback for destination sites where `inv_inventory` rows are not maintained.
+- Align `inventory_count_flg` interpretation across rollback and inventory trigger definitions.
 
 ## Active Non-Goals
 - Do not add a full `tax_report_lines` detail table.
 - Do not implement correction/amendment workflows for already submitted reports in this task.
 - Do not change e-Tax XML schemas.
+- Do not use `9999/12/31` as a cancellation movement date.
 
 ## Active Affected Files
 - New DDL file: `DB/ddl/tax_report_movement_refs.sql`
 - [DB/ddl/taxreport.sql](/Users/zhao/dev/other/beer/DB/ddl/taxreport.sql)
+- [DB/ddl/inv_inventory.sql](/Users/zhao/dev/other/beer/DB/ddl/inv_inventory.sql)
+- [DB/dml/registry_def/inv_inventory_trigger_inventory_count_flg.sql](/Users/zhao/dev/other/beer/DB/dml/registry_def/inv_inventory_trigger_inventory_count_flg.sql)
 - RPC files under [DB/function](/Users/zhao/dev/other/beer/DB/function).
 - [DB/function/31_public.movement_save.sql](/Users/zhao/dev/other/beer/DB/function/31_public.movement_save.sql)
 - New rollback RPC: `DB/function/48_public.product_move_rollback.sql`
+- Existing rollback RPCs:
+  - `DB/function/45_public.product_produce_rollback.sql`
+  - `DB/function/47_public.product_filling_rollback.sql`
 - New function spec: `docs/db/function/ProductMoveRollback.md`
+- Function spec: `docs/db/function/ProductMove.md`
+- Function specs:
+  - `docs/db/function/ProductProduceRollback.md`
+  - `docs/db/function/ProductFilling.md`
+- Stored-function error catalog: `docs/db/function/stored-function-error-catalog.md`
 - [public.movement_save.md](/Users/zhao/dev/other/beer/docs/db/function/public.movement_save.md)
 - [TaxReportEditor.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/TaxReportEditor.vue)
 - [TaxReport.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/TaxReport.vue)
@@ -59,6 +75,12 @@
 - [tax-report-editor.md](/Users/zhao/dev/other/beer/docs/UI/tax-report-editor.md)
 - [tax-report.md](/Users/zhao/dev/other/beer/docs/UI/tax-report.md)
 - [product_beer.md](/Users/zhao/dev/other/beer/docs/UI/product_beer.md)
+- [produced-beer-inventory-management-spec.md](/Users/zhao/dev/other/beer/docs/UI/produced-beer-inventory-management-spec.md)
+- [inventory-search-shortcut-modal-spec.md](/Users/zhao/dev/other/beer/docs/UI/inventory-search-shortcut-modal-spec.md)
+- [useProducedBeerInventory.ts](/Users/zhao/dev/other/beer/beeradmin_tail/src/composables/useProducedBeerInventory.ts)
+- [InventorySearchModal.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/components/inventory/InventorySearchModal.vue)
+- [ProducedBeerInventory.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/ProducedBeerInventory.vue)
+- [batchRecipeSnapshot.ts](/Users/zhao/dev/other/beer/beeradmin_tail/src/lib/batchRecipeSnapshot.ts)
 - New catalog: `docs/db/function/stored-function-error-catalog.md`
 - [specs/current-task.md](/Users/zhao/dev/other/beer/specs/current-task.md)
 
@@ -123,6 +145,20 @@
     - blocks rollback when a destination lot has downstream non-void movement use.
     - reverses `inv_inventory` and `lot` balances for source and destination lots.
     - marks the original product movement `void` and stores `reversed_by_movement_id`.
+    - normalizes rollback `movement_at` so the effective rollback timestamp is never before the target movement timestamp:
+      - when the requested/default rollback timestamp is before the target, use the target movement timestamp.
+      - keep the real operation timestamp in `created_at` / `voided_at`; do not use far-future sentinel dates.
+    - destination inventory reversal follows the destination site's inventory policy:
+      - when the destination site type maintains `inv_inventory`, an inventory row must exist with enough quantity and is decremented.
+      - when the destination site type suppresses `inv_inventory`, rollback ignores destination inventory rows and only reverses the destination lot balance.
+- Update rollback RPCs:
+  - `public.product_produce_rollback(p_doc jsonb) returns uuid`
+  - `public.product_filling_rollback(p_doc jsonb) returns uuid`
+  - Both use the same effective timestamp rule as `product_move_rollback`:
+    - `movement_at` is the requested rollback effective timestamp.
+    - when the requested/default rollback timestamp is before the target movement timestamp, use the target movement timestamp.
+    - keep actual operation time in `created_at` / `voided_at`.
+    - do not use `9999/12/31`.
 
 ## Active Final Process
 1. User chooses a report period in the editor.
@@ -148,6 +184,9 @@
   - confirm draft refs do not block rollback, but the draft becomes stale.
   - confirm RLS prevents cross-tenant report ref reads/writes.
   - cancel a normal `移入出登録` move and confirm source inventory is restored, destination inventory is reduced, affected lot balances are restored, and the original movement becomes `void`.
+  - cancel a `移入出登録` move whose destination site suppresses `inv_inventory` and confirm rollback succeeds by reversing lot balances without requiring a destination inventory row.
+  - cancel a future-dated `移入出登録` move and confirm rollback succeeds with rollback `movement_at` equal to the target movement timestamp, not `9999/12/31`.
+  - cancel future-dated produce/filling movements and confirm rollback succeeds with rollback `movement_at` equal to the target movement timestamp.
   - attempt to cancel a move whose destination lot has downstream non-void use and confirm rollback is rejected.
 
 ## Active Findings
@@ -186,6 +225,24 @@
 - `移入出登録` cancellation must call `product_move_rollback`; using `movement_save(status='void')` is not sufficient because it leaves `inv_inventory` and lot balances unchanged.
 - Product-move rollback writes a posted adjustment movement for audit, reverses inventory/lot quantities, then voids the original movement.
 - Product-move rollback does not insert rollback `lot_edge` rows; the audit relation is stored on rollback movement-line metadata so rollback does not change `lot_effective_created_at` for existing source lots.
+- Product-move rollback must not require destination `inv_inventory` when the destination site type suppresses inventory rows. `product_move` may still create a destination lot for lineage/reporting while the `inv_inventory` trigger skips the inventory row.
+- Product-move rollback ignores destination `inv_inventory` completely for site types where `inventory_count_flg = false`; this prevents legacy/stale suppressed-site inventory rows from blocking cancellation.
+- `registry_def.site_type.spec.inventory_count_flg` means:
+  - `true`: the site maintains `inv_inventory` rows.
+  - `false`: the site suppresses `inv_inventory` rows and may still keep lot lineage.
+- Product-move rollback uses `movement_at` as the business effective timestamp and `created_at` / `voided_at` as the operation timestamp.
+- If a rollback request timestamp is earlier than the target movement timestamp, normalize the rollback movement timestamp to the target movement timestamp instead of rejecting or using `9999/12/31`.
+- The cancel UI can keep sending the current timestamp as the requested rollback timestamp; `product_move_rollback` owns the effective timestamp normalization because it can lock and compare the target movement timestamp atomically.
+- Produce, filling, and product-move rollback functions share the same timestamp rule:
+  - `movement_at` is the business effective timestamp for the rollback movement.
+  - `created_at` / `voided_at` are the real operation timestamps.
+  - requested/default rollback timestamps earlier than the target movement timestamp are normalized to the target movement timestamp.
+  - far-future sentinel dates are not allowed.
+- Inventory page and inventory search modal ABV columns display actual ABV:
+  - column title is `ABV`
+  - prefer batch attribute `actual_abv`
+  - fallback to actual-like snapshot/meta `actual_abv` or generic `abv`
+  - do not fallback to `target_abv` for these two inventory views.
 
 ## Active Validation Results
 - `git diff --check`: passed.
@@ -215,6 +272,37 @@
 - After adding `product_move_rollback` and switching `移入出登録` cancellation to it:
   - `git diff --check`: passed.
   - `npx eslint src/views/Pages/ProducedBeer.vue --no-fix`: passed.
+  - `npm run type-check` in `beeradmin_tail`: passed.
+  - `npm run test --if-present` in `beeradmin_tail`: passed with no test script configured.
+  - SQL runtime validation was not executed because `psql` is not installed in this workspace.
+- After changing inventory ABV display to actual ABV:
+  - `git diff --check`: passed.
+  - targeted ESLint for `useProducedBeerInventory.ts`, `ProducedBeerInventory.vue`, `InventorySearchModal.vue`, and `batchRecipeSnapshot.ts`: passed.
+  - `npm run type-check` in `beeradmin_tail`: passed.
+  - `npm run test --if-present` in `beeradmin_tail`: passed with no test script configured.
+- After changing the inventory actual-ABV column label to `ABV`:
+  - `git diff --check`: passed.
+  - locale JSON ESLint command completed with existing "ignored because no matching configuration" warnings only.
+  - `npm run type-check` in `beeradmin_tail`: passed.
+- After normalizing product-move rollback timestamps for future-dated target movements:
+  - `git diff --check`: passed.
+  - `npm run type-check` in `beeradmin_tail`: passed.
+  - `npm run test --if-present` in `beeradmin_tail`: passed with no test script configured.
+  - SQL runtime validation was not executed because `psql` is not installed in this workspace.
+- After applying rollback timestamp normalization to `product_produce_rollback` and `product_filling_rollback`:
+  - `git diff --check`: passed.
+  - `npm run type-check` in `beeradmin_tail`: passed.
+  - `npm run test --if-present` in `beeradmin_tail`: passed with no test script configured.
+  - `npm run lint --if-present` failed on existing project-wide lint issues outside this SQL/docs change; no unrelated auto-fix files were left in the diff.
+  - SQL runtime validation was not executed because `psql` is not installed in this workspace.
+- After fixing product-move rollback for destination sites that suppress `inv_inventory`:
+  - `git diff --check`: passed.
+  - `npm run type-check` in `beeradmin_tail`: passed.
+  - `npm run test --if-present` in `beeradmin_tail`: passed with no test script configured.
+  - `npm run lint --if-present` was not rerun after this SQL/docs-only patch; the earlier run in this session failed on existing project-wide lint issues outside this change.
+  - SQL runtime validation was not executed because `psql` is not installed in this workspace.
+- After correcting the `inventory_count_flg` inversion and ignoring destination inventory for suppressed sites:
+  - `git diff --check`: passed.
   - `npm run type-check` in `beeradmin_tail`: passed.
   - `npm run test --if-present` in `beeradmin_tail`: passed with no test script configured.
   - SQL runtime validation was not executed because `psql` is not installed in this workspace.

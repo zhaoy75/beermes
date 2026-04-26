@@ -28,6 +28,7 @@
 
 ## Domain rules
 - Follow durable quantity and money rules in `docs/domain/quantity-and-money.md`.
+- Follow durable date and timestamp rules in `docs/domain/date-and-time.md`.
 
 ## Validation
 - Run:

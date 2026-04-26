@@ -2771,6 +2771,10 @@
       "taxReport": "Tax Report",
       "taxReportProfile": "Tax Report Profile",
       "taxableRemovalReport": "Taxable Removal Report",
+      "nonTaxableRemovalLedger": "Non-taxable Removal Ledger",
+      "exportExemptLedger": "Export Exemption Ledger",
+      "nonTaxableReceiptLedger": "Non-taxable Receipt Ledger",
+      "returnToFactoryLedger": "Return Ledger",
       "packing": "Packing",
       "taxCalc": "Tax Calculation",
       "unpaidMove": "Unpaid Movement",
@@ -3393,6 +3397,68 @@
     },
     "errors": {
       "loadFailed": "Failed to load the taxable removal report."
+    }
+  },
+  "taxLedgerReport": {
+    "filters": {
+      "businessYear": "Business year",
+      "month": "Month",
+      "liquorCode": "Liquor code"
+    },
+    "defaults": {
+      "allMonths": "All",
+      "allLiquorCodes": "All"
+    },
+    "results": {
+      "count": "{count} rows"
+    },
+    "export": {
+      "button": "Excel Export",
+      "exporting": "Exporting…",
+      "generatedAt": "Generated At",
+      "businessYear": "Business year",
+      "noData": "There is no data to export.",
+      "failed": "Failed to generate the ledger Excel file."
+    },
+    "summary": {
+      "title": "Business Year Summary",
+      "subtitle": "Aggregate selected business-year rows by liquor code and ABV with quantity and package counts.",
+      "columns": {
+        "liquorCode": "Liquor code",
+        "abv": "ABV",
+        "quantityMl": "Quantity (L)",
+        "packageCount": "Package count"
+      }
+    },
+    "table": {
+      "title": "Details",
+      "columns": {
+        "movementAt": "Date",
+        "item": "Item",
+        "brand": "Product",
+        "abv": "ABV",
+        "container": "Container",
+        "containerType": "Type",
+        "packageCount": "Count",
+        "quantityMl": "Quantity (L)",
+        "taxRate": "Tax rate",
+        "sourceAddress": "Remover address",
+        "sourceName": "Remover name",
+        "destinationAddress": "Destination address",
+        "destinationName": "Destination name",
+        "recipientAddress": "Recipient address",
+        "location": "Location",
+        "exporterAddress": "Exporter address",
+        "exportDestinationAddress": "Export destination address",
+        "exportDestinationName": "Export destination name",
+        "transferorAddress": "Transferor address",
+        "deliveryAddress": "Delivery destination address",
+        "lotNo": "Lot no",
+        "notes": "Notes"
+      }
+    },
+    "errors": {
+      "loadFailed": "Failed to load the ledger report."
     }
   },
   "recipe": {

@@ -30,8 +30,8 @@ begin
   where b.tenant_id = v_tenant
     and ((p_filter ->> 'status') is null or b.status::text = (p_filter ->> 'status'))
     and ((p_filter ->> 'recipe_id') is null or b.recipe_id = (p_filter ->> 'recipe_id')::uuid)
-    and ((p_filter ->> 'planned_from') is null or b.planned_start >= (p_filter ->> 'planned_from')::timestamptz)
-    and ((p_filter ->> 'planned_to') is null or b.planned_start <= (p_filter ->> 'planned_to')::timestamptz)
+    and (nullif(p_filter ->> 'planned_from', '') is null or b.planned_start >= nullif(p_filter ->> 'planned_from', '')::date::timestamptz)
+    and (nullif(p_filter ->> 'planned_to', '') is null or b.planned_start < (nullif(p_filter ->> 'planned_to', '')::date + 1)::timestamptz)
     and ((p_filter ->> 'keyword') is null or b.batch_code ilike ('%' || (p_filter ->> 'keyword') || '%') or coalesce(b.batch_label,'') ilike ('%' || (p_filter ->> 'keyword') || '%'))
   order by b.created_at desc
   limit v_limit offset v_offset;

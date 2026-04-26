@@ -133,8 +133,8 @@
               <td class="px-3 py-2 text-sm">
                 <span :class="statusClass(batch.status)">{{ statusLabel(batch.status) }}</span>
               </td>
-              <td class="px-3 py-2 text-sm text-gray-600">{{ fmtDateTime(batch.planned_start) }}</td>
-              <td class="px-3 py-2 text-sm text-gray-600">{{ fmtDateTime(batch.planned_end) }}</td>
+              <td class="px-3 py-2 text-sm text-gray-600">{{ formatDateOnly(batch.planned_start, locale) }}</td>
+              <td class="px-3 py-2 text-sm text-gray-600">{{ formatDateOnly(batch.planned_end, locale) }}</td>
               <td v-for="field in attrSearchFields" :key="`${batch.id}-${field.attr_id}`" class="px-3 py-2 text-sm text-gray-600">
                 {{ formatAttrValueForField(attrValueFor(batch.id, field.attr_id), field) }}
               </td>
@@ -191,6 +191,12 @@ import {
   normalizeBatchAttrDataType,
   validateBatchAttrField,
 } from '@/lib/batchAttrValidation'
+import {
+  compareDateOnly,
+  formatDateOnly,
+  nextDateOnly,
+  normalizeDateOnly,
+} from '@/lib/dateOnly'
 import { DEVELOPMENT_MODE_ENABLED } from '@/lib/devMode'
 import { formatRpcErrorMessage } from '@/lib/rpcErrors'
 import { supabase } from '@/lib/supabase'
@@ -523,11 +529,13 @@ async function fetchBatches() {
       .eq('tenant_id', tenant)
       .order('created_at', { ascending: false })
 
-    if (search.start) {
-      query.gte('planned_start', search.start)
+    const searchStart = normalizeDateOnly(search.start)
+    const searchEndNext = nextDateOnly(search.end)
+    if (searchStart) {
+      query.gte('planned_start', searchStart)
     }
-    if (search.end) {
-      query.lte('planned_start', search.end + 'T23:59:59')
+    if (searchEndNext) {
+      query.lt('planned_start', searchEndNext)
     }
     if (search.name) {
       query.or(`batch_code.ilike.%${search.name}%,batch_label.ilike.%${search.name}%`)
@@ -725,9 +733,12 @@ const filteredBatches = computed(() => {
       || batch.batch_code.toLowerCase().includes(nameQuery)
       || batch.display_name.toLowerCase().includes(nameQuery)
     const statusMatch = !search.status || String(batch.status ?? '') === search.status
-    const startOk = !search.start || (!!batch.planned_start && safeTimestamp(batch.planned_start) >= safeTimestamp(search.start))
-    const endSource = batch.planned_end ?? batch.planned_start
-    const endOk = !search.end || (!!endSource && safeTimestamp(endSource) <= safeTimestamp(search.end, true))
+    const startFilter = normalizeDateOnly(search.start)
+    const endFilter = normalizeDateOnly(search.end)
+    const plannedStart = normalizeDateOnly(batch.planned_start)
+    const endSource = normalizeDateOnly(batch.planned_end ?? batch.planned_start)
+    const startOk = !startFilter || (!!plannedStart && plannedStart >= startFilter)
+    const endOk = !endFilter || (!!endSource && endSource <= endFilter)
     const attrMatch = attrSearchFields.value.every((field) => {
       const query = normalizeSearchText(search.attr[String(field.attr_id)])
       if (!query) return true
@@ -749,6 +760,9 @@ const sortedBatches = computed(() => {
     if (av == null && bv == null) return 0
     if (av == null) return 1
     if (bv == null) return -1
+    if (key === 'planned_start' || key === 'planned_end') {
+      return dir * compareDateOnly(av, bv)
+    }
     if (typeof av === 'number' && typeof bv === 'number') {
       return dir * (av - bv)
     }
@@ -777,19 +791,6 @@ function fmtDateTime(value: string | null | undefined) {
     return new Date(value).toLocaleString()
   } catch {
     return value
-  }
-}
-
-function safeTimestamp(value: string, endOfDay = false) {
-  try {
-    if (endOfDay) {
-      const end = new Date(value)
-      end.setHours(23, 59, 59, 999)
-      return end.getTime()
-    }
-    return new Date(value).getTime()
-  } catch {
-    return 0
   }
 }
 
@@ -908,11 +909,7 @@ function formatAttrValueForField(value: unknown, field: AttrField) {
     return Boolean(value) ? t('common.yes') : t('common.no')
   }
   if (field.data_type === 'date') {
-    try {
-      return new Date(String(value)).toLocaleDateString()
-    } catch {
-      return String(value)
-    }
+    return formatDateOnly(value, locale.value)
   }
   if (field.data_type === 'timestamp') {
     return fmtDateTime(String(value))
@@ -953,6 +950,9 @@ function matchAttrValue(raw: unknown, query: string, field?: AttrField) {
         : null
     if (wanted === null) return false
     return normalized === wanted
+  }
+  if (field?.data_type === 'date') {
+    return normalizeDateOnly(normalized) === normalizeDateOnly(queryTrimmed)
   }
   const rawNum = Number(normalized)
   const queryNum = Number(queryTrimmed)
@@ -1020,7 +1020,7 @@ async function handleCreate(payload: BatchCreatePayload) {
       _tenant_id: tenant,
       _recipe_id: payload.recipeId,
       _batch_code: batchCode,
-      _planned_start: payload.plannedStart ? new Date(payload.plannedStart).toISOString() : null,
+      _planned_start: normalizeDateOnly(payload.plannedStart) || null,
       _notes: payload.notes,
     })
     if (error) throw error
@@ -1032,7 +1032,7 @@ async function handleCreate(payload: BatchCreatePayload) {
     }
     if (Object.keys(meta).length > 0) updatePayload.meta = meta
     if (payload.plannedEnd) {
-      updatePayload.planned_end = new Date(payload.plannedEnd).toISOString()
+      updatePayload.planned_end = normalizeDateOnly(payload.plannedEnd) || null
     }
     if (data) {
       const { error: updateError } = await supabase
@@ -1093,7 +1093,7 @@ async function saveCreateAttrValues(batchId: string, tenant: string, attrValues:
 
     if (dataType === 'number') row.value_num = Number(value)
     else if (dataType === 'bool') row.value_bool = Boolean(value)
-    else if (dataType === 'date') row.value_date = value
+    else if (dataType === 'date') row.value_date = normalizeDateOnly(value)
     else if (dataType === 'timestamp') row.value_ts = fromInputDateTime(String(value))
     else if (dataType === 'json') row.value_json = parseJsonValue(String(value))
     else if (dataType === 'ref') {

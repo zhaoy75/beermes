@@ -54,12 +54,12 @@
       fields in entity_attr_set in domain "batch". 
         field name should be choose according to system language setting
         field text and input method should follow the attr_def rule
-        save-time validation must follow attr_def conditions:
-          - required
+        save-time validation for entered values must follow attr_def conditions:
           - num_min / num_max
           - text_regex
           - allowed_values
-        if any batch attribute is invalid, batch save must be blocked and the field error must be shown inline
+        if any entered batch attribute is invalid, batch save must be blocked and the field error must be shown inline
+        required / non-null batch attributes are not forced on ordinary batch save, but must be completed before actual yield entry
 
     a horizontal line 
       released recipe information
@@ -157,6 +157,8 @@
     - actual yield site must be selected from `mst_sites`, but only `BREWERY_MANUFACTUR` sites are allowed.
     - if existing batch meta has non-manufacturing site id, do not auto-select it in the dialog.
     - when actual yield is saved, update the total product volume in filling section and call stored function `product_produce`.
+    - before opening or saving actual yield, all required batch attributes from `entity_attr_set` / `attr_def` must be entered.
+    - actual yield save must persist current batch attributes to `entity_attr` before calling `product_produce`.
     - if a non-`BREWERY_MANUFACTUR` site is submitted, show validation error and do not save.
     - redesign of batch page must keep this actual_yield operation intact
 
@@ -165,7 +167,8 @@
   - Manufacturing site for actual yield must be `BREWERY_MANUFACTUR`.
   - Stored function `product_produce` is the server-side source of truth and must reject non-manufacturing destination sites.
   - Batch attribute values stored in `entity_attr` must be validated against the linked `attr_def` conditions before save when a value is entered.
-  - Missing / blank `entity_attr` values on Batch Edit do not block save.
+  - Missing / blank `entity_attr` values on Batch Edit do not block ordinary batch save.
+  - Missing / blank required `entity_attr` values block `実績生産量を入力` and actual-yield save.
 
 
 ## Data Handling

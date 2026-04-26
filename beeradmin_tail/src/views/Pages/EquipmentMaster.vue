@@ -455,12 +455,14 @@
 </template>
 
 <script setup lang="ts">
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import ConfirmActionDialog from '@/components/common/ConfirmActionDialog.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { useConfirmDialog } from '@/composables/useConfirmDialog'
+import { normalizeDateOnly } from '@/lib/dateOnly'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
@@ -1009,8 +1011,8 @@ async function loadDetail(row: EquipmentRow) {
     equipment_kind: row.equipment_kind ?? '',
     site_id: row.site_id,
     equipment_status: row.equipment_status ?? 'available',
-    commissioned_at: row.commissioned_at ?? '',
-    decommissioned_at: row.decommissioned_at ?? '',
+    commissioned_at: normalizeDateOnly(row.commissioned_at),
+    decommissioned_at: normalizeDateOnly(row.decommissioned_at),
     is_active: row.is_active ?? true,
     sort_order: row.sort_order ?? 0,
   })
@@ -1185,8 +1187,8 @@ async function saveRecord() {
       equipment_kind: form.equipment_kind || null,
       site_id: form.site_id,
       equipment_status: form.equipment_status || 'available',
-      commissioned_at: form.commissioned_at || null,
-      decommissioned_at: form.decommissioned_at || null,
+      commissioned_at: normalizeDateOnly(form.commissioned_at) || null,
+      decommissioned_at: normalizeDateOnly(form.decommissioned_at) || null,
       is_active: form.is_active,
       sort_order: form.sort_order ?? 0,
     }

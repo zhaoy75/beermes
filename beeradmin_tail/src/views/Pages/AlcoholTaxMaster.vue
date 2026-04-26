@@ -253,6 +253,12 @@ import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
 import { useTableSort } from '@/composables/useTableSort'
+import {
+  dateOnlySortValue,
+  formatDateOnly,
+  isValidDateOnly,
+  normalizeDateOnly,
+} from '@/lib/dateOnly'
 
 type RegistrySpec = {
   name?: string | null
@@ -276,7 +282,7 @@ type SortKey = 'name' | 'taxCategoryCode' | 'taxRate' | 'startDate' | 'expiratio
 const TABLE = 'registry_def'
 const KIND = 'alcohol_tax'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const pageTitle = computed(() => t('alcoholTax.title'))
 
 const rows = ref<AlcoholTaxRow[]>([])
@@ -333,16 +339,15 @@ const { sortedRows, setSort, sortIcon } = useTableSort<AlcoholTaxRow, SortKey>(
       const value = row.spec?.tax_rate
       return value == null || value === '' ? null : Number(value)
     },
-    startDate: (row) => (row.spec?.start_date ? Date.parse(row.spec.start_date) : null),
-    expirationDate: (row) => (row.spec?.expiration_date ? Date.parse(row.spec.expiration_date) : null),
+    startDate: (row) => dateOnlySortValue(row.spec?.start_date),
+    expirationDate: (row) => dateOnlySortValue(row.spec?.expiration_date),
   },
   'startDate',
   'desc',
 )
 
 function formatDate(value: string | null | undefined) {
-  if (!value) return '—'
-  return value
+  return formatDateOnly(value, locale.value)
 }
 
 function formatRate(value: number | string | null | undefined) {
@@ -433,8 +438,8 @@ function openEdit(row: AlcoholTaxRow) {
   form.name = String(row.spec?.name ?? '')
   form.tax_category_code = row.spec?.tax_category_code != null ? String(row.spec?.tax_category_code) : ''
   form.tax_rate = row.spec?.tax_rate != null ? String(row.spec?.tax_rate) : ''
-  form.start_date = row.spec?.start_date ?? ''
-  form.expiration_date = row.spec?.expiration_date ?? ''
+  form.start_date = normalizeDateOnly(row.spec?.start_date)
+  form.expiration_date = normalizeDateOnly(row.spec?.expiration_date)
   resetErrors()
   showModal.value = true
 }
@@ -458,9 +463,7 @@ function parseNumber(value: unknown) {
 }
 
 function isValidDate(value: string) {
-  if (!value) return false
-  const parsed = Date.parse(value)
-  return !Number.isNaN(parsed)
+  return isValidDateOnly(value)
 }
 
 function buildSpec(): RegistrySpec {
@@ -468,8 +471,8 @@ function buildSpec(): RegistrySpec {
     name: form.name.trim() || null,
     tax_category_code: parseNumber(form.tax_category_code),
     tax_rate: parseNumber(form.tax_rate),
-    start_date: form.start_date || null,
-    expiration_date: form.expiration_date || null,
+    start_date: normalizeDateOnly(form.start_date) || null,
+    expiration_date: normalizeDateOnly(form.expiration_date) || null,
   }
 }
 
@@ -478,8 +481,9 @@ async function saveRecord() {
   const nameValue = String(form.name ?? '').trim()
   const taxCodeValue = String(form.tax_category_code ?? '').trim()
   const taxRateValue = String(form.tax_rate ?? '').trim()
-  const startDateValue = String(form.start_date ?? '').trim()
-  const expirationDateValue = String(form.expiration_date ?? '').trim()
+  const startDateValue = normalizeDateOnly(form.start_date)
+  const rawExpirationDateValue = String(form.expiration_date ?? '').trim()
+  const expirationDateValue = normalizeDateOnly(rawExpirationDateValue)
 
   if (!nameValue) {
     errors.name = t('alcoholTax.errors.nameRequired')
@@ -493,7 +497,7 @@ async function saveRecord() {
   if (!startDateValue || !isValidDate(startDateValue)) {
     errors.start_date = t('alcoholTax.errors.startDateInvalid')
   }
-  if (expirationDateValue && !isValidDate(expirationDateValue)) {
+  if (rawExpirationDateValue && !expirationDateValue) {
     errors.expiration_date = t('alcoholTax.errors.expirationDateInvalid')
   }
 

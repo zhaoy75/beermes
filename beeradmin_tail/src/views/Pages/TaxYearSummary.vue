@@ -129,6 +129,7 @@ import {
   loadAlcoholTypeReferenceData,
 } from '@/lib/alcoholTypeRegistry'
 import { supabase } from '@/lib/supabase'
+import { normalizeDateOnly } from '@/lib/dateOnly'
 import { calculateTaxAmount, normalizeTaxEventValue, resolveTaxEvent } from '@/lib/taxReport'
 import { formatYen, truncateYen } from '@/lib/moneyFormat'
 import { formatTotalVolumeFromLiters, millilitersToLiters, quantityToMilliliters } from '@/lib/volumeFormat'
@@ -161,8 +162,8 @@ interface CategoryRecord {
 
 interface TaxRateRecord {
   taxrate: number
-  effectDate: Date | null
-  expireDate: Date | null
+  effectDate: string | null
+  expireDate: string | null
 }
 
 interface MovementHeader {
@@ -338,8 +339,8 @@ function buildTaxRateIndex(rows: Array<{ spec?: Record<string, unknown> | null }
     if (!Number.isFinite(taxRateRaw)) return
     const entry: TaxRateRecord = {
       taxrate: taxRateRaw,
-      effectDate: spec.start_date ? new Date(String(spec.start_date)) : null,
-      expireDate: spec.expiration_date ? new Date(String(spec.expiration_date)) : null,
+      effectDate: normalizeDateOnly(spec.start_date) || null,
+      expireDate: normalizeDateOnly(spec.expiration_date) || null,
     }
     if (!index[categoryCode]) index[categoryCode] = []
     index[categoryCode].push(entry)
@@ -348,7 +349,7 @@ function buildTaxRateIndex(rows: Array<{ spec?: Record<string, unknown> | null }
   Object.values(index).forEach((records) => {
     records.sort((a, b) => {
       if (!a.effectDate || !b.effectDate) return 0
-      return a.effectDate.getTime() - b.effectDate.getTime()
+      return a.effectDate.localeCompare(b.effectDate)
     })
   })
   taxRateIndex.value = index
@@ -419,7 +420,8 @@ function applicableTaxRate(categoryId: string | null | undefined, dateStr: strin
   const records = taxRateIndex.value[code]
   if (!records || records.length === 0) return 0
   if (!dateStr) return records[records.length - 1]?.taxrate ?? 0
-  const date = new Date(dateStr)
+  const date = normalizeDateOnly(dateStr)
+  if (!date) return records[records.length - 1]?.taxrate ?? 0
   let candidate: TaxRateRecord | null = null
   for (const record of records) {
     const effectOk = !record.effectDate || date >= record.effectDate

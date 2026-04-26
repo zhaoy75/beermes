@@ -28,12 +28,13 @@
     search field should include:
       バッチ名
       ステータス
-      開始日  with calendar picker
-      終了日  with calendar picker
+      開始日  with calendar picker, date-only YYYY-MM-DD
+      終了日  with calendar picker, date-only YYYY-MM-DD
       a horizontal line 
       fields in entity_attr_set in domain "batch". 
         field name should be choose according to system language setting
         field text and input method should follow the attr_def rule
+        date fields should use entity_attr.value_date as YYYY-MM-DD
   　
 ### バッチリスト
     a list columns include the same fields in search section and a 操作 column with edit & delete button 
@@ -42,8 +43,8 @@
     Modal dialog to let user input 
       レシピ (optional, only shown when development mode is on)
       バッチ名 (should not to be blank)
-      開始日  with calendar picker
-      終了日  with calendar picker
+      開始日  with calendar picker, saved as YYYY-MM-DD
+      終了日  with calendar picker, saved as YYYY-MM-DD
       fields from entity_attr_set in domain "batch" (all optional at create time)
     A cancel and confirm button 
     
@@ -72,6 +73,8 @@
 ## Business Rules
 - default value of search section
   開始日 should be two months previous
+- 開始日 and 終了日 are date-only business dates; do not show or save time
+- 終了日 filters are inclusive for the whole selected day
 - normal user can not delete batch whose status is in_progress or completed
 
 ## Data Handling

@@ -5,7 +5,9 @@ Update batch fields.
 
 ## Input Contract
 - Required: `p_batch_id`.
-- Optional patch keys: status/timestamps/notes/meta/kpi.
+- Optional patch keys: status/date fields/notes/meta/kpi.
+- `planned_start`, `planned_end`, `actual_start`, and `actual_end` are date-only business fields.
+- Send these date fields as `YYYY-MM-DD`; the function truncates them to day precision before storing.
 
 ## Validation
 - Batch must exist and be tenant-visible.
@@ -16,6 +18,7 @@ Update batch fields.
 
 ## Behavior
 - Patch `mes_batches` with only provided fields.
+- Store batch date-like fields at day precision for compatibility with current `timestamptz` columns.
 
 ## Output
 - Return `p_batch_id`.

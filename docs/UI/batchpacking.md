@@ -240,6 +240,8 @@ Batch attribute validation requirement:
   - text_regex
   - allowed_values
 - if any attribute is invalid, save must be blocked and the field error must be shown inline
+- before opening or saving `実績生産量`, required batch attributes must be entered
+- actual yield save must persist current batch attributes to `entity_attr` before product production is posted
 - For Filling rows, Batch Edit page must display:
   - `明細総容量` using the same `sample_flg = false` line-total rule as Batch Packing
   - `詰口残数量` using the same `詰口払出数量 - 明細総容量` rule as Batch Packing

@@ -708,6 +708,7 @@
 </template>
 
 <script setup lang="ts">
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
@@ -732,6 +733,10 @@ import {
   normalizeBatchAttrDataType,
   validateBatchAttrField,
 } from '@/lib/batchAttrValidation'
+import {
+  dateOnlyToUtcStartOfDayIso,
+  normalizeDateOnly,
+} from '@/lib/dateOnly'
 import { checkLotChronology, lotChronologyViolationMessage } from '@/lib/lotChronology'
 import { formatRpcErrorMessage, toRpcUserError } from '@/lib/rpcErrors'
 import { supabase } from '@/lib/supabase'
@@ -1596,7 +1601,7 @@ async function loadBatchAttributes(batchUuid: string) {
       const dataType = normalizeBatchAttrDataType(attr.data_type)
       if (dataType === 'number') value = valueRow?.value_num ?? ''
       else if (dataType === 'bool') value = valueRow?.value_bool ?? false
-      else if (dataType === 'date') value = valueRow?.value_date ?? ''
+      else if (dataType === 'date') value = normalizeDateOnly(valueRow?.value_date)
       else if (dataType === 'timestamp') value = toInputDateTime(valueRow?.value_ts)
       else if (dataType === 'json') value = valueRow?.value_json ? JSON.stringify(valueRow.value_json, null, 2) : ''
       else if (dataType === 'ref') {
@@ -1673,6 +1678,22 @@ function validateBatchAttributes() {
   return !hasError
 }
 
+function ensureActualYieldAttributePrerequisites() {
+  if (attrLoading.value) {
+    const message = t('batch.edit.actualYieldAttrLoading')
+    batchSaveError.value = message
+    showPackingNotice(message)
+    return false
+  }
+  if (!validateBatchAttributes()) {
+    const message = t('batch.edit.actualYieldAttrRequired')
+    batchSaveError.value = message
+    showPackingNotice(message)
+    return false
+  }
+  return true
+}
+
 async function saveBatchAttributes(batchUuid: string) {
   if (!validateBatchAttributes()) {
     throw new Error(batchSaveError.value || t('batch.edit.errors.attrInvalid'))
@@ -1705,7 +1726,7 @@ async function saveBatchAttributes(batchUuid: string) {
     const row: Record<string, any> = { ...base }
     if (field.data_type === 'number') row.value_num = Number(field.value)
     else if (field.data_type === 'bool') row.value_bool = Boolean(field.value)
-    else if (field.data_type === 'date') row.value_date = field.value
+    else if (field.data_type === 'date') row.value_date = normalizeDateOnly(field.value)
     else if (field.data_type === 'timestamp') row.value_ts = fromInputDateTime(String(field.value))
     else if (field.data_type === 'json') row.value_json = parseJsonValue(String(field.value))
     else if (field.data_type === 'ref') {
@@ -2159,6 +2180,7 @@ function openRelationDialog(row?: BatchRelationRow) {
 }
 
 function openActualYieldDialog() {
+  if (!ensureActualYieldAttributePrerequisites()) return
   actualYieldDialog.open = true
   actualYieldDialog.loading = false
   actualYieldDialog.globalError = ''
@@ -2191,10 +2213,18 @@ async function saveActualYieldDialog() {
     actualYieldDialog.globalError = t('batch.edit.actualYieldSaveFailed')
     return
   }
+  if (!ensureActualYieldAttributePrerequisites()) {
+    actualYieldDialog.globalError = t('batch.edit.actualYieldAttrRequired')
+    return
+  }
 
   actualYieldDialog.loading = true
   actualYieldDialog.globalError = ''
+  let failedStage: 'attributes' | 'save' | 'produce' = 'attributes'
   try {
+    await saveBatchAttributes(batchId.value)
+
+    failedStage = 'save'
     const patch: Record<string, any> = {
       actual_yield: qty,
       actual_yield_uom: uomId,
@@ -2211,15 +2241,14 @@ async function saveActualYieldDialog() {
       fallbackKey: 'batch.edit.actualYieldSaveFailed',
     })
 
+    failedStage = 'produce'
     batchForm.actual_yield = String(qty)
     batchForm.actual_yield_uom = uomId
     batch.value.actual_yield = qty
     batch.value.actual_yield_uom = uomId
     batch.value.meta = patch.meta
 
-    const movementAt = batch.value.actual_end
-      ? new Date(batch.value.actual_end).toISOString()
-      : new Date().toISOString()
+    const movementAt = dateOnlyToUtcStartOfDayIso(batch.value.actual_end) ?? new Date().toISOString()
     const batchCode = String(batch.value.batch_code ?? 'BATCH')
     const normalizedQty = Number(qty).toFixed(6)
     const idempotencyKey = `batch_actual_yield:${batchId.value}:${normalizedQty}:${uomId}`
@@ -2262,9 +2291,14 @@ async function saveActualYieldDialog() {
     showPackingNotice(t('batch.edit.actualYieldSaved'))
   } catch (err) {
     const detail = extractErrorMessage(err)
+    const baseMessage = failedStage === 'attributes'
+      ? t('batch.edit.actualYieldAttrSaveFailed')
+      : failedStage === 'produce'
+        ? t('batch.edit.actualYieldProduceFailed')
+        : t('batch.edit.actualYieldSaveFailed')
     actualYieldDialog.globalError = detail
-      ? `${t('batch.edit.actualYieldSaveFailed')} (${detail})`
-      : t('batch.edit.actualYieldSaveFailed')
+      ? `${baseMessage} (${detail})`
+      : baseMessage
   } finally {
     actualYieldDialog.loading = false
   }
@@ -3748,17 +3782,7 @@ function toNumber(value: any): number | null {
 }
 
 function toInputDate(value: string | null | undefined) {
-  if (!value) return ''
-  try {
-    const d = new Date(value)
-    const pad = (n: number) => String(n).padStart(2, '0')
-    const yyyy = d.getFullYear()
-    const mm = pad(d.getMonth() + 1)
-    const dd = pad(d.getDate())
-    return `${yyyy}-${mm}-${dd}`
-  } catch {
-    return ''
-  }
+  return normalizeDateOnly(value)
 }
 
 function toInputDateTime(value: string | null | undefined) {
@@ -3778,12 +3802,7 @@ function toInputDateTime(value: string | null | undefined) {
 }
 
 function fromInputDate(value: string) {
-  if (!value) return null
-  try {
-    return new Date(value).toISOString()
-  } catch {
-    return value
-  }
+  return normalizeDateOnly(value) || null
 }
 
 function fromInputDateTime(value: string) {

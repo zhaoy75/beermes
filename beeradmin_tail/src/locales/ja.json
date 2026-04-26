@@ -404,6 +404,9 @@
       "actualYieldRequired": "実績生産量は0より大きい値を入力してください。",
       "actualYieldMax": "実績生産量は {max} 以下で入力してください。",
       "actualYieldStatusBlocked": "実績生産量はバッチステータスが製造中または完了のときのみ入力できます。",
+      "actualYieldAttrLoading": "バッチ属性を読み込み中です。完了後に実績生産量を入力してください。",
+      "actualYieldAttrRequired": "実績生産量を入力する前に、必須のバッチ属性を入力してください。",
+      "actualYieldAttrSaveFailed": "必須バッチ属性の保存に失敗しました。",
       "actualYieldUomRequired": "実績生産単位を選択してください。",
       "actualYieldSite": "製造サイト",
       "actualYieldSiteRequired": "製造サイトを選択してください。",
@@ -2763,6 +2766,10 @@
       "taxReport": "酒税申告",
       "taxReportProfile": "申告基本情報",
       "taxableRemovalReport": "課税移出一覧表",
+      "nonTaxableRemovalLedger": "未納税移出帳",
+      "exportExemptLedger": "輸出免税帳",
+      "nonTaxableReceiptLedger": "未納税移入帳",
+      "returnToFactoryLedger": "戻入帳",
       "packing": "充填管理",
       "taxCalc": "課税計算",
       "unpaidMove": "未納税搬入出",
@@ -3385,6 +3392,68 @@
     },
     "errors": {
       "loadFailed": "課税移出一覧表の読み込みに失敗しました。"
+    }
+  },
+  "taxLedgerReport": {
+    "filters": {
+      "businessYear": "年度",
+      "month": "month",
+      "liquorCode": "酒類分類"
+    },
+    "defaults": {
+      "allMonths": "すべて",
+      "allLiquorCodes": "すべて"
+    },
+    "results": {
+      "count": "{count}件"
+    },
+    "export": {
+      "button": "Excel Export",
+      "exporting": "出力中…",
+      "generatedAt": "生成日時",
+      "businessYear": "年度",
+      "noData": "出力対象のデータがありません。",
+      "failed": "帳票 Excel ファイル生成に失敗しました。"
+    },
+    "summary": {
+      "title": "年度サマリー",
+      "subtitle": "選択年度の明細を酒類分類・ABV別に数量と個数で集計します。",
+      "columns": {
+        "liquorCode": "酒類分類",
+        "abv": "ABV",
+        "quantityMl": "数量(L)",
+        "packageCount": "個数"
+      }
+    },
+    "table": {
+      "title": "明細",
+      "columns": {
+        "movementAt": "年月日",
+        "item": "品目",
+        "brand": "製品名",
+        "abv": "ABV",
+        "container": "容器",
+        "containerType": "種類",
+        "packageCount": "個数",
+        "quantityMl": "数量(L)",
+        "taxRate": "適用税率",
+        "sourceAddress": "移出者所在地",
+        "sourceName": "移出者名称",
+        "destinationAddress": "移出先所在地",
+        "destinationName": "移出先名称",
+        "recipientAddress": "受取人住所",
+        "location": "所在地",
+        "exporterAddress": "移出者所在地",
+        "exportDestinationAddress": "輸出先所在地",
+        "exportDestinationName": "輸出先名称",
+        "transferorAddress": "引渡人所在地",
+        "deliveryAddress": "引渡先所在地",
+        "lotNo": "ロット番号",
+        "notes": "摘要"
+      }
+    },
+    "errors": {
+      "loadFailed": "帳票の読み込みに失敗しました。"
     }
   },
   "recipe": {

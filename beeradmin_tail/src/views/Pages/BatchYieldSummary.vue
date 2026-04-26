@@ -117,6 +117,7 @@
 </template>
 
 <script setup lang="ts">
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { computed, reactive, ref, watch, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
@@ -129,6 +130,11 @@ import {
   resolveReleasedRecipeName,
   type BatchRecipeAttrFallback,
 } from '@/lib/batchRecipeSnapshot'
+import {
+  formatDateOnly,
+  nextDateOnly,
+  normalizeDateOnly,
+} from '@/lib/dateOnly'
 import { supabase } from '@/lib/supabase'
 import { formatVolumeNumber } from '@/lib/volumeFormat'
 
@@ -179,15 +185,15 @@ const uomLookup = computed(() => {
 })
 
 const filteredBatches = computed(() => {
-  const fromTs = filters.dateFrom ? new Date(`${filters.dateFrom}T00:00:00`).getTime() : null
-  const toTs = filters.dateTo ? new Date(`${filters.dateTo}T23:59:59`).getTime() : null
+  const fromDate = normalizeDateOnly(filters.dateFrom)
+  const toDate = normalizeDateOnly(filters.dateTo)
   return batches.value.filter((batch) => {
     const matchesStyle = !filters.style || (batch.style || '') === filters.style
     const matchesRecipe = !filters.recipeId || batch.recipeId === filters.recipeId
     const matchesStatus = !filters.status || (batch.status || '') === filters.status
-    const batchTs = batch.planned_start ? new Date(batch.planned_start).getTime() : null
-    const matchesFrom = fromTs == null || (batchTs != null && batchTs >= fromTs)
-    const matchesTo = toTs == null || (batchTs != null && batchTs <= toTs)
+    const batchDate = normalizeDateOnly(batch.planned_start)
+    const matchesFrom = !fromDate || (!!batchDate && batchDate >= fromDate)
+    const matchesTo = !toDate || (!!batchDate && batchDate <= toDate)
     return matchesStyle && matchesRecipe && matchesStatus && matchesFrom && matchesTo
   })
 })
@@ -231,12 +237,7 @@ function formatPercent(value: number | null | undefined) {
 }
 
 function formatDate(value: string | null) {
-  if (!value) return '—'
-  try {
-    return new Intl.DateTimeFormat(locale.value).format(new Date(value))
-  } catch {
-    return value
-  }
+  return formatDateOnly(value, locale.value)
 }
 
 async function loadUoms() {
@@ -317,8 +318,10 @@ async function fetchBatches() {
       .select('id, batch_code, batch_label, product_name, status, planned_start, kpi, meta, mes_recipe_id, released_reference_json, recipe_json')
       .eq('tenant_id', tenant)
 
-    if (filters.dateFrom) batchQuery.gte('planned_start', `${filters.dateFrom}`)
-    if (filters.dateTo) batchQuery.lte('planned_start', `${filters.dateTo}T23:59:59`)
+    const dateFrom = normalizeDateOnly(filters.dateFrom)
+    const dateToNext = nextDateOnly(filters.dateTo)
+    if (dateFrom) batchQuery.gte('planned_start', dateFrom)
+    if (dateToNext) batchQuery.lt('planned_start', dateToNext)
 
     const { data: batchRows, error: batchError } = await batchQuery
     if (batchError) throw batchError

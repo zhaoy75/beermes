@@ -112,7 +112,7 @@
           <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div v-for="field in attrFields" :key="field.attr_id">
               <label class="block text-sm text-gray-600 mb-1">
-                {{ attrLabel(field) }}
+                {{ attrLabel(field) }}<span v-if="field.required" class="text-red-600">*</span>
               </label>
               <template v-if="field.data_type === 'ref'">
                 <select v-model="field.value" class="w-full h-[40px] border rounded px-3 bg-white">
@@ -545,6 +545,10 @@ import {
   normalizeBatchAttrDataType,
   validateBatchAttrField,
 } from '@/lib/batchAttrValidation'
+import {
+  dateOnlyToUtcStartOfDayIso,
+  normalizeDateOnly,
+} from '@/lib/dateOnly'
 import { DEVELOPMENT_MODE_ENABLED } from '@/lib/devMode'
 import { toRpcUserError } from '@/lib/rpcErrors'
 import { supabase } from '@/lib/supabase'
@@ -1210,7 +1214,7 @@ async function loadBatchAttributes(batchUuid: string) {
       const dataType = normalizeBatchAttrDataType(attr.data_type)
       if (dataType === 'number') value = valueRow?.value_num ?? ''
       else if (dataType === 'bool') value = valueRow?.value_bool ?? false
-      else if (dataType === 'date') value = valueRow?.value_date ?? ''
+      else if (dataType === 'date') value = normalizeDateOnly(valueRow?.value_date)
       else if (dataType === 'timestamp') value = toInputDateTime(valueRow?.value_ts)
       else if (dataType === 'json') value = valueRow?.value_json ? JSON.stringify(valueRow.value_json, null, 2) : ''
       else if (dataType === 'ref') {
@@ -1248,12 +1252,12 @@ async function loadBatchAttributes(batchUuid: string) {
   }
 }
 
-function validateBatchAttributes() {
+function validateBatchAttributes(options: { enforceRequired?: boolean } = {}) {
   let hasError = false
   batchSaveError.value = ''
 
   for (const field of attrFields.value) {
-    if (validateBatchAttributeField(field)) hasError = true
+    if (validateBatchAttributeField(field, options)) hasError = true
   }
 
   if (hasError) {
@@ -1263,13 +1267,13 @@ function validateBatchAttributes() {
   return !hasError
 }
 
-function validateBatchAttributeField(field: AttrField) {
+function validateBatchAttributeField(field: AttrField, options: { enforceRequired?: boolean } = {}) {
   field.error = validateBatchAttrField(
     {
       code: field.code,
       name: attrLabel(field),
       data_type: field.data_type,
-      required: false,
+      required: options.enforceRequired ? field.required : false,
       num_min: field.num_min,
       num_max: field.num_max,
       text_regex: field.text_regex,
@@ -1291,14 +1295,30 @@ function validateBatchAttributeField(field: AttrField) {
   return field.error
 }
 
+function ensureActualYieldAttributePrerequisites() {
+  if (attrLoading.value) {
+    const message = t('batch.edit.actualYieldAttrLoading')
+    batchSaveError.value = message
+    showPackingNotice(message)
+    return false
+  }
+  if (!validateBatchAttributes({ enforceRequired: true })) {
+    const message = t('batch.edit.actualYieldAttrRequired')
+    batchSaveError.value = message
+    showPackingNotice(message)
+    return false
+  }
+  return true
+}
+
 function parseOptionalNumber(value: unknown) {
   if (value == null || value === '') return null
   const parsed = typeof value === 'number' ? value : Number(value)
   return Number.isFinite(parsed) ? parsed : null
 }
 
-async function saveBatchAttributes(batchUuid: string) {
-  if (!validateBatchAttributes()) {
+async function saveBatchAttributes(batchUuid: string, options: { enforceRequired?: boolean } = {}) {
+  if (!validateBatchAttributes(options)) {
     throw new Error(batchSaveError.value || t('batch.edit.errors.attrInvalid'))
   }
 
@@ -1329,7 +1349,7 @@ async function saveBatchAttributes(batchUuid: string) {
     const row: Record<string, any> = { ...base }
     if (field.data_type === 'number') row.value_num = Number(field.value)
     else if (field.data_type === 'bool') row.value_bool = Boolean(field.value)
-    else if (field.data_type === 'date') row.value_date = field.value
+    else if (field.data_type === 'date') row.value_date = normalizeDateOnly(field.value)
     else if (field.data_type === 'timestamp') row.value_ts = fromInputDateTime(String(field.value))
     else if (field.data_type === 'json') row.value_json = parseJsonValue(String(field.value))
     else if (field.data_type === 'ref') {
@@ -1811,6 +1831,7 @@ function openActualYieldDialog() {
     showPackingNotice(t('batch.edit.actualYieldStatusBlocked'))
     return
   }
+  if (!ensureActualYieldAttributePrerequisites()) return
   actualYieldDialog.open = true
   actualYieldDialog.loading = false
   actualYieldDialog.globalError = ''
@@ -1935,19 +1956,24 @@ async function saveActualYieldDialog() {
     actualYieldDialog.errors = errors
     return
   }
-    if (!batchId.value || !batch.value) {
-      actualYieldDialog.globalError = t('batch.edit.actualYieldSaveFailed')
-      return
-    }
-    const targetQty = qty as number
+  if (!batchId.value || !batch.value) {
+    actualYieldDialog.globalError = t('batch.edit.actualYieldSaveFailed')
+    return
+  }
+  if (!ensureActualYieldAttributePrerequisites()) {
+    actualYieldDialog.globalError = t('batch.edit.actualYieldAttrRequired')
+    return
+  }
+  const targetQty = qty as number
 
-    actualYieldDialog.loading = true
+  actualYieldDialog.loading = true
   actualYieldDialog.globalError = ''
-  let failedStage: 'produce' | 'save' = 'produce'
+  let failedStage: 'attributes' | 'produce' | 'save' = 'attributes'
   try {
-    const movementAt = batch.value.actual_end
-      ? new Date(batch.value.actual_end).toISOString()
-      : new Date().toISOString()
+    await saveBatchAttributes(batchId.value, { enforceRequired: true })
+
+    failedStage = 'produce'
+    const movementAt = dateOnlyToUtcStartOfDayIso(batch.value.actual_end) ?? new Date().toISOString()
     const batchCode = String(batch.value.batch_code ?? 'BATCH')
     const normalizedQty = Number(qty).toFixed(6)
     const idempotencyKey = `batch_actual_yield:${batchId.value}:${normalizedQty}:${uomId}`
@@ -2021,7 +2047,9 @@ async function saveActualYieldDialog() {
     showPackingNotice(t('batch.edit.actualYieldSaved'))
   } catch (err) {
     const detail = extractErrorMessage(err)
-    const baseMessage = failedStage === 'save'
+    const baseMessage = failedStage === 'attributes'
+      ? t('batch.edit.actualYieldAttrSaveFailed')
+      : failedStage === 'save'
       ? t('batch.edit.actualYieldSaveFailed')
       : t('batch.edit.actualYieldProduceFailed')
     actualYieldDialog.globalError = detail
@@ -2629,17 +2657,7 @@ function toNumber(value: any): number | null {
 }
 
 function toInputDate(value: string | null | undefined) {
-  if (!value) return ''
-  try {
-    const d = new Date(value)
-    const pad = (n: number) => String(n).padStart(2, '0')
-    const yyyy = d.getFullYear()
-    const mm = pad(d.getMonth() + 1)
-    const dd = pad(d.getDate())
-    return `${yyyy}-${mm}-${dd}`
-  } catch {
-    return ''
-  }
+  return normalizeDateOnly(value)
 }
 
 function toInputDateTime(value: string | null | undefined) {
@@ -2659,12 +2677,7 @@ function toInputDateTime(value: string | null | undefined) {
 }
 
 function fromInputDate(value: string) {
-  if (!value) return null
-  try {
-    return new Date(value).toISOString()
-  } catch {
-    return value
-  }
+  return normalizeDateOnly(value) || null
 }
 
 function fromInputDateTime(value: string) {

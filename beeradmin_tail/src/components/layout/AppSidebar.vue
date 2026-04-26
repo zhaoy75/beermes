@@ -421,6 +421,10 @@ const menuGroups = computed<MenuGroup[]>(() => [
             name: t('sidebar.items.reportList'),
             subItems: [
               { name: t('sidebar.items.taxableRemovalReport'), path: "/taxableRemovalReport", pro: false },
+              { name: t('sidebar.items.nonTaxableRemovalLedger'), path: "/nonTaxableRemovalLedger", pro: false },
+              { name: t('sidebar.items.exportExemptLedger'), path: "/exportExemptLedger", pro: false },
+              { name: t('sidebar.items.nonTaxableReceiptLedger'), path: "/nonTaxableReceiptLedger", pro: false },
+              { name: t('sidebar.items.returnToFactoryLedger'), path: "/returnToFactoryLedger", pro: false },
             ],
           },
           { name: t('sidebar.items.taxYearSummary'), path: "/taxYearSummary", pro: false },

@@ -39,7 +39,10 @@
 ### Rules
 - default planned start from = two months before today
 - `planned start from` and `planned start to` must use calendar-selectable date inputs
+- `planned start from` and `planned start to` are date-only `YYYY-MM-DD` values
+- `planned start to` is inclusive for the whole selected day and should be implemented as `< next day`
 - dynamic batch attribute filters follow `attr_def` data type behavior
+- date dynamic batch attribute filters use `entity_attr.value_date` and remain `YYYY-MM-DD`
 - numeric dynamic batch attribute filters must validate entered values against `attr_def.num_min` / `attr_def.num_max`
 - invalid numeric batch attribute filters should show inline error text and should not be applied until corrected
 - filter values are optional
@@ -166,6 +169,8 @@
 ### Rules
 - recipe is nullable
 - `planned start` and `planned end` must use calendar-selectable date inputs
+- `planned start` and `planned end` are date-only `YYYY-MM-DD` values and should not show or save time
+- date attributes in the create dialog are saved to `entity_attr.value_date` as `YYYY-MM-DD`
 - if recipe is selected:
   - call `create_batch_from_recipe`
   - released recipe info and step rows are created

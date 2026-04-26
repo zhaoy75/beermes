@@ -1,889 +1,163 @@
 # Current Task
 
 ## Active Goal
-- Define the final tax-report source movement tracking process so submitted tax reports can block product-move rollback safely.
+- Design several tax ledger report pages under `税務管理 > 帳票一覧`:
+  - `未納税移出帳`
+  - `輸出免税帳`
+  - `未納税移入帳`
+  - `戻入帳`
 
 ## Active Scope
-- Add a narrow source-reference table that records which `inv_movements` / `inv_movement_lines` contributed to each saved tax report.
-- Make backend RPCs the authority for tax-report source movement selection, tax breakdown calculation, `tax_reports` save/update, and movement-ref persistence.
-- Define report status transitions and immutability rules for draft, stale, submitted, and approved reports.
-- Define rollback blocking rules for submitted/approved reports.
-- Define stale-draft handling when referenced source movements are changed or rolled back.
-- Translate the submitted/approved tax-report movement lock error in movement cancellation UI.
-- Generate a stored-function error catalog from active `raise exception` statements and classify translation readiness.
-- Clean the stored-function error catalog wording so it can be used as a translation and cleanup checklist.
-- Implement the frontend stored-function error formatter and apply it to main RPC-backed pages.
-- Add a header-level save action on the `申告書作成/編集` page next to `一覧へ戻る`.
-- Redesign shared table column sort/filter controls to use one column action icon with a popup menu for ascending sort, descending sort, and filter.
-- Fix `移入出登録` cancellation so it reverses product-move lot and inventory effects instead of only voiding the movement header.
-- Change `ビール在庫管理` and the inventory search modal to display actual ABV instead of target ABV.
-- Fix product-move rollback timestamp handling so future-dated movements can be cancelled without using a sentinel date.
-- Apply the same rollback timestamp normalization to produce and filling rollback functions for consistency.
-- Fix product-move rollback for destination sites where `inv_inventory` rows are not maintained.
-- Align `inventory_count_flg` interpretation across rollback and inventory trigger definitions.
-- Hide batch-create recipe selection while recipe functions are still under development and development mode is disabled.
-- Show configured batch `entity_attr` fields in the batch-create dialog so users can input attributes before opening the batch edit page.
+- Match the UI pattern of the existing `課税移出一覧表` page.
+- Add one report page route/menu item per ledger.
+- Use one reusable page implementation if practical; report differences should live in config.
+- Each report page has a search section with:
+  - `年度`
+  - `月`
+  - `酒類コード`
+- Each report page reads tenant-scoped data from:
+  - `inv_movements`
+  - `inv_movement_lines`
+  - supporting lookup/enrichment tables already used by `課税移出一覧表`
+- Movement type mapping:
+  - `未納税移出帳`: `NON_TAXABLE_REMOVAL`
+  - `輸出免税帳`: `EXPORT_EXEMPT`
+  - `未納税移入帳`: `RETURN_TO_FACTORY_NON_TAXABLE`
+  - `戻入帳`: `RETURN_TO_FACTORY`
+- Each page has a business-year summary grouped by:
+  - `酒類コード`
+  - `ABV`
+- Summary totals include quantity and package count only.
+- Each page exports Excel:
+  - `未納税移出帳_<year>.xlsx`
+  - `輸出免税帳_<year>.xlsx`
+  - `未納税移入帳_<year>.xlsx`
+  - `戻入帳_<year>.xlsx`
+- Excel layouts should follow the provided sample workbook structure as closely as practical.
+- Business-year summary uses only the selected business year, not the visible month or `酒類コード` filters.
+- Excel export uses the selected business year and does not apply the visible month or `酒類コード` filters, consistent with `課税移出一覧表`.
 
 ## Active Non-Goals
-- Do not add a full `tax_report_lines` detail table.
-- Do not implement correction/amendment workflows for already submitted reports in this task.
-- Do not change e-Tax XML schemas.
-- Do not use `9999/12/31` as a cancellation movement date.
+- Do not calculate tax amount in the new yearly summaries.
+- Do not add edit actions to these report pages.
+- Do not change movement posting or tax event derivation.
+- Do not add new database tables.
+- Do not change existing `課税移出一覧表` behavior except for extracting shared report helpers when needed.
+- Do not add PDF export in this task.
 
 ## Active Affected Files
-- New DDL file: `DB/ddl/tax_report_movement_refs.sql`
-- [DB/ddl/taxreport.sql](/Users/zhao/dev/other/beer/DB/ddl/taxreport.sql)
-- [DB/ddl/inv_inventory.sql](/Users/zhao/dev/other/beer/DB/ddl/inv_inventory.sql)
-- [DB/dml/registry_def/inv_inventory_trigger_inventory_count_flg.sql](/Users/zhao/dev/other/beer/DB/dml/registry_def/inv_inventory_trigger_inventory_count_flg.sql)
-- RPC files under [DB/function](/Users/zhao/dev/other/beer/DB/function).
-- [DB/function/31_public.movement_save.sql](/Users/zhao/dev/other/beer/DB/function/31_public.movement_save.sql)
-- New rollback RPC: `DB/function/48_public.product_move_rollback.sql`
-- Existing rollback RPCs:
-  - `DB/function/45_public.product_produce_rollback.sql`
-  - `DB/function/47_public.product_filling_rollback.sql`
-- New function spec: `docs/db/function/ProductMoveRollback.md`
-- Function spec: `docs/db/function/ProductMove.md`
-- Function specs:
-  - `docs/db/function/ProductProduceRollback.md`
-  - `docs/db/function/ProductFilling.md`
-- Stored-function error catalog: `docs/db/function/stored-function-error-catalog.md`
-- [public.movement_save.md](/Users/zhao/dev/other/beer/docs/db/function/public.movement_save.md)
-- [TaxReportEditor.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/TaxReportEditor.vue)
-- [TaxReport.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/TaxReport.vue)
-- [ProducedBeer.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/ProducedBeer.vue)
-- Shared table controls:
-  - `beeradmin_tail/src/components/common/TableColumnHeader.vue`
-  - `beeradmin_tail/src/composables/useColumnTableControls.ts`
-  - Pages that consume `TableColumnHeader.vue`
-- Main RPC-backed UI pages:
-  - `BatchEdit.vue`
-  - `BatchList.vue`
-  - `BatchLotDag.vue`
-  - `BatchPacking.vue`
-  - `BatchStepExecution.vue`
-  - `ProductMoveFast.vue`
-  - `ProducedBeerInventory.vue`
-  - `ProducedBeerMovementEdit.vue`
-  - `ProducedBeerUnpacking.vue`
-  - `RecipeEdit.vue`
-  - `RecipeList.vue`
-  - `RecipeStepEditor.vue`
-- RPC helper consumers:
-  - `beeradmin_tail/src/lib/lotChronology.ts`
-  - `beeradmin_tail/src/stores/ruleengineLabels.ts`
-- New frontend helper: `beeradmin_tail/src/lib/rpcErrors.ts`
-- [ja.json](/Users/zhao/dev/other/beer/beeradmin_tail/src/locales/ja.json)
-- [en.json](/Users/zhao/dev/other/beer/beeradmin_tail/src/locales/en.json)
-- [tax-report-editor.md](/Users/zhao/dev/other/beer/docs/UI/tax-report-editor.md)
-- [tax-report.md](/Users/zhao/dev/other/beer/docs/UI/tax-report.md)
-- [product_beer.md](/Users/zhao/dev/other/beer/docs/UI/product_beer.md)
-- [produced-beer-inventory-management-spec.md](/Users/zhao/dev/other/beer/docs/UI/produced-beer-inventory-management-spec.md)
-- [inventory-search-shortcut-modal-spec.md](/Users/zhao/dev/other/beer/docs/UI/inventory-search-shortcut-modal-spec.md)
-- [useProducedBeerInventory.ts](/Users/zhao/dev/other/beer/beeradmin_tail/src/composables/useProducedBeerInventory.ts)
-- [InventorySearchModal.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/components/inventory/InventorySearchModal.vue)
-- [ProducedBeerInventory.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/ProducedBeerInventory.vue)
-- [batchRecipeSnapshot.ts](/Users/zhao/dev/other/beer/beeradmin_tail/src/lib/batchRecipeSnapshot.ts)
-- [BatchList.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/BatchList.vue)
-- [BatchCreateDialog.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/components/BatchCreateDialog.vue)
-- [batch-list-page.md](/Users/zhao/dev/other/beer/specs/batch-list-page.md)
-- [batchlist.md](/Users/zhao/dev/other/beer/docs/UI/batchlist.md)
-- New catalog: `docs/db/function/stored-function-error-catalog.md`
-- [specs/current-task.md](/Users/zhao/dev/other/beer/specs/current-task.md)
+- Spec:
+  - [specs/current-task.md](/Users/zhao/dev/other/beer/specs/current-task.md)
+- Docs to create/update:
+  - `docs/UI/tax-ledger-reports.md`
+- Frontend page/helper files:
+  - `beeradmin_tail/src/views/Pages/TaxLedgerReport.vue`
+  - `beeradmin_tail/src/lib/taxLedgerReport.ts`
+  - `beeradmin_tail/src/router/tenant-routes.ts`
+  - `beeradmin_tail/src/components/layout/AppSidebar.vue`
+  - `beeradmin_tail/src/locales/ja.json`
+  - `beeradmin_tail/src/locales/en.json`
+- Reference files:
+  - [TaxableRemovalReport.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/TaxableRemovalReport.vue)
+  - [taxableRemovalReport.ts](/Users/zhao/dev/other/beer/beeradmin_tail/src/lib/taxableRemovalReport.ts)
+  - sample Excel files under `/Users/zhao/Documents/FutureProject/ビール/受領資料/20250829/既存デモ/税務`
 
 ## Active Data Model / API Changes
-- Add table `public.tax_report_movement_refs`:
-  - `id uuid primary key default gen_random_uuid()`
-  - `tenant_id uuid not null`
-  - `tax_report_id uuid not null references public.tax_reports(id) on delete cascade`
-  - `movement_id uuid not null references public.inv_movements(id)`
-  - `movement_line_id uuid null references public.inv_movement_lines(id)`
-  - `tax_event text null`
-  - `role text not null default 'source'`
-  - `source_period_year int null`
-  - `source_period_month int null`
-  - `created_at timestamptz default now()`
-  - unique key on `(tenant_id, tax_report_id, movement_id, movement_line_id)`
-- Add indexes:
-  - `(tenant_id, movement_id)`
-  - `(tenant_id, tax_report_id)`
-  - optionally `(tenant_id, movement_line_id)` when line-level checks are used.
-- Enable tenant RLS and require inserted refs to point to same-tenant `tax_reports`, `inv_movements`, and `inv_movement_lines`.
-- Extend `tax_reports.status` to include `stale`.
-- Add backend RPCs:
-  - `public.tax_report_generate(p_doc jsonb) returns jsonb`
-    - inputs: optional `report_id`, `tax_type`, `tax_year`, `tax_month`, optional requested `status`, optional attachment/file metadata.
-    - reads source movements and movement lines for the period.
-    - calculates `volume_breakdown` and `total_tax_amount`.
-    - upserts `tax_reports`.
-    - replaces `tax_report_movement_refs` for the report in the same transaction.
-    - returns the saved report row and a source-ref summary.
-  - `public.tax_report_set_status(p_tax_report_id uuid, p_status text, p_reason text default null) returns uuid`
-    - controls transitions to `submitted` and `approved`.
-    - rejects submission if the report is `stale` or has no refs for a non-empty report.
-    - submitted/approved reports are read-only except status advancement and file metadata explicitly allowed by policy.
-  - `public.tax_report_mark_stale_for_movement(p_movement_id uuid) returns int`
-    - rejects movements already referenced by a `submitted` or `approved` report.
-    - marks draft reports that reference the movement as `stale`.
-    - used by rollback/update functions before mutating referenced source movements.
-- Update `public.movement_save(...)`:
-  - call `tax_report_mark_stale_for_movement` before changing the movement.
-- Add a stored-function error catalog that records:
-  - code/message source line.
-  - translation readiness: safe, duplicate/ambiguous, missing-details, uncoded.
-  - cleanup needed before a high-quality localized message can be produced.
-- Add message-writing rules for stored-function translations:
-  - user-facing message first, technical detail only in logs/details.
-  - translate by stable code, not raw SQL text.
-  - avoid table/function names unless the user needs them.
-  - use JSON `DETAIL` for dynamic values.
-- Add frontend `rpcErrors` helper:
-  - parse stored-function code prefixes from Supabase/PostgREST errors.
-  - read JSON `details` when available.
-  - map known codes to `rpcErrors.codes.<CODE>.message`.
-  - fall back to categorized messages for network/auth/permission/conflict/validation/server/unknown.
-  - expose a single `formatRpcErrorMessage(...)` function for pages.
-  - preserve plain local validation errors so page-level validation messages are not replaced by generic RPC fallbacks.
-- Add backend RPC:
-  - `public.product_move_rollback(p_doc jsonb) returns uuid`
-    - inputs: `product_movement_id`, `doc_no`, optional `movement_at`, `reason`, `notes`, `meta.idempotency_key`.
-    - rejects non-posted, missing, already reversed, or non-product-move target movements.
-    - calls `tax_report_mark_stale_for_movement` before changing the target movement.
-    - blocks rollback when a destination lot has downstream non-void movement use.
-    - reverses `inv_inventory` and `lot` balances for source and destination lots.
-    - marks the original product movement `void` and stores `reversed_by_movement_id`.
-    - normalizes rollback `movement_at` so the effective rollback timestamp is never before the target movement timestamp:
-      - when the requested/default rollback timestamp is before the target, use the target movement timestamp.
-      - keep the real operation timestamp in `created_at` / `voided_at`; do not use far-future sentinel dates.
-    - destination inventory reversal follows the destination site's inventory policy:
-      - when the destination site type maintains `inv_inventory`, an inventory row must exist with enough quantity and is decremented.
-      - when the destination site type suppresses `inv_inventory`, rollback ignores destination inventory rows and only reverses the destination lot balance.
-- Update rollback RPCs:
-  - `public.product_produce_rollback(p_doc jsonb) returns uuid`
-  - `public.product_filling_rollback(p_doc jsonb) returns uuid`
-  - Both use the same effective timestamp rule as `product_move_rollback`:
-    - `movement_at` is the requested rollback effective timestamp.
-    - when the requested/default rollback timestamp is before the target movement timestamp, use the target movement timestamp.
-    - keep actual operation time in `created_at` / `voided_at`.
-    - do not use `9999/12/31`.
-- No DB/API change for hiding recipe selection:
-  - the batch create dialog still calls `create_batch_from_recipe`.
-  - when development mode is disabled, the UI hides recipe selection and submits an empty recipe id so the RPC creates a header-only batch.
-  - recipe-option queries are skipped when the selector is hidden.
-- No DB/API change for batch-create attributes:
-  - load active batch `attr_set` / `attr_set_rule` / `attr_def` metadata already used by the batch list dynamic filters.
-  - render those fields in the create dialog using the configured data type.
-  - after `create_batch_from_recipe` returns the batch id, assign active batch attr sets and upsert non-empty values into `entity_attr`.
-  - keep empty optional values absent from `entity_attr`.
+- No schema changes.
+- No stored function changes planned for v1.
+- Frontend loader should query existing tables directly, consistent with `課税移出一覧表`.
+- Movement matching should use normalized tax event values from movement metadata:
+  - first `inv_movements.meta.tax_event`
+  - then fallback `inv_movements.meta.tax_decision_code`
+- Shared normalized row model should include:
+  - movement id / line id
+  - movement date
+  - movement type
+  - source/destination site
+  - item / liquor code
+  - brand/product name
+  - ABV
+  - package/container label
+  - package count
+  - quantity in mL
+  - display quantity
+  - tax rate if present
+  - source/destination address fields
+  - lot number
+  - notes
+- Quantity calculation follows the domain rule:
+  - durable internal volume is mL
+  - total display can show L where useful
+  - ledger detail/export quantity should follow the sample workbook and existing report convention
 
-## Active Final Process
-1. User chooses a report period in the editor.
-2. The UI calls `tax_report_generate`.
-3. The backend selects reportable movements from `inv_movements` / `inv_movement_lines` using tenant, period, non-void status, and reportable tax-event/doc-type rules.
-4. The backend calculates the report breakdown and tax total from the selected source rows.
-5. The backend upserts `tax_reports`.
-6. The backend deletes old refs for the report and inserts new `tax_report_movement_refs` for every source movement line included in the calculation.
-7. The frontend uses the returned saved report data for edit/preview and XML/file generation.
-8. When the user marks the report submitted, the UI calls `tax_report_set_status(..., 'submitted')`.
-9. Once submitted or approved, the report refs become hard locks for normal movement update/rollback.
-10. If a draft report references a movement that is later corrected, the movement update/rollback marks that report `stale`; stale reports must be regenerated before XML export or submission.
+## Active Implementation Design
+1. Built a generic tax-ledger report config layer:
+   - one config per report type
+   - title, route, tax event, file name, detail columns, workbook sheets
+2. Built a shared loader in `taxLedgerReport.ts`:
+   - fetch matching `inv_movements`
+   - fetch lines for matched movements
+   - enrich from `mes_batches`, `entity_attr`, `mst_package`, `mst_uom`, `mst_sites`, `lot`
+3. Built one reusable `TaxLedgerReport.vue`:
+   - uses route meta/param to select report config
+   - same visual structure as `TaxableRemovalReport.vue`
+   - filters by fiscal year, month, liquor code
+   - business-year summary groups by liquor code + ABV and uses fiscal year only
+4. Excel export:
+   - uses existing workbook helper without changing `課税移出一覧表`
+   - uses two gray header rows for the `容器` / `種類・個数` structure instead of true merged cells
+   - keep gray bold header cells and bordered data rows
+   - workbook contents use selected fiscal year, ignoring page month/liquor filters like `課税移出一覧表`
+5. Added routes/menu entries under `税務管理 > 帳票一覧`.
+
+## Active Route / Menu Plan
+- `未納税移出帳`
+  - route path: `/nonTaxableRemovalLedger`
+  - route name: `NonTaxableRemovalLedger`
+- `輸出免税帳`
+  - route path: `/exportExemptLedger`
+  - route name: `ExportExemptLedger`
+- `未納税移入帳`
+  - route path: `/nonTaxableReceiptLedger`
+  - route name: `NonTaxableReceiptLedger`
+- `戻入帳`
+  - route path: `/returnToFactoryLedger`
+  - route name: `ReturnToFactoryLedger`
 
 ## Active Validation Plan
-- Spec-only pass: run `git diff --check`.
-- Implementation validation:
-  - create a draft report and confirm refs are inserted for contributing movements.
-  - update an existing draft and confirm refs are replaced, not duplicated.
-  - compare backend-generated breakdown against the current frontend-generated breakdown for the same period.
-  - confirm source refs are generated from the same movement lines as the breakdown.
-  - confirm frontend cannot submit a stale report.
-  - confirm submitted/approved report refs block `product_move_rollback`.
-  - confirm draft refs do not block rollback, but the draft becomes stale.
-  - confirm RLS prevents cross-tenant report ref reads/writes.
-  - cancel a normal `移入出登録` move and confirm source inventory is restored, destination inventory is reduced, affected lot balances are restored, and the original movement becomes `void`.
-  - cancel a `移入出登録` move whose destination site suppresses `inv_inventory` and confirm rollback succeeds by reversing lot balances without requiring a destination inventory row.
-  - cancel a future-dated `移入出登録` move and confirm rollback succeeds with rollback `movement_at` equal to the target movement timestamp, not `9999/12/31`.
-  - cancel future-dated produce/filling movements and confirm rollback succeeds with rollback `movement_at` equal to the target movement timestamp.
-  - attempt to cancel a move whose destination lot has downstream non-void use and confirm rollback is rejected.
-  - with `VITE_DEVELOPMENT_MODE` disabled, open the batch create dialog and confirm the recipe selector is hidden and batch creation sends a blank recipe id.
-  - with `VITE_DEVELOPMENT_MODE` enabled, confirm the recipe selector is visible and recipe options are loaded.
-  - create a batch with batch attribute values and confirm rows are inserted into `entity_attr`.
-  - confirm numeric, JSON, and reference batch attribute inputs use the same validation and storage columns as the batch edit page.
+- Spec/design step:
+  - `git diff --check`
+- Implementation step:
+  - direct targeted ESLint for touched Vue/TS files
+  - `npm run type-check`
+  - `npm run test --if-present`
+  - JSON parse for locale files
+  - manual route/menu verification
+  - manual export workbook open check
 
 ## Active Findings
-- Current `tax_reports` stores aggregate `volume_breakdown`, files, and status, but does not preserve source movement IDs.
-- Current report generation in `TaxReportEditor.vue` queries `inv_movements` and `inv_movement_lines`; movement IDs are available during generation and then lost during aggregation.
-- Without a source-reference table, rollback can only use a period-level lock, which is safe but overly broad.
-- A narrow `tax_report_movement_refs` table gives accurate blocking without forcing a full report-line model.
-- The browser should not be the final authority for report source selection because rollback locks must be trustworthy.
-- Submitted/approved reports should make included source movements immutable for normal operational rollback.
-- Draft reports should not permanently block rollback, but any rollback/source movement change should force draft regeneration.
-- Bug found after implementation: backend generation joined `entity_attr` to `attr_def` by both `attr_id` and `tenant_id`; batch attribute definitions are system/zero-tenant rows while `entity_attr` values are tenant rows, so all beer-category lookups returned null and the generated report became empty.
+- Existing `課税移出一覧表` already has the target UI structure and filter behavior.
+- Existing workbook generator supports basic `.xlsx`, gray bold headers, and borders, but does not yet support merged two-row headers used by the samples.
+- Sample workbook sheets:
+  - `未納税移出帳`: `製造場`, `蔵置場`
+  - `未納税移入帳`: `蔵置場`, `製造場`
+  - `輸出免税帳`: `輸出免税帳`
+  - `戻入帳`: `戻入帳`
+- Sample workbook detail columns are similar but not identical. The reusable page should support report-specific address/name columns.
 
 ## Active Final Decisions
-- Use `tax_report_movement_refs` as the final source/audit lock table.
-- Use backend RPCs as the final authority for source movement selection, report calculation, report save, and ref persistence.
-- Do not use JSON-only movement ID storage inside `tax_reports.volume_breakdown` as the long-term lock mechanism.
-- Do not block rollback from draft refs; block only from refs attached to `submitted` or `approved` reports.
-- Mark draft reports `stale` when their referenced source movements are corrected or rolled back.
-- Keep `tax_report_movement_refs` as a source/audit lock table, not as official e-Tax detail rows.
-- Exclude `tax_event = NONE` and `RETURN_TO_FACTORY_NON_TAXABLE` from backend report rows and source refs.
-- Keep submitted/approved report rows immutable through the editor; only status advancement through `tax_report_set_status` is allowed.
-- Allow `draft` and `stale` reports to be deleted from the list page; submitted/approved reports remain protected.
-- Join `entity_attr` to `attr_def` by global `attr_id`; do not require matching `tenant_id` for system attribute definitions.
-- Map `TRM002: movement is locked by tax report (...)` to a localized movement-cancel message in the UI; keep unknown database errors visible as fallback.
-- Use the stored-function error catalog as the working list before adding broad locale coverage.
-- Prefer `formatRpcErrorMessage` at RPC catch boundaries; keep local validation errors unchanged.
-- Use `toRpcUserError` when a lower-level RPC helper should throw a UI-safe message to its caller.
-- Apply the new formatter first to the main operational RPC flows: tax report generation/save, movement cancel/save, fast movement, batch production/filling rollback, batch step backflush/equipment assignment, inventory trace/domestic removal, recipe schema lookup, ruleengine labels, and lot chronology warnings.
-- Keep the existing footer save button on the tax report editor, and add the same save action to the header so users can save without scrolling to the bottom.
-- For shared sortable/filterable table headers, show the column label as plain text and a single icon button as the only control in the header.
-- Clicking the icon opens a compact popup with:
-  - sort ascending
-  - sort descending
-  - filter input/select for that column
-- The popup should visually indicate the active sort direction and whether the column has an active filter.
-- `移入出登録` cancellation must call `product_move_rollback`; using `movement_save(status='void')` is not sufficient because it leaves `inv_inventory` and lot balances unchanged.
-- Product-move rollback writes a posted adjustment movement for audit, reverses inventory/lot quantities, then voids the original movement.
-- Product-move rollback does not insert rollback `lot_edge` rows; the audit relation is stored on rollback movement-line metadata so rollback does not change `lot_effective_created_at` for existing source lots.
-- Product-move rollback must not require destination `inv_inventory` when the destination site type suppresses inventory rows. `product_move` may still create a destination lot for lineage/reporting while the `inv_inventory` trigger skips the inventory row.
-- Product-move rollback ignores destination `inv_inventory` completely for site types where `inventory_count_flg = false`; this prevents legacy/stale suppressed-site inventory rows from blocking cancellation.
-- `registry_def.site_type.spec.inventory_count_flg` means:
-  - `true`: the site maintains `inv_inventory` rows.
-  - `false`: the site suppresses `inv_inventory` rows and may still keep lot lineage.
-- Product-move rollback uses `movement_at` as the business effective timestamp and `created_at` / `voided_at` as the operation timestamp.
-- If a rollback request timestamp is earlier than the target movement timestamp, normalize the rollback movement timestamp to the target movement timestamp instead of rejecting or using `9999/12/31`.
-- The cancel UI can keep sending the current timestamp as the requested rollback timestamp; `product_move_rollback` owns the effective timestamp normalization because it can lock and compare the target movement timestamp atomically.
-- Produce, filling, and product-move rollback functions share the same timestamp rule:
-  - `movement_at` is the business effective timestamp for the rollback movement.
-  - `created_at` / `voided_at` are the real operation timestamps.
-  - requested/default rollback timestamps earlier than the target movement timestamp are normalized to the target movement timestamp.
-  - far-future sentinel dates are not allowed.
-- Inventory page and inventory search modal ABV columns display actual ABV:
-  - column title is `ABV`
-  - prefer batch attribute `actual_abv`
-  - fallback to actual-like snapshot/meta `actual_abv` or generic `abv`
-  - do not fallback to `target_abv` for these two inventory views.
-- Batch creation treats recipe selection as a development-mode feature:
-  - when `VITE_DEVELOPMENT_MODE` is disabled, hide the recipe dropdown and do not query recipe options.
-  - when the dropdown is hidden, force `recipeId` to blank on submit.
-- Batch creation shows configured batch attributes:
-  - fields are sourced from active `attr_set` / `attr_set_rule` / `attr_def` rows for domain `batch`.
-  - labels follow `name_i18n` and the current locale.
-  - supported inputs: text/enum, number, boolean, date, timestamp, JSON, and configured references.
-  - all create-dialog batch attribute fields are optional for now, even when `attr_set_rule.required` or `attr_def.required` is true.
-  - values are persisted only after the batch id exists.
+- `戻入帳` source movement type is `RETURN_TO_FACTORY`.
+- `未納税移入帳` source movement type is `RETURN_TO_FACTORY_NON_TAXABLE`.
+- Business-year summaries include quantity/package only, not tax amount.
+- Export workbook output must keep gray bold headers and table rows per repository Excel rule.
+- New ledger pages reuse one component and differ by config.
+- `未納税移出帳` and `未納税移入帳` export split sheets by source/destination site type when that metadata can be resolved; unmatched rows are kept in the first sheet so they are not dropped.
 
 ## Active Validation Results
-- `git diff --check`: passed.
-- `npm run type-check` in `beeradmin_tail`: passed.
-- `npx eslint src/views/Pages/TaxReportEditor.vue src/views/Pages/TaxReport.vue --no-fix`: passed.
-- `npm run test --if-present` in `beeradmin_tail`: passed with no test script configured.
-- `npm run build:test` in `beeradmin_tail`: passed with existing CSS minifier warnings.
-- After fixing backend beer-category lookup, `git diff --check`, targeted ESLint, and `npm run type-check` passed.
-- After adding the localized `TRM002` cancellation message, `git diff --check`, `npx eslint src/views/Pages/ProducedBeer.vue --no-fix`, and `npm run type-check` passed.
-- After adding the stored-function error catalog, `git diff --check` passed.
-- After cleaning the stored-function error catalog wording, `git diff --check` passed.
-- After implementing the shared stored-function error formatter:
-  - `git diff --check`: passed.
-  - targeted ESLint for `rpcErrors.ts`, `lotChronology.ts`, `ruleengineLabels.ts`, `BatchList.vue`, `BatchLotDag.vue`, `RecipeEdit.vue`, `RecipeList.vue`, `RecipeStepEditor.vue`, and `ProducedBeerInventory.vue`: passed.
-  - `npm run type-check` in `beeradmin_tail`: passed.
-  - `npm run test --if-present` in `beeradmin_tail`: passed with no test script configured.
-  - `npm run build:test` in `beeradmin_tail`: passed with existing CSS minifier warnings.
-- After adding the tax report editor header save button:
-  - `git diff --check`: passed.
-  - `npx eslint src/views/Pages/TaxReportEditor.vue --no-fix`: passed.
-  - `npm run type-check` in `beeradmin_tail`: passed.
-- After redesigning shared table column sort/filter controls:
-  - `git diff --check`: passed.
-  - targeted ESLint for `TableColumnHeader.vue`, `useColumnTableControls.ts`, `UomMaster.vue`, `PackageMaster.vue`, `TaxReport.vue`, `TaxableRemovalReport.vue`, and `ProducedBeer.vue`: passed.
-  - `npm run type-check` in `beeradmin_tail`: passed.
-  - `npm run test --if-present` in `beeradmin_tail`: passed with no test script configured.
-- After adding `product_move_rollback` and switching `移入出登録` cancellation to it:
-  - `git diff --check`: passed.
-  - `npx eslint src/views/Pages/ProducedBeer.vue --no-fix`: passed.
-  - `npm run type-check` in `beeradmin_tail`: passed.
-  - `npm run test --if-present` in `beeradmin_tail`: passed with no test script configured.
-  - SQL runtime validation was not executed because `psql` is not installed in this workspace.
-- After changing inventory ABV display to actual ABV:
-  - `git diff --check`: passed.
-  - targeted ESLint for `useProducedBeerInventory.ts`, `ProducedBeerInventory.vue`, `InventorySearchModal.vue`, and `batchRecipeSnapshot.ts`: passed.
-  - `npm run type-check` in `beeradmin_tail`: passed.
-  - `npm run test --if-present` in `beeradmin_tail`: passed with no test script configured.
-- After changing the inventory actual-ABV column label to `ABV`:
-  - `git diff --check`: passed.
-  - locale JSON ESLint command completed with existing "ignored because no matching configuration" warnings only.
-  - `npm run type-check` in `beeradmin_tail`: passed.
-- After normalizing product-move rollback timestamps for future-dated target movements:
-  - `git diff --check`: passed.
-  - `npm run type-check` in `beeradmin_tail`: passed.
-  - `npm run test --if-present` in `beeradmin_tail`: passed with no test script configured.
-  - SQL runtime validation was not executed because `psql` is not installed in this workspace.
-- After applying rollback timestamp normalization to `product_produce_rollback` and `product_filling_rollback`:
-  - `git diff --check`: passed.
-  - `npm run type-check` in `beeradmin_tail`: passed.
-  - `npm run test --if-present` in `beeradmin_tail`: passed with no test script configured.
-  - `npm run lint --if-present` failed on existing project-wide lint issues outside this SQL/docs change; no unrelated auto-fix files were left in the diff.
-  - SQL runtime validation was not executed because `psql` is not installed in this workspace.
-- After fixing product-move rollback for destination sites that suppress `inv_inventory`:
-  - `git diff --check`: passed.
-  - `npm run type-check` in `beeradmin_tail`: passed.
-  - `npm run test --if-present` in `beeradmin_tail`: passed with no test script configured.
-  - `npm run lint --if-present` was not rerun after this SQL/docs-only patch; the earlier run in this session failed on existing project-wide lint issues outside this change.
-  - SQL runtime validation was not executed because `psql` is not installed in this workspace.
-- After correcting the `inventory_count_flg` inversion and ignoring destination inventory for suppressed sites:
-  - `git diff --check`: passed.
-  - `npm run type-check` in `beeradmin_tail`: passed.
-  - `npm run test --if-present` in `beeradmin_tail`: passed with no test script configured.
-  - SQL runtime validation was not executed because `psql` is not installed in this workspace.
-- After hiding batch-create recipe selection outside development mode and adding create-time batch attribute inputs:
-  - `git diff --check`: passed.
-  - `npx eslint src/views/Pages/BatchList.vue src/views/Pages/components/BatchCreateDialog.vue --no-fix`: passed.
-  - `npm run type-check` in `beeradmin_tail`: passed.
-  - `npm run test --if-present` in `beeradmin_tail`: passed with no test script configured.
-- After making create-dialog batch attributes optional:
-  - `git diff --check`: passed.
-  - `npx eslint src/views/Pages/components/BatchCreateDialog.vue --no-fix`: passed.
-  - `npm run type-check` in `beeradmin_tail`: passed.
-  - `npm run test --if-present` in `beeradmin_tail`: passed with no test script configured.
-
-## Previous Task: Source-Lot Chronology And Filling Rollback
-
-## Goal
-- Analyze and specify validation to prevent a movement/transaction date from being earlier than the source lot's business creation date.
-- Protect user-editable movement dates in UI flows from producing impossible lot chronology.
-- Fix `product_produce_rollback` so a produced lot that already has downstream usage reports the downstream dependency error before balance errors.
-- Fix batch filling delete so deleting a `詰口` packing event reverses the related `product_filling` movement effects instead of only hiding the movement header.
-- Align source-lot chronology checks with UI minute precision so a movement in the same displayed minute as source lot creation is allowed.
-
-## Scope
-- Identify the canonical source-lot creation timestamp for validation.
-- Identify backend entry points that create or update movements using source lots.
-- Identify UI pages where users can edit movement or transaction dates.
-- Recommend the safest implementation layer and edge-case behavior.
-- Add frontend early-warning checks on pages that expose user-editable movement/event timestamps.
-- Keep backend validation as the final authority.
-- Keep rollback behavior aligned with `docs/db/function/ProductProduceRollback.md`.
-- Keep filling delete atomic in the database; the UI must not manually repair movement lines, lot edges, inventory, and lots.
-- Treat source-lot chronology comparisons as minute-precision checks because `datetime-local` inputs currently do not capture seconds.
-
-## Findings
-- `inv_movements.movement_at` is user-controlled in several flows and is the business effective timestamp used by tax/reporting and lot trace.
-- `lot.created_at` is not a sufficient business creation date because it is database insert time; backdated production can create a lot today with an earlier `movement_at`.
-- `lot.produced_at` is not sufficient for moved/split/fill lots because it can preserve the original product production date instead of the specific lot record's creation/movement date.
-- The best business creation timestamp for product lots is the first `inv_movements.movement_at` joined through `lot_edge.to_lot_id = lot.id`; fallback should be `lot.produced_at`, then `lot.created_at` for legacy/raw-material lots without edges.
-- Product beer flows with source lots include:
-  - `public.product_move(p_doc)`
-  - `public.product_move_fast_post(p_docs)` through `product_move`
-  - `public.product_filling(p_doc)`
-  - `public.product_unpacking(p_doc)`
-  - `public.domestic_removal_complete(...)` through `product_move`
-- Additional lot-consuming paths exist outside `lot_edge`:
-  - raw material inventory create/edit/move writes `inv_movements` and stores lot id in line `meta.lot_id`
-  - batch-step backflush consumes material lots and stores lot id in line `meta.lot_id`
-- `public.movement_save(p_movement_id, p_doc)` can update `inv_movements.movement_at` after posting. This can invalidate chronology unless it validates both source lots used by that movement and downstream movements that already use lots created by that movement.
-- `public.product_produce_rollback(p_doc)` checked produced lot quantity before downstream lot usage, so a fully consumed/filled produced lot raised `PPR006` even when rollback should be blocked by downstream movements with `PPR005`.
-- `BatchPacking.vue` and `BatchEdit.vue` delete packing events by setting `inv_movements.status = 'void'`. For `packing_type = 'filling'`, this hides the event from the list but does not restore source lot quantity, remove filled lot availability, or write reversal lineage.
-- `datetime-local` inputs truncate seconds, so a source lot created at `21:20:30` and a packing movement entered as `21:20` could be rejected even though both display as `21:20`.
-
-## Recommended Implementation Plan
-1. Add a DB helper to resolve lot business creation time:
-   - input: `p_lot_id uuid`
-   - primary source: earliest `m.movement_at` from `lot_edge e join inv_movements m on m.id = e.movement_id where e.to_lot_id = p_lot_id and m.status <> 'void'`
-   - fallback: `lot.produced_at`
-   - fallback: `lot.created_at`
-2. Add a DB assertion helper for source-lot chronology:
-   - input: `p_movement_at timestamptz`, `p_source_lot_ids uuid[]`, optional context
-   - reject if any source lot creation time is after `p_movement_at`
-   - error should include lot number and both dates for clear UI feedback
-3. Call the assertion inside all posting functions before stock/lot mutation:
-   - `product_move`: `v_src_lot_id`
-   - `product_filling`: `v_from_lot_id`
-   - `product_unpacking`: `v_src_lot_id`
-   - `batch_step_complete_backflush`: explicit and FIFO-selected material lot ids before consumption
-   - raw-material movement creation path should move to an RPC or add equivalent validation before direct insert/update
-4. Add trigger protection for posted data:
-   - `lot_edge` before insert/update: if `from_lot_id` exists, movement date must be on/after source lot creation time
-   - `inv_movements` before update of `movement_at`: validate source lots already used by this movement
-   - for movements that created lots, also validate that the new movement date is not later than any downstream non-void movement that uses those created lots as a source
-5. Add UI pre-checks only as convenience:
-   - ProductMoveFast and produced beer movement edit should compare selected movement date with selected/candidate source lot creation date when known
-   - Batch packing/filling dialogs should compare event time with resolved source lot creation date when known
-   - UI must still rely on backend errors as the final authority
-
-## Non-Goals
-- Do not use UI-only validation as the final safeguard.
-- Do not rewrite historical inventory quantities in this pass.
-- Do not allow `movement_save` to silently change lot graph chronology.
-- Do not use `lot.created_at` alone as the validation source.
-
-## Affected Files For Implementation
-- [DB/function/03_public.lot_chronology.sql](/Users/zhao/dev/other/beer/DB/function/03_public.lot_chronology.sql)
-- [DB/function/44_public.product_move.sql](/Users/zhao/dev/other/beer/DB/function/44_public.product_move.sql)
-- [DB/function/43_public.product_filling.sql](/Users/zhao/dev/other/beer/DB/function/43_public.product_filling.sql)
-- [DB/function/71_public.product_unpacking.sql](/Users/zhao/dev/other/beer/DB/function/71_public.product_unpacking.sql)
-- [DB/function/72_public.batch_step_complete_backflush.sql](/Users/zhao/dev/other/beer/DB/function/72_public.batch_step_complete_backflush.sql)
-- [DB/function/45_public.product_produce_rollback.sql](/Users/zhao/dev/other/beer/DB/function/45_public.product_produce_rollback.sql)
-- [DB/function/47_public.product_filling_rollback.sql](/Users/zhao/dev/other/beer/DB/function/47_public.product_filling_rollback.sql)
-- [BatchEdit.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/BatchEdit.vue)
-- `DB/function/31_public.movement_save.sql` is protected indirectly by the new `inv_movements` update trigger.
-- raw material inventory movement path, currently [RawMaterialInventoryEdit.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/RawMaterialInventoryEdit.vue)
-- UI early-warning paths:
-  - [ProductMoveFast.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/ProductMoveFast.vue)
-  - [ProducedBeerMovementEdit.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/ProducedBeerMovementEdit.vue)
-  - [BatchPacking.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/BatchPacking.vue)
-  - [BatchStepExecution.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/BatchStepExecution.vue)
-- Shared frontend helper:
-  - [lotChronology.ts](/Users/zhao/dev/other/beer/beeradmin_tail/src/lib/lotChronology.ts)
-
-## Validation Plan
-- Add SQL tests or manual SQL cases:
-  - movement at same timestamp as source creation: allowed
-  - movement before source creation: rejected
-  - editing a posted movement earlier than source creation: rejected
-  - editing a lot-creating movement later than a downstream use of that lot: rejected
-  - void downstream movement should not block chronology update
-- Run frontend type-check/lint only if UI early warnings are implemented.
-- For frontend warning pass:
-  - run targeted ESLint for touched Vue/TS files
-  - run frontend type-check
-  - run unit tests if present
-  - run `npm run build:test`
-
-## Final Decisions
-- Added `public.lot_effective_created_at(p_lot_id uuid)` to resolve a lot's business creation timestamp from the first non-void `lot_edge.to_lot_id` movement, then `lot.produced_at`, then `lot.created_at`.
-- Added `public._assert_source_lot_not_after_movement(...)` to reject source lots created after the requested movement timestamp.
-- Source-lot chronology comparison uses minute precision in both DB and frontend early-warning logic; `21:20:00` and `21:20:59` are considered the same business minute.
-- Added a `lot_edge` trigger to protect all edge-based source-lot movement paths.
-- Added an `inv_movement_lines` trigger to protect legacy/direct movement-line paths that store source lot ids in line `meta`.
-- Added an `inv_movements` update trigger to protect changing `movement_at` after posting:
-  - validates existing source lots for that movement
-  - rejects moving a lot-creating movement later than downstream movements that already use the created lot
-- Added explicit pre-mutation assertions in `product_move`, `product_filling`, and `product_unpacking`.
-- Updated `batch_step_complete_backflush`:
-  - explicit lot consumption rejects if the step completion time is before the lot creation time
-  - FIFO candidate selection ignores lots not yet created at the step completion time
-- Added a shared frontend helper `lotChronology.ts` that calls `lot_effective_created_at` and formats early-warning messages.
-- Added frontend early-warning checks before posting user-editable movement/event dates:
-  - `ProductMoveFast.vue` checks allocated source lots before bulk posting.
-  - `ProducedBeerMovementEdit.vue` exposes `movement_at`, sends it to `product_move`, and checks selected source lots before save.
-  - `BatchPacking.vue` checks the resolved source lot for filling, transfer, and ship packing events.
-  - `BatchStepExecution.vue` checks selected actual-material lots before direct actual-material save and before backflush completion.
-- Frontend early-warning RPC failures are logged and do not block posting; the database validation remains the final authority after the DB helper/trigger deployment.
-- `ProductMoveFast.vue` preserves `LOT_TIME...` backend validation messages instead of replacing them with the generic RPC unavailable message.
-- The `inv_movements` chronology update trigger now also fires on `src_site_id` changes, because line-based lot validation depends on source-site semantics.
-- Voiding a lot-creating movement no longer skips downstream chronology validation; source-lot validation is skipped for voided movement rows, but downstream created-lot protection still runs.
-- `product_produce_rollback` now checks non-void downstream `lot_edge.from_lot_id` usage before checking produced lot quantity/inventory, matching the rollback spec and returning `PPR005` for child-dependency cases.
-- Added `product_filling_rollback` to reverse `product_filling` movements:
-  - rejects non-posted/non-filling/already-reversed movements
-  - rejects rollback when filled child lots have non-void downstream usage
-  - consumes/voids filled child lots through rollback lineage
-  - restores source lot and source inventory, including filling loss quantity
-  - marks the original filling movement `void` with `reversed_by_movement_id`
-- `BatchPacking.vue` and `BatchEdit.vue` now call `product_filling_rollback` when deleting a `filling` packing event; other packing event types keep the existing void-header behavior.
-
-## Validation Results
-- `git diff --check -- specs/current-task.md DB/function/03_public.lot_chronology.sql DB/function/43_public.product_filling.sql DB/function/44_public.product_move.sql DB/function/71_public.product_unpacking.sql DB/function/72_public.batch_step_complete_backflush.sql`: passed.
-- `git diff --check -- specs/current-task.md beeradmin_tail/src/lib/lotChronology.ts beeradmin_tail/src/views/Pages/ProductMoveFast.vue beeradmin_tail/src/views/Pages/ProducedBeerMovementEdit.vue beeradmin_tail/src/views/Pages/BatchPacking.vue`: passed.
-- `git diff --check -- specs/current-task.md DB/function/03_public.lot_chronology.sql beeradmin_tail/src/lib/lotChronology.ts beeradmin_tail/src/views/Pages/ProductMoveFast.vue beeradmin_tail/src/views/Pages/BatchStepExecution.vue beeradmin_tail/src/views/Pages/BatchPacking.vue beeradmin_tail/src/views/Pages/ProducedBeerMovementEdit.vue`: passed after review fixes.
-- `git diff --check -- DB/function/45_public.product_produce_rollback.sql specs/current-task.md`: passed.
-- `git diff --check -- specs/current-task.md DB/function/47_public.product_filling_rollback.sql beeradmin_tail/src/views/Pages/BatchPacking.vue beeradmin_tail/src/views/Pages/BatchEdit.vue`: passed.
-- `git diff --check -- specs/current-task.md DB/function/03_public.lot_chronology.sql beeradmin_tail/src/lib/lotChronology.ts`: passed after minute-precision chronology fix.
-- `npx eslint src/lib/lotChronology.ts --no-fix`: passed.
-- `npx eslint src/views/Pages/BatchStepExecution.vue --no-fix`: passed.
-- `npx eslint src/lib/lotChronology.ts src/views/Pages/ProductMoveFast.vue src/views/Pages/ProducedBeerMovementEdit.vue src/views/Pages/BatchPacking.vue --no-fix`: failed because the touched Vue files already contain existing lint debt, mostly `@typescript-eslint/no-explicit-any` and unused-function errors. The new shared helper passes ESLint.
-- `npx eslint src/lib/lotChronology.ts src/views/Pages/ProductMoveFast.vue src/views/Pages/ProducedBeerMovementEdit.vue src/views/Pages/BatchPacking.vue src/views/Pages/BatchStepExecution.vue --no-fix`: failed because `ProductMoveFast.vue`, `ProducedBeerMovementEdit.vue`, and `BatchPacking.vue` still contain existing lint debt; `lotChronology.ts` and `BatchStepExecution.vue` pass individually.
-- `npm run type-check` in `beeradmin_tail`: passed.
-- `npm run test --if-present` in `beeradmin_tail`: passed with no test script configured.
-- `npm run build:test` in `beeradmin_tail`: passed with existing CSS minifier warnings and existing large-chunk warnings.
-- `npx eslint src/views/Pages/BatchPacking.vue src/views/Pages/BatchEdit.vue --no-fix`: failed because `BatchPacking.vue` still contains existing `@typescript-eslint/no-explicit-any` lint debt; `BatchEdit.vue` did not introduce a new reported error in this targeted run.
-- SQL runtime validation was not executed in this workspace because `psql` is not installed; the new DB helper/trigger file should be applied and tested against Supabase/Postgres before release.
-
----
-
-# Previous Task: LIA260 XML Output
-
-## Goal
-- Add `LIA260` XML output to the generated `RLI0010_232` `.xtx` file.
-- Use existing `EXPORT_EXEMPT` report rows as the first source for `LIA260` detail rows.
-- Keep `LIA260` in `CATALOG` and `CONTENTS` only when export-exempt rows exist.
-
-## Scope
-- Update the RLI0010_232 XML builder so `LIA260` pages are emitted after `LIA220`.
-- Add a `LIA260` builder using `LIA260-003.xsd` and the local sample `.xtx` as references.
-- Populate supported `LIA260` fields from existing tax breakdown/profile data:
-  - `EOD00010/kubun_CD`
-  - `EOD00020` liquor code
-  - `EOD00030` item/category name
-  - `EOD00040` ABV
-  - `EOD00080` quantity in mL
-  - `EOD00090` export/sale date, using the report period date as a fallback
-  - `EOD00100` destination when source data exists; omit the optional field instead of writing placeholder filing data
-  - `EOD00110` export customs office when source data exists; omit the optional field instead of writing placeholder filing data
-  - `EOD00120` exporter/carrier address, using profile data when available
-  - `EOD00130` exporter/carrier name, using taxpayer/tenant name when available
-- Keep existing `LIA110` export-exempt summary behavior.
-- Keep database schema and RPC/API fields unchanged in this pass.
-
-## Non-Goals
-- Do not add new export-detail data-entry fields in this pass.
-- Do not change movement posting behavior.
-- Do not implement `LIA230`, `LIA240`, or `LIA250`.
-- Do not change official e-Tax schema validation behavior.
-
-## Affected Files
-- [specs/current-task.md](/Users/zhao/dev/other/beer/specs/current-task.md)
-- [docs/UI/tax-report-editor.md](/Users/zhao/dev/other/beer/docs/UI/tax-report-editor.md)
-- [beeradmin_tail/src/lib/taxReport.ts](/Users/zhao/dev/other/beer/beeradmin_tail/src/lib/taxReport.ts)
-- [beeradmin_tail/src/lib/taxreportxml/RLI0010_232/types.ts](/Users/zhao/dev/other/beer/beeradmin_tail/src/lib/taxreportxml/RLI0010_232/types.ts)
-- [beeradmin_tail/src/lib/taxreportxml/RLI0010_232/schemaMap.ts](/Users/zhao/dev/other/beer/beeradmin_tail/src/lib/taxreportxml/RLI0010_232/schemaMap.ts)
-- [beeradmin_tail/src/lib/taxreportxml/RLI0010_232/constants.ts](/Users/zhao/dev/other/beer/beeradmin_tail/src/lib/taxreportxml/RLI0010_232/constants.ts)
-- [beeradmin_tail/src/lib/taxreportxml/RLI0010_232/builders/root.ts](/Users/zhao/dev/other/beer/beeradmin_tail/src/lib/taxreportxml/RLI0010_232/builders/root.ts)
-- [beeradmin_tail/src/lib/taxreportxml/RLI0010_232/builders/lia260.ts](/Users/zhao/dev/other/beer/beeradmin_tail/src/lib/taxreportxml/RLI0010_232/builders/lia260.ts)
-
-## Data Model / API Changes
-- No schema/API changes.
-- `LIA260` detail rows are derived from existing `TaxVolumeItem` `EXPORT_EXEMPT` rows.
-- Export destination/customs-office fields should be replaced by real persisted source data in a later pass.
-
-## Validation Plan
-- Run targeted ESLint for touched TS/Markdown files.
-- Run frontend type-check.
-- Run unit tests if present.
-- Run `npm run build:test`.
-- Run `git diff --check` for touched files.
-- Inspect generated XML structure for `LIA260` inclusion when export-exempt rows exist.
-
-## Final Decisions
-- Added `breakdown.exportExempt` to the `RLI0010_232` XML input and `formSummary.LIA260` to the generated result.
-- Added a `LIA260` builder for `LIA260-003.xsd`.
-- `LIA260` pages are emitted after `LIA220` in both `CATALOG` and `CONTENTS`.
-- `LIA260` is emitted only when existing `EXPORT_EXEMPT` rows exist.
-- `LIA260` rows use existing category, ABV, and quantity data; quantity is written in mL.
-- `EOD00090` falls back to the first day of the report period until movement-level export dates are persisted.
-- `EOD00120` and `EOD00130` use taxpayer/profile data when row-level exporter data is unavailable.
-- Although the initial scope considered placeholders for destination/customs office, the implementation omits those optional fields when source data is unavailable. This keeps the generated `.xtx` schema-compatible without inventing filing data.
-
-## Validation Results
-- `npx eslint src/lib/taxReport.ts src/lib/taxreportxml/RLI0010_232/types.ts src/lib/taxreportxml/RLI0010_232/constants.ts src/lib/taxreportxml/RLI0010_232/schemaMap.ts src/lib/taxreportxml/RLI0010_232/builders/root.ts src/lib/taxreportxml/RLI0010_232/builders/lia260.ts src/lib/taxreportxml/RLI0010_232/service.ts src/lib/taxreportxml/RLI0010_232/validation/structural.ts --no-fix`: passed.
-- `npm run type-check` in `beeradmin_tail`: passed.
-- `npm run test --if-present` in `beeradmin_tail`: passed with no test script configured.
-- `npm run build:test` in `beeradmin_tail`: passed with existing CSS minifier warnings and existing large-chunk warnings.
-- `git diff --check -- specs/current-task.md docs/UI/tax-report-editor.md beeradmin_tail/src/lib/taxReport.ts beeradmin_tail/src/lib/taxreportxml/RLI0010_232/types.ts beeradmin_tail/src/lib/taxreportxml/RLI0010_232/constants.ts beeradmin_tail/src/lib/taxreportxml/RLI0010_232/schemaMap.ts beeradmin_tail/src/lib/taxreportxml/RLI0010_232/builders/root.ts beeradmin_tail/src/lib/taxreportxml/RLI0010_232/builders/lia260.ts beeradmin_tail/src/lib/taxreportxml/RLI0010_232/service.ts beeradmin_tail/src/lib/taxreportxml/RLI0010_232/validation/structural.ts`: passed.
-- Generated XML sanity check with one `EXPORT_EXEMPT` row: passed; output included `<LIA260 VR="3.0" id="LIA260-1" ...>` and `EOD00080` quantity `1000`.
-
----
-
-## Previous Goal
-- Normalize beer volume and money calculation/presentation across the directly used beer, inventory, and tax/report pages.
-- Use milliliters as the canonical calculation/output boundary for beer volume.
-- Present unit/package beer volume in mL and total/aggregate beer volume in L.
-- Preserve official form/schema units for tax form previews and XML output.
-- Treat money/tax amounts as integer yen and discard fractions smaller than 1 yen.
-
-## Previous Scope
-- Add the durable volume/money rule to `AGENTS.md`.
-- Add shared frontend helpers for:
-  - converting liters/UOM quantities to integer milliliters
-  - displaying unit/package volume as mL
-  - displaying total/aggregate volume as L
-  - converting raw tax/money values to integer yen without fractional rounding up
-- Update the tax report calculation and XML generation paths so generated yen values use integer-yen flooring/truncation.
-- Update report/list pages that directly show tax amounts or beer volume:
-  - `申告書一覧`
-  - `申告書編集`
-  - `課税移出明細`
-  - `年度酒税サマリー`
-- Update the safe beer inventory/movement list displays:
-  - `ビール在庫管理`
-  - inventory search modal
-  - `移入出登録` summary volume labels
-- Preserve existing database/RPC compatibility fields such as `volume_l` and `qty_l` in this pass.
-
-## Previous Non-Goals
-- Do not change database schema in this pass.
-- Do not rename RPC/API fields such as `qty_l`.
-- Do not migrate stored `volume_breakdown` JSON.
-- Do not change raw-material quantity pages or generic UOM pages unless they are specifically beer volume reports.
-- Do not change the existing tax-report editor redesign behavior except for volume/money normalization.
-
-## Previous Affected Files
-- [AGENTS.md](/Users/zhao/dev/other/beer/AGENTS.md)
-- [specs/current-task.md](/Users/zhao/dev/other/beer/specs/current-task.md)
-- [docs/domain/quantity-and-money.md](/Users/zhao/dev/other/beer/docs/domain/quantity-and-money.md)
-- [beeradmin_tail/src/lib/volumeFormat.ts](/Users/zhao/dev/other/beer/beeradmin_tail/src/lib/volumeFormat.ts)
-- [beeradmin_tail/src/lib/moneyFormat.ts](/Users/zhao/dev/other/beer/beeradmin_tail/src/lib/moneyFormat.ts)
-- [beeradmin_tail/src/lib/taxReport.ts](/Users/zhao/dev/other/beer/beeradmin_tail/src/lib/taxReport.ts)
-- [beeradmin_tail/src/lib/taxreportxml/RLI0010_232/builders/lia010.ts](/Users/zhao/dev/other/beer/beeradmin_tail/src/lib/taxreportxml/RLI0010_232/builders/lia010.ts)
-- [beeradmin_tail/src/lib/taxreportxml/RLI0010_232/builders/lia110.ts](/Users/zhao/dev/other/beer/beeradmin_tail/src/lib/taxreportxml/RLI0010_232/builders/lia110.ts)
-- [beeradmin_tail/src/lib/taxreportxml/RLI0010_232/builders/lia130.ts](/Users/zhao/dev/other/beer/beeradmin_tail/src/lib/taxreportxml/RLI0010_232/builders/lia130.ts)
-- [beeradmin_tail/src/lib/taxreportxml/RLI0010_232/builders/lia220.ts](/Users/zhao/dev/other/beer/beeradmin_tail/src/lib/taxreportxml/RLI0010_232/builders/lia220.ts)
-- [beeradmin_tail/src/lib/taxableRemovalReport.ts](/Users/zhao/dev/other/beer/beeradmin_tail/src/lib/taxableRemovalReport.ts)
-- [beeradmin_tail/src/views/Pages/TaxReport.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/TaxReport.vue)
-- [beeradmin_tail/src/views/Pages/TaxReportEditor.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/TaxReportEditor.vue)
-- [beeradmin_tail/src/views/Pages/TaxableRemovalReport.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/TaxableRemovalReport.vue)
-- [beeradmin_tail/src/views/Pages/TaxYearSummary.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/TaxYearSummary.vue)
-- [beeradmin_tail/src/composables/useProducedBeerInventory.ts](/Users/zhao/dev/other/beer/beeradmin_tail/src/composables/useProducedBeerInventory.ts)
-- [beeradmin_tail/src/views/Pages/ProducedBeerInventory.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/ProducedBeerInventory.vue)
-- [beeradmin_tail/src/components/inventory/InventorySearchModal.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/components/inventory/InventorySearchModal.vue)
-- [beeradmin_tail/src/views/Pages/ProducedBeer.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/ProducedBeer.vue)
-
-## Previous Data Model / API Changes
-- No schema or API changes in this pass.
-- Stored `volume_l` remains supported and is converted to integer mL for calculations/presentation.
-- Future migration can add stored `volume_ml`, but this is intentionally not required for the first pass.
-
-## Previous Validation Plan
-- Run targeted ESLint for touched Vue/TS files.
-- Run frontend type-check.
-- Run unit tests if present.
-- Run `npm run build:test`.
-- Run `git diff --check` for touched files.
-
-## Previous Final Decisions
-- Added durable project guidance to `AGENTS.md` for beer volume and yen handling.
-- Moved durable quantity/money domain rules from `AGENTS.md` into `docs/domain/quantity-and-money.md`.
-- `AGENTS.md` now keeps only a short pointer to the domain-rule document.
-- Added shared volume helpers in `volumeFormat.ts`:
-  - liters/UOM quantities can be converted through integer milliliters
-  - unit/package beer volume can be displayed in mL
-  - total/aggregate beer volume can be displayed in L
-- Added shared money helpers in `moneyFormat.ts`:
-  - yen values are truncated toward zero
-  - non-negative tax output floors fractions smaller than 1 yen
-  - tax can be calculated from mL or L using yen-per-kL rates
-- Updated tax report calculation and XML generation so tax/money output uses integer-yen helpers instead of `Math.round`.
-- Kept stored `volume_l` and RPC/API field names unchanged for compatibility.
-- Added optional `volume_ml` support to normalized tax report breakdown rows when present or newly generated.
-- Updated `申告書一覧`, `申告書編集`, `課税移出明細`, and `年度酒税サマリー` to use shared yen/volume helpers.
-- Updated `ビール在庫管理`, inventory search modal, and `移入出登録` list/summary volume display through the shared total-volume L path.
-- Updated `課税移出明細` display/export labels from mL to L because those rows present removal totals, not unit/package volume.
-- Kept official tax form previews using mL where the e-Tax form layout/schema expects mL.
-- Removed existing lint debt in the touched inventory composable while preserving behavior.
-
-## Previous Validation Results
-- `npx eslint src/lib/volumeFormat.ts src/lib/moneyFormat.ts src/lib/taxReport.ts src/lib/taxreportxml/RLI0010_232/builders/lia010.ts src/lib/taxreportxml/RLI0010_232/builders/lia110.ts src/lib/taxreportxml/RLI0010_232/builders/lia130.ts src/lib/taxreportxml/RLI0010_232/builders/lia220.ts src/lib/taxableRemovalReport.ts src/views/Pages/TaxReport.vue src/views/Pages/TaxReportEditor.vue src/views/Pages/TaxableRemovalReport.vue src/views/Pages/TaxYearSummary.vue src/composables/useProducedBeerInventory.ts src/views/Pages/ProducedBeer.vue src/views/Pages/ProducedBeerInventory.vue src/components/inventory/InventorySearchModal.vue --no-fix`: passed.
-- `npm run type-check`: passed.
-- `npm run test --if-present`: passed with no test script configured.
-- `npm run build:test`: passed with existing CSS `:is()` minifier warnings and existing large-chunk warnings.
-- `node -e "JSON.parse(...)"` for `src/locales/en.json` and `src/locales/ja.json`: passed.
-- `git diff --check -- AGENTS.md specs/current-task.md beeradmin_tail/src/lib/volumeFormat.ts beeradmin_tail/src/lib/moneyFormat.ts beeradmin_tail/src/lib/taxReport.ts beeradmin_tail/src/lib/taxreportxml/RLI0010_232/builders/lia010.ts beeradmin_tail/src/lib/taxreportxml/RLI0010_232/builders/lia110.ts beeradmin_tail/src/lib/taxreportxml/RLI0010_232/builders/lia130.ts beeradmin_tail/src/lib/taxreportxml/RLI0010_232/builders/lia220.ts beeradmin_tail/src/lib/taxableRemovalReport.ts beeradmin_tail/src/views/Pages/TaxReport.vue beeradmin_tail/src/views/Pages/TaxReportEditor.vue beeradmin_tail/src/views/Pages/TaxableRemovalReport.vue beeradmin_tail/src/views/Pages/TaxYearSummary.vue beeradmin_tail/src/composables/useProducedBeerInventory.ts beeradmin_tail/src/views/Pages/ProducedBeer.vue beeradmin_tail/src/components/inventory/InventorySearchModal.vue`: passed.
-- Documentation move:
-  - `git diff --check -- AGENTS.md specs/current-task.md docs/domain/quantity-and-money.md`: passed.
-
----
-
-## Previous Goal
-- Redesign the `申告書編集` page as a tabbed form-document editor for the e-Tax `RLI0010_232` monthly liquor tax report.
-- Add an explicit mode switch between editable form panels and e-Tax/PDF-like document previews.
-- Correct the top summary terminology so tax before reduction is not shown as the final liquor tax amount.
-
-## Previous Scope
-- Update the page specification before implementation.
-- Use sample PDFs directly under `docs/taxpdf` as visual references for the form panels.
-- Use the guide found at `docs/taxpdf/docfromcustomer/20260416データ/承認酒類製造者に対する酒税の税率の特例措置を適用する場合の酒税納税申告書の作成の手引.pdf` as the rule/layout reference for the reduced-tax flow.
-- Keep the page title behavior:
-  - `申告書作成` for new rows
-  - `申告書編集` for existing rows
-- Replace ambiguous `酒税額合計` top-summary wording with clear fields:
-  - `本則税額合計` or `軽減前酒税額`
-  - `軽減税額`
-  - `納付税額`
-  - `還付税額`
-  - `最終納付税額`
-- Add a mode switch:
-  - `編集`
-  - `帳票プレビュー`
-- Place the mode switch on the right side of the tab/mode toolbar.
-- Add form tabs for:
-  - `LIA010` 酒税納税申告書
-  - `LIA110` 税額算出表
-  - `LIA130` 軽減税額算出表
-  - `LIA220` 戻入れ酒類の控除(還付)税額計算書
-  - `LIA260` 輸出免税酒類輸出明細書兼輸出酒類販売場における購入明細書
-- Show short user-facing tab captions and browser title/tooltip text, each 14 characters or less, and do not show XML form codes such as `LIA010` in the tab itself.
-- Keep full official form names available for accessibility labels or documentation, not as visible tab captions or browser tooltips.
-- Improve the form-tab visual design with rounded, compact segmented tabs.
-- Do not keep extra vertical whitespace between the tab/mode toolbar and the active form panel.
-- Keep edit-mode panels compact; long field-list panels should have a lower visible height and scroll internally instead of stretching the page.
-- In edit mode, keep the UI simple and table-oriented; show only the fields users can change plus enough read-only context to identify each row.
-- Editable fields in edit mode should include field contents that are persisted in the current draft, especially quantity and alcohol percentage where available.
-- `LIA010` edit mode should list every field currently emitted by the `LIA010` XML builder, including profile-derived fields, declaration class, tax totals, tax-accountant fields, refund account, and creator name.
-- LIA010 tax amount fields belong inside the `LIA010` panel, not in the page title/header summary area.
-- `LIA130` edit mode should list every field currently emitted by the `LIA130` XML builder, including the repeated XML elements that share the same source calculation value.
-- In preview mode, prioritize visual fidelity to the sample PDFs over edit ergonomics:
-  - A4-like page proportions
-  - official title and metadata placement
-  - black ruled table layout
-  - compact official-form typography
-  - column order and labels matching the sample PDFs as closely as possible within the current data model
-- Preview mode remains read-only and uses the current draft state.
-- Preview mode should support document navigation:
-  - zoom out / zoom in
-  - reset to 100%
-  - fit to viewport width
-  - scrollbars for overflow
-  - drag-to-pan ("slide") inside the preview canvas
-- `LIA130` preview requires a closer match to the sample PDF than the first implementation:
-  - landscape page header with date at left, title centered, organizer/factory box at right
-  - main calculation grid with diagonal header cell
-  - row numbers ① through ⑭ laid out like the sample
-  - gray/diagonal non-entry cells
-  - lower `軽減割合の区分` box and final-total rows
-- Keep existing XML generation behavior unless explicitly changed in a later implementation step.
-
-## Previous Non-Goals
-- Do not implement `LIA260` XML output until its source data fields are confirmed.
-- Do not change tax calculation rules in this redesign step.
-- Do not change movement posting, ruleengine behavior, or tax event semantics.
-- Do not replace existing XML/XSD validation flow.
-- Do not introduce generic XSD-to-Vue rendering.
-- Do not change storage behavior for generated XML/XLSX files.
-
-## Previous Affected Files
-- [specs/current-task.md](/Users/zhao/dev/other/beer/specs/current-task.md)
-- [docs/UI/tax-report-editor.md](/Users/zhao/dev/other/beer/docs/UI/tax-report-editor.md)
-- [beeradmin_tail/src/views/Pages/TaxReportEditor.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/TaxReportEditor.vue)
-- [beeradmin_tail/src/locales/ja.json](/Users/zhao/dev/other/beer/beeradmin_tail/src/locales/ja.json)
-- [beeradmin_tail/src/locales/en.json](/Users/zhao/dev/other/beer/beeradmin_tail/src/locales/en.json)
-
-## Previous Data Model / API Changes
-- No database schema changes in the redesign spec.
-- No API changes for the initial tab/mode shell.
-- `LIA260` requires additional source fields before XML output can be implemented:
-  - export/sale date
-  - destination
-  - export customs office
-  - exporter or carrier address
-  - exporter or carrier name
-  - optional reference notes
-- Until those fields are mapped to stored data, `LIA260` can be specified and previewed as a draft/manual panel, but XML emission should remain disabled or omitted.
-
-## Previous UI Design Decisions
-- `TaxReportEditor.vue` should become the page shell:
-  - route/load/save/generate orchestration
-  - summary metrics
-  - mode switch
-  - form tab switch
-  - file actions
-- Form-specific editor and preview code should be split into child components when implementation starts.
-- The selected tab should remain stable when switching between `編集` and `帳票プレビュー`.
-- Preview components should share one paper-like visual frame and support multi-page forms.
-- The preview frame should look like a document page rather than an app table:
-  - gray surrounding canvas
-  - white A4-like page
-  - black official-form borders
-  - tighter form typography
-  - small boxed metadata areas
-- Preview layouts should be hand-tuned per form from the local sample PDFs instead of reusing the simple edit tables.
-- Edit layouts should stay intentionally simpler than preview layouts and should not copy the PDF structure when that makes editing harder.
-- `LIA110`, `LIA220`, and `LIA260` can have multiple pages; previews should support page navigation or a stacked-page layout.
-- `LIA110` and related attachment `区分` values should be treated as e-Tax tax-rate application codes, not movement tax-event codes:
-  - `0` = 本則税率適用
-  - `1` = 措置法適用
-  - `2` = 沖縄特例適用
-  - `3` = 措置法/経過措置 and 沖縄特例 both apply
-  - `7` = 税率適用区分別計 for return/deduction attachment forms
-  - `8` = 品目区分別計
-  - `9` = 総合計
-- `tax_event` should drive which quantity/tax column is populated, not replace the e-Tax `区分` semantics.
-- `EXPORT_EXEMPT` contributes to `LIA110` `輸出免税数量` and to detailed `LIA260` rows.
-
-## Previous Validation Plan
-- Documentation step:
-  - run `git diff --check` for changed spec files
-- Implementation step:
-  - run targeted ESLint for touched Vue/TS files
-  - run frontend type-check
-  - run unit tests if present
-  - run `npm run build:test`
-  - verify the editor opens in both new and existing report routes
-  - verify `編集` and `帳票プレビュー` preserve selected tab and current draft data
-
-## Previous Final Decisions
-- Spec-first step completed.
-- `TaxReportEditor.vue` now includes a page-level mode switch with `編集` and `帳票プレビュー`.
-- The page now uses form tabs for `LIA010`, `LIA110`, `LIA130`, `LIA220`, and `LIA260`.
-- The mode switch is aligned to the right side of the tab/mode toolbar.
-- Tab captions are short user-facing labels and no longer show XML form codes such as `LIA010`.
-- Tab visible labels and browser title/tooltip text are capped at 14 characters; full official form names remain available through accessibility labels.
-- The tab switch now uses a compact rounded segmented-control design.
-- The tab/mode toolbar now sits directly above the active panel without the previous large vertical gap.
-- Long edit-mode field-list panels use denser rows and internal scrolling to keep the visible panel height lower.
-- LIA010/LIA130 field-list tables use a fixed visible height, compact row padding, and sticky headers so long lists remain reviewable without making the editor panel tall.
-- The preview area now uses a gray canvas and A4-like white paper frame with denser official-form borders and typography.
-- The preview area is zoomable and draggable:
-  - zoom out, zoom in, reset, and fit-to-width controls
-  - current zoom percentage display
-  - scrollbars remain available
-  - drag-to-pan lets users slide the document inside the preview canvas
-- Preview pages now use landscape A4 proportions to match the sample PDFs.
-- The preview layouts were hand-tuned closer to the local PDF samples:
-  - `LIA010` uses the main return's large title, tax office/submitter block, tax calculation block, and lower bank/notes areas.
-  - `LIA110` uses the tax calculation table's dense 18-row ruled layout and official column order.
-- `LIA130` uses the reduced-tax table's landscape header, organizer/factory boxes, and main calculation grid.
-- `LIA130` preview was redone after review because the first version was too far from the sample:
-  - added the sample-like diagonal top-left header
-  - added row numbers ① through ⑭
-  - added gray/diagonal non-entry cells
-  - added the left vertical calculation label
-  - added the lower `軽減割合の区分` box and final-total block
-  - `LIA220` uses the return/deduction attachment's 18-row ruled layout.
-  - `LIA260` uses the export attachment's 9-row ruled layout and reference-notes area.
-- Edit mode remains intentionally simpler than preview mode; it is focused on changing draft field contents instead of copying the PDF layout.
-- Export-exempt rows in edit mode now allow changing alcohol percentage and quantity, matching the editable behavior of other report detail rows.
-- The top summary now uses `本則税額合計`, `軽減税額`, `納付税額`, `還付税額`, and `最終納付税額` instead of the ambiguous `酒税額合計`.
-- Existing editable movement rows remain editable in their form panels; generated subtotal/total rows remain read-only.
-- `LIA010` edit mode now lists all current `LIA010` XML output fields in the panel; tax amount fields were moved out of the page-level summary area and into this panel.
-- `LIA130` edit mode now lists all current `LIA130` XML output fields, including the individual XML element codes used by the builder.
-- `LIA010`, `LIA110`, `LIA130`, `LIA220`, and `LIA260` now have read-only paper-like preview views driven by the current draft data.
-- `LIA260` is visible as a UI/preview panel, but XML output remains out of scope until export detail source fields are confirmed.
-- Existing XML generation behavior is unchanged.
-- The sample PDFs and guide were reviewed for spec refinement.
-- The spec now treats `区分` as an e-Tax tax-rate application code and keeps `tax_event` as the movement classification that populates quantity/detail columns.
-
-## Previous Validation Results
-- `git diff --check -- specs/current-task.md docs/UI/tax-report-editor.md`: passed.
-- `npx eslint src/views/Pages/TaxReportEditor.vue --no-fix` in `beeradmin_tail`: passed.
-- `npm run type-check` in `beeradmin_tail`: passed.
-- `npm run test --if-present` in `beeradmin_tail`: passed with no test script configured.
-- `npm run build:test` in `beeradmin_tail`: passed with existing CSS minifier warnings and existing large-chunk warnings.
-- `node -e "JSON.parse(...)"` for `src/locales/en.json` and `src/locales/ja.json`: passed.
-- `git diff --check -- specs/current-task.md docs/UI/tax-report-editor.md beeradmin_tail/src/views/Pages/TaxReportEditor.vue beeradmin_tail/src/locales/ja.json beeradmin_tail/src/locales/en.json`: passed.
-- After PDF-fidelity refinement:
-  - `npx eslint src/views/Pages/TaxReportEditor.vue --no-fix` in `beeradmin_tail`: passed.
-  - `npm run type-check` in `beeradmin_tail`: passed.
-  - `npm run test --if-present` in `beeradmin_tail`: passed with no test script configured.
-  - `npm run build:test` in `beeradmin_tail`: passed with existing CSS minifier warnings and existing large-chunk warnings.
-  - `node -e "JSON.parse(...)"` for `src/locales/en.json` and `src/locales/ja.json`: passed.
-  - `git diff --check -- specs/current-task.md docs/UI/tax-report-editor.md beeradmin_tail/src/views/Pages/TaxReportEditor.vue beeradmin_tail/src/locales/ja.json beeradmin_tail/src/locales/en.json`: passed.
-- After LIA130 preview redo:
-  - `npx eslint src/views/Pages/TaxReportEditor.vue --no-fix` in `beeradmin_tail`: passed.
-  - `npm run type-check` in `beeradmin_tail`: passed.
-  - `npm run test --if-present` in `beeradmin_tail`: passed with no test script configured.
-  - `npm run build:test` in `beeradmin_tail`: passed with existing CSS minifier warnings and existing large-chunk warnings.
-  - `git diff --check -- specs/current-task.md docs/UI/tax-report-editor.md beeradmin_tail/src/views/Pages/TaxReportEditor.vue`: passed.
-- After zoomable/slidable preview update:
-  - `npx eslint src/views/Pages/TaxReportEditor.vue --no-fix` in `beeradmin_tail`: passed.
-  - `npm run type-check` in `beeradmin_tail`: passed.
-  - `npm run test --if-present` in `beeradmin_tail`: passed with no test script configured.
-  - `npm run build:test` in `beeradmin_tail`: passed with existing CSS minifier warnings and existing large-chunk warnings.
-  - `node -e "JSON.parse(...)"` for `src/locales/en.json` and `src/locales/ja.json`: passed.
-  - `git diff --check -- specs/current-task.md docs/UI/tax-report-editor.md beeradmin_tail/src/views/Pages/TaxReportEditor.vue beeradmin_tail/src/locales/ja.json beeradmin_tail/src/locales/en.json`: passed.
-- After tab title length update:
-  - `npx eslint src/views/Pages/TaxReportEditor.vue --no-fix` in `beeradmin_tail`: passed.
-  - `npm run type-check` in `beeradmin_tail`: passed.
-  - `npm run test --if-present` in `beeradmin_tail`: passed with no test script configured.
-  - `npm run build:test` in `beeradmin_tail`: passed with existing CSS minifier warnings and existing large-chunk warnings.
-  - `git diff --check -- specs/current-task.md docs/UI/tax-report-editor.md beeradmin_tail/src/views/Pages/TaxReportEditor.vue`: passed.
-- After LIA010/LIA130 edit field-list update:
-  - `npx eslint src/views/Pages/TaxReportEditor.vue --no-fix` in `beeradmin_tail`: passed.
-  - `node -e "JSON.parse(...)"` for `src/locales/en.json` and `src/locales/ja.json`: passed.
-  - `npm run type-check` in `beeradmin_tail`: passed.
-  - `npm run test --if-present` in `beeradmin_tail`: passed with no test script configured.
-  - `npm run build:test` in `beeradmin_tail`: passed with existing CSS minifier warnings and existing large-chunk warnings.
-  - `git diff --check -- specs/current-task.md docs/UI/tax-report-editor.md beeradmin_tail/src/views/Pages/TaxReportEditor.vue beeradmin_tail/src/locales/ja.json beeradmin_tail/src/locales/en.json`: passed.
-- After compact tab-to-panel layout update:
-  - `npx eslint src/views/Pages/TaxReportEditor.vue --no-fix` in `beeradmin_tail`: passed.
-  - `npm run type-check` in `beeradmin_tail`: passed.
-  - `npm run test --if-present` in `beeradmin_tail`: passed with no test script configured.
-  - `npm run build:test` in `beeradmin_tail`: passed with existing CSS minifier warnings and existing large-chunk warnings.
-  - `git diff --check -- specs/current-task.md docs/UI/tax-report-editor.md beeradmin_tail/src/views/Pages/TaxReportEditor.vue`: passed.
+- `git diff --check -- specs/current-task.md docs/UI/tax-ledger-reports.md` passed before implementation.
+- `git diff --check -- touched files` passed after implementation.
+- `npm run type-check` passed.
+- Targeted `npx eslint --no-fix src/lib/taxLedgerReport.ts src/views/Pages/TaxLedgerReport.vue src/router/tenant-routes.ts src/components/layout/AppSidebar.vue` passed.
+- Locale JSON parse passed for `src/locales/ja.json` and `src/locales/en.json`.
+- `npm run test --if-present` passed.
+- Full `npx eslint --no-fix .` still fails on existing unrelated lint debt outside this task.

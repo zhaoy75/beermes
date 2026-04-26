@@ -224,6 +224,46 @@ export const tenantRoutes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/nonTaxableRemovalLedger',
+    name: 'NonTaxableRemovalLedger',
+    component: () => import('@/views/Pages/TaxLedgerReport.vue'),
+    meta: {
+      title: 'Non-taxable Removal Ledger',
+      requiresAuth: true,
+      ledgerKey: 'nonTaxableRemoval',
+    },
+  },
+  {
+    path: '/exportExemptLedger',
+    name: 'ExportExemptLedger',
+    component: () => import('@/views/Pages/TaxLedgerReport.vue'),
+    meta: {
+      title: 'Export Exemption Ledger',
+      requiresAuth: true,
+      ledgerKey: 'exportExempt',
+    },
+  },
+  {
+    path: '/nonTaxableReceiptLedger',
+    name: 'NonTaxableReceiptLedger',
+    component: () => import('@/views/Pages/TaxLedgerReport.vue'),
+    meta: {
+      title: 'Non-taxable Receipt Ledger',
+      requiresAuth: true,
+      ledgerKey: 'nonTaxableReceipt',
+    },
+  },
+  {
+    path: '/returnToFactoryLedger',
+    name: 'ReturnToFactoryLedger',
+    component: () => import('@/views/Pages/TaxLedgerReport.vue'),
+    meta: {
+      title: 'Return Ledger',
+      requiresAuth: true,
+      ledgerKey: 'returnToFactory',
+    },
+  },
+  {
     path: '/siteMovements',
     name: 'SiteMovements',
     component: () => import('@/views/Pages/SiteMovement.vue'),

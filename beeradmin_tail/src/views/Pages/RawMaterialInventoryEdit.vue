@@ -270,6 +270,7 @@ import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { openTypeDefGraph, type TypeDefGraphSelection } from '@/composables/useTypeDefGraphModal'
 import { supabase } from '@/lib/supabase'
 import { normalizeBatchAttrDataType, validateBatchAttrField } from '@/lib/batchAttrValidation'
+import { normalizeDateOnly } from '@/lib/dateOnly'
 
 type NameI18n = {
   ja?: string | null
@@ -870,7 +871,7 @@ async function saveAttrValues(tenant: string, lotIdValue: string) {
     }
     if (field.data_type === 'number') row.value_num = Number(field.value)
     else if (field.data_type === 'bool') row.value_bool = Boolean(field.value)
-    else if (field.data_type === 'date') row.value_date = field.value
+    else if (field.data_type === 'date') row.value_date = normalizeDateOnly(field.value)
     else if (field.data_type === 'timestamp') row.value_ts = fromInputDateTime(String(field.value))
     else if (field.data_type === 'json') row.value_json = parseJsonValue(String(field.value))
     else if (field.data_type === 'ref') {
@@ -958,7 +959,7 @@ async function loadAttrFields(typeIdValue: string, lotIdValue: string | null) {
       let value: unknown = ''
       if (dataType === 'number') value = valueRow?.value_num ?? ''
       else if (dataType === 'bool') value = valueRow?.value_bool ?? false
-      else if (dataType === 'date') value = valueRow?.value_date ?? ''
+      else if (dataType === 'date') value = normalizeDateOnly(valueRow?.value_date)
       else if (dataType === 'timestamp') value = toInputDateTime(valueRow?.value_ts)
       else if (dataType === 'json') value = valueRow?.value_json ? JSON.stringify(valueRow.value_json, null, 2) : ''
       else if (dataType === 'ref') {

@@ -108,12 +108,14 @@
 </template>
 
 <script setup lang="ts">
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   resolveReleasedRecipeCode,
   resolveReleasedRecipeName,
 } from '@/lib/batchRecipeSnapshot'
+import { formatDateOnly } from '@/lib/dateOnly'
 import { supabase } from '@/lib/supabase'
 import { formatVolumeNumber } from '@/lib/volumeFormat'
 
@@ -339,11 +341,6 @@ async function loadSteps(batchId: string) {
 }
 
 function fmt(value: string | null | undefined) {
-  if (!value) return '—'
-  try {
-    return new Date(value).toLocaleString()
-  } catch {
-    return value
-  }
+  return formatDateOnly(value, locale.value)
 }
 </script>

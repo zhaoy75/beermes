@@ -128,7 +128,7 @@ UI:
   - select
   - lot code
   - beer category
-  - target ABV
+  - ABV
   - style name
   - batch code
   - package volume

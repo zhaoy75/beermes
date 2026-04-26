@@ -284,6 +284,7 @@ import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import TableColumnHeader from '@/components/common/TableColumnHeader.vue'
 import { useConfirmDialog } from '@/composables/useConfirmDialog'
 import { useColumnTableControls, type ColumnSortDirection } from '@/composables/useColumnTableControls'
+import { formatAbvPercent } from '@/lib/abvFormat'
 import { formatYen } from '@/lib/moneyFormat'
 import { formatTotalVolumeFromLiters } from '@/lib/volumeFormat'
 import { supabase } from '@/lib/supabase'
@@ -426,8 +427,7 @@ function formatVolume(value: number | null | undefined) {
 }
 
 function formatAbv(value: number | null | undefined) {
-  if (value == null || Number.isNaN(value)) return t('taxReport.abvUnknown')
-  return `${new Intl.NumberFormat(locale.value, { maximumFractionDigits: 2 }).format(value)}%`
+  return formatAbvPercent(value, locale.value, t('taxReport.abvUnknown'))
 }
 
 function breakdownLabel(item: TaxVolumeItem) {

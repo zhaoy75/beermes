@@ -2,6 +2,7 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue3-toastify'
 import { supabase } from '@/lib/supabase'
+import { formatAbvPercent } from '@/lib/abvFormat'
 import {
   buildAlcoholTypeLabelMap,
   loadAlcoholTypeReferenceData,
@@ -216,8 +217,7 @@ export function useProducedBeerInventory() {
   }
 
   function formatAbv(value: number | null | undefined) {
-    if (value == null || Number.isNaN(value)) return '—'
-    return `${numberFormatter.value.format(value)}%`
+    return formatAbvPercent(value, locale.value)
   }
 
   function formatDate(value: string | null | undefined) {

@@ -116,6 +116,9 @@ The loader should normalize each detail row to include:
 - Quantity presentation follows the domain rule:
   - internal durable volume is mL
   - ledger values should match existing report and sample workbook expectations
+- ABV presentation:
+  - keep data as numeric ABV
+  - display and Excel export values with `%`, for example `5.0%`
 
 ## Detail Columns
 Use a common base column set and allow report-specific address/name columns.
@@ -125,6 +128,7 @@ Common columns:
 - `品目`
 - `製品名`
 - `ABV`
+  - displayed as a percentage value with `%`
 - `容器`
 - `個数`
 - `数量`
@@ -183,6 +187,7 @@ Report-specific columns:
 - The workbook helper currently does not support true merged cells, so ledger exports use two gray bold header rows for the `容器` group.
 - Multi-sheet exports keep unmatched rows in the first sheet if site type metadata cannot classify them reliably.
 - Summary and export remain business-year level and ignore visible `月` / `酒類コード` filters.
+- ABV display/export values use the shared percent formatter.
 
 ## Non-Scope
 - No database schema changes.

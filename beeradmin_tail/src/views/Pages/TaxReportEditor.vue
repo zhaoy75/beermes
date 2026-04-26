@@ -203,7 +203,7 @@
                         class="h-[36px] w-full rounded border bg-white px-2"
                         @input="updateReportBreakdownNumber(row.sourceIndex, 'abv', $event)"
                       />
-                      <span v-else class="text-gray-600">{{ formatNullableNumber(row.item.abv, 1) }}</span>
+                      <span v-else class="text-gray-600">{{ formatAbv(row.item.abv) }}</span>
                     </td>
                     <td class="px-3 py-2 text-right">
                       <input
@@ -589,7 +589,7 @@
                       <td class="border border-black p-[0.8mm] text-center">{{ lia110KubunCodeForItem(row.item) }}</td>
                       <td class="border border-black p-[0.8mm] text-center">{{ row.item.categoryCode }}</td>
                       <td class="border border-black p-[0.8mm] font-semibold">{{ row.item.categoryName }}</td>
-                      <td class="border border-black p-[0.8mm] text-right">{{ formatNullableNumber(row.item.abv, 1) }}</td>
+                      <td class="border border-black p-[0.8mm] text-right">{{ formatAbv(row.item.abv) }}</td>
                       <td class="border border-black p-[0.8mm] text-right">{{ formatMilliliters(row.item.volume_l) }}</td>
                       <td class="border border-black p-0">
                         <div class="h-1/2 border-b border-black px-[0.8mm] text-right">{{ formatMilliliters(row.item.non_taxable_volume_l) }}</div>
@@ -852,7 +852,7 @@
                       <td class="border border-black p-[0.8mm] text-center">1</td>
                       <td class="border border-black p-[0.8mm] text-center">{{ row.item.categoryCode }}</td>
                       <td class="border border-black p-[0.8mm] font-semibold">{{ row.item.categoryName }}</td>
-                      <td class="border border-black p-[0.8mm] text-right">{{ formatNullableNumber(row.item.abv, 1) }}</td>
+                      <td class="border border-black p-[0.8mm] text-right">{{ formatAbv(row.item.abv) }}</td>
                       <td class="border border-black p-[0.8mm] text-right">{{ formatMilliliters(row.item.volume_l) }}</td>
                       <td class="border border-black p-[0.8mm] text-right">{{ formatInteger(row.item.tax_rate) }}</td>
                       <td class="border border-black p-[0.8mm] text-right">{{ formatInteger(previewReturnTaxAmount(row.item)) }}</td>
@@ -920,7 +920,7 @@
                       <td class="border border-black p-[0.8mm] text-center">0</td>
                       <td class="border border-black p-[0.8mm] text-center">{{ row.categoryCode }}</td>
                       <td class="border border-black p-[0.8mm] font-semibold">{{ row.categoryName }}</td>
-                      <td class="border border-black p-[0.8mm] text-right">{{ formatNullableNumber(row.abv, 1) }}</td>
+                      <td class="border border-black p-[0.8mm] text-right">{{ formatAbv(row.abv) }}</td>
                       <td class="border border-black p-[0.8mm] text-right">{{ formatMilliliters(row.volume_l) }}</td>
                       <td class="border border-black p-[0.8mm]">{{ reportDateText }}</td>
                       <td class="border border-black p-[0.8mm]"></td>
@@ -1097,6 +1097,7 @@ import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { formatRpcErrorMessage } from '@/lib/rpcErrors'
 import { supabase } from '@/lib/supabase'
+import { formatAbvPercent } from '@/lib/abvFormat'
 import {
   createEmptyTaxReportProfile,
   fetchTaxReportProfileForTenant,
@@ -1520,6 +1521,10 @@ function formatNullableNumber(value: number | null | undefined, maximumFractionD
   return new Intl.NumberFormat(locale.value, {
     maximumFractionDigits,
   }).format(Number(value))
+}
+
+function formatAbv(value: number | null | undefined) {
+  return formatAbvPercent(value, locale.value)
 }
 
 function formatPercent(value: number | null | undefined) {

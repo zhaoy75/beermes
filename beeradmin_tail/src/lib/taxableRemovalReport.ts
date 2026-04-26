@@ -9,6 +9,7 @@ import {
   resolveBatchDisplayName,
   resolveBatchTargetAbv,
 } from '@/lib/batchRecipeSnapshot'
+import { formatAbvPercent } from '@/lib/abvFormat'
 import { createWorkbookBlob, type WorkbookCell, type WorkbookCellValue, type WorkbookSheet } from '@/lib/fillingReportExport'
 import { formatYen, taxAmountFromMilliliters } from '@/lib/moneyFormat'
 import { formatTotalVolumeFromMilliliters, quantityToMilliliters } from '@/lib/volumeFormat'
@@ -467,11 +468,7 @@ function formatNumberValue(value: number | null | undefined, locale: string, dig
 }
 
 function formatAbv(value: number | null | undefined, locale: string) {
-  if (value == null || Number.isNaN(value)) return '—'
-  return new Intl.NumberFormat(locale, {
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 2,
-  }).format(value)
+  return formatAbvPercent(value, locale)
 }
 
 function formatQuantityMl(value: number | null | undefined, locale: string) {

@@ -6,6 +6,7 @@
   - `輸出免税帳`
   - `未納税移入帳`
   - `戻入帳`
+- Standardize ABV presentation so user-facing ABV values show a `%` suffix.
 
 ## Active Scope
 - Match the UI pattern of the existing `課税移出一覧表` page.
@@ -36,6 +37,8 @@
 - Excel layouts should follow the provided sample workbook structure as closely as practical.
 - Business-year summary uses only the selected business year, not the visible month or `酒類コード` filters.
 - Excel export uses the selected business year and does not apply the visible month or `酒類コード` filters, consistent with `課税移出一覧表`.
+- ABV values in report/inventory/movement pages display as percentages, for example `5.0%`.
+- Non-batch-management table headers should use `ABV` rather than `目標ABV` / `Target ABV`.
 
 ## Active Non-Goals
 - Do not calculate tax amount in the new yearly summaries.
@@ -85,6 +88,7 @@
   - source/destination address fields
   - lot number
   - notes
+- ABV remains numeric in data models; only presentation gets the `%` suffix.
 - Quantity calculation follows the domain rule:
   - durable internal volume is mL
   - total display can show L where useful
@@ -152,6 +156,7 @@
 - Export workbook output must keep gray bold headers and table rows per repository Excel rule.
 - New ledger pages reuse one component and differ by config.
 - `未納税移出帳` and `未納税移入帳` export split sheets by source/destination site type when that metadata can be resolved; unmatched rows are kept in the first sheet so they are not dropped.
+- ABV display values include `%`; labels should not imply target ABV outside batch-management-specific contexts.
 
 ## Active Validation Results
 - `git diff --check -- specs/current-task.md docs/UI/tax-ledger-reports.md` passed before implementation.
@@ -161,3 +166,9 @@
 - Locale JSON parse passed for `src/locales/ja.json` and `src/locales/en.json`.
 - `npm run test --if-present` passed.
 - Full `npx eslint --no-fix .` still fails on existing unrelated lint debt outside this task.
+- ABV update validation:
+  - `git diff --check -- ABV touched files` passed.
+  - `npm run type-check` passed.
+  - targeted `npx eslint --no-fix` passed for ABV touched files without pre-existing lint debt.
+  - locale JSON parse passed for `src/locales/ja.json` and `src/locales/en.json`.
+  - `npm run test --if-present` passed.

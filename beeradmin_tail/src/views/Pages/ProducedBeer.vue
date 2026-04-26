@@ -412,6 +412,7 @@ import { useRuleengineLabels } from '@/composables/useRuleengineLabels'
 import { createWorkbookBlob, type WorkbookCell, type WorkbookSheet } from '@/lib/fillingReportExport'
 import { extractErrorMessage, formatRpcErrorMessage } from '@/lib/rpcErrors'
 import { supabase } from '@/lib/supabase'
+import { formatAbvPercent } from '@/lib/abvFormat'
 import {
   formatTotalVolumeFromLiters,
   formatUnitVolumeFromLiters,
@@ -713,8 +714,7 @@ function formatVolumeNumberValue(value: number | null | undefined) {
 }
 
 function formatAbv(value: number | null | undefined) {
-  if (value == null || Number.isNaN(value)) return '—'
-  return `${numberFormatter.value.format(value)}%`
+  return formatAbvPercent(value, locale.value)
 }
 
 function formatDateTime(value: string | null | undefined) {

@@ -323,6 +323,7 @@ import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import TableColumnHeader from '@/components/common/TableColumnHeader.vue'
 import { useColumnTableControls, type ColumnSortDirection } from '@/composables/useColumnTableControls'
 import { supabase } from '@/lib/supabase'
+import { formatAbvPercent } from '@/lib/abvFormat'
 import { formatYen } from '@/lib/moneyFormat'
 import { formatTotalVolumeFromMilliliters } from '@/lib/volumeFormat'
 import {
@@ -517,11 +518,7 @@ function formatNumberValue(value: number | null | undefined, digits = 0) {
 }
 
 function formatAbv(value: number | null | undefined) {
-  if (value == null || Number.isNaN(value)) return '—'
-  return new Intl.NumberFormat(locale.value, {
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 2,
-  }).format(value)
+  return formatAbvPercent(value, locale.value)
 }
 
 function formatQuantityMl(value: number | null | undefined) {

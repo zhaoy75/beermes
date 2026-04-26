@@ -62,7 +62,7 @@
 - Movement date
 - Batch code
 - Style name
-- Target ABV
+- ABV
 - Package type
 - Volume Per Package
 - Unit of Package

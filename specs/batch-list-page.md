@@ -128,14 +128,40 @@
 - planned start
 - planned end
 - notes
+- configured batch attributes from active batch `attr_set`
 
 ### Base Recipe
 - optional
+- development-mode only until recipe functions are production-ready
+- when `VITE_DEVELOPMENT_MODE` is disabled:
+  - hide the recipe selector
+  - do not query recipe options
+  - submit a blank recipe id and create a header-only batch
 - data source:
   - `mes.mst_recipe`
   - current version via `mes.mst_recipe.current_version_id`
 - display label:
   - `recipe_name (recipe_code) / v{version_no}`
+
+### Batch Attributes
+- source:
+  - active `attr_set` rows where `domain = 'batch'`
+  - active `attr_set_rule`
+  - active `attr_def`
+- display labels follow `attr_def.name_i18n` for the current locale, then `name`, then `code`
+- create-dialog fields are optional for now; do not enforce `attr_set_rule.required` or `attr_def.required` during batch creation
+- input control follows `attr_def.data_type`:
+  - `number`: numeric input with configured min/max
+  - `bool`: checkbox
+  - `date`: date input
+  - `timestamp`: datetime-local input
+  - `json`: textarea with JSON validation
+  - `ref`: select from configured reference options
+  - text/enum: text input, with allowed-value validation when configured
+- after batch creation:
+  - assign active batch attr sets to `entity_attr_set`
+  - upsert non-empty values into `entity_attr`
+  - leave empty optional values absent from `entity_attr`
 
 ### Rules
 - recipe is nullable
@@ -165,6 +191,12 @@
 - create dialog recipe list:
   - `mes.mst_recipe`
   - `mes.mst_recipe_version`
+- create dialog attribute input:
+  - `attr_set`
+  - `attr_set_rule`
+  - `attr_def`
+  - `entity_attr_set`
+  - `entity_attr`
 
 ## Business Rules
 - batch delete remains blocked for normal users when status is `in_progress` or `completed`

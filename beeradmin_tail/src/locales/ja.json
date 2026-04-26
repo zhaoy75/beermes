@@ -342,6 +342,7 @@
       "parentBatchesEmpty": "親バッチは未登録です。",
       "parentBatchCode": "親バッチコード",
       "parentBatchQuantity": "数量 (L)",
+      "attributes": "バッチ属性",
       "autoCodeHint": "空欄の場合は BATCH-YYYYMMDD-XXXX 形式で自動生成されます。",
       "createButton": "作成",
       "createFailed": "バッチ作成に失敗しました。"

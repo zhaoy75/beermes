@@ -40,10 +40,11 @@
 
 ### Batch Add Dialog
     Modal dialog to let user input 
-      レシピ (optional)
+      レシピ (optional, only shown when development mode is on)
       バッチ名 (should not to be blank)
       開始日  with calendar picker
       終了日  with calendar picker
+      fields from entity_attr_set in domain "batch" (all optional at create time)
     A cancel and confirm button 
     
 
@@ -53,9 +54,12 @@
 - Add
   A Batch Add dialog will shown to let user input related field.
   recipe selection is optional and should read from `mes.mst_recipe`
+  recipe selection is hidden when `VITE_DEVELOPMENT_MODE` is off because recipe functions are still under development
   when selected, current released version should be derived from `mes.mst_recipe.current_version_id`
   when not selected, batch header only is created
   after user fill the form and click confirm button, call create_batch_from_recipe
+  active batch attribute fields should be shown and saved to `entity_attr` after the batch is created
+  at create time, do not force any batch attribute as required
 
 - Edit
   move to batchedit page
@@ -79,6 +83,10 @@
   - `mes.batch_step`
   - `mes.batch_material_plan`
 - other attribute stored in entity_attr
+- batch create attribute fields:
+  - read active `attr_set`, `attr_set_rule`, and `attr_def` rows for domain `batch`
+  - assign batch attr sets to `entity_attr_set`
+  - save non-empty values to `entity_attr`
 
 ## other
 - this page should be multilanguage (english and japanese)

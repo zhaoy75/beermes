@@ -21,6 +21,8 @@
 - Apply the same rollback timestamp normalization to produce and filling rollback functions for consistency.
 - Fix product-move rollback for destination sites where `inv_inventory` rows are not maintained.
 - Align `inventory_count_flg` interpretation across rollback and inventory trigger definitions.
+- Hide batch-create recipe selection while recipe functions are still under development and development mode is disabled.
+- Show configured batch `entity_attr` fields in the batch-create dialog so users can input attributes before opening the batch edit page.
 
 ## Active Non-Goals
 - Do not add a full `tax_report_lines` detail table.
@@ -81,6 +83,10 @@
 - [InventorySearchModal.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/components/inventory/InventorySearchModal.vue)
 - [ProducedBeerInventory.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/ProducedBeerInventory.vue)
 - [batchRecipeSnapshot.ts](/Users/zhao/dev/other/beer/beeradmin_tail/src/lib/batchRecipeSnapshot.ts)
+- [BatchList.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/BatchList.vue)
+- [BatchCreateDialog.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/components/BatchCreateDialog.vue)
+- [batch-list-page.md](/Users/zhao/dev/other/beer/specs/batch-list-page.md)
+- [batchlist.md](/Users/zhao/dev/other/beer/docs/UI/batchlist.md)
 - New catalog: `docs/db/function/stored-function-error-catalog.md`
 - [specs/current-task.md](/Users/zhao/dev/other/beer/specs/current-task.md)
 
@@ -159,6 +165,15 @@
     - when the requested/default rollback timestamp is before the target movement timestamp, use the target movement timestamp.
     - keep actual operation time in `created_at` / `voided_at`.
     - do not use `9999/12/31`.
+- No DB/API change for hiding recipe selection:
+  - the batch create dialog still calls `create_batch_from_recipe`.
+  - when development mode is disabled, the UI hides recipe selection and submits an empty recipe id so the RPC creates a header-only batch.
+  - recipe-option queries are skipped when the selector is hidden.
+- No DB/API change for batch-create attributes:
+  - load active batch `attr_set` / `attr_set_rule` / `attr_def` metadata already used by the batch list dynamic filters.
+  - render those fields in the create dialog using the configured data type.
+  - after `create_batch_from_recipe` returns the batch id, assign active batch attr sets and upsert non-empty values into `entity_attr`.
+  - keep empty optional values absent from `entity_attr`.
 
 ## Active Final Process
 1. User chooses a report period in the editor.
@@ -188,6 +203,10 @@
   - cancel a future-dated `移入出登録` move and confirm rollback succeeds with rollback `movement_at` equal to the target movement timestamp, not `9999/12/31`.
   - cancel future-dated produce/filling movements and confirm rollback succeeds with rollback `movement_at` equal to the target movement timestamp.
   - attempt to cancel a move whose destination lot has downstream non-void use and confirm rollback is rejected.
+  - with `VITE_DEVELOPMENT_MODE` disabled, open the batch create dialog and confirm the recipe selector is hidden and batch creation sends a blank recipe id.
+  - with `VITE_DEVELOPMENT_MODE` enabled, confirm the recipe selector is visible and recipe options are loaded.
+  - create a batch with batch attribute values and confirm rows are inserted into `entity_attr`.
+  - confirm numeric, JSON, and reference batch attribute inputs use the same validation and storage columns as the batch edit page.
 
 ## Active Findings
 - Current `tax_reports` stores aggregate `volume_breakdown`, files, and status, but does not preserve source movement IDs.
@@ -243,6 +262,15 @@
   - prefer batch attribute `actual_abv`
   - fallback to actual-like snapshot/meta `actual_abv` or generic `abv`
   - do not fallback to `target_abv` for these two inventory views.
+- Batch creation treats recipe selection as a development-mode feature:
+  - when `VITE_DEVELOPMENT_MODE` is disabled, hide the recipe dropdown and do not query recipe options.
+  - when the dropdown is hidden, force `recipeId` to blank on submit.
+- Batch creation shows configured batch attributes:
+  - fields are sourced from active `attr_set` / `attr_set_rule` / `attr_def` rows for domain `batch`.
+  - labels follow `name_i18n` and the current locale.
+  - supported inputs: text/enum, number, boolean, date, timestamp, JSON, and configured references.
+  - all create-dialog batch attribute fields are optional for now, even when `attr_set_rule.required` or `attr_def.required` is true.
+  - values are persisted only after the batch id exists.
 
 ## Active Validation Results
 - `git diff --check`: passed.
@@ -306,6 +334,16 @@
   - `npm run type-check` in `beeradmin_tail`: passed.
   - `npm run test --if-present` in `beeradmin_tail`: passed with no test script configured.
   - SQL runtime validation was not executed because `psql` is not installed in this workspace.
+- After hiding batch-create recipe selection outside development mode and adding create-time batch attribute inputs:
+  - `git diff --check`: passed.
+  - `npx eslint src/views/Pages/BatchList.vue src/views/Pages/components/BatchCreateDialog.vue --no-fix`: passed.
+  - `npm run type-check` in `beeradmin_tail`: passed.
+  - `npm run test --if-present` in `beeradmin_tail`: passed with no test script configured.
+- After making create-dialog batch attributes optional:
+  - `git diff --check`: passed.
+  - `npx eslint src/views/Pages/components/BatchCreateDialog.vue --no-fix`: passed.
+  - `npm run type-check` in `beeradmin_tail`: passed.
+  - `npm run test --if-present` in `beeradmin_tail`: passed with no test script configured.
 
 ## Previous Task: Source-Lot Chronology And Filling Rollback
 

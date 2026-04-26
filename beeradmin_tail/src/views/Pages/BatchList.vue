@@ -157,7 +157,17 @@
     </section>
 
     <BatchSummaryDialog v-if="showSummary && summaryState" :batch="summaryState" :open="showSummary" @close="showSummary = false" />
-    <BatchCreateDialog v-if="showCreate" :open="showCreate" :recipes="recipes" :loading="loading" @close="closeCreate" @submit="handleCreate" />
+    <BatchCreateDialog
+      v-if="showCreate"
+      :open="showCreate"
+      :recipes="showRecipeSelection ? recipes : []"
+      :loading="loading"
+      :show-recipe-selection="showRecipeSelection"
+      :attr-fields="createAttrFields"
+      :attr-loading="attrLoading"
+      @close="closeCreate"
+      @submit="handleCreate"
+    />
 
     <ConfirmDeleteDialog v-if="toDelete" :open="!!toDelete" :batch="toDelete" :loading="loading" @cancel="toDelete = null" @confirm="deleteBatch" />
   </AdminLayout>
@@ -177,7 +187,11 @@ import {
   loadAlcoholTypeReferenceData,
   resolveAlcoholTypeLabel,
 } from '@/lib/alcoholTypeRegistry'
-import { validateBatchAttrField } from '@/lib/batchAttrValidation'
+import {
+  normalizeBatchAttrDataType,
+  validateBatchAttrField,
+} from '@/lib/batchAttrValidation'
+import { DEVELOPMENT_MODE_ENABLED } from '@/lib/devMode'
 import { formatRpcErrorMessage } from '@/lib/rpcErrors'
 import { supabase } from '@/lib/supabase'
 import BatchSummaryDialog from '@/views/Pages/components/BatchSummaryDialog.vue'
@@ -235,13 +249,27 @@ type AttrField = {
   name: string
   name_i18n?: Record<string, string> | null
   data_type: string
+  required: boolean
+  uom_id: string | null
+  uom_code: string | null
   num_min?: number | null
   num_max?: number | null
+  text_regex?: string | null
+  allowed_values?: unknown | null
   ref_kind?: string | null
   ref_domain?: string | null
 }
 
 type ColumnDef = { key: SortKey | string, label: string, sortable: boolean, i18n: boolean }
+type BatchCreatePayload = {
+  recipeId: string
+  batchCode: string | null
+  label: string | null
+  plannedStart: string | null
+  plannedEnd: string | null
+  notes: string | null
+  attrValues: Record<string, unknown>
+}
 
 const baseColumns: ColumnDef[] = [
   { key: 'label', label: 'batch.list.colName', sortable: true, i18n: true },
@@ -255,6 +283,7 @@ const loading = ref(false)
 const tenantId = ref<string | null>(null)
 const recipes = ref<RecipeOption[]>([])
 const isAdmin = ref(false)
+const showRecipeSelection = DEVELOPMENT_MODE_ENABLED
 
 const search = reactive<SearchState>({
   name: '',
@@ -281,6 +310,12 @@ const attrRefOptions = ref<Record<string, Array<{ value: string | number, label:
 const attrRefLabelMaps = ref<Record<string, Map<string, string>>>({})
 
 const attrSearchFields = computed(() => attrFields.value)
+const createAttrFields = computed(() =>
+  attrFields.value.map((field) => ({
+    ...field,
+    options: attrOptions(field),
+  })),
+)
 const mesClient = () => supabase.schema('mes')
 
 const columns = computed<ColumnDef[]>(() => {
@@ -374,7 +409,7 @@ async function loadAttrFields() {
   if (attrLoading.value) return
   try {
     attrLoading.value = true
-    await ensureTenant()
+    const tenant = await ensureTenant()
     const { data: setData, error: setError } = await supabase
       .from('attr_set')
       .select('attr_set_id, code, name, domain, scope, owner_id, is_active, sort_order')
@@ -390,11 +425,30 @@ async function loadAttrFields() {
     }
     const { data: ruleData, error: ruleError } = await supabase
       .from('attr_set_rule')
-      .select('attr_set_id, attr_id, required, sort_order, is_active, attr_def:attr_def!fk_attr_set_rule_attr(attr_id, code, name, name_i18n, data_type, num_min, num_max, ref_kind, ref_domain, is_active)')
+      .select('attr_set_id, attr_id, required, sort_order, is_active, attr_def:attr_def!fk_attr_set_rule_attr(attr_id, code, name, name_i18n, data_type, required, uom_id, num_min, num_max, text_regex, allowed_values, ref_kind, ref_domain, is_active)')
       .in('attr_set_id', setIds)
       .eq('is_active', true)
       .order('sort_order', { ascending: true })
     if (ruleError) throw ruleError
+
+    const uomIds = new Set<string>()
+    for (const row of ruleData ?? []) {
+      const attr = (row as any).attr_def
+      if (attr?.uom_id) uomIds.add(String(attr.uom_id))
+    }
+    const uomMap = new Map<string, string>()
+    if (uomIds.size > 0) {
+      const { data: uomRows, error: uomError } = await supabase
+        .from('mst_uom')
+        .select('id, code')
+        .eq('tenant_id', tenant)
+        .in('id', Array.from(uomIds))
+      if (uomError) throw uomError
+      for (const row of uomRows ?? []) {
+        uomMap.set(String((row as any).id), String((row as any).code ?? ''))
+      }
+    }
+
     const fields: AttrField[] = []
     const seen = new Set<number>()
     for (const row of ruleData ?? []) {
@@ -409,9 +463,14 @@ async function loadAttrFields() {
         code: String(attr.code ?? ''),
         name: String(attr.name ?? attr.code ?? attr.attr_id),
         name_i18n: (attr as any).name_i18n ?? null,
-        data_type: String(attr.data_type ?? ''),
+        data_type: normalizeBatchAttrDataType(String(attr.data_type ?? '')),
+        required: Boolean((row as any).required || (attr as any).required),
+        uom_id: (attr as any).uom_id ?? null,
+        uom_code: (attr as any).uom_id ? uomMap.get(String((attr as any).uom_id)) ?? null : null,
         num_min: parseOptionalNumber((attr as any).num_min),
         num_max: parseOptionalNumber((attr as any).num_max),
+        text_regex: (attr as any).text_regex ?? null,
+        allowed_values: (attr as any).allowed_values ?? null,
         ref_kind: (attr as any).ref_kind ?? null,
         ref_domain: (attr as any).ref_domain ?? null,
       })
@@ -500,6 +559,11 @@ async function fetchBatches() {
 }
 
 async function fetchRecipes() {
+  if (!showRecipeSelection) {
+    recipes.value = []
+    return
+  }
+
   try {
     const tenant = await ensureTenant()
     const { data, error } = await mesClient()
@@ -947,7 +1011,7 @@ function closeCreate() {
   showCreate.value = false
 }
 
-async function handleCreate(payload: { recipeId: string, batchCode: string | null, label: string | null, plannedStart: string | null, plannedEnd: string | null, notes: string | null }) {
+async function handleCreate(payload: BatchCreatePayload) {
   try {
     loading.value = true
     const tenant = await ensureTenant()
@@ -977,6 +1041,7 @@ async function handleCreate(payload: { recipeId: string, batchCode: string | nul
         .eq('id', data)
       if (updateError) throw updateError
       await assignBatchAttrSets(data, tenant)
+      await saveCreateAttrValues(data, tenant, payload.attrValues)
     }
     showCreate.value = false
     fetchBatches()
@@ -1006,6 +1071,72 @@ async function assignBatchAttrSets(batchId: string, tenant: string) {
     .from('entity_attr_set')
     .upsert(rows, { onConflict: 'tenant_id,entity_type,entity_id,attr_set_id' })
   if (error) throw error
+}
+
+async function saveCreateAttrValues(batchId: string, tenant: string, attrValues: Record<string, unknown>) {
+  if (!attrFields.value.length) return
+
+  const rows: Array<Record<string, any>> = []
+  for (const field of attrFields.value) {
+    const key = String(field.attr_id)
+    const value = attrValues[key]
+    const dataType = normalizeBatchAttrDataType(field.data_type)
+    if (isCreateAttrValueEmpty(value, dataType)) continue
+
+    const row: Record<string, any> = {
+      tenant_id: tenant,
+      entity_type: 'batch',
+      entity_id: batchId,
+      attr_id: field.attr_id,
+      uom_id: field.uom_id ?? null,
+    }
+
+    if (dataType === 'number') row.value_num = Number(value)
+    else if (dataType === 'bool') row.value_bool = Boolean(value)
+    else if (dataType === 'date') row.value_date = value
+    else if (dataType === 'timestamp') row.value_ts = fromInputDateTime(String(value))
+    else if (dataType === 'json') row.value_json = parseJsonValue(String(value))
+    else if (dataType === 'ref') {
+      if (field.ref_kind === 'registry_def') {
+        row.value_json = { def_id: value, kind: field.ref_domain }
+      } else {
+        row.value_ref_type_id = String(value).trim()
+      }
+    } else {
+      row.value_text = String(value)
+    }
+
+    rows.push(row)
+  }
+
+  if (!rows.length) return
+
+  const { error } = await supabase
+    .from('entity_attr')
+    .upsert(rows, { onConflict: 'tenant_id,entity_type,entity_id,attr_id' })
+  if (error) throw error
+}
+
+function isCreateAttrValueEmpty(value: unknown, dataType: string) {
+  if (dataType === 'bool') return false
+  if (value === null || value === undefined) return true
+  if (typeof value === 'string') return value.trim() === ''
+  return false
+}
+
+function parseJsonValue(value: string) {
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  return JSON.parse(trimmed)
+}
+
+function fromInputDateTime(value: string) {
+  if (!value) return null
+  try {
+    return new Date(value).toISOString()
+  } catch {
+    return value
+  }
 }
 
 async function generateBatchCode() {

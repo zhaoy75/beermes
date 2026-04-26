@@ -342,6 +342,7 @@
       "parentBatchesEmpty": "No parent batches added.",
       "parentBatchCode": "Parent batch code",
       "parentBatchQuantity": "Quantity (L)",
+      "attributes": "Batch attributes",
       "autoCodeHint": "If blank, a batch code will be generated like BATCH-YYYYMMDD-XXXX.",
       "createButton": "Create Batch",
       "createFailed": "Failed to create batch."

@@ -1834,8 +1834,12 @@
         "step5": "ステップ5"
       },
       "intent": {
-        "title": "ステップ1：移出目的",
+        "title": "ステップ1：登録内容を選択",
         "loading": "移出目的を読み込み中..."
+      },
+      "otherBrewery": {
+        "title": "他製造者へ出荷",
+        "description": "他の酒類製造者の製造場へ出荷します。"
       },
       "sites": {
         "title": "ステップ2：移出元/移出先の選択",
@@ -1896,6 +1900,7 @@
         "noLotsFound": "ロットが見つかりません。"
       },
       "confirmRows": {
+        "registrationType": "登録種別",
         "movementIntent": "movement_intent",
         "srcSiteType": "src_site_type",
         "dstSiteType": "dst_site_type",
@@ -1916,7 +1921,8 @@
       },
       "errors": {
         "loadIntents": "移出目的一覧の取得に失敗しました。",
-        "loadRules": "移出ルールの取得に失敗しました。"
+        "loadRules": "移出ルールの取得に失敗しました。",
+        "otherBreweryDestinationRequired": "他製造者へ出荷では、移出先に他の酒類製造者の製造場を選択してください。"
       }
     },
     "taxEvent": {

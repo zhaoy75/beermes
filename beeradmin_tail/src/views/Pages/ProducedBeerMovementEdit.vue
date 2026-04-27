@@ -21,9 +21,10 @@
               v-for="step in wizardSteps"
               :key="step.key"
               class="px-3 py-1.5 text-sm rounded-md"
-              :class="currentStep === step.index ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-50'"
+              :class="currentStep === step.index ? 'bg-gray-900 text-white' : canEnterStep(step.index) ? 'text-gray-600 hover:bg-gray-50' : 'text-gray-400 cursor-not-allowed'"
+              :disabled="!canEnterStep(step.index)"
               type="button"
-              @click="currentStep = step.index"
+              @click="goToStep(step.index)"
             >
               {{ step.label }}
             </button>
@@ -40,17 +41,17 @@
               <p v-else-if="intentsLoading" class="text-xs text-gray-500">{{ t('producedBeer.movementWizard.intent.loading') }}</p>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <button
-                  v-for="option in intentOptions"
-                  :key="option.value"
+                  v-for="option in step1Options"
+                  :key="option.key"
                   class="p-4 rounded-lg border text-left"
-                  :class="movementForm.intent === option.value ? 'border-blue-600 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'"
+                  :class="isStep1OptionSelected(option) ? 'border-blue-600 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'"
                   type="button"
-                  @click="movementForm.intent = option.value"
+                  @click="selectStep1Option(option)"
                 >
                   <div class="text-sm font-semibold text-gray-900">{{ option.label }}</div>
-                  <div class="text-xs text-gray-500">{{ option.value }}</div>
-                  </button>
-                </div>
+                  <div v-if="option.description" class="mt-1 text-xs text-gray-500">{{ option.description }}</div>
+                </button>
+              </div>
             </section>
 
             <section v-if="currentStep === 2" class="space-y-4">
@@ -286,6 +287,10 @@
                 <h3 class="text-base font-semibold">{{ t('producedBeer.movementWizard.confirm.title') }}</h3>
               </header>
               <div class="rounded-lg border border-gray-200 p-4 space-y-2 text-sm text-gray-600">
+                <div v-if="entryMode === 'OTHER_BREWERY_SHIPMENT'">
+                  {{ t('producedBeer.movementWizard.confirmRows.registrationType') }}:
+                  <span class="text-gray-900">{{ t('producedBeer.movementWizard.otherBrewery.title') }}</span>
+                </div>
                 <div>{{ t('producedBeer.movementWizard.confirmRows.movementIntent') }}: <span class="text-gray-900">{{ intentLabel(movementForm.intent) }}</span></div>
                 <div>{{ t('producedBeer.movementWizard.confirmRows.srcSiteType') }}: <span class="text-gray-900">{{ siteTypeLabel(movementForm.srcSiteType) }}</span></div>
                 <div>{{ t('producedBeer.movementWizard.confirmRows.dstSiteType') }}: <span class="text-gray-900">{{ siteTypeLabel(movementForm.dstSiteType) }}</span></div>
@@ -350,6 +355,7 @@ type RuleLabel = { ja?: string; en?: string }
 
 type MovementRules = {
   enums?: Record<string, string[]>
+  movement_intent_labels?: Record<string, RuleLabel>
   site_type_labels?: Record<string, RuleLabel>
   lot_tax_type_labels?: Record<string, RuleLabel>
   tax_event_labels?: Record<string, RuleLabel>
@@ -364,6 +370,16 @@ const router = useRouter()
 const { t, locale } = useI18n()
 const { loadRuleengineLabels, ruleLabel } = useRuleengineLabels()
 const pageTitle = computed(() => t('producedBeer.movementWizard.title'))
+const OTHER_BREWERY_SHIPMENT_INTENT = 'SHIP_DOMESTIC'
+const OTHER_BREWERY_SITE_TYPE = 'OTHER_BREWERY'
+type EntryMode = 'RULE_INTENT' | 'OTHER_BREWERY_SHIPMENT'
+type Step1Option = {
+  key: string
+  type: EntryMode
+  value: string
+  label: string
+  description: string
+}
 
 const currentStep = ref(1)
 const wizardSteps = computed(() => ([
@@ -381,6 +397,23 @@ const rulesLoading = ref(false)
 const intentLoadError = ref('')
 const rulesLoadError = ref('')
 const intentOptions = ref<Array<{ value: string; label: string }>>([])
+const entryMode = ref<EntryMode>('RULE_INTENT')
+const step1Options = computed<Step1Option[]>(() => [
+  ...intentOptions.value.map((option) => ({
+    key: `intent:${option.value}`,
+    type: 'RULE_INTENT' as const,
+    value: option.value,
+    label: option.label,
+    description: '',
+  })),
+  {
+    key: 'preset:other-brewery-shipment',
+    type: 'OTHER_BREWERY_SHIPMENT',
+    value: OTHER_BREWERY_SHIPMENT_INTENT,
+    label: t('producedBeer.movementWizard.otherBrewery.title'),
+    description: t('producedBeer.movementWizard.otherBrewery.description'),
+  },
+])
 
 type SiteOption = {
   id: string
@@ -448,7 +481,8 @@ const movementForm = reactive({
 function intentLabel(code: string | null | undefined) {
   if (!code) return '—'
   const row = intentOptions.value.find((item) => item.value === code)
-  return row?.label || code
+  if (row?.label) return row.label
+  return ruleLabel('movement_intent', code, rules.value?.movement_intent_labels)
 }
 
 function siteTypeLabel(code: string | null | undefined) {
@@ -605,11 +639,70 @@ function alcoholTypeLabel(code: string | null | undefined) {
   return resolveAlcoholTypeLabel(alcoholTypeLabelMap.value, code) ?? code
 }
 
+function resetMovementContext() {
+  movementForm.srcSite = ''
+  movementForm.dstSite = ''
+  movementForm.srcSiteType = ''
+  movementForm.dstSiteType = ''
+  movementForm.taxDecisionCode = ''
+  movementForm.taxDecisionReason = ''
+  movementForm.srcLots = []
+  movementForm.srcLotMoveQty = {}
+  movementForm.srcLotTaxType = ''
+  lotOptions.value = []
+  lotSelectionSource.value = 'none'
+  lotLookupQuery.value = ''
+  showLotSuggestions.value = false
+}
+
+function applyOtherBreweryDestinationDefaults() {
+  movementForm.dstSiteType = OTHER_BREWERY_SITE_TYPE
+  if (movementForm.dstSite) {
+    const dstSite = siteOptions.value.find((site) => site.id === movementForm.dstSite)
+    if (dstSite?.siteTypeKey !== OTHER_BREWERY_SITE_TYPE) movementForm.dstSite = ''
+  }
+}
+
+function selectRuleIntent(intent: string) {
+  entryMode.value = 'RULE_INTENT'
+  if (movementForm.intent === intent) return
+  movementForm.intent = intent
+}
+
+function isStep1OptionSelected(option: Step1Option) {
+  return entryMode.value === option.type && movementForm.intent === option.value
+}
+
+function selectStep1Option(option: Step1Option) {
+  if (option.type === 'OTHER_BREWERY_SHIPMENT') {
+    void selectOtherBreweryShipmentPreset()
+    return
+  }
+  selectRuleIntent(option.value)
+}
+
+async function selectOtherBreweryShipmentPreset() {
+  entryMode.value = 'OTHER_BREWERY_SHIPMENT'
+  if (movementForm.intent !== OTHER_BREWERY_SHIPMENT_INTENT) {
+    movementForm.intent = OTHER_BREWERY_SHIPMENT_INTENT
+    return
+  }
+  resetMovementContext()
+  await loadRulesForIntent(OTHER_BREWERY_SHIPMENT_INTENT)
+  applyOtherBreweryDestinationDefaults()
+}
+
 async function saveMovement() {
   if (saving.value) return
   try {
     if (!movementForm.intent) throw new Error('movement_intent is required')
     if (!movementForm.srcSite || !movementForm.dstSite) throw new Error('src/dst site is required')
+    if (entryMode.value === 'OTHER_BREWERY_SHIPMENT') {
+      const dstSite = siteOptions.value.find((site) => site.id === movementForm.dstSite)
+      if (movementForm.dstSiteType !== OTHER_BREWERY_SITE_TYPE || dstSite?.siteTypeKey !== OTHER_BREWERY_SITE_TYPE) {
+        throw new Error(t('producedBeer.movementWizard.errors.otherBreweryDestinationRequired'))
+      }
+    }
     if (!movementForm.srcLotTaxType) throw new Error('src_lot_tax_type is required')
     if (!movementForm.taxDecisionCode) throw new Error('tax_decision_code is required')
     if (!movementForm.srcLots.length) throw new Error('select at least one lot')
@@ -668,6 +761,7 @@ async function saveMovement() {
         notes: movementForm.notes.trim() || null,
         meta: {
           source: 'produced_beer_movement_ui',
+          ...(entryMode.value === 'OTHER_BREWERY_SHIPMENT' ? { entry_mode: 'OTHER_BREWERY_SHIPMENT' } : {}),
           unit_price: toNumber(movementForm.unitPrice),
           price: toNumber(movementForm.price),
           package_qty: row.packageQty,
@@ -807,7 +901,10 @@ const taxDecisionReasonRequired = computed(() =>
 )
 
 const srcSiteTypeOptions = computed(() => allowedSrcSiteTypes.value)
-const dstSiteTypeOptions = computed(() => allowedDstSiteTypes.value)
+const dstSiteTypeOptions = computed(() => {
+  if (entryMode.value !== 'OTHER_BREWERY_SHIPMENT') return allowedDstSiteTypes.value
+  return allowedDstSiteTypes.value.filter((siteType: string) => siteType === OTHER_BREWERY_SITE_TYPE)
+})
 
 const filteredSrcSiteOptions = computed(() => {
   if (!movementForm.srcSiteType) return siteOptions.value
@@ -815,6 +912,9 @@ const filteredSrcSiteOptions = computed(() => {
 })
 
 const filteredDstSiteOptions = computed(() => {
+  if (entryMode.value === 'OTHER_BREWERY_SHIPMENT') {
+    return siteOptions.value.filter((site) => site.siteTypeKey === OTHER_BREWERY_SITE_TYPE)
+  }
   if (!movementForm.dstSiteType) return siteOptions.value
   return siteOptions.value.filter((site) => site.siteTypeKey === movementForm.dstSiteType)
 })
@@ -903,12 +1003,18 @@ const selectedLookupLot = computed(() => {
 
 const hasStep1Input = computed(() => !!movementForm.intent)
 
-const hasStep2Input = computed(() =>
-  !!movementForm.srcSiteType ||
-  !!movementForm.dstSiteType ||
-  !!movementForm.srcSite ||
-  !!movementForm.dstSite,
-)
+const isStep2Complete = computed(() => {
+  if (!movementForm.srcSiteType || !movementForm.srcSite || !movementForm.dstSiteType || !movementForm.dstSite) {
+    return false
+  }
+
+  if (entryMode.value === 'OTHER_BREWERY_SHIPMENT') {
+    const dstSite = siteOptions.value.find((site) => site.id === movementForm.dstSite)
+    return movementForm.dstSiteType === OTHER_BREWERY_SITE_TYPE && dstSite?.siteTypeKey === OTHER_BREWERY_SITE_TYPE
+  }
+
+  return true
+})
 
 const hasStep3Input = computed(() =>
   !!movementForm.srcLotTaxType ||
@@ -920,16 +1026,8 @@ const hasStep3Input = computed(() =>
   Object.values(movementForm.srcLotMoveQty).some((value) => String(value ?? '').trim().length > 0),
 )
 
-const currentStepHasInput = computed(() => {
-  if (currentStep.value === 1) return hasStep1Input.value
-  if (currentStep.value === 2) return hasStep2Input.value
-  if (currentStep.value === 3) return hasStep3Input.value
-  if (currentStep.value === 4) return true
-  return true
-})
-
 const isNextDisabled = computed(() =>
-  currentStep.value === wizardSteps.value.length || !currentStepHasInput.value,
+  currentStep.value === wizardSteps.value.length || !canEnterStep(currentStep.value + 1),
 )
 
 const selectedLots = computed(() => lotOptions.value.filter((lot) => movementForm.srcLots.includes(lot.id)))
@@ -1057,19 +1155,7 @@ watch(
   () => movementForm.intent,
   async (value, oldValue) => {
     if (value === oldValue) return
-    movementForm.srcSite = ''
-    movementForm.dstSite = ''
-    movementForm.srcSiteType = ''
-    movementForm.dstSiteType = ''
-    movementForm.taxDecisionCode = ''
-    movementForm.taxDecisionReason = ''
-    movementForm.srcLots = []
-    movementForm.srcLotMoveQty = {}
-    movementForm.srcLotTaxType = ''
-    lotOptions.value = []
-    lotSelectionSource.value = 'none'
-    lotLookupQuery.value = ''
-    showLotSuggestions.value = false
+    resetMovementContext()
 
     if (!value) {
       rules.value = null
@@ -1077,6 +1163,7 @@ watch(
     }
 
     await loadRulesForIntent(value)
+    if (entryMode.value === 'OTHER_BREWERY_SHIPMENT') applyOtherBreweryDestinationDefaults()
   }
 )
 
@@ -1146,6 +1233,21 @@ watch(
 )
 
 watch(
+  () => entryMode.value,
+  (value) => {
+    if (value === 'OTHER_BREWERY_SHIPMENT') applyOtherBreweryDestinationDefaults()
+  },
+)
+
+watch(
+  () => movementForm.dstSiteType,
+  () => {
+    if (entryMode.value !== 'OTHER_BREWERY_SHIPMENT') return
+    applyOtherBreweryDestinationDefaults()
+  },
+)
+
+watch(
   () => movementForm.srcLots,
   () => {
     const selected = new Set(movementForm.srcLots)
@@ -1194,6 +1296,7 @@ async function loadMovementIntents() {
 
     if (
       movementForm.intent &&
+      entryMode.value === 'RULE_INTENT' &&
       !nextIntentOptions.some((option: { value: string }) => option.value === movementForm.intent)
     ) {
       movementForm.intent = ''
@@ -1591,7 +1694,20 @@ async function loadLotsForSite(siteId: string) {
 
 function nextStep() {
   if (isNextDisabled.value) return
-  if (currentStep.value < wizardSteps.value.length) currentStep.value += 1
+  goToStep(currentStep.value + 1)
+}
+
+function canEnterStep(stepIndex: number) {
+  if (stepIndex <= currentStep.value) return true
+  if (stepIndex === 2) return hasStep1Input.value
+  if (stepIndex >= 3 && (!hasStep1Input.value || !isStep2Complete.value)) return false
+  if (stepIndex >= 4 && !hasStep3Input.value) return false
+  return stepIndex <= wizardSteps.value.length
+}
+
+function goToStep(stepIndex: number) {
+  if (!canEnterStep(stepIndex)) return
+  currentStep.value = stepIndex
 }
 
 function prevStep() {

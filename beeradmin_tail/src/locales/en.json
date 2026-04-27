@@ -1833,9 +1833,13 @@
         "step5": "Step 5"
       },
       "intent": {
-        "title": "Step 1: Movement Intent",
+        "title": "Step 1: Select Registration Type",
         "subtitle": "Load movement intents using movement_get_movement_ui_intent.",
         "loading": "Loading movement intents..."
+      },
+      "otherBrewery": {
+        "title": "Ship to Other Brewery",
+        "description": "Ship produced beer to another brewery."
       },
       "sites": {
         "title": "Step 2: Source / Destination",
@@ -1900,6 +1904,7 @@
         "noLotsFound": "No lots found."
       },
       "confirmRows": {
+        "registrationType": "Registration Type",
         "movementIntent": "movement_intent",
         "srcSiteType": "src_site_type",
         "dstSiteType": "dst_site_type",
@@ -1920,7 +1925,8 @@
       },
       "errors": {
         "loadIntents": "Failed to load movement intents.",
-        "loadRules": "Failed to load movement rules."
+        "loadRules": "Failed to load movement rules.",
+        "otherBreweryDestinationRequired": "For Ship to Other Brewery, select a destination site whose type is Other Brewery."
       }
     },
     "taxEvent": {

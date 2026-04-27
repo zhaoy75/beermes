@@ -842,7 +842,7 @@ VALUES (
       "allowed_tax_decisions": [
         {
           "tax_decision_code": "NON_TAXABLE_REMOVAL",
-          "tax_event": "TAXABLE_REMOVAL",
+          "tax_event": "NON_TAXABLE_REMOVAL",
           "result_lot_tax_type": "TAX_SUSPENDED",
           "default": true,
           "lines_rules": {

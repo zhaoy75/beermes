@@ -859,7 +859,7 @@ VALUES (
           "tax_decision_code": "TAXABLE_REMOVAL",
           "tax_event": "TAXABLE_REMOVAL",
           "result_lot_tax_type": "TAX_PAID",
-          "default": true,
+          "default": false,
           "lines_rules": {
             "allow_partial_quantity": true,
             "require_full_lot": false,

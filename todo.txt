@@ -989,3 +989,22 @@ High: editor manual changes are discarded on save. saveReport() regenerates from
 
 Medium: SQL file order is fragile. 31_public.movement_save.sql (line 17) now depends on 76_public.tax_report_mark_stale_for_movement.sql (line 1). If function files are applied by numeric order, 31 is applied before 76, so deployment can fail or leave a runtime dependency missing.
 
+I want to create several vue pages for export report under 税務管理.帳票一覧 menu, including 未納税移出帳, 輸出免税帳, 未納税移入帳, 戻入帳.
+- ui design should be similar to 課税移出一覧表 page
+- the page should have a search section to filter by year, month and 酒類コード
+- the data should be retrieved from inv_movements and inv_movement_lines tables with movement type
+  - 未納税移出帳: movement type = 未納税移出
+  - 輸出免税帳: movement type = 輸出免税
+  - 未納税移入帳: movement type = 未納税移入
+  - 戻入帳票: movement type = 戻入
+- the page should have a business year summary section with following columns. data will be group by 酒類コード	ABV. the summary will be calculated based on search section year.
+- export excel file function should be implemented for each page, the excel file name should be like "未納税移出帳_2026.xlsx", "輸出免税帳_2026.xlsx", "未納税移入帳_2026.xlsx", "戻入帳_2026.xlsx"
+- excel layout should be similar to current excel file in the context
+
+PM010 message is not proper. is not correct translate from message of stored function
+
+I want to compact tables with 7 above columns for usability. do you have some idea like 
+- make gap between columns smaller
+- user dropdown menu for action (操作) if there are multiple actions for one record
+- use icons for actions instead of text to save space
+- if some columns are very long, consider compact it  and using focusing tooltip to show full content when user hover over the cell

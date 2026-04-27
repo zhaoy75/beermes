@@ -18,6 +18,7 @@ declare
   v_total_tax_amount numeric := 0;
   v_report_files jsonb;
   v_attachment_files jsonb;
+  v_breakdown_count int := 0;
   v_ref_count int := 0;
 begin
   if p_doc is null then
@@ -303,6 +304,16 @@ begin
     coalesce(sum(case when g.move_type in ('sale', 'tax_transfer', 'return', 'transfer') then g.tax_amount else 0 end), 0)
     into v_volume_breakdown, v_total_tax_amount
   from grouped g;
+
+  v_breakdown_count := jsonb_array_length(coalesce(v_volume_breakdown, '[]'::jsonb));
+  if v_existing.id is null and v_breakdown_count = 0 then
+    raise exception 'TRG005: no reportable source records for selected period'
+      using detail = jsonb_build_object(
+        'tax_type', v_tax_type,
+        'tax_year', v_tax_year,
+        'tax_month', v_tax_month
+      )::text;
+  end if;
 
   insert into public.tax_reports (
     id, tenant_id, tax_type, tax_year, tax_month, status,

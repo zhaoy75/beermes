@@ -101,7 +101,7 @@ These codes have one clear user meaning. They can receive locale entries now. Co
 | `PPR002`, `PPR005`, `PPR007` | `45_public.product_produce_rollback.sql` | Ready / Ready + details | Produce rollback target missing, downstream block, duplicate doc. |
 | `PU003`, `PU006`, `PU008`, `PU009`, `PU010` | `71_public.product_unpacking.sql` | Ready / Ready + details | Unpacking target/source/doc validation. |
 | `RSG001`-`RSG003` | `68_public.recipe_schema_get.sql` | Ready | Recipe schema errors. |
-| `TRG001`, `TRG003`, `TRG004` | `74_public.tax_report_generate.sql` | Ready | Tax report generation validation. |
+| `TRG001`, `TRG003`, `TRG004`, `TRG005` | `74_public.tax_report_generate.sql` | Ready / Ready + details | Tax report generation validation. `TRG005` includes period detail for empty-period creation. |
 | `TRM001`, `TRM002` | `76_public.tax_report_mark_stale_for_movement.sql` | Ready + details | `TRM002` already translated in UI; should eventually expose report status/year/month as JSON detail. |
 | `TRS001`, `TRS002`, `TRS003`, `TRS006` | `75_public.tax_report_set_status.sql` | Ready | Tax report status validation. |
 
@@ -276,6 +276,7 @@ These exceptions need stable codes before they can participate in the translatio
 | `74_public.tax_report_generate.sql:35,39` | `TRG002` | unsupported tax type; missing/invalid period | Ambiguous |
 | `74_public.tax_report_generate.sql:43` | `TRG003` | generate can only write draft/stale | Ready |
 | `74_public.tax_report_generate.sql:65` | `TRG004` | submitted/approved report cannot regenerate | Ready |
+| `74_public.tax_report_generate.sql` | `TRG005` | no reportable source records for selected period | Ready + details |
 | `75_public.tax_report_set_status.sql:18` | `TRS001` | report id required | Ready |
 | `75_public.tax_report_set_status.sql:23` | `TRS002` | invalid status | Ready |
 | `75_public.tax_report_set_status.sql:36` | `TRS003` | report not found | Ready |

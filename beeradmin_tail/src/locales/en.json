@@ -95,6 +95,7 @@
       "TRG001": { "message": "Tax report generation input is missing." },
       "TRG003": { "message": "Tax report generation can only save draft or stale reports." },
       "TRG004": { "message": "Submitted or approved tax reports cannot be regenerated." },
+      "TRG005": { "message": "No reportable details exist for the selected period, so the tax report was not created." },
       "TRM001": { "message": "The target movement was not specified." },
       "TRM002": { "message": "This movement is included in tax report ({report}) and cannot be reversed." },
       "TRS001": { "message": "The target tax report was not specified." },

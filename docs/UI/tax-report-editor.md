@@ -4,7 +4,13 @@
 - Provide a dedicated page to create or edit one `酒税申告` record.
 - Generate monthly tax-report breakdown data from movement records.
 - Generate XML files for the main report and disposal section.
-- Generate a month-scoped `課税移出一覧表` Excel from the shared taxable-removal export source when creating a new monthly draft.
+- Generate a yearly `課税移出一覧表` Excel from the shared taxable-removal export source when saving a monthly report.
+- Generate the supporting yearly ledger Excel package when saving a report:
+  - `課税移出一覧表_<year>.xlsx`
+  - `未納税移出帳_<year>.xlsx`
+  - `輸出免税帳_<year>.xlsx`
+  - `未納税移入帳_<year>.xlsx`
+  - `戻入帳_<year>.xlsx`
 - Persist generated XML/XLSX files in Supabase Storage and save file metadata in `tax_reports.report_files`.
 - Persist the source movement references used by the report so submitted/approved reports can block operational rollback of reported movements.
 
@@ -24,6 +30,9 @@
 ## Source Movement Tracking
 - Backend RPCs are the authority for source movement selection, tax breakdown calculation, `tax_reports` save/update, and source-reference persistence.
 - The editor calls `tax_report_generate` for report creation/regeneration.
+- New report creation must not create a `tax_reports` row when the selected period has no reportable source movement lines.
+- If `tax_report_generate` returns `TRG005`, the editor shows an empty-period message and returns to the list page.
+- If an existing editable report has no generated report rows, save must show the empty-period/validation message instead of returning silently.
 - Source references are stored in `tax_report_movement_refs`, not embedded only in `tax_reports.volume_breakdown`.
 - The backend must replace refs atomically whenever it saves the report:
   - delete old refs for `tax_report_id`
@@ -270,14 +279,14 @@
    - use selected route query values as the initial period
    - call `tax_report_generate` for that period
    - use the returned saved report row as the editor state
-   - if the tax type is monthly, also prepare the month-scoped `課税移出一覧表` Excel using the shared taxable-removal export source when saving files
+   - if the tax type is monthly, prepare the generated supporting workbook package when saving files
 5. Edit flow:
    - load the saved `tax_reports` row by id
    - populate the editor from the stored breakdown and file metadata
 6. User may edit breakdown values, generate XML files, manage attachment file-name lists, and save.
 7. Save behavior:
    - regenerate the report through `tax_report_generate` so source movement refs match the saved aggregate
-   - upload generated XML/XLSX files to Supabase Storage
+   - upload generated XML/XLSX files and supporting ledger workbooks to Supabase Storage
    - call `tax_report_generate` again with the generated file metadata and attachments
    - call `tax_report_set_status` when the requested final status is `submitted` or `approved`
 8. After save, user returns to the `酒税申告` list page.
@@ -404,6 +413,15 @@
     "storagePath": "tenant/<tenantId>/tax-reports/<reportId>/R8年1月_課税移出一覧表.xlsx",
     "size": 45678,
     "generatedAt": "2026-03-30T12:05:00Z"
+  },
+  {
+    "fileName": "未納税移出帳_2026.xlsx",
+    "fileType": "non_taxable_removal_ledger_excel",
+    "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "storageBucket": "tax-report-files",
+    "storagePath": "tenant/<tenantId>/tax-reports/<reportId>/non_taxable_removal_ledger_excel/未納税移出帳_2026.xlsx",
+    "size": 56789,
+    "generatedAt": "2026-03-30T12:06:00Z"
   }
 ]
 ```
@@ -603,18 +621,48 @@
 - Disposal XML generation/persistence behavior may remain available internally while disposal page design is revisited.
 
 ## 課税移出一覧表 Excel Generation
-- New monthly draft flow automatically generates the month-scoped workbook once after the initial report breakdown is created.
+- Tax-report save generates the yearly `課税移出一覧表` workbook as part of the supporting workbook package.
 - No manual `課税移出一覧表Excel` button is shown on the editor page.
 - Implementation rule:
   - reuse the shared taxable-removal export source used by the `課税移出一覧表` page
 - Workbook content:
-  - one monthly sheet using the same columns and layout as `課税移出明細`
-  - metadata rows include generation timestamp, business year, and selected month
+  - business-year summary sheet
+  - one monthly detail sheet per month in the selected business year
+  - metadata rows include generation timestamp and business year
 - File name format:
-  - `R<n>年<m>月_課税移出一覧表.xlsx`
+  - `課税移出一覧表_<year>.xlsx`
 - Save behavior:
   - upload file to Supabase Storage during save
   - save metadata object to `report_files`
+
+## Supporting Ledger Workbook Generation
+- Tax-report save generates five yearly supporting workbook files:
+  - `課税移出一覧表_<year>.xlsx`
+  - `未納税移出帳_<year>.xlsx`
+  - `輸出免税帳_<year>.xlsx`
+  - `未納税移入帳_<year>.xlsx`
+  - `戻入帳_<year>.xlsx`
+- These files are supporting audit/report files, not e-Tax XML submission files.
+- File generation uses the selected business year.
+- File generation does not apply the editor's visible month or `酒類コード` filters.
+- File source helpers:
+  - `課税移出一覧表`: shared taxable-removal workbook helper.
+  - other four ledgers: shared tax-ledger report config/helper.
+- File metadata `fileType` values:
+  - `taxable_removal_excel`
+  - `non_taxable_removal_ledger_excel`
+  - `export_exempt_ledger_excel`
+  - `non_taxable_receipt_ledger_excel`
+  - `return_to_factory_ledger_excel`
+- Save behavior:
+  - upload all generated workbook files to Supabase Storage during save
+  - save metadata objects to `report_files`
+  - replace prior metadata by `fileType` so stale generated workbook metadata does not remain active
+  - remove obsolete/replaced generated storage objects after the new metadata is saved
+- Workbook formatting follows repository Excel rules:
+  - table rows are included
+  - table header background is gray
+  - table header font is bold
 
 ## Non-Scope
 - No persistence of generated XML/XLSX binaries in `localStorage`.

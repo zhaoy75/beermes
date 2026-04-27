@@ -1095,7 +1095,7 @@ import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
-import { formatRpcErrorMessage } from '@/lib/rpcErrors'
+import { formatRpcErrorMessage, parseRpcError } from '@/lib/rpcErrors'
 import { supabase } from '@/lib/supabase'
 import { formatAbvPercent } from '@/lib/abvFormat'
 import {
@@ -1107,7 +1107,6 @@ import {
   calculateTaxTotalAmount,
   buildLia110ReportRows,
   buildTaxReductionPreview,
-  buildTaxableRemovalExcelFilename,
   buildDisposeXmlFilename,
   buildXmlFilename,
   buildXmlPayload,
@@ -1131,11 +1130,21 @@ import {
   type TaxVolumeItem,
 } from '@/lib/taxReport'
 import {
+  buildTaxableRemovalBusinessYearFileName,
   businessYearForDate,
-  createTaxableRemovalMonthWorkbookBlob,
+  createTaxableRemovalBusinessYearWorkbookBlob,
   loadTaxableRemovalDetailRows,
   type TaxableRemovalExportLabels,
 } from '@/lib/taxableRemovalReport'
+import {
+  buildTaxLedgerBusinessYearFileName,
+  createTaxLedgerBusinessYearWorkbookBlob,
+  getTaxLedgerConfig,
+  loadTaxLedgerDetailRows,
+  type TaxLedgerColumnKey,
+  type TaxLedgerExportLabels,
+  type TaxLedgerKey,
+} from '@/lib/taxLedgerReport'
 import { formatYen, nonNegativeYen, taxAmountFromLiters, truncateYen } from '@/lib/moneyFormat'
 import {
   formatMilliliters as formatMillilitersValue,
@@ -1147,6 +1156,13 @@ type MovementSortKey = 'kubun' | 'taxEvent' | 'category' | 'abv' | 'volume'
 type MovementSortDirection = 'asc' | 'desc'
 type EditorMode = 'edit' | 'preview'
 type TaxReportFormTab = 'LIA010' | 'LIA110' | 'LIA130' | 'LIA220' | 'LIA260'
+type SupportingLedgerFileType = Extract<
+  GeneratedTaxReportFile['fileType'],
+  | 'non_taxable_removal_ledger_excel'
+  | 'export_exempt_ledger_excel'
+  | 'non_taxable_receipt_ledger_excel'
+  | 'return_to_factory_ledger_excel'
+>
 
 interface MovementTableRow {
   item: TaxVolumeItem
@@ -1172,6 +1188,41 @@ const PREVIEW_MAX_ZOOM = 2
 const PREVIEW_ZOOM_STEP = 0.1
 const CSS_PIXELS_PER_MM = 96 / 25.4
 const showDisposeSection = false
+const taxLedgerKeys: TaxLedgerKey[] = [
+  'nonTaxableRemoval',
+  'exportExempt',
+  'nonTaxableReceipt',
+  'returnToFactory',
+]
+const taxLedgerFileTypes: Record<TaxLedgerKey, SupportingLedgerFileType> = {
+  nonTaxableRemoval: 'non_taxable_removal_ledger_excel',
+  exportExempt: 'export_exempt_ledger_excel',
+  nonTaxableReceipt: 'non_taxable_receipt_ledger_excel',
+  returnToFactory: 'return_to_factory_ledger_excel',
+}
+const taxLedgerColumnKeys: TaxLedgerColumnKey[] = [
+  'movementAt',
+  'item',
+  'brand',
+  'abv',
+  'container',
+  'packageCount',
+  'quantityMl',
+  'taxRate',
+  'sourceAddress',
+  'sourceName',
+  'destinationAddress',
+  'destinationName',
+  'recipientAddress',
+  'location',
+  'exporterAddress',
+  'exportDestinationAddress',
+  'exportDestinationName',
+  'transferorAddress',
+  'deliveryAddress',
+  'lotNo',
+  'notes',
+]
 
 const { t, tm, locale } = useI18n()
 const route = useRoute()
@@ -1273,6 +1324,7 @@ const formTabs = computed<Array<{ id: TaxReportFormTab; label: string; title: st
   },
 ])
 const attachmentList = computed(() => parseFileList(form.attachment_files))
+const reportBusinessYear = computed(() => businessYearForReportPeriod(form.tax_year, form.tax_month))
 const expectedGeneratedFiles = computed(() => {
   const files: Array<{ fileName: string; fileType: GeneratedTaxReportFile['fileType'] }> = []
   if (reportBreakdown.value.length > 0) {
@@ -1289,8 +1341,15 @@ const expectedGeneratedFiles = computed(() => {
   }
   if (form.tax_type === 'monthly' && form.tax_month) {
     files.push({
-      fileName: buildTaxableRemovalExcelFilename(form.tax_year, form.tax_month),
+      fileName: buildTaxableRemovalBusinessYearFileName(reportBusinessYear.value),
       fileType: 'taxable_removal_excel',
+    })
+    taxLedgerKeys.forEach((key) => {
+      const config = getTaxLedgerConfig(key)
+      files.push({
+        fileName: buildTaxLedgerBusinessYearFileName(config, reportBusinessYear.value),
+        fileType: taxLedgerFileTypes[key],
+      })
     })
   }
   return files
@@ -1459,6 +1518,16 @@ const taxableRemovalExportLabels = computed<TaxableRemovalExportLabels>(() => ({
     lotNo: t('taxableRemovalReport.table.columns.lotNo'),
     notes: t('taxableRemovalReport.table.columns.notes'),
   },
+}))
+const taxLedgerExportLabels = computed<TaxLedgerExportLabels>(() => ({
+  generatedAt: t('taxLedgerReport.export.generatedAt'),
+  businessYear: t('taxLedgerReport.export.businessYear'),
+  columns: Object.fromEntries(
+    [...taxLedgerColumnKeys, 'containerType'].map((column) => [
+      column,
+      t(`taxLedgerReport.table.columns.${column}`),
+    ]),
+  ) as TaxLedgerExportLabels['columns'],
 }))
 
 function statusLabel(status: string) {
@@ -1765,6 +1834,10 @@ function formatWarekiDate(year: number, month: number, day: number) {
   return `${eraName} ${yy} 年 ${month} 月 ${day} 日`
 }
 
+function businessYearForReportPeriod(year: number, month: number) {
+  return businessYearForDate(`${year}-${String(month).padStart(2, '0')}-01`) ?? year
+}
+
 function toWarekiYearParts(year: number) {
   if (year >= 2019) return { eraName: '令和', yy: year - 2018 }
   if (year >= 1989) return { eraName: '平成', yy: year - 1988 }
@@ -2014,8 +2087,13 @@ function validateForm() {
   if (!form.tax_year) errors.tax_year = t('taxReport.errors.taxYearRequired')
   if (form.tax_type === 'monthly' && !form.tax_month) errors.tax_month = t('taxReport.errors.taxMonthRequired')
   if (!form.status) errors.status = t('taxReport.errors.statusRequired')
-  if (reportBreakdown.value.length === 0) errors.breakdown = t('taxReport.errors.breakdownRequired')
+  if (reportBreakdown.value.length === 0) errors.breakdown = t('taxReport.emptyBreakdown')
   return Object.keys(errors).length === 0
+}
+
+function showValidationErrorToast() {
+  const firstError = Object.values(errors).find((message) => message)
+  if (firstError) toast.error(firstError)
 }
 
 async function buildSummaryXmlFile() {
@@ -2073,38 +2151,61 @@ async function buildDisposeXmlFile() {
   }
 }
 
-async function buildTaxableRemovalExcelFile() {
+async function buildSupportingLedgerWorkbookFiles() {
   if (form.tax_type !== 'monthly' || !form.tax_year || !form.tax_month) return null
 
   const tenant = await ensureTenant()
+  const businessYear = reportBusinessYear.value
+  const createdAt = new Date()
   const detailRows = await loadTaxableRemovalDetailRows({
     supabase,
     tenantId: tenant,
     locale: locale.value,
     removalTypeLabel: t('taxableRemovalReport.defaults.taxableRemovalType'),
   })
-  const businessYear =
-    businessYearForDate(`${form.tax_year}-${String(form.tax_month).padStart(2, '0')}-01`) ??
-    form.tax_year
-  const fileName = buildTaxableRemovalExcelFilename(form.tax_year, form.tax_month)
-  const createdAt = new Date()
-  const blob = createTaxableRemovalMonthWorkbookBlob({
+  const taxableRemovalBlob = createTaxableRemovalBusinessYearWorkbookBlob({
     detailRows,
     businessYear,
-    month: form.tax_month,
     labels: taxableRemovalExportLabels.value,
     locale: locale.value,
     createdAt,
     creator: 'beeradmin_tail',
   })
 
-  return {
-    blob,
-    fileName,
+  const files: GeneratedTaxReportFile[] = [{
+    blob: taxableRemovalBlob,
+    fileName: buildTaxableRemovalBusinessYearFileName(businessYear),
     fileType: 'taxable_removal_excel' as const,
     generatedAt: createdAt.toISOString(),
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  }]
+
+  for (const key of taxLedgerKeys) {
+    const config = getTaxLedgerConfig(key)
+    const ledgerRows = await loadTaxLedgerDetailRows({
+      supabase,
+      tenantId: tenant,
+      locale: locale.value,
+      config,
+    })
+    files.push({
+      blob: createTaxLedgerBusinessYearWorkbookBlob({
+        detailRows: ledgerRows,
+        businessYear,
+        config,
+        labels: taxLedgerExportLabels.value,
+        locale: locale.value,
+        createdAt,
+        creator: 'beeradmin_tail',
+      }),
+      fileName: buildTaxLedgerBusinessYearFileName(config, businessYear),
+      fileType: taxLedgerFileTypes[key],
+      generatedAt: createdAt.toISOString(),
+      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    })
   }
+
+  return files
 }
 
 async function saveReport() {
@@ -2130,7 +2231,10 @@ async function saveReport() {
       silent: true,
     })
 
-    if (!validateForm()) return
+    if (!validateForm()) {
+      showValidationErrorToast()
+      return
+    }
 
     const tenant = await ensureTenant()
     const reportId = form.id
@@ -2143,8 +2247,8 @@ async function saveReport() {
     const disposeFile = await buildDisposeXmlFile()
     if (disposeFile) generatedFiles.push(disposeFile)
 
-    const taxableRemovalFile = await buildTaxableRemovalExcelFile()
-    if (taxableRemovalFile) generatedFiles.push(taxableRemovalFile)
+    const supportingLedgerFiles = await buildSupportingLedgerWorkbookFiles()
+    if (supportingLedgerFiles) generatedFiles.push(...supportingLedgerFiles)
 
     const activeFileTypes = new Set(generatedFiles.map((file) => file.fileType))
     const obsoleteStoredFiles = storedReportFiles.value.filter(
@@ -2161,6 +2265,13 @@ async function saveReport() {
       tenantId: tenant,
     })
 
+    const replacedStoredFiles = retainedStoredFiles.filter((existing) =>
+      uploadedFiles.some((uploaded) =>
+        uploaded.fileType === existing.fileType &&
+        uploaded.storageBucket === existing.storageBucket &&
+        uploaded.storagePath !== existing.storagePath,
+      ),
+    )
     const reportFiles = mergeStoredFiles(retainedStoredFiles, uploadedFiles)
     await generateReportForPeriod(form.tax_type, form.tax_year, form.tax_month, {
       status: 'draft',
@@ -2171,11 +2282,12 @@ async function saveReport() {
     filesPersisted = true
     await applyRequestedFinalStatus(requestedStatus)
     storedReportFiles.value = reportFiles
-    if (obsoleteStoredFiles.length > 0) {
+    const cleanupFiles = [...obsoleteStoredFiles, ...replacedStoredFiles]
+    if (cleanupFiles.length > 0) {
       try {
         await removeStoredTaxReportFiles({
           supabase,
-          files: obsoleteStoredFiles,
+          files: cleanupFiles,
         })
       } catch (cleanupErr) {
         console.warn('Failed to remove obsolete tax report files from storage', cleanupErr)
@@ -2227,17 +2339,6 @@ async function createXmlForDispose() {
   } catch (err) {
     toast.error(formatRpcErrorMessage(err))
     console.error(err)
-  }
-}
-
-async function generateTaxableRemovalExcelForCurrentPeriod() {
-  if (form.tax_type !== 'monthly' || !form.tax_year || !form.tax_month) return
-
-  try {
-    await buildTaxableRemovalExcelFile()
-  } catch (err) {
-    console.error(err)
-    toast.error(t('taxableRemovalReport.export.failed'))
   }
 }
 
@@ -2314,8 +2415,7 @@ async function initializeNewReport() {
   form.tax_year = queryNumber(route.query.taxYear, new Date().getFullYear())
   form.tax_month = form.tax_type === 'monthly' ? queryNumber(route.query.taxMonth, new Date().getMonth() + 1) : 12
   form.status = 'draft'
-  await generateReportForPeriod(form.tax_type, form.tax_year, form.tax_month)
-  if (form.tax_type === 'monthly') await generateTaxableRemovalExcelForCurrentPeriod()
+  await generateReportForPeriod(form.tax_type, form.tax_year, form.tax_month, { silent: true })
 }
 
 async function goBack() {
@@ -2339,7 +2439,10 @@ onMounted(async () => {
     await fitPreviewToWidthWhenVisible()
   } catch (err) {
     console.error(err)
-    toast.error(err instanceof Error ? err.message : String(err))
+    toast.error(formatRpcErrorMessage(err))
+    if (!editing.value && parseRpcError(err).businessCode === 'TRG005') {
+      await router.push({ name: 'TaxReport' })
+    }
   } finally {
     loadingInitial.value = false
   }

@@ -15,6 +15,10 @@ export type TaxReportFileType =
   | 'tax_report_xml'
   | 'tax_report_dispose_xml'
   | 'taxable_removal_excel'
+  | 'non_taxable_removal_ledger_excel'
+  | 'export_exempt_ledger_excel'
+  | 'non_taxable_receipt_ledger_excel'
+  | 'return_to_factory_ledger_excel'
   | 'legacy'
 
 export interface TaxVolumeItem {
@@ -518,6 +522,10 @@ export function normalizeStoredFile(value: unknown): TaxReportStoredFile | null 
 }
 
 export function inferStoredFileType(fileName: string): TaxReportFileType {
+  if (fileName.includes('未納税移出帳')) return 'non_taxable_removal_ledger_excel'
+  if (fileName.includes('輸出免税帳')) return 'export_exempt_ledger_excel'
+  if (fileName.includes('未納税移入帳')) return 'non_taxable_receipt_ledger_excel'
+  if (fileName.includes('戻入帳')) return 'return_to_factory_ledger_excel'
   if (fileName.includes('課税移出一覧表') || fileName.toLowerCase().endsWith('.xlsx')) {
     return 'taxable_removal_excel'
   }

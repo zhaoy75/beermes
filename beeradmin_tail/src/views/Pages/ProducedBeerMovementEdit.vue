@@ -411,7 +411,7 @@ const step1Options = computed<Step1Option[]>(() => [
     type: 'OTHER_BREWERY_SHIPMENT',
     value: OTHER_BREWERY_SHIPMENT_INTENT,
     label: t('producedBeer.movementWizard.otherBrewery.title'),
-    description: t('producedBeer.movementWizard.otherBrewery.description'),
+    description: '',
   },
 ])
 
@@ -589,6 +589,24 @@ function displayLotQuantity(lot: LotOption) {
 function movementInputUomLabel(lot: LotOption) {
   if (isPackagedMoveInput(lot)) return t('producedBeer.movementWizard.table.package')
   return lot.uomCode || '—'
+}
+
+function resolvedMovementQuantity(lot: LotOption) {
+  const inputQty = toNumber(movementForm.srcLotMoveQty[lot.id])
+  if (inputQty == null || inputQty <= 0) return null
+  const unitVolume = packageUnitVolumeInLotUom(lot)
+  return isPackagedMoveInput(lot) && unitVolume != null && unitVolume > 0
+    ? inputQty * unitVolume
+    : inputQty
+}
+
+function isSelectedLotRowValid(lot: LotOption) {
+  const qty = resolvedMovementQuantity(lot)
+  if (qty == null || qty <= 0) return false
+  if (!lot.uomId) return false
+  const maxQty = lot.quantity
+  if (maxQty != null && Number.isFinite(maxQty) && qty > maxQty + 1e-9) return false
+  return true
 }
 
 function formatDateValue(value: string | null | undefined) {
@@ -1003,6 +1021,8 @@ const selectedLookupLot = computed(() => {
 
 const hasStep1Input = computed(() => !!movementForm.intent)
 
+const selectedLots = computed(() => lotOptions.value.filter((lot) => movementForm.srcLots.includes(lot.id)))
+
 const isStep2Complete = computed(() => {
   if (!movementForm.srcSiteType || !movementForm.srcSite || !movementForm.dstSiteType || !movementForm.dstSite) {
     return false
@@ -1016,21 +1036,16 @@ const isStep2Complete = computed(() => {
   return true
 })
 
-const hasStep3Input = computed(() =>
-  !!movementForm.srcLotTaxType ||
-  !!movementForm.taxDecisionCode ||
-  !!movementForm.product.trim() ||
-  !!movementForm.taxDecisionReason.trim() ||
-  !!lotLookupQuery.value.trim() ||
-  movementForm.srcLots.length > 0 ||
-  Object.values(movementForm.srcLotMoveQty).some((value) => String(value ?? '').trim().length > 0),
-)
+const isStep3Complete = computed(() => {
+  if (!movementForm.srcLotTaxType || !movementForm.taxDecisionCode) return false
+  if (taxDecisionReasonRequired.value && !movementForm.taxDecisionReason.trim()) return false
+  if (!selectedLots.value.length) return false
+  return selectedLots.value.every((lot) => isSelectedLotRowValid(lot))
+})
 
 const isNextDisabled = computed(() =>
   currentStep.value === wizardSteps.value.length || !canEnterStep(currentStep.value + 1),
 )
-
-const selectedLots = computed(() => lotOptions.value.filter((lot) => movementForm.srcLots.includes(lot.id)))
 
 function focusMovementQtyInput(lotId: string) {
   nextTick(() => {
@@ -1701,7 +1716,7 @@ function canEnterStep(stepIndex: number) {
   if (stepIndex <= currentStep.value) return true
   if (stepIndex === 2) return hasStep1Input.value
   if (stepIndex >= 3 && (!hasStep1Input.value || !isStep2Complete.value)) return false
-  if (stepIndex >= 4 && !hasStep3Input.value) return false
+  if (stepIndex >= 4 && !isStep3Complete.value) return false
   return stepIndex <= wizardSteps.value.length
 }
 

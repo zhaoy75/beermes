@@ -1823,9 +1823,9 @@
       }
     },
     "movementWizard": {
-      "title": "製品ビール移出登録",
+      "title": "その他移入出登録",
       "back": "戻る",
-      "wizardTitle": "製品ビール移出登録ウィザード",
+      "wizardTitle": "その他移入出登録ウィザード",
       "steps": {
         "step1": "ステップ1",
         "step2": "ステップ2",
@@ -1838,8 +1838,8 @@
         "loading": "移出目的を読み込み中..."
       },
       "otherBrewery": {
-        "title": "他製造者へ出荷",
-        "description": "他の酒類製造者の製造場へ出荷します。"
+        "title": "その他醸造所移出",
+        "description": ""
       },
       "sites": {
         "title": "ステップ2：移出元/移出先の選択",
@@ -1922,7 +1922,7 @@
       "errors": {
         "loadIntents": "移出目的一覧の取得に失敗しました。",
         "loadRules": "移出ルールの取得に失敗しました。",
-        "otherBreweryDestinationRequired": "他製造者へ出荷では、移出先に他の酒類製造者の製造場を選択してください。"
+        "otherBreweryDestinationRequired": "その他醸造所移出では、移出先に他の酒類製造者の製造場を選択してください。"
       }
     },
     "taxEvent": {

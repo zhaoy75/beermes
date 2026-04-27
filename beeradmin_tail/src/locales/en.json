@@ -1820,10 +1820,10 @@
       }
     },
     "movementWizard": {
-      "title": "Produced Beer Movement Registration",
+      "title": "Other Receipt / Shipment Registration",
       "subtitle": "Apply rules loaded dynamically from registry_def.",
       "back": "Back",
-      "wizardTitle": "Produced Beer Movement Wizard",
+      "wizardTitle": "Other Receipt / Shipment Wizard",
       "wizardSubtitle": "Complete steps 1 through 5.",
       "steps": {
         "step1": "Step 1",
@@ -1838,8 +1838,8 @@
         "loading": "Loading movement intents..."
       },
       "otherBrewery": {
-        "title": "Ship to Other Brewery",
-        "description": "Ship produced beer to another brewery."
+        "title": "Other Brewery Shipment",
+        "description": ""
       },
       "sites": {
         "title": "Step 2: Source / Destination",
@@ -1926,7 +1926,7 @@
       "errors": {
         "loadIntents": "Failed to load movement intents.",
         "loadRules": "Failed to load movement rules.",
-        "otherBreweryDestinationRequired": "For Ship to Other Brewery, select a destination site whose type is Other Brewery."
+        "otherBreweryDestinationRequired": "For Other Brewery Shipment, select a destination site whose type is Other Brewery."
       }
     },
     "taxEvent": {

@@ -1,15 +1,17 @@
 # Current Task
 
 ## Goal
-- Add a Step 1 entry point in `製品ビール移出登録` for shipping/selling produced beer to another brewery.
+- Rename the `製品ビール移出登録` page wording to `その他移入出登録`.
+- Add a Step 1 entry point in the movement wizard for shipping/selling produced beer to another brewery.
 - Continue using the current rule engine for movement rules, tax decisions, site type labels, and lot tax behavior.
 - Keep `SHIP_DOMESTIC` hidden from the normal rule-engine-driven movement intent list.
 
 ## Scope
-- Update the `製品ビール移出登録` Step 1 design to show one business-action list.
+- Update the movement wizard Step 1 design to show one business-action list.
 - The list includes:
   - normal rule-engine visible movement intents
-  - the frontend preset `他製造者へ出荷` / `Ship to Other Brewery`
+  - the frontend preset `その他醸造所移出` / `Other Brewery Shipment`
+- The preset card should not show explanatory/comment text.
 - The dedicated preset maps internally to:
   - `movement_intent = "SHIP_DOMESTIC"`
   - `entry_mode = "OTHER_BREWERY_SHIPMENT"`
@@ -17,6 +19,7 @@
 - The preset must call `movement_get_rules('SHIP_DOMESTIC')` and derive all allowed source site types, lot tax types, tax decisions, and tax events from the returned rule payload.
 - Step 2 must restrict destination site type and destination site choices to `OTHER_BREWERY` when the preset is active.
 - Step 2 must be complete before the user can move to Step 3.
+- Step 3 must be complete before the user can move to Step 4.
 - Save must still call `public.product_move(p_doc jsonb)`.
 - Save payload metadata should include:
   - `meta.entry_mode = "OTHER_BREWERY_SHIPMENT"`
@@ -62,8 +65,9 @@
 - The list contains:
   - movement intents returned by `movement_get_movement_UI_intent()`
   - one frontend preset card:
-    - Japanese label: `他製造者へ出荷`
-    - English label: `Ship to Other Brewery`
+    - Japanese label: `その他醸造所移出`
+    - English label: `Other Brewery Shipment`
+- The preset card must not show a description/comment under the label.
 - The UI must not expose a visible distinction such as `通常の移出目的` vs `専用登録`.
 - The preset card is not returned by the rule engine and is not a new movement intent.
 - Selecting the preset should:
@@ -98,10 +102,20 @@
 - Tax decision options and default decision must come from the matching rule.
 - If a non-default tax decision is selected, existing reason handling should remain in effect.
 - Quantity and package input behavior must continue to follow existing wizard behavior and durable quantity rules.
+- Step 3 is complete only when:
+  - `移出元ロット税区分` / source lot tax type is selected
+  - `税務判定コード` / tax decision code is selected
+  - at least one lot row is selected
+  - every selected lot row has a valid movement quantity greater than zero
+  - selected lot movement quantity does not exceed available lot stock
+  - selected lot row has a UOM
+  - non-default tax decision reason is entered when the existing reason rule requires it
+- The Next button must not move from Step 3 to Step 4 until Step 3 is complete.
+- The step header buttons must not allow jumping to Step 4 or later until Step 3 is complete.
 
 ## Confirmation / Save
 - Confirmation should make the preset clear:
-  - registration type: `他製造者へ出荷`
+  - registration type: `その他醸造所移出`
   - movement intent: `SHIP_DOMESTIC` / `国内出荷`
   - destination site type: `OTHER_BREWERY`
 - Before save, frontend validation must reject the preset if the resolved destination site type is not `OTHER_BREWERY`.
@@ -129,10 +143,13 @@
   - Load `SHIP_DOMESTIC` rules when the preset is selected.
   - Constrain destination site type/site options to `OTHER_BREWERY`.
   - Require complete Step 2 source/destination selections before Step 3 navigation.
+  - Require complete Step 3 tax/lot selections before Step 4 navigation.
   - Validate destination site type before save.
   - Add `meta.entry_mode` to save payload for the preset.
 - Locale files:
-  - Add labels for the Step 1 business-action list and preset card.
+  - Rename page title/wizard title to `その他移入出登録`.
+  - Rename the preset card to `その他醸造所移出`.
+  - Remove preset card comment text.
   - Add confirmation label for registration type if needed.
 
 ## Validation Plan
@@ -145,11 +162,13 @@
   - `npm run test --if-present`
   - manual UI check:
     - Step 1 shows one business-action list
-    - rule-engine visible intents and `他製造者へ出荷` appear together
+    - rule-engine visible intents and `その他醸造所移出` appear together
     - preset loads `SHIP_DOMESTIC` rules
     - Step 2 destination type only allows `OTHER_BREWERY`
     - Step 2 Next remains blocked until source type, source site, destination type, and destination site are selected
     - Step header buttons cannot jump to Step 3 or later until Step 2 is complete
+    - Step 3 Next remains blocked until source lot tax type, tax decision code, and valid selected lot rows are present
+    - Step header buttons cannot jump to Step 4 or later until Step 3 is complete
     - save payload uses `SHIP_DOMESTIC` and includes `meta.entry_mode`
 
 ## Final Decisions
@@ -163,11 +182,16 @@
 - Destination site type/site options are constrained to `OTHER_BREWERY` in preset mode.
 - Step 2 navigation now requires source site type, source site, destination site type, and destination site before Step 3 is reachable.
 - The step header buttons follow the same Step 2 completion gate for Step 3 and later steps.
+- Page title and wizard title are now `その他移入出登録`.
+- The preset label is now `その他醸造所移出`.
+- The preset card does not show a description/comment.
+- Step 3 navigation now requires source lot tax type, tax decision code, and valid selected lot rows before Step 4 is reachable.
+- The step header buttons follow the same Step 3 completion gate for Step 4 and later steps.
 - Save validation rejects the preset if destination site type is not `OTHER_BREWERY`.
 - Save payload adds `meta.entry_mode = "OTHER_BREWERY_SHIPMENT"` only for the preset.
 
 ## Validation Results
-- `git diff --check` passed after the Step 2 navigation change.
+- `git diff --check` passed after the title, preset label, and Step 3 navigation changes.
 - Locale JSON parse passed for `beeradmin_tail/src/locales/ja.json` and `beeradmin_tail/src/locales/en.json`.
 - `npm run type-check` passed.
 - `npm run build` passed with existing CSS minifier warnings for `::-webkit-scrollbar-thumb:is()`.

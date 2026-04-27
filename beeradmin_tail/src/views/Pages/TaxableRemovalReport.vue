@@ -152,7 +152,7 @@
             <table class="min-w-full divide-y divide-gray-200 text-sm">
               <thead class="bg-gray-50 text-xs uppercase text-gray-600">
                 <tr>
-                  <th class="px-3 py-2 text-left">
+                  <th class="px-2 py-1.5 text-left">
                     <TableColumnHeader
                       v-model:filter-value="columnFilters.item"
                       :active-sort-key="sortKey"
@@ -163,7 +163,7 @@
                       @sort="setColumnSort"
                     />
                   </th>
-                  <th class="px-3 py-2 text-left">
+                  <th class="px-2 py-1.5 text-left">
                     <TableColumnHeader
                       v-model:filter-value="columnFilters.brand"
                       :active-sort-key="sortKey"
@@ -174,7 +174,7 @@
                       @sort="setColumnSort"
                     />
                   </th>
-                  <th class="px-3 py-2 text-right">
+                  <th class="px-2 py-1.5 text-right">
                     <TableColumnHeader
                       v-model:filter-value="columnFilters.abv"
                       align="right"
@@ -186,7 +186,7 @@
                       @sort="setColumnSort"
                     />
                   </th>
-                  <th class="px-3 py-2 text-left">
+                  <th class="px-2 py-1.5 text-left">
                     <TableColumnHeader
                       v-model:filter-value="columnFilters.movementAt"
                       :active-sort-key="sortKey"
@@ -197,7 +197,7 @@
                       @sort="setColumnSort"
                     />
                   </th>
-                  <th class="px-3 py-2 text-left">
+                  <th class="px-2 py-1.5 text-left">
                     <TableColumnHeader
                       v-model:filter-value="columnFilters.container"
                       :active-sort-key="sortKey"
@@ -208,7 +208,7 @@
                       @sort="setColumnSort"
                     />
                   </th>
-                  <th class="px-3 py-2 text-right">
+                  <th class="px-2 py-1.5 text-right">
                     <TableColumnHeader
                       v-model:filter-value="columnFilters.quantityMl"
                       align="right"
@@ -220,9 +220,9 @@
                       @sort="setColumnSort"
                     />
                   </th>
-                  <th class="px-3 py-2 text-right">{{ t('taxableRemovalReport.table.columns.unitPrice') }}</th>
-                  <th class="px-3 py-2 text-right">{{ t('taxableRemovalReport.table.columns.amount') }}</th>
-                  <th class="px-3 py-2 text-left">
+                  <th class="px-2 py-1.5 text-right">{{ t('taxableRemovalReport.table.columns.unitPrice') }}</th>
+                  <th class="px-2 py-1.5 text-right">{{ t('taxableRemovalReport.table.columns.amount') }}</th>
+                  <th class="px-2 py-1.5 text-left">
                     <TableColumnHeader
                       v-model:filter-value="columnFilters.removalType"
                       :active-sort-key="sortKey"
@@ -233,7 +233,7 @@
                       @sort="setColumnSort"
                     />
                   </th>
-                  <th class="px-3 py-2 text-left">
+                  <th class="px-2 py-1.5 text-left">
                     <TableColumnHeader
                       v-model:filter-value="columnFilters.destinationAddress"
                       :active-sort-key="sortKey"
@@ -244,7 +244,7 @@
                       @sort="setColumnSort"
                     />
                   </th>
-                  <th class="px-3 py-2 text-left">
+                  <th class="px-2 py-1.5 text-left">
                     <TableColumnHeader
                       v-model:filter-value="columnFilters.destinationName"
                       :active-sort-key="sortKey"
@@ -255,7 +255,7 @@
                       @sort="setColumnSort"
                     />
                   </th>
-                  <th class="px-3 py-2 text-left">
+                  <th class="px-2 py-1.5 text-left">
                     <TableColumnHeader
                       v-model:filter-value="columnFilters.lotNo"
                       :active-sort-key="sortKey"
@@ -266,7 +266,7 @@
                       @sort="setColumnSort"
                     />
                   </th>
-                  <th class="px-3 py-2 text-left">
+                  <th class="px-2 py-1.5 text-left">
                     <TableColumnHeader
                       v-model:filter-value="columnFilters.notes"
                       :active-sort-key="sortKey"
@@ -291,19 +291,19 @@
                   </td>
                 </tr>
                 <tr v-for="row in visibleDetailRows" v-else :key="row.id" class="hover:bg-gray-50">
-                  <td class="px-3 py-2 text-gray-700">{{ row.itemLabel || row.liquorCode || '—' }}</td>
-                  <td class="px-3 py-2 text-gray-700">{{ row.brandName || '—' }}</td>
-                  <td class="px-3 py-2 text-right">{{ formatAbv(row.abv) }}</td>
-                  <td class="px-3 py-2 text-xs text-gray-500">{{ formatDateTime(row.movementAt) }}</td>
-                  <td class="px-3 py-2 text-gray-700">{{ row.containerLabel || '—' }}</td>
-                  <td class="px-3 py-2 text-right">{{ formatQuantityMl(row.quantityMl) }}</td>
-                  <td class="px-3 py-2 text-right">—</td>
-                  <td class="px-3 py-2 text-right">—</td>
-                  <td class="px-3 py-2 text-gray-700">{{ row.removalTypeLabel || '—' }}</td>
-                  <td class="px-3 py-2 text-gray-700">{{ row.destinationAddress || '—' }}</td>
-                  <td class="px-3 py-2 text-gray-700">{{ row.destinationName || '—' }}</td>
-                  <td class="px-3 py-2 font-mono text-xs text-gray-700">{{ row.lotNo || '—' }}</td>
-                  <td class="px-3 py-2 text-gray-700">{{ row.notes || '—' }}</td>
+                  <CompactTableCell :value="row.itemLabel || row.liquorCode" max-width="8rem" truncate focusable />
+                  <CompactTableCell :value="row.brandName" max-width="10rem" truncate focusable />
+                  <CompactTableCell :value="formatAbv(row.abv)" align="right" numeric />
+                  <CompactTableCell :value="formatDateTime(row.movementAt)" max-width="9rem" />
+                  <CompactTableCell :value="row.containerLabel" max-width="9rem" truncate focusable />
+                  <CompactTableCell :value="formatQuantityMl(row.quantityMl)" align="right" numeric />
+                  <CompactTableCell value="—" align="right" numeric />
+                  <CompactTableCell value="—" align="right" numeric />
+                  <CompactTableCell :value="row.removalTypeLabel" max-width="9rem" truncate focusable />
+                  <CompactTableCell :value="row.destinationAddress" max-width="13rem" truncate focusable />
+                  <CompactTableCell :value="row.destinationName" max-width="11rem" truncate focusable />
+                  <CompactTableCell :value="row.lotNo" max-width="10rem" truncate monospace focusable />
+                  <CompactTableCell :value="row.notes" max-width="12rem" truncate focusable />
                 </tr>
               </tbody>
             </table>
@@ -318,6 +318,7 @@
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue3-toastify'
+import CompactTableCell from '@/components/common/CompactTableCell.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import TableColumnHeader from '@/components/common/TableColumnHeader.vue'

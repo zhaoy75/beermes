@@ -105,7 +105,7 @@
         </div>
 
         <section class="overflow-x-auto border border-gray-200 rounded-lg">
-          <table class="min-w-full divide-y divide-gray-200 text-sm">
+          <table class="compact-table min-w-full divide-y divide-gray-200 text-sm">
             <thead class="bg-gray-50 text-xs uppercase text-gray-600">
               <tr>
                 <th class="px-3 py-2 text-left">
@@ -164,7 +164,7 @@
                     {{ t('producedBeer.inventory.table.site') }} {{ sortIndicator('site') }}
                   </button>
                 </th>
-                <th class="px-3 py-2 text-left">{{ t('common.actions') }}</th>
+                <th class="w-10 px-2 py-1.5 text-center">{{ t('common.actions') }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-100 bg-white">
@@ -217,35 +217,12 @@
                   <td class="px-3 py-2 text-right">{{ formatVolumeNumberValue(row.qtyLiters) }}</td>
                   <td class="px-3 py-2 text-right">{{ formatNumber(row.qtyPackages) }}</td>
                   <td class="px-3 py-2">{{ row.siteLabelText }}</td>
-                  <td class="px-3 py-2 space-x-2">
-                    <button
-                      v-if="canUnpack(row)"
-                      class="px-2 py-1 text-xs rounded border border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
-                      type="button"
-                      @click="openUnpackPage(row)"
-                    >
-                      {{ t('producedBeerInventory.actions.unpack') }}
-                    </button>
-                    <button
-                      class="px-2 py-1 text-xs rounded border hover:bg-gray-100 disabled:opacity-50"
-                      type="button"
-                      :disabled="!row.canShowDag"
-                      @click="openDagDialog(row)"
-                    >
-                      {{ t('producedBeerInventory.actions.showDag') }}
-                    </button>
-                    <button
-                      class="px-2 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
-                      type="button"
-                      :disabled="processingRowId === row.id || !row.canVoid"
-                      @click="completeDomesticRemoval(row)"
-                    >
-                      {{
-                        processingRowId === row.id
-                          ? t('common.saving')
-                          : t('producedBeerInventory.actions.cancelRemoval')
-                      }}
-                    </button>
+                  <td class="px-2 py-1.5 text-center">
+                    <RowActionMenu
+                      :actions="inventoryRowActions(row)"
+                      :label="t('common.actions')"
+                      @select="handleInventoryRowAction(row, $event)"
+                    />
                   </td>
                 </tr>
                 <tr v-if="isExpanded(row.id)" class="bg-gray-50/80">
@@ -442,6 +419,7 @@ import { useRouter } from 'vue-router'
 import ConfirmActionDialog from '@/components/common/ConfirmActionDialog.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import RowActionMenu from '@/components/common/RowActionMenu.vue'
 import Modal from '@/components/ui/Modal.vue'
 import { useConfirmDialog } from '@/composables/useConfirmDialog'
 import { useRuleengineLabels } from '@/composables/useRuleengineLabels'
@@ -713,6 +691,43 @@ function canUnpack(row: InventoryPageRow) {
   return Boolean(row.packageId && row.lotIds.length === 1 && row.siteId)
 }
 
+function inventoryRowActions(row: InventoryPageRow) {
+  return [
+    {
+      key: 'unpack',
+      label: t('producedBeerInventory.actions.unpack'),
+      disabled: !canUnpack(row),
+    },
+    {
+      key: 'dag',
+      label: t('producedBeerInventory.actions.showDag'),
+      disabled: !row.canShowDag,
+    },
+    {
+      key: 'cancelRemoval',
+      label: processingRowId.value === row.id
+        ? t('common.saving')
+        : t('producedBeerInventory.actions.cancelRemoval'),
+      disabled: processingRowId.value === row.id || !row.canVoid,
+      tone: 'danger' as const,
+    },
+  ]
+}
+
+function handleInventoryRowAction(row: InventoryPageRow, action: string) {
+  if (action === 'unpack') {
+    openUnpackPage(row)
+    return
+  }
+  if (action === 'dag') {
+    void openDagDialog(row)
+    return
+  }
+  if (action === 'cancelRemoval') {
+    void completeDomesticRemoval(row)
+  }
+}
+
 function openUnpackPage(row: InventoryPageRow) {
   if (!canUnpack(row)) return
   void router.push({
@@ -894,5 +909,13 @@ onMounted(async () => {
 th,
 td {
   white-space: nowrap;
+}
+
+.compact-table :is(th, td) {
+  padding: 0.375rem 0.5rem;
+}
+
+.compact-table tbody tr {
+  min-height: 2.25rem;
 }
 </style>

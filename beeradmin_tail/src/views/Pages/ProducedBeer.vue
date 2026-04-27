@@ -169,7 +169,7 @@
         </section>
 
         <section class="overflow-x-auto border border-gray-200 rounded-lg">
-          <table class="min-w-full divide-y divide-gray-200 text-sm">
+          <table class="compact-table min-w-full divide-y divide-gray-200 text-sm">
             <thead class="bg-gray-50 text-xs uppercase text-gray-600">
               <tr>
                 <th class="px-3 py-2 text-left">
@@ -322,7 +322,7 @@
                     @sort="setMovementColumnSort"
                   />
                 </th>
-                <th class="px-3 py-2 text-left">{{ t('common.actions') }}</th>
+                <th class="w-10 px-2 py-1.5 text-center">{{ t('common.actions') }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
@@ -354,17 +354,38 @@
                 <td class="px-3 py-2 text-gray-600">
                   {{ movementTypeLabel(card.taxEvent) }}
                 </td>
-                <td class="px-3 py-2">
+                <td class="px-2 py-1.5 text-center">
                   <button
-                    class="px-2 py-1 text-xs rounded border hover:bg-gray-50 disabled:opacity-50 disabled:hover:bg-white"
+                    class="inline-flex h-8 w-8 items-center justify-center rounded border border-red-200 bg-white text-red-700 hover:bg-red-50 disabled:border-gray-200 disabled:text-gray-400 disabled:opacity-60 disabled:hover:bg-white"
                     :disabled="movementLoading || card.status === 'void'"
-                    @click="reverseMovement(card)"
-                  >
-                    {{
+                    :aria-label="
                       card.status === 'void'
                         ? t('producedBeer.movement.actions.reversed')
                         : t('producedBeer.movement.actions.reverse')
-                    }}
+                    "
+                    :title="
+                      card.status === 'void'
+                        ? t('producedBeer.movement.actions.reversed')
+                        : t('producedBeer.movement.actions.reverse')
+                    "
+                    @click="reverseMovement(card)"
+                  >
+                    <svg class="h-4 w-4" viewBox="0 0 20 20" aria-hidden="true" fill="none">
+                      <path
+                        d="M6.3 6.8A5 5 0 1 1 5 10.2"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="1.8"
+                      />
+                      <path
+                        d="M6.4 3.8v3.1h3.1"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="1.8"
+                      />
+                    </svg>
                   </button>
                 </td>
               </tr>
@@ -1346,5 +1367,13 @@ onMounted(async () => {
 th,
 td {
   white-space: nowrap;
+}
+
+.compact-table :is(th, td) {
+  padding: 0.375rem 0.5rem;
+}
+
+.compact-table tbody tr {
+  min-height: 2.25rem;
 }
 </style>

@@ -151,7 +151,7 @@
                   <th
                     v-for="column in detailColumns"
                     :key="column"
-                    class="px-3 py-2"
+                    class="px-2 py-1.5"
                     :class="isRightAlignedColumn(column) ? 'text-right' : 'text-left'"
                   >
                     <TableColumnHeader
@@ -179,17 +179,19 @@
                   </td>
                 </tr>
                 <tr v-for="row in visibleDetailRows" v-else :key="row.id" class="hover:bg-gray-50">
-                  <td
+                  <CompactTableCell
                     v-for="column in detailColumns"
                     :key="`${row.id}-${column}`"
-                    class="px-3 py-2 text-gray-700"
-                    :class="[
-                      isRightAlignedColumn(column) ? 'text-right' : 'text-left',
-                      column === 'lotNo' ? 'font-mono text-xs' : '',
-                    ]"
+                    :align="isRightAlignedColumn(column) ? 'right' : 'left'"
+                    :focusable="isTruncatedColumn(column)"
+                    :max-width="columnMaxWidth(column)"
+                    :monospace="isMonospaceColumn(column)"
+                    :numeric="isRightAlignedColumn(column)"
+                    :title="isTruncatedColumn(column) ? formatDetailValue(row, column) : ''"
+                    :truncate="isTruncatedColumn(column)"
                   >
                     {{ formatDetailValue(row, column) }}
-                  </td>
+                  </CompactTableCell>
                 </tr>
               </tbody>
             </table>
@@ -205,6 +207,7 @@ import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import { toast } from 'vue3-toastify'
+import CompactTableCell from '@/components/common/CompactTableCell.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import TableColumnHeader from '@/components/common/TableColumnHeader.vue'
@@ -411,6 +414,52 @@ function formatDetailValue(row: TaxLedgerDetailRow, column: TaxLedgerColumnKey) 
 
 function isRightAlignedColumn(column: TaxLedgerColumnKey) {
   return rightAlignedColumns.has(column)
+}
+
+function isMonospaceColumn(column: TaxLedgerColumnKey) {
+  return column === 'lotNo'
+}
+
+function isTruncatedColumn(column: TaxLedgerColumnKey) {
+  return [
+    'brand',
+    'sourceAddress',
+    'sourceName',
+    'destinationAddress',
+    'destinationName',
+    'recipientAddress',
+    'location',
+    'exporterAddress',
+    'exportDestinationAddress',
+    'exportDestinationName',
+    'transferorAddress',
+    'deliveryAddress',
+    'lotNo',
+    'notes',
+  ].includes(column)
+}
+
+function columnMaxWidth(column: TaxLedgerColumnKey) {
+  const widths: Partial<Record<TaxLedgerColumnKey, string>> = {
+    movementAt: '9rem',
+    item: '8rem',
+    brand: '10rem',
+    container: '9rem',
+    sourceAddress: '13rem',
+    sourceName: '11rem',
+    destinationAddress: '13rem',
+    destinationName: '11rem',
+    recipientAddress: '13rem',
+    location: '10rem',
+    exporterAddress: '13rem',
+    exportDestinationAddress: '13rem',
+    exportDestinationName: '11rem',
+    transferorAddress: '13rem',
+    deliveryAddress: '13rem',
+    lotNo: '10rem',
+    notes: '12rem',
+  }
+  return widths[column] ?? ''
 }
 
 function setColumnSort(key: string, direction?: ColumnSortDirection) {

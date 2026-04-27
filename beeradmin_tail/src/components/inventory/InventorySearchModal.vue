@@ -133,7 +133,7 @@
               </div>
 
               <div class="max-h-[48vh] overflow-auto rounded-xl border border-gray-200">
-                <table class="min-w-full divide-y divide-gray-200 text-sm">
+                <table class="compact-table min-w-full divide-y divide-gray-200 text-sm">
                   <thead class="bg-gray-50 text-xs uppercase text-gray-600">
                     <tr>
                       <th class="px-3 py-2 text-left">
@@ -683,5 +683,13 @@ onBeforeUnmount(() => {
 th,
 td {
   white-space: nowrap;
+}
+
+.compact-table :is(th, td) {
+  padding: 0.375rem 0.5rem;
+}
+
+.compact-table tbody tr {
+  min-height: 2.25rem;
 }
 </style>

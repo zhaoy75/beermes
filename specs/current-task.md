@@ -7,6 +7,7 @@
   - `未納税移入帳`
   - `戻入帳`
 - Standardize ABV presentation so user-facing ABV values show a `%` suffix.
+- Define a reusable compact-table plan for tables with seven or more columns.
 
 ## Active Scope
 - Match the UI pattern of the existing `課税移出一覧表` page.
@@ -39,6 +40,7 @@
 - Excel export uses the selected business year and does not apply the visible month or `酒類コード` filters, consistent with `課税移出一覧表`.
 - ABV values in report/inventory/movement pages display as percentages, for example `5.0%`.
 - Non-batch-management table headers should use `ABV` rather than `目標ABV` / `Target ABV`.
+- Compact-table pattern applies to tables with seven or more visible columns, or tables with multiple row actions.
 
 ## Active Non-Goals
 - Do not calculate tax amount in the new yearly summaries.
@@ -47,6 +49,8 @@
 - Do not add new database tables.
 - Do not change existing `課税移出一覧表` behavior except for extracting shared report helpers when needed.
 - Do not add PDF export in this task.
+- Do not replace all tables with a third-party grid component.
+- Do not redesign page-level information architecture while compacting table rows.
 
 ## Active Affected Files
 - Spec:
@@ -64,6 +68,16 @@
   - [TaxableRemovalReport.vue](/Users/zhao/dev/other/beer/beeradmin_tail/src/views/Pages/TaxableRemovalReport.vue)
   - [taxableRemovalReport.ts](/Users/zhao/dev/other/beer/beeradmin_tail/src/lib/taxableRemovalReport.ts)
   - sample Excel files under `/Users/zhao/Documents/FutureProject/ビール/受領資料/20250829/既存デモ/税務`
+- Compact-table candidate shared components:
+  - `beeradmin_tail/src/components/common/CompactTableCell.vue`
+  - `beeradmin_tail/src/components/common/RowActionMenu.vue`
+  - existing `beeradmin_tail/src/components/common/TableColumnHeader.vue`
+- Compact-table first rollout page candidates:
+  - `TaxLedgerReport.vue`
+  - `TaxableRemovalReport.vue`
+  - `ProducedBeer.vue`
+  - `ProducedBeerInventory.vue`
+  - `InventorySearchModal.vue`
 
 ## Active Data Model / API Changes
 - No schema changes.
@@ -114,6 +128,42 @@
    - workbook contents use selected fiscal year, ignoring page month/liquor filters like `課税移出一覧表`
 5. Added routes/menu entries under `税務管理 > 帳票一覧`.
 
+## Active Compact Table Plan
+1. Define the trigger rule:
+   - any table with seven or more visible columns uses compact density.
+   - any table with multiple row actions uses a row action menu.
+2. Add shared compact table building blocks:
+   - `CompactTableCell.vue`
+     - supports `align`, `maxWidth`, `truncate`, `monospace`, and `title`/tooltip text.
+     - default cell spacing: `px-2 py-1.5`.
+     - keeps numeric cells right-aligned and uses `tabular-nums` where useful.
+   - `RowActionMenu.vue`
+     - one icon button under `操作`.
+     - one direct icon button is allowed when there is exactly one action.
+     - two or more actions must be moved into the menu.
+3. Standard compact table styling:
+   - table header: `text-xs`, compact padding, stable line height.
+   - body: `text-sm`, compact padding, stable row height around 36-40px.
+   - numeric/date columns keep predictable width.
+   - long text columns use `truncate` with a full-value hover title.
+4. Column prioritization:
+   - keep identifiers, date, status, quantity, and primary name visible.
+   - truncate secondary values such as notes, address, lot code, destination name, and long product names.
+   - avoid truncating numeric totals or action controls.
+5. Row action rules:
+   - one action: icon button with accessible `aria-label` and tooltip/title.
+   - two or more actions: `...` menu with text labels inside the dropdown.
+   - destructive actions stay visually distinct in the menu.
+6. Rollout order:
+   - first apply to new tax ledger pages and `課税移出一覧表`.
+   - next apply to `ProducedBeer.vue` movement table and inventory tables.
+   - then apply to modal tables such as inventory search.
+7. Validation:
+   - compare desktop and narrow viewport screenshots manually.
+   - verify keyboard focus and escape/click-away behavior for action menus.
+   - verify truncated cells expose full text on hover/focus.
+   - run targeted lint/type-check for touched shared components and rollout pages.
+
 ## Active Route / Menu Plan
 - `未納税移出帳`
   - route path: `/nonTaxableRemovalLedger`
@@ -157,6 +207,14 @@
 - New ledger pages reuse one component and differ by config.
 - `未納税移出帳` and `未納税移入帳` export split sheets by source/destination site type when that metadata can be resolved; unmatched rows are kept in the first sheet so they are not dropped.
 - ABV display values include `%`; labels should not imply target ABV outside batch-management-specific contexts.
+- Compact table implementation uses shared `CompactTableCell.vue` for report detail cells and shared `RowActionMenu.vue` for multi-action inventory rows.
+- First rollout implemented compact density on:
+  - tax ledger detail tables
+  - `課税移出一覧表` detail table
+  - produced beer movement table
+  - beer inventory table
+  - inventory search modal result table
+- Single row action remains a direct icon button; multiple row actions are grouped under one `操作` menu.
 
 ## Active Validation Results
 - `git diff --check -- specs/current-task.md docs/UI/tax-ledger-reports.md` passed before implementation.
@@ -172,3 +230,9 @@
   - targeted `npx eslint --no-fix` passed for ABV touched files without pre-existing lint debt.
   - locale JSON parse passed for `src/locales/ja.json` and `src/locales/en.json`.
   - `npm run test --if-present` passed.
+- Compact table implementation validation:
+  - `git diff --check -- compact-table touched files and spec` passed.
+  - `npm run type-check` passed.
+  - targeted `npx eslint --no-fix` passed for compact-table touched files.
+  - `npm run test --if-present` passed.
+  - full `npx eslint --no-fix .` still fails on existing unrelated lint debt outside this compact-table task.

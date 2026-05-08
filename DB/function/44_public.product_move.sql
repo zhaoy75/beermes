@@ -23,6 +23,7 @@ declare
   v_tax_rate numeric;
   v_beer_category text;
   v_beer_category_type_id uuid;
+  v_beer_abv numeric;
   v_tax_category_code text;
   v_tax_category_match_count int;
   v_uom_id uuid;
@@ -368,91 +369,121 @@ begin
     end if;
   end if;
 
-  if v_tax_event = 'TAXABLE_REMOVAL' then
+  v_tax_rate := 0;
+  v_tax_category_code := null;
+  v_beer_category := null;
+  v_beer_category_type_id := null;
+  v_beer_abv := null;
+
+  if v_tax_event in ('TAXABLE_REMOVAL', 'NON_TAXABLE_REMOVAL', 'EXPORT_EXEMPT', 'RETURN_TO_FACTORY') then
     if v_source_batch_id is null then
-      raise exception 'PM010: source beer category or tax category code could not be resolved for taxable movement';
-    end if;
-
-    select
-      coalesce(
-        nullif(btrim(coalesce(v_batch_attr.value_json ->> 'def_id', '')), ''),
-        nullif(btrim(coalesce(v_batch_attr.value_text, '')), '')
-      ),
-      v_batch_attr.value_ref_type_id
-      into
-        v_beer_category,
-        v_beer_category_type_id
-    from public.mes_batches b
-    left join lateral (
-      select ea.value_text, ea.value_json, ea.value_ref_type_id
-      from public.entity_attr ea
-      join public.attr_def ad
-        on ad.attr_id = ea.attr_id
-      where ea.tenant_id = v_tenant
-        and ea.entity_type = 'batch'
-        and ea.entity_id = b.id
-        and ad.domain = 'batch'
-        and ad.code = 'beer_category'
-        and ad.is_active = true
-      order by ea.updated_at desc
-      limit 1
-    ) v_batch_attr on true
-    where b.tenant_id = v_tenant
-      and b.id = v_source_batch_id
-    limit 1;
-
-    if v_beer_category is null and v_beer_category_type_id is null then
-      raise exception 'PM010: source beer category or tax category code could not be resolved for taxable movement';
-    end if;
-
-    v_tax_category_code := null;
-    v_tax_category_match_count := 0;
-
-    if v_beer_category is not null then
-      select count(*), max(v.key)
-        into v_tax_category_match_count, v_tax_category_code
-      from public.v_alcohol_type_options v
-      where
-        v.def_id::text = v_beer_category
-        or v.def_key = v_beer_category
-        or lower(coalesce(v.spec ->> 'name', '')) = lower(v_beer_category)
-        or v.key = v_beer_category
-        or v.value = v_beer_category;
-    end if;
-
-    if v_tax_category_match_count > 1 then
-      raise exception 'PM010: source beer category or tax category code could not be resolved for taxable movement';
-    end if;
-
-    if v_tax_category_code is null and v_beer_category_type_id is not null then
-      select nullif(btrim(coalesce(td.meta ->> 'tax_category_code', '')), '')
-        into v_tax_category_code
-      from public.type_def td
-      where td.tenant_id = v_tenant
-        and td.type_id = v_beer_category_type_id
-        and td.is_active = true
+      if v_tax_event = 'TAXABLE_REMOVAL' then
+        raise exception 'PM010: source beer category or tax category code could not be resolved for taxable movement';
+      end if;
+    else
+      select
+        coalesce(
+          nullif(btrim(coalesce(v_batch_attr.value_json ->> 'def_id', '')), ''),
+          nullif(btrim(coalesce(v_batch_attr.value_text, '')), '')
+        ),
+        v_batch_attr.value_ref_type_id,
+        v_abv_attr.value_num
+        into
+          v_beer_category,
+          v_beer_category_type_id,
+          v_beer_abv
+      from public.mes_batches b
+      left join lateral (
+        select ea.value_text, ea.value_json, ea.value_ref_type_id
+        from public.entity_attr ea
+        join public.attr_def ad
+          on ad.attr_id = ea.attr_id
+        where ea.tenant_id = v_tenant
+          and ea.entity_type = 'batch'
+          and ea.entity_id = b.id
+          and ad.domain = 'batch'
+          and ad.code = 'beer_category'
+          and ad.is_active = true
+        order by ea.updated_at desc
+        limit 1
+      ) v_batch_attr on true
+      left join lateral (
+        select ea.value_num
+        from public.entity_attr ea
+        join public.attr_def ad
+          on ad.attr_id = ea.attr_id
+        where ea.tenant_id = v_tenant
+          and ea.entity_type = 'batch'
+          and ea.entity_id = b.id
+          and ad.domain = 'batch'
+          and ad.code in ('actual_abv', 'target_abv')
+          and ad.is_active = true
+        order by case when ad.code = 'actual_abv' then 0 else 1 end, ea.updated_at desc
+        limit 1
+      ) v_abv_attr on true
+      where b.tenant_id = v_tenant
+        and b.id = v_source_batch_id
       limit 1;
     end if;
 
-    if v_tax_category_code is null
-       and v_beer_category is not null
-       and btrim(v_beer_category) ~ '^[0-9]+(\.[0-9]+)?$' then
-      v_tax_category_code := btrim(v_beer_category);
-    end if;
+    if v_beer_category is null and v_beer_category_type_id is null then
+      if v_tax_event = 'TAXABLE_REMOVAL' then
+        raise exception 'PM010: source beer category or tax category code could not be resolved for taxable movement';
+      end if;
+    else
+      v_tax_category_match_count := 0;
 
-    if v_tax_category_code is null then
-      raise exception 'PM010: source beer category or tax category code could not be resolved for taxable movement';
-    end if;
+      if v_beer_category is not null then
+        select count(*), max(v.key)
+          into v_tax_category_match_count, v_tax_category_code
+        from public.v_alcohol_type_options v
+        where
+          v.def_id::text = v_beer_category
+          or v.def_key = v_beer_category
+          or lower(coalesce(v.spec ->> 'name', '')) = lower(v_beer_category)
+          or v.key = v_beer_category
+          or v.value = v_beer_category;
+      end if;
 
-    begin
-      v_tax_rate := public.get_current_tax_rate(v_tax_category_code, v_movement_at::date);
-    exception
-      when others then
-        raise exception 'PM011: %', sqlerrm;
-    end;
-  else
-    v_tax_rate := 0;
-    v_tax_category_code := null;
+      if v_tax_category_match_count > 1 then
+        if v_tax_event = 'TAXABLE_REMOVAL' then
+          raise exception 'PM010: source beer category or tax category code could not be resolved for taxable movement';
+        end if;
+        v_tax_category_code := null;
+      end if;
+
+      if v_tax_category_code is null and v_beer_category_type_id is not null then
+        select nullif(btrim(coalesce(td.meta ->> 'tax_category_code', '')), '')
+          into v_tax_category_code
+        from public.type_def td
+        where td.tenant_id = v_tenant
+          and td.type_id = v_beer_category_type_id
+          and td.is_active = true
+        limit 1;
+      end if;
+
+      if v_tax_category_code is null
+         and v_beer_category is not null
+         and btrim(v_beer_category) ~ '^[0-9]+(\.[0-9]+)?$' then
+        v_tax_category_code := btrim(v_beer_category);
+      end if;
+
+      if v_tax_category_code is null then
+        if v_tax_event = 'TAXABLE_REMOVAL' then
+          raise exception 'PM010: source beer category or tax category code could not be resolved for taxable movement';
+        end if;
+      else
+        begin
+          v_tax_rate := public.get_current_tax_rate(v_tax_category_code, v_movement_at::date);
+        exception
+          when others then
+            if v_tax_event = 'TAXABLE_REMOVAL' then
+              raise exception 'PM011: %', sqlerrm;
+            end if;
+            v_tax_rate := 0;
+        end;
+      end if;
+    end if;
   end if;
 
   if v_doc_no is null then
@@ -482,7 +513,10 @@ begin
       'movement_intent', v_movement_intent,
       'tax_decision_code', v_tax_decision_code,
       'tax_event', v_tax_event,
-      'tax_rate', v_tax_rate
+      'tax_rate', v_tax_rate,
+      'beer_category', v_beer_category,
+      'tax_category_code', v_tax_category_code,
+      'abv', v_beer_abv
     ),
     v_notes
   )
@@ -514,7 +548,8 @@ begin
       'dst_site_type', v_dst_site_type,
       'src_lot_tax_type', v_effective_lot_tax_type,
       'beer_category', v_beer_category,
-      'tax_category_code', v_tax_category_code
+      'tax_category_code', v_tax_category_code,
+      'abv', v_beer_abv
     )
   )
   returning id into v_movement_line_id;

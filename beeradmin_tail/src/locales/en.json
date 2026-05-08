@@ -904,8 +904,9 @@
     "subtitle": "Manage packaging definitions for filling.",
     "newTitle": "New Package",
     "editTitle": "Edit Package",
-    "deleteTitle": "Delete Package",
-    "deleteConfirm": "Delete package {code}? This cannot be undone.",
+    "deactivateAction": "Disable",
+    "deactivateTitle": "Disable Package",
+    "deactivateConfirm": "Disable package {code}? Historical filling records will still reference it.",
     "columns": {
       "code": "Package code",
       "name": "Name",
@@ -2515,7 +2516,8 @@
     },
     "defaults": {
       "allMonths": "All Months",
-      "allLiquorCodes": "All Liquor Codes"
+      "allLiquorCodes": "All Liquor Codes",
+      "unknownPackage": "Unknown package {index}"
     },
     "results": {
       "count": "{count} results"
@@ -3488,6 +3490,7 @@
       "perBase": "Per Base",
       "percentOfBase": "Percent Of Base",
       "fixedPerBatch": "Fixed Per Batch",
+      "yieldBased": "Yield Based",
       "byFormula": "By Formula"
     },
     "consumptionModes": {

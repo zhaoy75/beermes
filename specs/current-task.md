@@ -1,199 +1,130 @@
 # Current Task
 
 ## Goal
-- Rename the `製品ビール移出登録` page wording to `その他移入出登録`.
-- Add a Step 1 entry point in the movement wizard for shipping/selling produced beer to another brewery.
-- Continue using the current rule engine for movement rules, tax decisions, site type labels, and lot tax behavior.
-- Keep `SHIP_DOMESTIC` hidden from the normal rule-engine-driven movement intent list.
+- Ensure generated tax report breakdown rows keep tax rate strictly constant per row.
+- Prevent `tax_rate` in `tax_reports.volume_breakdown` from being reverse-calculated from truncated yen tax amounts.
+- Preserve the tax rate that was saved on each movement line when generating reports, instead of recalculating report rows from the current tax master.
+- Prevent frontend-generated tax report summary rows from reverse-calculating or averaging tax rates.
+- Preserve generated `tax_amount`, beer category, and ABV snapshots through frontend report/XML/export paths.
 
 ## Scope
-- Update the movement wizard Step 1 design to show one business-action list.
-- The list includes:
-  - normal rule-engine visible movement intents
-  - the frontend preset `その他醸造所移出` / `Other Brewery Shipment`
-- The preset card should not show explanatory/comment text.
-- The dedicated preset maps internally to:
-  - `movement_intent = "SHIP_DOMESTIC"`
-  - `entry_mode = "OTHER_BREWERY_SHIPMENT"`
-  - destination site type constrained to `OTHER_BREWERY`
-- The preset must call `movement_get_rules('SHIP_DOMESTIC')` and derive all allowed source site types, lot tax types, tax decisions, and tax events from the returned rule payload.
-- Step 2 must restrict destination site type and destination site choices to `OTHER_BREWERY` when the preset is active.
-- Step 2 must be complete before the user can move to Step 3.
-- Step 3 must be complete before the user can move to Step 4.
-- Save must still call `public.product_move(p_doc jsonb)`.
-- Save payload metadata should include:
-  - `meta.entry_mode = "OTHER_BREWERY_SHIPMENT"`
+- Update `DB/function/74_public.tax_report_generate.sql`.
+- Update `DB/function/44_public.product_move.sql` so new reportable movements snapshot the applicable category tax rate when possible.
+- Update frontend tax report summary row construction.
+- Update frontend tax report normalization and XML/export builders that still recalculate tax amount or mix tax rates.
+- Treat `tax_rate` as part of the tax report grouping identity.
+- Emit the original grouped tax rate directly in `volume_breakdown`.
+- Use the saved movement-line tax rate as the authoritative rate for report generation.
+- Use the alcohol tax master only as a legacy fallback when a reportable movement line has no saved tax rate or only has legacy saved `0`.
+- Keep summary rows split by tax rate when detail rows in the same category/kubun use different tax rates.
+- Keep tax amount calculation and yen truncation separate from tax rate display/storage.
+- Include generated row `tax_amount` in `volume_breakdown` so frontend code can use the stored amount instead of recalculating from rate/volume.
+- Snapshot report-relevant beer category and ABV metadata on new product movements.
+- Use saved beer category and ABV metadata in report generation before falling back to current batch attributes.
+- Remove frontend fallback behavior that reverse-calculates missing tax rates from stored total tax amount.
 
 ## Non-Goals
-- Do not make `SHIP_DOMESTIC.show_in_movement_wizard` true.
-- Do not add a new movement intent enum.
-- Do not add a new stored function.
-- Do not change `movementrule.sql` rule visibility or tax transformation semantics in this task.
-- Do not add a real customer shipment flow.
-- Do not redesign later wizard steps beyond the constraints needed for this preset.
+- Do not change tax master schema.
+- Do not change frontend tax report rendering in this task.
+- Do not change existing tax rate master data.
+- Do not backfill existing `inv_movement_lines.tax_rate` values in this task.
+- Do not decide whether tax amount should be truncated per line or per grouped row in this task.
 
 ## Affected Files
 - Spec:
   - `specs/current-task.md`
-- Expected implementation files:
-  - `beeradmin_tail/src/views/Pages/ProducedBeerMovementEdit.vue`
-  - `beeradmin_tail/src/locales/ja.json`
-  - `beeradmin_tail/src/locales/en.json`
-- Reference files:
-  - `docs/UI/product_move.md`
-  - `DB/dml/registry_def/movementrule.sql`
+- Implementation:
+  - `DB/function/74_public.tax_report_generate.sql`
   - `DB/function/44_public.product_move.sql`
-  - `DB/function/35_public.movement_get_rules.sql`
-  - `DB/function/34_public.movement_get_movement_UI_intent.sql`
+  - `beeradmin_tail/src/lib/taxReport.ts`
+  - `beeradmin_tail/src/views/Pages/TaxReportEditor.vue`
+  - `beeradmin_tail/src/lib/taxreportxml/RLI0010_232/builders/lia220.ts`
+  - `beeradmin_tail/src/lib/taxableRemovalReport.ts`
+  - `beeradmin_tail/src/lib/taxLedgerReport.ts`
+  - `beeradmin_tail/src/views/Pages/TaxYearSummary.vue`
+- Reference files:
+  - `docs/domain/quantity-and-money.md`
+  - `DB/function/66_public.get_current_tax_rate.sql`
+  - `beeradmin_tail/src/lib/taxReport.ts`
+  - `beeradmin_tail/src/lib/moneyFormat.ts`
 
 ## Data Model / API Changes
-- No database schema changes.
-- No stored function signature changes.
-- `movement_get_movement_UI_intent()` remains the source for normal Step 1 movement intents.
-- `movement_get_rules('SHIP_DOMESTIC')` is used after selecting the dedicated other-brewery preset.
-- `public.product_move(...)` remains the posting API.
-- New frontend-only state:
-  - `entryMode: "RULE_INTENT" | "OTHER_BREWERY_SHIPMENT"`
-- New movement metadata on save:
-  - `meta.entry_mode = "OTHER_BREWERY_SHIPMENT"` only for this preset.
+- No schema changes.
+- Existing `tax_reports.volume_breakdown` JSON gains a `tax_amount` property per generated row.
+- `tax_reports.volume_breakdown[].tax_rate` should now always be the grouped source/master tax rate, not an effective rate derived from truncated tax amount.
+- `tax_reports.volume_breakdown[].tax_amount` should be read and reused by frontend tax report calculations when present.
+- `tax_report_generate` reads tax rates in this priority order:
+  1. `inv_movement_lines.tax_rate`
+  2. `inv_movement_lines.meta.tax_rate`
+  3. `inv_movements.meta.tax_rate`
+  4. alcohol tax master lookup by category/date for legacy rows with no saved positive rate
+- New movements should snapshot the applicable tax rate for reportable events:
+  - `TAXABLE_REMOVAL`
+  - `NON_TAXABLE_REMOVAL`
+  - `EXPORT_EXEMPT`
+  - `RETURN_TO_FACTORY`
+- New movements should snapshot source beer category / tax category code and ABV when available.
 
-## Step 1 Design
-- Step 1 title should use business wording:
-  - Japanese: `登録内容を選択`
-  - English: `Select Registration Type`
-- Step 1 should display one list of business actions.
-- The list contains:
-  - movement intents returned by `movement_get_movement_UI_intent()`
-  - one frontend preset card:
-    - Japanese label: `その他醸造所移出`
-    - English label: `Other Brewery Shipment`
-- The preset card must not show a description/comment under the label.
-- The UI must not expose a visible distinction such as `通常の移出目的` vs `専用登録`.
-- The preset card is not returned by the rule engine and is not a new movement intent.
-- Selecting the preset should:
-  - set `movementForm.intent = "SHIP_DOMESTIC"`
-  - set `entryMode = "OTHER_BREWERY_SHIPMENT"`
-  - call `movement_get_rules('SHIP_DOMESTIC')`
-  - move to the same Step 2 flow used by normal intents
-
-## Step 2 Constraints
-- When `entryMode = "OTHER_BREWERY_SHIPMENT"`:
-  - destination site type options must be filtered to `OTHER_BREWERY`
-  - destination site options must be filtered to sites whose resolved rule site type is `OTHER_BREWERY`
-  - source site type options must still come from the `SHIP_DOMESTIC` rule payload
-  - source site options must follow the selected source site type
-- The UI must not show `DOMESTIC_CUSTOMER` as an allowed destination in this preset.
-- Step 2 is complete only when all required site fields are selected:
-  - source site type
-  - source site
-  - destination site type
-  - destination site
-- The Next button must not move from Step 2 to Step 3 until Step 2 is complete.
-- The step header buttons must not allow jumping to Step 3 or later until Step 2 is complete.
-- In the other-brewery preset, Step 2 completion also requires:
-  - `dstSiteType = "OTHER_BREWERY"`
-  - the selected destination site resolves to site type `OTHER_BREWERY`
-
-## Step 3 / Tax Behavior
-- Lot tax type options must be derived from `tax_transformation_rules` matching:
-  - `movement_intent = "SHIP_DOMESTIC"`
-  - selected source site type
-  - `dst_site_type = "OTHER_BREWERY"`
-- Tax decision options and default decision must come from the matching rule.
-- If a non-default tax decision is selected, existing reason handling should remain in effect.
-- Quantity and package input behavior must continue to follow existing wizard behavior and durable quantity rules.
-- Step 3 is complete only when:
-  - `移出元ロット税区分` / source lot tax type is selected
-  - `税務判定コード` / tax decision code is selected
-  - at least one lot row is selected
-  - every selected lot row has a valid movement quantity greater than zero
-  - selected lot movement quantity does not exceed available lot stock
-  - selected lot row has a UOM
-  - non-default tax decision reason is entered when the existing reason rule requires it
-- The Next button must not move from Step 3 to Step 4 until Step 3 is complete.
-- The step header buttons must not allow jumping to Step 4 or later until Step 3 is complete.
-
-## Confirmation / Save
-- Confirmation should make the preset clear:
-  - registration type: `その他醸造所移出`
-  - movement intent: `SHIP_DOMESTIC` / `国内出荷`
-  - destination site type: `OTHER_BREWERY`
-- Before save, frontend validation must reject the preset if the resolved destination site type is not `OTHER_BREWERY`.
-- Save payload should include:
-  - `movement_intent: "SHIP_DOMESTIC"`
-  - selected source and destination sites
-  - selected lot and quantity
-  - selected tax decision code
-  - existing price/notes/reason fields
-  - `meta.entry_mode = "OTHER_BREWERY_SHIPMENT"`
-
-## Concerns / Guardrails
-- This is a UI preset, not backend authorization. Direct API calls can still post any valid rule-engine `SHIP_DOMESTIC` context.
-- The preset must not be treated as a real movement intent in saved movement data.
-- Reports/history that need to distinguish this flow should use:
-  - destination site type `OTHER_BREWERY`
-  - or `inv_movements.meta.entry_mode`
-- If business rules later require stricter source site restrictions, update the rule engine or add an explicit preset source filter.
-- Return flow compatibility should be checked because the outbound lot lands at an `OTHER_BREWERY` destination.
-
-## Planned File Changes
-- `ProducedBeerMovementEdit.vue`
-  - Add Step 1 business-action list.
-  - Add frontend-only `entryMode`.
-  - Load `SHIP_DOMESTIC` rules when the preset is selected.
-  - Constrain destination site type/site options to `OTHER_BREWERY`.
-  - Require complete Step 2 source/destination selections before Step 3 navigation.
-  - Require complete Step 3 tax/lot selections before Step 4 navigation.
-  - Validate destination site type before save.
-  - Add `meta.entry_mode` to save payload for the preset.
-- Locale files:
-  - Rename page title/wizard title to `その他移入出登録`.
-  - Rename the preset card to `その他醸造所移出`.
-  - Remove preset card comment text.
-  - Add confirmation label for registration type if needed.
+## Implementation Plan
+- Add `l.tax_rate` to the `grouped` CTE select list.
+- Add saved tax-rate extraction to `source_lines`.
+- Change `enriched_lines.tax_rate` to prefer saved positive source rates before master lookup.
+- Change `product_move` to resolve and save an applicable tax rate for reportable tax events, while preserving strict errors for taxable removals and avoiding new hard failures for non-taxable/export/return events.
+- Change LIA110 kubun summary grouping to include tax rate.
+- Change kubun summary rows to display the shared source tax rate, not an effective rate derived from truncated tax amount.
+- Change frontend normalization to preserve stored `tax_amount` and avoid reverse-calculating fallback rates.
+- Change frontend total/summary amount calculations to prefer stored `tax_amount`.
+- Change LIA220 return XML amount generation to prefer stored `tax_amount`.
+- Change taxable-removal Excel summary rows to group by tax rate.
+- Change tax ledger export rows and yearly tax summary category lookup to prefer saved movement metadata before current batch attributes.
+- Change report generation to prefer saved beer category and ABV metadata before current batch attributes.
+- Keep category and grand-total rows tax-rate blank because they may aggregate multiple rates.
+- Include `l.tax_rate` in the group key expression, `GROUP BY`, and generated `key` string.
+- Remove `weighted_tax_rate` from the grouped calculation because rows are no longer mixed across rates.
+- Emit:
+  - `'tax_rate', g.tax_rate`
+  - `'tax_amount', g.tax_amount`
+- Keep `v_total_tax_amount` based on `g.tax_amount`.
+- Validate SQL shape and run available project checks.
 
 ## Validation Plan
-- Spec/design:
-  - `git diff --check`
-- Implementation:
-  - locale JSON parse for `ja.json` and `en.json`
-  - `npm run type-check`
-  - targeted ESLint for touched Vue files
-  - `npm run test --if-present`
-  - manual UI check:
-    - Step 1 shows one business-action list
-    - rule-engine visible intents and `その他醸造所移出` appear together
-    - preset loads `SHIP_DOMESTIC` rules
-    - Step 2 destination type only allows `OTHER_BREWERY`
-    - Step 2 Next remains blocked until source type, source site, destination type, and destination site are selected
-    - Step header buttons cannot jump to Step 3 or later until Step 2 is complete
-    - Step 3 Next remains blocked until source lot tax type, tax decision code, and valid selected lot rows are present
-    - Step header buttons cannot jump to Step 4 or later until Step 3 is complete
-    - save payload uses `SHIP_DOMESTIC` and includes `meta.entry_mode`
+- `git diff --check`
+- SQL syntax-oriented review of the changed function section
+- `npm run test --if-present`
+- `npx eslint .`
+- `npx eslint src/lib/taxReport.ts src/views/Pages/TaxReportEditor.vue`
+- `npx eslint src/lib/taxreportxml/RLI0010_232/builders/lia220.ts src/lib/taxableRemovalReport.ts src/lib/taxLedgerReport.ts src/views/Pages/TaxYearSummary.vue`
+- `npm run type-check`
+- `npm run build`
+- Manual DB check when available:
+  - generate a report with small volume and tax rate `155000`
+  - confirm generated `volume_breakdown[].tax_rate = 155000`
+  - confirm generated `volume_breakdown[].tax_amount` is still truncated yen
+  - confirm rows split when the same category/event/ABV has different tax rates
 
 ## Final Decisions
-- Step 1 now shows a single business-action list.
-- Rule-engine visible movement intents and the frontend preset appear together.
-- The UI does not expose `通常の移出目的` / `専用登録` as separate concepts.
-- The preset is frontend-only and maps to:
-  - `movement_intent = "SHIP_DOMESTIC"`
-  - `entryMode = "OTHER_BREWERY_SHIPMENT"`
-- The preset still loads normal `SHIP_DOMESTIC` rules through `movement_get_rules`.
-- Destination site type/site options are constrained to `OTHER_BREWERY` in preset mode.
-- Step 2 navigation now requires source site type, source site, destination site type, and destination site before Step 3 is reachable.
-- The step header buttons follow the same Step 2 completion gate for Step 3 and later steps.
-- Page title and wizard title are now `その他移入出登録`.
-- The preset label is now `その他醸造所移出`.
-- The preset card does not show a description/comment.
-- Step 3 navigation now requires source lot tax type, tax decision code, and valid selected lot rows before Step 4 is reachable.
-- The step header buttons follow the same Step 3 completion gate for Step 4 and later steps.
-- Save validation rejects the preset if destination site type is not `OTHER_BREWERY`.
-- Save payload adds `meta.entry_mode = "OTHER_BREWERY_SHIPMENT"` only for the preset.
+- `tax_report_generate` now includes the tax rate in the generated breakdown row identity.
+- Rows with the same category/event/ABV but different tax rates are split into separate `volume_breakdown` rows.
+- Generated `volume_breakdown[].tax_rate` now uses the saved movement-line/header tax rate when available.
+- Saved tax rates of `0` are treated as missing in `tax_report_generate` so old non-taxable/export/return rows can still fall back to the master rate.
+- Alcohol tax master lookup remains only as a legacy fallback for reportable movement lines without a saved positive tax rate.
+- `product_move` now snapshots applicable tax rate for reportable tax events when category/rate can be resolved.
+- Taxable removals still raise if category/rate resolution fails; non-taxable/export/return movements keep posting and can rely on report-generation fallback.
+- LIA110 kubun summary rows are split by tax rate and now display the shared source tax rate.
+- Frontend summary row tax rates are no longer derived from tax amount and volume.
+- Category and grand-total summary rows continue to leave tax rate blank.
+- Generated `volume_breakdown[]` now includes `tax_amount` separately from `tax_rate`.
+- The old reverse calculation from truncated `tax_amount` back into `tax_rate` was removed.
+- Taxable removal Excel, tax ledger export, and yearly tax summary now prefer saved line/header category and ABV metadata before live batch attributes.
+- The existing per-line yen truncation behavior was left unchanged.
 
 ## Validation Results
-- `git diff --check` passed after the title, preset label, and Step 3 navigation changes.
-- Locale JSON parse passed for `beeradmin_tail/src/locales/ja.json` and `beeradmin_tail/src/locales/en.json`.
+- `git diff --check` passed.
+- Static review confirmed saved tax-rate extraction, saved-positive-rate preference, master fallback gating, product-move rate/category/ABV snapshotting for reportable tax events, LIA110 summary grouping by tax rate, and absence of the old SQL `weighted_tax_rate` / `g.tax_amount * 1000` reverse-rate formula.
+- Static search found no remaining `storedTotalTaxAmount * 1000`, `fallbackRate`, `effectiveTaxRate`, `weighted_tax_rate`, or `g.tax_amount * 1000` patterns in the tax-report source paths.
+- `npm run test --if-present` passed with no test output.
+- `npx eslint .` failed on existing project-wide frontend lint debt such as missing `<script lang>`, unused variables, `no-explicit-any`, and multi-word component-name violations.
+- `npx eslint src/lib/taxReport.ts src/views/Pages/TaxReportEditor.vue src/lib/taxreportxml/RLI0010_232/builders/lia220.ts src/lib/taxableRemovalReport.ts src/lib/taxLedgerReport.ts src/views/Pages/TaxYearSummary.vue` passed.
 - `npm run type-check` passed.
 - `npm run build` passed with existing CSS minifier warnings for `::-webkit-scrollbar-thumb:is()`.
-- `npm run test --if-present` passed with no test output.
-- Targeted `npx eslint --no-fix src/views/Pages/ProducedBeerMovementEdit.vue` still fails on existing `no-explicit-any` and unused-helper debt in that file.
+- Manual DB execution of `tax_report_generate` was not run in this workspace.

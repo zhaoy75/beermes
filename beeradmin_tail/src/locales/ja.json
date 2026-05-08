@@ -907,8 +907,9 @@
     "subtitle": "詰口容器の情報を管理します。",
     "newTitle": "パッケージの追加",
     "editTitle": "パッケージの編集",
-    "deleteTitle": "パッケージの削除",
-    "deleteConfirm": "パッケージ {code} を削除しますか？ この操作は元に戻せません。",
+    "deactivateAction": "無効化",
+    "deactivateTitle": "パッケージの無効化",
+    "deactivateConfirm": "パッケージ {code} を無効化しますか？ 過去の詰口実績では引き続き参照されます。",
     "columns": {
       "code": "コード",
       "name": "名称",
@@ -2510,7 +2511,8 @@
     },
     "defaults": {
       "allMonths": "すべての月",
-      "allLiquorCodes": "すべての酒類分類"
+      "allLiquorCodes": "すべての酒類分類",
+      "unknownPackage": "不明容器{index}"
     },
     "results": {
       "count": "{count}件"
@@ -3483,6 +3485,7 @@
       "perBase": "基準当たり",
       "percentOfBase": "基準比率",
       "fixedPerBatch": "バッチ固定",
+      "yieldBased": "収量基準",
       "byFormula": "計算式"
     },
     "consumptionModes": {

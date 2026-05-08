@@ -144,8 +144,8 @@
                 <button class="px-2 py-1 text-sm rounded border hover:bg-gray-100" @click="openEdit(row)">
                   {{ t('common.edit') }}
                 </button>
-                <button class="px-2 py-1 text-sm rounded bg-red-600 text-white hover:bg-red-700" @click="confirmDelete(row)">
-                  {{ t('common.delete') }}
+                <button class="px-2 py-1 text-sm rounded bg-red-600 text-white hover:bg-red-700" @click="confirmDeactivate(row)">
+                  {{ t('package.deactivateAction') }}
                 </button>
               </td>
             </tr>
@@ -252,18 +252,18 @@
       </div>
     </div>
 
-    <div v-if="showDelete" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+    <div v-if="showDeactivate" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div class="w-full max-w-md bg-white rounded-xl shadow-lg border">
         <header class="px-4 py-3 border-b">
-          <h3 class="font-semibold">{{ t('package.deleteTitle') }}</h3>
+          <h3 class="font-semibold">{{ t('package.deactivateTitle') }}</h3>
         </header>
-        <div class="p-4 text-sm">{{ t('package.deleteConfirm', { code: toDelete?.package_code ?? '' }) }}</div>
+        <div class="p-4 text-sm">{{ t('package.deactivateConfirm', { code: toDeactivate?.package_code ?? '' }) }}</div>
         <footer class="px-4 py-3 border-t flex items-center justify-end gap-2">
-          <button class="px-3 py-2 rounded border hover:bg-gray-50" type="button" @click="showDelete = false">
+          <button class="px-3 py-2 rounded border hover:bg-gray-50" type="button" @click="showDeactivate = false">
             {{ t('common.cancel') }}
           </button>
-          <button class="px-3 py-2 rounded bg-red-600 text-white hover:bg-red-700" type="button" @click="deleteRecord">
-            {{ t('common.delete') }}
+          <button class="px-3 py-2 rounded bg-red-600 text-white hover:bg-red-700" type="button" @click="deactivateRecord">
+            {{ t('package.deactivateAction') }}
           </button>
         </footer>
       </div>
@@ -292,6 +292,7 @@ type PackageRow = {
   qty_fix_flg: boolean | null
   fixed_qty: boolean | null
   volume_uom: string
+  is_active: boolean
   created_at: string | null
 }
 
@@ -317,9 +318,9 @@ const volumeUoms = ref<{ id: string; code: string; name: string | null; dimensio
 const loading = ref(false)
 const saving = ref(false)
 const showModal = ref(false)
-const showDelete = ref(false)
+const showDeactivate = ref(false)
 const editing = ref(false)
-const toDelete = ref<PackageRow | null>(null)
+const toDeactivate = ref<PackageRow | null>(null)
 
 const form = reactive({
   id: '',
@@ -513,6 +514,7 @@ async function fetchPackages() {
     const { data, error } = await supabase
       .from(TABLE)
       .select('*')
+      .eq('is_active', true)
       .order('package_code', { ascending: true })
     if (error) throw error
     rows.value = ((data ?? []) as PackageSourceRow[]).map((row) => ({
@@ -526,6 +528,7 @@ async function fetchPackages() {
       qty_fix_flg: typeof row.qty_fix_flg === 'boolean' ? row.qty_fix_flg : null,
       fixed_qty: typeof row.fixed_qty === 'boolean' ? row.fixed_qty : null,
       volume_uom: String(row.volume_uom ?? ''),
+      is_active: row.is_active !== false,
       created_at: typeof row.created_at === 'string' ? row.created_at : null,
     }))
   } catch (err) {
@@ -551,6 +554,7 @@ async function saveRecord() {
       unit_volume: Number(form.unit_volume),
       max_volume: form.max_volume === '' ? null : Number(form.max_volume),
       volume_uom: form.volume_uom,
+      is_active: true,
     }
 
     const payloadQtyFix = {
@@ -599,18 +603,21 @@ async function saveRecord() {
   }
 }
 
-function confirmDelete(row: PackageRow) {
-  toDelete.value = row
-  showDelete.value = true
+function confirmDeactivate(row: PackageRow) {
+  toDeactivate.value = row
+  showDeactivate.value = true
 }
 
-async function deleteRecord() {
-  if (!toDelete.value) return
+async function deactivateRecord() {
+  if (!toDeactivate.value) return
   try {
-    const { error } = await supabase.from(TABLE).delete().eq('id', toDelete.value.id)
+    const { error } = await supabase
+      .from(TABLE)
+      .update({ is_active: false })
+      .eq('id', toDeactivate.value.id)
     if (error) throw error
-    showDelete.value = false
-    toDelete.value = null
+    showDeactivate.value = false
+    toDeactivate.value = null
     await fetchPackages()
   } catch (err) {
     console.error(err)

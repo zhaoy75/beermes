@@ -461,7 +461,30 @@ function resolveMovementTaxRate(
 ) {
   const explicitLineRate = toNumber(line.tax_rate)
   if (explicitLineRate != null && explicitLineRate > 0) return explicitLineRate
+  const lineMetaRate = toNumber(line.meta?.tax_rate)
+  if (lineMetaRate != null && lineMetaRate > 0) return lineMetaRate
+  const headerMetaRate = toNumber(header.meta?.tax_rate)
+  if (headerMetaRate != null && headerMetaRate > 0) return headerMetaRate
   return applicableTaxRate(categoryCode, header.movement_at)
+}
+
+function resolveMovementCategory(
+  line: MovementLine,
+  header: MovementHeader,
+  fallbackCategoryId: string | null,
+) {
+  const categoryCandidates = [
+    line.meta?.tax_category_code,
+    line.meta?.beer_category,
+    header.meta?.tax_category_code,
+    header.meta?.beer_category,
+    fallbackCategoryId,
+  ]
+  for (const candidate of categoryCandidates) {
+    const normalized = normalizeTaxCategoryCode(candidate)
+    if (normalized) return normalized
+  }
+  return ''
 }
 
 async function loadMovementLines(movementIds: string[]) {
@@ -646,9 +669,11 @@ function processMovementLines(
     const batchId = row.batch_id ?? null
     if (!batchId) return
     const batchInfo = batchMap.get(batchId)
-    const rawCategoryId = batchCategoryMap.get(batchId) ?? null
+    const rawCategoryId = resolveMovementCategory(row, header, batchCategoryMap.get(batchId) ?? null)
     if (!rawCategoryId) return
-    const categoryRecord = categoryLookup.value.get(rawCategoryId)
+    const categoryRecord =
+      categoryLookup.value.get(rawCategoryId) ??
+      categoryLookup.value.get(normalizeTaxCategoryCode(rawCategoryId))
     const categoryId = categoryRecord?.id || normalizeTaxCategoryCode(rawCategoryId) || rawCategoryId
     const categoryName = categoryRecord?.name || categoryRecord?.code || categoryId
 

@@ -191,6 +191,7 @@ import {
   normalizeBatchAttrDataType,
   validateBatchAttrField,
 } from '@/lib/batchAttrValidation'
+import { formatAbvPercent } from '@/lib/abvFormat'
 import {
   compareDateOnly,
   formatDateOnly,
@@ -899,8 +900,15 @@ function parseOptionalNumber(value: unknown) {
   return Number.isFinite(parsed) ? parsed : null
 }
 
+function isAbvAttrField(field: AttrField) {
+  return field.code === 'target_abv' || field.code === 'actual_abv'
+}
+
 function formatAttrValueForField(value: unknown, field: AttrField) {
   if (value == null) return '—'
+  if (isAbvAttrField(field)) {
+    return formatAbvPercent(parseOptionalNumber(value), locale.value)
+  }
   if (field.data_type === 'ref') {
     const normalized = normalizeAttrValue(value)
     return resolveAttrRefDisplayLabel(normalized, field) ?? String(normalized ?? '—')

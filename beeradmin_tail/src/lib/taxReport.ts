@@ -130,7 +130,13 @@ export function sortTaxVolumeItems(items: TaxVolumeItem[]) {
     if ((a.categoryCode ?? '') !== (b.categoryCode ?? '')) {
       return (a.categoryCode ?? '').localeCompare(b.categoryCode ?? '')
     }
-    return (a.abv ?? 0) - (b.abv ?? 0)
+    const abvResult = (a.abv ?? 0) - (b.abv ?? 0)
+    if (abvResult !== 0) return abvResult
+
+    return compareNullableFiniteNumbers(
+      nullableFiniteNumber(a.tax_rate),
+      nullableFiniteNumber(b.tax_rate),
+    )
   })
 }
 
@@ -245,19 +251,34 @@ export function buildLia110ReportRows(items: TaxVolumeItem[]) {
   Array.from(categoryGroups.entries())
     .sort(([, leftRows], [, rightRows]) => compareCategoryRows(leftRows[0], rightRows[0]))
     .forEach(([categoryKey, categoryRows]) => {
-      const kubunGroups = new Map<number, TaxVolumeItem[]>()
+      const kubunGroups = new Map<string, {
+        kubunCode: number
+        taxRate: number | null
+        rows: TaxVolumeItem[]
+      }>()
       categoryRows.forEach((item) => {
         const kubunCode = lia110KubunCodeForItem(item)
-        if (!kubunGroups.has(kubunCode)) kubunGroups.set(kubunCode, [])
-        kubunGroups.get(kubunCode)?.push(item)
+        const taxRate = nullableFiniteNumber(item.tax_rate)
+        const groupKey = `${kubunCode}-${taxRateGroupKey(taxRate)}`
+        if (!kubunGroups.has(groupKey)) {
+          kubunGroups.set(groupKey, {
+            kubunCode,
+            taxRate,
+            rows: [],
+          })
+        }
+        kubunGroups.get(groupKey)?.rows.push(item)
       })
 
       let categoryTaxableVolume = 0
       let categoryTaxAmount = 0
 
-      Array.from(kubunGroups.entries())
-        .sort(([left], [right]) => left - right)
-        .forEach(([kubunCode, groupRows]) => {
+      Array.from(kubunGroups.values())
+        .sort((left, right) => {
+          if (left.kubunCode !== right.kubunCode) return left.kubunCode - right.kubunCode
+          return compareNullableFiniteNumbers(left.taxRate, right.taxRate)
+        })
+        .forEach(({ kubunCode, rows: groupRows }) => {
           groupRows.sort(compareLia110Rows)
           rows.push(...groupRows)
           const summaryRow = createKubunSummaryRow(categoryKey, kubunCode, groupRows)
@@ -279,12 +300,9 @@ export function buildLia110ReportRows(items: TaxVolumeItem[]) {
 }
 
 export function calculateTaxTotalAmount(
-  items: Array<Pick<TaxVolumeItem, 'move_type' | 'tax_event' | 'volume_l' | 'tax_rate'>>,
+  items: Array<Pick<TaxVolumeItem, 'move_type' | 'tax_event' | 'volume_l' | 'tax_rate' | 'tax_amount'>>,
 ) {
-  return items.reduce(
-    (sum, item) => sum + calculateTaxAmount(item.move_type, item.volume_l, item.tax_rate, item.tax_event),
-    0,
-  )
+  return items.reduce((sum, item) => sum + taxAmountForItem(item), 0)
 }
 
 export function buildTaxReductionPreview(options: {
@@ -437,6 +455,7 @@ export function normalizeReport(row: JsonMap): TaxReportRow {
               : record.taxRate
                 ? Number(record.taxRate)
                 : null,
+        tax_amount: toNullableNumber(record.tax_amount ?? record.taxAmount),
         export_date: toNullableString(record.export_date ?? record.exportDate),
         export_destination: toNullableString(record.export_destination ?? record.exportDestination),
         export_customs_office: toNullableString(record.export_customs_office ?? record.exportCustomsOffice),
@@ -446,25 +465,13 @@ export function normalizeReport(row: JsonMap): TaxReportRow {
       }
     })
     .filter((item) => item.categoryId || item.categoryName)
-  if (
-    normalizedBreakdown.length > 0 &&
-    normalizedBreakdown.every((item) => item.tax_rate == null)
-  ) {
-    const totalVolume = normalizedBreakdown.reduce((sum, item) => {
-      const sign = taxDirectionForMovement(item.move_type, item.tax_event)
-      if (sign === 0) return sum
-      return sum + sign * (item.volume_l || 0)
-    }, 0)
-    const fallbackRate =
-      totalVolume !== 0 ? (storedTotalTaxAmount * 1000) / totalVolume : 0
-    normalizedBreakdown.forEach((item) => {
-      item.tax_rate = isTaxAffectingMoveType(item.move_type, item.tax_event) ? fallbackRate : 0
-    })
-  } else if (normalizedBreakdown.length > 0) {
+  if (normalizedBreakdown.length > 0) {
     normalizeStoredBreakdownTaxRates(normalizedBreakdown, storedTotalTaxAmount)
   }
 
   const hasDerivedBreakdown = normalizedBreakdown.length > 0
+  const hasTaxBasis = normalizedBreakdown.some(hasStoredOrCalculableTaxAmount)
+  const hasMissingTaxBasis = normalizedBreakdown.some(hasTaxAffectingRowWithoutTaxBasis)
 
   return {
     id: String(row.id ?? ''),
@@ -472,7 +479,7 @@ export function normalizeReport(row: JsonMap): TaxReportRow {
     tax_year: Number(row.tax_year),
     tax_month: row.tax_month ? Number(row.tax_month) : 0,
     status: toNullableString(row.status) ?? 'draft',
-    total_tax_amount: hasDerivedBreakdown
+    total_tax_amount: hasDerivedBreakdown && hasTaxBasis && !hasMissingTaxBasis
       ? calculateTaxTotalAmount(normalizedBreakdown)
       : storedTotalTaxAmount,
     volume_breakdown: normalizedBreakdown,
@@ -586,13 +593,11 @@ function createKubunSummaryRow(
   const nonTaxableVolume = sumNumbers(rows.map((item) => item.non_taxable_volume_l))
   const exportExemptVolume = sumNumbers(rows.map((item) => item.export_exempt_volume_l))
   const taxableVolume = sumNumbers(rows.map((item) => item.taxable_volume_l))
-  const taxAmount = sumNumbers(
-    rows.map((item) => calculateTaxAmount(item.move_type, item.volume_l, item.tax_rate, item.tax_event)),
-  )
-  const basisVolume = taxableVolume > 0 ? taxableVolume : totalVolume
+  const taxAmount = sumNumbers(rows.map((item) => taxAmountForItem(item)))
+  const taxRate = sharedTaxRate(rows)
 
   return {
-    key: `${categoryKey}-kubun-${kubunCode}-summary`,
+    key: `${categoryKey}-kubun-${kubunCode}-${taxRateGroupKey(taxRate)}-summary`,
     move_type: first?.move_type ?? 'summary',
     tax_event: kubunCode === 1 ? 'TAXABLE_REMOVAL' : null,
     categoryId: first?.categoryId ?? '',
@@ -600,7 +605,7 @@ function createKubunSummaryRow(
     categoryName: first?.categoryName ?? '—',
     abv: null,
     volume_l: kubunCode === 1 ? taxableVolume : totalVolume,
-    tax_rate: effectiveTaxRate(rows, basisVolume, taxAmount),
+    tax_rate: taxRate,
     row_role: 'kubun_summary',
     kubun_code: kubunCode,
     non_taxable_volume_l: nonTaxableVolume,
@@ -669,6 +674,12 @@ function compareLia110Rows(left: TaxVolumeItem, right: TaxVolumeItem) {
   const kubunResult = lia110KubunCodeForItem(left) - lia110KubunCodeForItem(right)
   if (kubunResult !== 0) return kubunResult
 
+  const taxRateResult = compareNullableFiniteNumbers(
+    nullableFiniteNumber(left.tax_rate),
+    nullableFiniteNumber(right.tax_rate),
+  )
+  if (taxRateResult !== 0) return taxRateResult
+
   const leftAbv = Number.isFinite(left.abv) ? Number(left.abv) : Number.NEGATIVE_INFINITY
   const rightAbv = Number.isFinite(right.abv) ? Number(right.abv) : Number.NEGATIVE_INFINITY
   if (leftAbv !== rightAbv) return rightAbv - leftAbv
@@ -688,16 +699,36 @@ function compareCategoryRows(left: TaxVolumeItem | undefined, right: TaxVolumeIt
   return (left?.categoryId ?? '').localeCompare(right?.categoryId ?? '')
 }
 
-function effectiveTaxRate(rows: TaxVolumeItem[], basisVolume: number, taxAmount: number) {
-  if (basisVolume > 0 && taxAmount > 0) return (taxAmount * 1000) / basisVolume
+function taxRateGroupKey(value: number | null | undefined) {
+  const numeric = nullableFiniteNumber(value)
+  if (numeric == null) return 'missing'
+  if (Number.isInteger(numeric)) return String(numeric)
+  return trimNumericString(numeric)
+}
 
-  const weightedVolume = sumNumbers(rows.map((item) => item.volume_l))
-  if (weightedVolume <= 0) return finiteNumber(rows.find((item) => Number.isFinite(item.tax_rate))?.tax_rate)
+function sharedTaxRate(rows: TaxVolumeItem[]) {
+  const firstRate = nullableFiniteNumber(rows[0]?.tax_rate)
+  if (firstRate == null) return null
+  return rows.every((item) => nullableFiniteNumber(item.tax_rate) === firstRate) ? firstRate : null
+}
 
-  const weightedRateTotal = sumNumbers(
-    rows.map((item) => finiteNumber(item.tax_rate) * finiteNumber(item.volume_l)),
-  )
-  return weightedRateTotal / weightedVolume
+function compareNullableFiniteNumbers(left: number | null, right: number | null) {
+  if (left == null && right == null) return 0
+  if (left == null) return 1
+  if (right == null) return -1
+  return left - right
+}
+
+function nullableFiniteNumber(value: number | null | undefined) {
+  return Number.isFinite(value) ? Number(value) : null
+}
+
+function trimNumericString(value: number) {
+  return trimTrailingZeros(value.toFixed(12))
+}
+
+function trimTrailingZeros(value: string) {
+  return value.replace(/\.?0+$/, '')
 }
 
 function sumNumbers(values: Array<number | null | undefined>): number {
@@ -979,10 +1010,30 @@ function taxDirectionForMovement(moveType: string, taxEvent?: string | null) {
   }
 }
 
+function taxAmountForItem(
+  item: Pick<TaxVolumeItem, 'move_type' | 'tax_event' | 'volume_l' | 'tax_rate' | 'tax_amount'>,
+) {
+  if (Number.isFinite(item.tax_amount)) return Number(item.tax_amount)
+  return calculateTaxAmount(item.move_type, item.volume_l, item.tax_rate, item.tax_event)
+}
+
+function hasStoredOrCalculableTaxAmount(
+  item: Pick<TaxVolumeItem, 'move_type' | 'tax_event' | 'tax_rate' | 'tax_amount'>,
+) {
+  return Number.isFinite(item.tax_amount) || Number.isFinite(item.tax_rate)
+}
+
+function hasTaxAffectingRowWithoutTaxBasis(
+  item: Pick<TaxVolumeItem, 'move_type' | 'tax_event' | 'tax_rate' | 'tax_amount'>,
+) {
+  return taxDirectionForMovement(item.move_type, item.tax_event) !== 0 && !hasStoredOrCalculableTaxAmount(item)
+}
+
 function normalizeStoredBreakdownTaxRates(
   items: TaxVolumeItem[],
   storedTotalTaxAmount: number,
 ) {
+  if (items.some((item) => Number.isFinite(item.tax_amount))) return
   if (!Number.isFinite(storedTotalTaxAmount) || storedTotalTaxAmount === 0) return
 
   const derivedTotal = calculateTaxTotalAmount(items)

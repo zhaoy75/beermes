@@ -494,7 +494,7 @@ export async function loadTaxLedgerDetailRows(options: {
       const batchInfo = line.batch_id ? batchInfoMap.get(line.batch_id) : undefined
       const sourceSite = header.src_site_id ? siteMap.get(header.src_site_id) : undefined
       const destinationSite = header.dest_site_id ? siteMap.get(header.dest_site_id) : undefined
-      const liquorCode = batchInfo?.liquorCode ?? resolveMetaString(line.meta, 'beer_category')
+      const liquorCode = resolveLineLiquorCode(line, header, batchInfo)
       const itemLabel = resolveAlcoholTypeLabel(alcoholTypeLabelMap, liquorCode)
       const quantityMl = lineQuantityMl(line, pkg, uomMap)
       const packageCount = linePackageCount(line)
@@ -511,7 +511,7 @@ export async function loadTaxLedgerDetailRows(options: {
         liquorCode: liquorCode ?? null,
         itemLabel: itemLabel ?? liquorCode ?? null,
         brandName: batchInfo?.brandName ?? null,
-        abv: batchInfo?.abv ?? null,
+        abv: resolveLineAbv(line, header, batchInfo),
         containerLabel: packageLabel(pkg, locale) || null,
         quantityMl,
         packageCount,
@@ -906,7 +906,39 @@ function resolveSourceEvent(header: MovementHeaderRow, line: MovementLineRow) {
 }
 
 function taxRateForLine(line: MovementLineRow, header: MovementHeaderRow) {
-  return toNumber(line.tax_rate) ?? resolveMetaNumber(header.meta, 'tax_rate') ?? resolveMetaNumber(line.meta, 'tax_rate')
+  const lineRate = toNumber(line.tax_rate)
+  if (lineRate != null && lineRate > 0) return lineRate
+  return resolveMetaNumber(line.meta, 'tax_rate') ?? resolveMetaNumber(header.meta, 'tax_rate')
+}
+
+function resolveLineLiquorCode(
+  line: MovementLineRow,
+  header: MovementHeaderRow,
+  batchInfo: BatchInfo | undefined,
+) {
+  return (
+    resolveMetaString(line.meta, 'tax_category_code') ||
+    resolveMetaString(line.meta, 'beer_category') ||
+    resolveMetaString(header.meta, 'tax_category_code') ||
+    resolveMetaString(header.meta, 'beer_category') ||
+    batchInfo?.liquorCode ||
+    null
+  )
+}
+
+function resolveLineAbv(
+  line: MovementLineRow,
+  header: MovementHeaderRow,
+  batchInfo: BatchInfo | undefined,
+) {
+  return (
+    resolveMetaNumber(line.meta, 'abv') ??
+    resolveMetaNumber(line.meta, 'actual_abv') ??
+    resolveMetaNumber(line.meta, 'target_abv') ??
+    resolveMetaNumber(header.meta, 'abv') ??
+    batchInfo?.abv ??
+    null
+  )
 }
 
 async function loadUoms(supabase: SupabaseClient) {

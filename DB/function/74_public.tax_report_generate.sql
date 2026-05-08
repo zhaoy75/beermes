@@ -100,6 +100,14 @@ begin
       ml.batch_id,
       ml.qty,
       ml.uom_id,
+      nullif(case
+        when ml.tax_rate > 0 then ml.tax_rate
+        when nullif(btrim(ml.meta ->> 'tax_rate'), '') ~ '^[0-9]+(\.[0-9]+)?$' then
+          nullif(btrim(ml.meta ->> 'tax_rate'), '')::numeric
+        when nullif(btrim(m.meta ->> 'tax_rate'), '') ~ '^[0-9]+(\.[0-9]+)?$' then
+          nullif(btrim(m.meta ->> 'tax_rate'), '')::numeric
+        else null
+      end, 0) as saved_tax_rate,
       lower(coalesce(u.code, 'l')) as uom_code,
       case lower(coalesce(u.code, 'l'))
         when 'ml' then round(ml.qty)
@@ -107,8 +115,27 @@ begin
         when 'gal_us' then round(ml.qty * 3785.41)
         else round(ml.qty * 1000)
       end as volume_ml,
-      cat.raw_category_id,
-      abv.abv
+      coalesce(
+        nullif(btrim(ml.meta ->> 'tax_category_code'), ''),
+        nullif(btrim(ml.meta ->> 'beer_category'), ''),
+        nullif(btrim(m.meta ->> 'tax_category_code'), ''),
+        nullif(btrim(m.meta ->> 'beer_category'), ''),
+        cat.raw_category_id
+      ) as raw_category_id,
+      coalesce(
+        case
+          when nullif(btrim(ml.meta ->> 'abv'), '') ~ '^[0-9]+(\.[0-9]+)?$' then
+            nullif(btrim(ml.meta ->> 'abv'), '')::numeric
+          when nullif(btrim(ml.meta ->> 'actual_abv'), '') ~ '^[0-9]+(\.[0-9]+)?$' then
+            nullif(btrim(ml.meta ->> 'actual_abv'), '')::numeric
+          when nullif(btrim(ml.meta ->> 'target_abv'), '') ~ '^[0-9]+(\.[0-9]+)?$' then
+            nullif(btrim(ml.meta ->> 'target_abv'), '')::numeric
+          when nullif(btrim(m.meta ->> 'abv'), '') ~ '^[0-9]+(\.[0-9]+)?$' then
+            nullif(btrim(m.meta ->> 'abv'), '')::numeric
+          else null
+        end,
+        abv.abv
+      ) as abv
     from public.inv_movements m
     join public.inv_movement_lines ml
       on ml.tenant_id = m.tenant_id
@@ -160,7 +187,7 @@ begin
       coalesce(alc.category_id, s.raw_category_id) as category_id,
       coalesce(alc.category_code, '') as category_code,
       coalesce(alc.category_name, s.raw_category_id, '—') as category_name,
-      coalesce(rate.tax_rate, 0) as tax_rate,
+      coalesce(s.saved_tax_rate, rate.tax_rate, 0) as tax_rate,
       case
         when s.move_type in ('sale', 'tax_transfer', 'return', 'transfer')
              and s.tax_event = 'TAXABLE_REMOVAL' then 1
@@ -210,7 +237,8 @@ begin
     left join lateral (
       select nullif(btrim(r.spec ->> 'tax_rate'), '')::numeric as tax_rate
       from public.registry_def r
-      where r.kind = 'alcohol_tax'
+      where s.saved_tax_rate is null
+        and r.kind = 'alcohol_tax'
         and r.is_active = true
         and (
           (r.scope = 'tenant' and r.owner_id = v_tenant)
@@ -238,6 +266,11 @@ begin
       e.*,
       (e.volume_ml::numeric / 1000) as volume_l,
       case
+        when e.tax_rate::text like '%.%' then
+          trim(trailing '.' from trim(trailing '0' from e.tax_rate::text))
+        else e.tax_rate::text
+      end as tax_rate_key,
+      case
         when e.tax_direction = 0 then 0
         else e.tax_direction * floor((e.volume_ml::numeric / 1000000) * e.tax_rate)
       end as line_tax_amount
@@ -247,9 +280,9 @@ begin
     select
       case
         when l.move_type in ('sale', 'tax_transfer', 'return', 'transfer') then
-          coalesce(l.tax_event, 'unknown') || '-' || l.category_id || '-' || coalesce(l.abv::text, 'na')
+          coalesce(l.tax_event, 'unknown') || '-' || l.category_id || '-' || coalesce(l.abv::text, 'na') || '-' || l.tax_rate_key
         else
-          l.move_type || '-' || coalesce(l.tax_event, 'unknown') || '-' || l.category_id || '-' || coalesce(l.abv::text, 'na')
+          l.move_type || '-' || coalesce(l.tax_event, 'unknown') || '-' || l.category_id || '-' || coalesce(l.abv::text, 'na') || '-' || l.tax_rate_key
       end as key,
       min(l.move_type) as move_type,
       l.tax_event,
@@ -257,24 +290,25 @@ begin
       l.category_code,
       l.category_name,
       l.abv,
+      l.tax_rate,
       sum(l.volume_ml)::bigint as volume_ml,
       sum(l.volume_l) as volume_l,
       sum(l.line_tax_amount) as tax_amount,
-      sum(l.tax_rate * l.volume_l) as weighted_tax_rate,
       max(l.tax_direction) as tax_direction
     from line_amounts l
     group by
       case
         when l.move_type in ('sale', 'tax_transfer', 'return', 'transfer') then
-          coalesce(l.tax_event, 'unknown') || '-' || l.category_id || '-' || coalesce(l.abv::text, 'na')
+          coalesce(l.tax_event, 'unknown') || '-' || l.category_id || '-' || coalesce(l.abv::text, 'na') || '-' || l.tax_rate_key
         else
-          l.move_type || '-' || coalesce(l.tax_event, 'unknown') || '-' || l.category_id || '-' || coalesce(l.abv::text, 'na')
+          l.move_type || '-' || coalesce(l.tax_event, 'unknown') || '-' || l.category_id || '-' || coalesce(l.abv::text, 'na') || '-' || l.tax_rate_key
       end,
       l.tax_event,
       l.category_id,
       l.category_code,
       l.category_name,
-      l.abv
+      l.abv,
+      l.tax_rate
   )
   select
     coalesce(
@@ -289,15 +323,10 @@ begin
           'abv', g.abv,
           'volume_l', g.volume_l,
           'volume_ml', g.volume_ml,
-          'tax_rate', case
-            when g.volume_l > 0 and g.tax_direction <> 0 then
-              (g.tax_amount * 1000) / (g.volume_l * g.tax_direction)
-            when g.volume_l > 0 then
-              g.weighted_tax_rate / g.volume_l
-            else 0
-          end
+          'tax_rate', g.tax_rate,
+          'tax_amount', g.tax_amount
         )
-        order by g.tax_event, g.category_name, g.category_code, g.abv
+        order by g.tax_event, g.category_name, g.category_code, g.abv, g.tax_rate
       ),
       '[]'::jsonb
     ),

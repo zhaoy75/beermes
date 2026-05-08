@@ -1676,6 +1676,9 @@ function compareMovementTableRows(a: TaxVolumeItem, b: TaxVolumeItem) {
   const kubunResult = lia110KubunCodeForItem(a) - lia110KubunCodeForItem(b)
   if (kubunResult !== 0) return kubunResult
 
+  const taxRateResult = compareNullableNumbers(a.tax_rate, b.tax_rate, 'asc')
+  if (taxRateResult !== 0) return taxRateResult
+
   const roleResult = movementRowRoleRank(a) - movementRowRoleRank(b)
   if (roleResult !== 0) return roleResult
 
@@ -1821,6 +1824,7 @@ function previewTaxAmount(item: TaxVolumeItem) {
 }
 
 function previewReturnTaxAmount(item: TaxVolumeItem) {
+  if (Number.isFinite(item.tax_amount)) return nonNegativeYen(Math.abs(Number(item.tax_amount)))
   return taxAmountFromLiters(item.volume_l || 0, item.tax_rate || 0)
 }
 
@@ -1870,6 +1874,7 @@ function updateReportBreakdownNumber(
     item.abv = Number.isFinite(value) ? Number(value) : null
   } else {
     item.volume_l = Number.isFinite(value) ? Number(value) : 0
+    item.tax_amount = null
   }
   handleBreakdownChange(index)
 }

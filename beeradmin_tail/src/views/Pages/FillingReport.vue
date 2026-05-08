@@ -373,9 +373,17 @@ type PackageLookup = {
 type PackageRow = {
   id: string
   package_code: string | null
+  package_type_id: string | null
   unit_volume: number | string | null
   volume_uom: string | null
   volume_fix_flg: boolean | null
+}
+
+type PreparedPackageRow = {
+  id: string
+  packageCode: string
+  packageTypeId: string | null
+  lookup: PackageLookup
 }
 
 type RegistryRow = {
@@ -666,14 +674,6 @@ function resolveMetaString(meta: JsonRecord | null | undefined, key: string) {
   if (typeof value !== 'string') return null
   const trimmed = value.trim()
   return trimmed.length ? trimmed : null
-}
-
-function resolveMetaNumber(meta: JsonRecord | null | undefined, key: string) {
-  return toNumber(meta?.[key])
-}
-
-function resolveBatchLabel(meta: JsonRecord | null | undefined) {
-  return resolveMetaString(meta, 'label')
 }
 
 function convertToLiters(size: number | null, uomCode: string | null | undefined) {
@@ -973,6 +973,36 @@ function resolveContainerKind(packageCode: string | null | undefined) {
   return 'other'
 }
 
+function isUuidLike(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value.trim(),
+  )
+}
+
+function unknownPackageLabel(index: number) {
+  const key = 'fillingReport.defaults.unknownPackage'
+  const label = t(key, { index })
+  return label === key ? `Unknown package ${index}` : label
+}
+
+function resolvePackageDisplayLabel(
+  packageTypeId: string,
+  lookup: Map<string, PackageLookup>,
+  unresolvedPackageLabels: Map<string, string>,
+) {
+  const normalized = packageTypeId.trim()
+  const packageDef = lookup.get(normalized)
+  if (packageDef?.packageCode) return packageDef.packageCode
+  if (!isUuidLike(normalized)) return normalized
+
+  const existing = unresolvedPackageLabels.get(normalized)
+  if (existing) return existing
+
+  const label = unknownPackageLabel(unresolvedPackageLabels.size + 1)
+  unresolvedPackageLabels.set(normalized, label)
+  return label
+}
+
 function extractErrorMessage(err: unknown) {
   if (!err) return ''
   if (typeof err === 'string') return err
@@ -997,28 +1027,63 @@ async function ensureTenant() {
 async function loadPackageLookup(tenant: string) {
   const { data, error } = await supabase
     .from('mst_package')
-    .select('id, package_code, unit_volume, volume_uom, volume_fix_flg, is_active')
+    .select('id, package_code, package_type_id, unit_volume, volume_uom, volume_fix_flg, is_active')
     .eq('tenant_id', tenant)
-    .eq('is_active', true)
     .order('package_code', { ascending: true })
   if (error) throw error
 
-  return new Map<string, PackageLookup>(
-    ((data ?? []) as PackageRow[]).map((row) => {
-      const unitVolume = toNumber(row.unit_volume)
-      const volumeUomCode = resolveVolumeUomCode(row.volume_uom ?? null, volumeUomCodeById.value)
-      const unitVolumeLiters = convertToLiters(unitVolume, volumeUomCode)
-      return [
-        String(row.id),
-        {
-          packageCode: String(row.package_code ?? row.id),
-          volumeFix: row.volume_fix_flg === true,
-          unitVolumeLiters,
-          volumeUomCode,
-        },
-      ]
-    }),
-  )
+  const lookup = new Map<string, PackageLookup>()
+  const packages: PreparedPackageRow[] = ((data ?? []) as PackageRow[]).flatMap((row) => {
+    const id = String(row.id ?? '').trim()
+    if (!id) return []
+
+    const packageCode = String(row.package_code ?? '').trim() || id
+    const packageTypeId = String(row.package_type_id ?? '').trim() || null
+    const unitVolume = toNumber(row.unit_volume)
+    const volumeUomCode = resolveVolumeUomCode(row.volume_uom ?? null, volumeUomCodeById.value)
+    const unitVolumeLiters = convertToLiters(unitVolume, volumeUomCode)
+
+    return [{
+      id,
+      packageCode,
+      packageTypeId,
+      lookup: {
+        packageCode,
+        volumeFix: row.volume_fix_flg === true,
+        unitVolumeLiters,
+        volumeUomCode,
+      } satisfies PackageLookup,
+    }]
+  })
+
+  packages.forEach((row) => {
+    lookup.set(row.id, row.lookup)
+  })
+
+  const rowsByPackageCode = new Map<string, PreparedPackageRow[]>()
+  const rowsByPackageTypeId = new Map<string, PreparedPackageRow[]>()
+  packages.forEach((row) => {
+    if (row.packageCode && row.packageCode !== row.id) {
+      rowsByPackageCode.set(row.packageCode, [...(rowsByPackageCode.get(row.packageCode) ?? []), row])
+    }
+    if (row.packageTypeId) {
+      rowsByPackageTypeId.set(row.packageTypeId, [
+        ...(rowsByPackageTypeId.get(row.packageTypeId) ?? []),
+        row,
+      ])
+    }
+  })
+
+  rowsByPackageCode.forEach((rows, packageCode) => {
+    const row = rows[0]
+    if (rows.length === 1 && row && !lookup.has(packageCode)) lookup.set(packageCode, row.lookup)
+  })
+  rowsByPackageTypeId.forEach((rows, packageTypeId) => {
+    const row = rows[0]
+    if (rows.length === 1 && row && !lookup.has(packageTypeId)) lookup.set(packageTypeId, row.lookup)
+  })
+
+  return lookup
 }
 
 const volumeUomCodeById = ref<Map<string, string>>(new Map())
@@ -1355,6 +1420,7 @@ function buildReportRows(
   lookup: Map<string, PackageLookup>,
 ) {
   const rowsByBatch = new Map<string, AggregateBatchRow>()
+  const unresolvedPackageLabels = new Map<string, string>()
 
   movements.forEach((movement) => {
     const meta = isRecord(movement.meta) ? movement.meta : {}
@@ -1415,8 +1481,7 @@ function buildReportRows(
           : ''
       if (!packageTypeId) return
 
-      const packageDef = lookup.get(packageTypeId)
-      const label = packageDef?.packageCode ?? packageTypeId
+      const label = resolvePackageDisplayLabel(packageTypeId, lookup, unresolvedPackageLabels)
       const quantity = packageNumberFromLine(line, lookup)
       const volume = resolveFillingLineVolumeFromEvent(line, fillingOptions)
       const group = row.packageGroups.get(packageTypeId)

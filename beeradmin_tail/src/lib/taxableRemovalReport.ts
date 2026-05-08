@@ -208,7 +208,8 @@ export function buildTaxableRemovalSummaryRows(
     .filter((row) => matchesBusinessYear(row.movementAt, businessYear))
     .forEach((row) => {
       const abvKey = row.abv == null ? '' : String(row.abv)
-      const key = `${row.liquorCode ?? ''}__${abvKey}`
+      const taxRateKey = row.taxRate == null ? '' : String(row.taxRate)
+      const key = `${row.liquorCode ?? ''}__${abvKey}__${taxRateKey}`
       if (!map.has(key)) {
         map.set(key, {
           key,
@@ -242,7 +243,9 @@ export function buildTaxableRemovalSummaryRows(
       if (labelCompare !== 0) return labelCompare
       const codeCompare = (a.liquorCode ?? '').localeCompare(b.liquorCode ?? '')
       if (codeCompare !== 0) return codeCompare
-      return (a.abv ?? 0) - (b.abv ?? 0)
+      const abvCompare = (a.abv ?? 0) - (b.abv ?? 0)
+      if (abvCompare !== 0) return abvCompare
+      return (a.taxRates[0] ?? Number.MAX_SAFE_INTEGER) - (b.taxRates[0] ?? Number.MAX_SAFE_INTEGER)
     })
 }
 
@@ -383,7 +386,7 @@ export async function loadTaxableRemovalDetailRows(options: {
       const pkg = line.package_id ? packageMap.get(line.package_id) : undefined
       const batchInfo = line.batch_id ? batchInfoMap.get(line.batch_id) : undefined
       const destination = header.dest_site_id ? siteMap.get(header.dest_site_id) : undefined
-      const liquorCode = batchInfo?.liquorCode ?? resolveMetaString(line.meta, 'beer_category')
+      const liquorCode = resolveLineLiquorCode(line, header, batchInfo)
       const itemLabel = resolveAlcoholTypeLabel(alcoholTypeLabelMap, liquorCode)
       const quantityMl = lineQuantityMl(line, pkg, uomMap)
       const packageCount = linePackageCount(line)
@@ -399,7 +402,7 @@ export async function loadTaxableRemovalDetailRows(options: {
         liquorCode: liquorCode ?? null,
         itemLabel: itemLabel ?? liquorCode ?? null,
         brandName: batchInfo?.brandName ?? null,
-        abv: batchInfo?.abv ?? null,
+        abv: resolveLineAbv(line, header, batchInfo),
         containerLabel: packageLabel(pkg, locale) || null,
         quantityMl,
         packageCount,
@@ -666,7 +669,39 @@ function isTaxableRemoval(header: MovementHeaderRow) {
 }
 
 function taxRateForLine(line: MovementLineRow, header: MovementHeaderRow) {
-  return toNumber(line.tax_rate) ?? resolveMetaNumber(header.meta, 'tax_rate')
+  const lineRate = toNumber(line.tax_rate)
+  if (lineRate != null && lineRate > 0) return lineRate
+  return resolveMetaNumber(line.meta, 'tax_rate') ?? resolveMetaNumber(header.meta, 'tax_rate')
+}
+
+function resolveLineLiquorCode(
+  line: MovementLineRow,
+  header: MovementHeaderRow,
+  batchInfo: BatchInfo | undefined,
+) {
+  return (
+    resolveMetaString(line.meta, 'tax_category_code') ||
+    resolveMetaString(line.meta, 'beer_category') ||
+    resolveMetaString(header.meta, 'tax_category_code') ||
+    resolveMetaString(header.meta, 'beer_category') ||
+    batchInfo?.liquorCode ||
+    null
+  )
+}
+
+function resolveLineAbv(
+  line: MovementLineRow,
+  header: MovementHeaderRow,
+  batchInfo: BatchInfo | undefined,
+) {
+  return (
+    resolveMetaNumber(line.meta, 'abv') ??
+    resolveMetaNumber(line.meta, 'actual_abv') ??
+    resolveMetaNumber(line.meta, 'target_abv') ??
+    resolveMetaNumber(header.meta, 'abv') ??
+    batchInfo?.abv ??
+    null
+  )
 }
 
 function taxAmountForLine(quantityMl: number | null, taxRate: number | null) {

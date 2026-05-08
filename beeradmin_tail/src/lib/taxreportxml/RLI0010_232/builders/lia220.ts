@@ -1,5 +1,5 @@
 import type { TaxVolumeItem } from '@/lib/taxReport'
-import { taxAmountFromLiters } from '@/lib/moneyFormat'
+import { nonNegativeYen, taxAmountFromLiters } from '@/lib/moneyFormat'
 import type { RLI0010_232_Input } from '../types'
 import { paginate } from '../../core/pagination'
 import { element, emptyElement, joinXml, optionalElement } from '../../core/xml'
@@ -37,7 +37,7 @@ export function buildLia220Xml(input: RLI0010_232_Input) {
 function buildLia220Row(item: TaxVolumeItem) {
   const volume = formatXmlVolume(item.volume_l)
   const taxRate = Math.max(0, Math.round(item.tax_rate || 0))
-  const taxAmount = taxAmountFromLiters(item.volume_l || 0, item.tax_rate || 0)
+  const taxAmount = taxAmountForRow(item)
   return element('EKD00000', joinXml([
     element('EKD00010', optionalElement('kubun_CD', 1)),
     optionalElement('EKD00020', resolveCategoryCode(item)),
@@ -48,6 +48,11 @@ function buildLia220Row(item: TaxVolumeItem) {
     optionalElement('EKD00100', taxAmount, { AutoCalc: 1 }),
     optionalElement('EKD00120', moveTypeSummary(item.tax_event)),
   ]))
+}
+
+function taxAmountForRow(item: TaxVolumeItem) {
+  if (Number.isFinite(item.tax_amount)) return nonNegativeYen(Math.abs(Number(item.tax_amount)))
+  return taxAmountFromLiters(item.volume_l || 0, item.tax_rate || 0)
 }
 
 function buildYymmBody(year: number, month: number) {

@@ -1973,7 +1973,7 @@ async function saveActualYieldDialog() {
     await saveBatchAttributes(batchId.value, { enforceRequired: true })
 
     failedStage = 'produce'
-    const movementAt = dateOnlyToUtcStartOfDayIso(batch.value.actual_end) ?? new Date().toISOString()
+    const movementAt = dateOnlyToUtcStartOfDayIso(batch.value.actual_start) ?? new Date().toISOString()
     const batchCode = String(batch.value.batch_code ?? 'BATCH')
     const normalizedQty = Number(qty).toFixed(6)
     const idempotencyKey = `batch_actual_yield:${batchId.value}:${normalizedQty}:${uomId}`

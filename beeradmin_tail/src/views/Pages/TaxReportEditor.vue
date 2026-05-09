@@ -847,9 +847,9 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="(row, index) in returnTableRows" :key="`return-preview-${row.item.key}`" class="h-[7.2mm]">
+                    <tr v-for="(row, index) in lia220ReturnTableRows" :key="`return-preview-${row.item.key}`" class="h-[7.2mm]">
                       <td class="border border-black p-[0.8mm] text-center">{{ index + 1 }}</td>
-                      <td class="border border-black p-[0.8mm] text-center">1</td>
+                      <td class="border border-black p-[0.8mm] text-center">{{ lia220KubunCode(row.item) }}</td>
                       <td class="border border-black p-[0.8mm] text-center">{{ row.item.categoryCode }}</td>
                       <td class="border border-black p-[0.8mm] font-semibold">{{ row.item.categoryName }}</td>
                       <td class="border border-black p-[0.8mm] text-right">{{ formatAbv(row.item.abv) }}</td>
@@ -857,13 +857,13 @@
                       <td class="border border-black p-[0.8mm] text-right">{{ formatInteger(row.item.tax_rate) }}</td>
                       <td class="border border-black p-[0.8mm] text-right">{{ formatInteger(previewReturnTaxAmount(row.item)) }}</td>
                       <td class="border border-black p-[0.8mm] text-right"></td>
-                      <td class="border border-black p-[0.8mm]">{{ breakdownMovementLabel(row.item) }}</td>
+                      <td class="border border-black p-[0.8mm]">{{ lia220Remarks(row.item) }}</td>
                     </tr>
-                    <tr v-if="returnTableRows.length === 0" class="h-[7.2mm]">
+                    <tr v-if="lia220ReturnTableRows.length === 0" class="h-[7.2mm]">
                       <td colspan="10" class="border border-black p-[1mm] text-center">{{ t('taxReportEditor.preview.empty') }}</td>
                     </tr>
                     <tr v-for="index in lia220BlankRowCount" :key="`lia220-blank-${index}`" class="h-[7.2mm]">
-                      <td class="border border-black p-[0.8mm] text-center">{{ returnTableRows.length + index }}</td>
+                      <td class="border border-black p-[0.8mm] text-center">{{ lia220ReturnTableRows.length + index }}</td>
                       <td class="border border-black"></td>
                       <td class="border border-black"></td>
                       <td class="border border-black"></td>
@@ -1105,6 +1105,7 @@ import {
 } from '@/lib/taxReportProfile'
 import {
   calculateTaxTotalAmount,
+  buildLia220ReturnRows,
   buildLia110ReportRows,
   buildTaxReductionPreview,
   buildDisposeXmlFilename,
@@ -1403,6 +1404,13 @@ const returnTableRows = computed<MovementTableRow[]>(() =>
       return compareNullableNumbers(a.item.abv, b.item.abv, 'desc')
     }),
 )
+const lia220ReturnTableRows = computed<MovementTableRow[]>(() =>
+  buildLia220ReturnRows(reportBreakdown.value).map((item) => ({
+    item,
+    sourceIndex: null,
+    editable: false,
+  })),
+)
 const exportExemptTableRows = computed<MovementTableRow[]>(() =>
   reportBreakdown.value
     .map((item, index) => ({ item, sourceIndex: index, editable: true }))
@@ -1474,7 +1482,7 @@ const exportExemptRows = computed(() =>
   reportBreakdown.value.filter((item) => resolveTaxEvent(item.move_type, item.tax_event) === 'EXPORT_EXEMPT'),
 )
 const lia110BlankRowCount = computed(() => Math.max(0, 18 - Math.max(1, movementTableRows.value.length)))
-const lia220BlankRowCount = computed(() => Math.max(0, 18 - Math.max(1, returnTableRows.value.length)))
+const lia220BlankRowCount = computed(() => Math.max(0, 18 - Math.max(1, lia220ReturnTableRows.value.length)))
 const lia260BlankRowCount = computed(() => Math.max(0, 9 - Math.max(1, exportExemptRows.value.length)))
 const reportPeriodText = computed(() => formatWarekiMonth(form.tax_year, form.tax_month))
 const reportDateText = computed(() => formatWarekiDate(form.tax_year, form.tax_month, 1))
@@ -1566,6 +1574,14 @@ function movementRowRoleLabel(item: TaxVolumeItem) {
   const rowRole = item.row_role ?? 'detail'
   if (rowRole === 'detail') return ''
   return t('taxReportEditor.rowTypes.generated')
+}
+
+function lia220KubunCode(item: TaxVolumeItem) {
+  return Number.isFinite(item.kubun_code) ? Number(item.kubun_code) : 1
+}
+
+function lia220Remarks(item: TaxVolumeItem) {
+  return lia220KubunCode(item) === 1 ? breakdownMovementLabel(item) : ''
 }
 
 function movementRowClass(item: TaxVolumeItem) {

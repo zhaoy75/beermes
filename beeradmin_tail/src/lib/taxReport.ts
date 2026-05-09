@@ -305,15 +305,66 @@ export function calculateTaxTotalAmount(
   return items.reduce((sum, item) => sum + taxAmountForItem(item), 0)
 }
 
+export function buildLia220ReturnRows(items: TaxVolumeItem[]) {
+  const groups = new Map<string, {
+    categoryKey: string
+    abv: number | null
+    taxRate: number | null
+    first: TaxVolumeItem
+    rows: TaxVolumeItem[]
+    volumeMl: number
+    taxAmount: number
+  }>()
+
+  items
+    .filter((item) => !isGeneratedTaxVolumeItem(item) && isReturnTaxEvent(item.move_type, item.tax_event))
+    .forEach((item) => {
+      const detailRow = createLia220DetailRow(item)
+      const categoryKey = lia220CategoryGroupKey(detailRow)
+      const abv = nullableFiniteNumber(detailRow.abv)
+      const taxRate = nullableFiniteNumber(detailRow.tax_rate)
+      const key = [
+        categoryKey,
+        numericGroupKey(abv),
+        taxRateGroupKey(taxRate),
+      ].join('|')
+      if (!groups.has(key)) {
+        groups.set(key, {
+          categoryKey,
+          abv,
+          taxRate,
+          first: detailRow,
+          rows: [],
+          volumeMl: 0,
+          taxAmount: 0,
+        })
+      }
+
+      const group = groups.get(key)
+      if (!group) return
+      group.rows.push(detailRow)
+      group.volumeMl += volumeMillilitersForItem(detailRow)
+      group.taxAmount += Math.abs(taxAmountForItem(detailRow))
+    })
+
+  return Array.from(groups.values())
+    .sort(compareLia220ReturnRows)
+    .flatMap((group) => [
+      ...group.rows.sort(compareLia220Rows),
+      createLia220SubtotalRow(group),
+    ])
+}
+
 export function buildTaxReductionPreview(options: {
   breakdown: TaxVolumeItem[]
   priorFiscalYearStandardTaxAmount: number
 }): RLI0010_232_ReductionTotals {
   const sourceBreakdown = options.breakdown.filter((item) => !isGeneratedTaxVolumeItem(item))
   const lia110DetailItems = sourceBreakdown.filter(isLia110DetailItem)
-  const returnItems = sourceBreakdown.filter((item) => isReturnTaxEvent(item.move_type, item.tax_event))
+  const returnItems = buildLia220ReturnRows(sourceBreakdown)
+  const returnSubtotalItems = returnItems.filter(isLia220SubtotalRow)
   const currentMonthStandardTaxAmount = roundNonNegativeTax(calculateTaxTotalAmount(lia110DetailItems))
-  const returnStandardTaxAmount = roundNonNegativeTax(Math.abs(calculateTaxTotalAmount(returnItems)))
+  const returnStandardTaxAmount = roundNonNegativeTax(Math.abs(calculateTaxTotalAmount(returnSubtotalItems)))
 
   return buildLia130ReductionTotals({
     priorFiscalYearStandardTaxAmount: options.priorFiscalYearStandardTaxAmount,
@@ -583,6 +634,37 @@ function createLegacyDisposeLia110Row(item: TaxVolumeItem): TaxVolumeItem {
   }
 }
 
+function createLia220DetailRow(item: TaxVolumeItem): TaxVolumeItem {
+  return {
+    ...item,
+    tax_event: 'RETURN_TO_FACTORY',
+    row_role: 'detail',
+    kubun_code: 1,
+  }
+}
+
+function createLia220SubtotalRow(group: {
+  categoryKey: string
+  abv: number | null
+  taxRate: number | null
+  first: TaxVolumeItem
+  volumeMl: number
+  taxAmount: number
+}): TaxVolumeItem {
+  return {
+    ...group.first,
+    key: `lia220-subtotal-${group.categoryKey}-${numericGroupKey(group.abv)}-${taxRateGroupKey(group.taxRate)}`,
+    tax_event: 'RETURN_TO_FACTORY',
+    abv: group.abv,
+    volume_l: millilitersToLiters(group.volumeMl) ?? 0,
+    volume_ml: group.volumeMl,
+    tax_rate: group.taxRate,
+    row_role: 'kubun_summary',
+    kubun_code: 7,
+    tax_amount: nonNegativeYen(group.taxAmount),
+  }
+}
+
 function createKubunSummaryRow(
   categoryKey: string,
   kubunCode: number,
@@ -667,6 +749,52 @@ function categoryGroupKey(item: TaxVolumeItem) {
   return `${item.categoryId || item.categoryCode || item.categoryName || 'unknown'}`
 }
 
+function lia220CategoryGroupKey(item: TaxVolumeItem) {
+  return [
+    item.categoryId || '',
+    item.categoryCode || '',
+    item.categoryName || '',
+  ].join('::') || 'unknown'
+}
+
+function compareLia220ReturnRows(
+  left: { first: TaxVolumeItem; abv: number | null; taxRate: number | null },
+  right: { first: TaxVolumeItem; abv: number | null; taxRate: number | null },
+) {
+  const categoryResult = compareCategoryRows(left.first, right.first)
+  if (categoryResult !== 0) return categoryResult
+
+  const leftAbv = Number.isFinite(left.abv) ? Number(left.abv) : Number.NEGATIVE_INFINITY
+  const rightAbv = Number.isFinite(right.abv) ? Number(right.abv) : Number.NEGATIVE_INFINITY
+  if (leftAbv !== rightAbv) return rightAbv - leftAbv
+
+  return compareNullableFiniteNumbers(
+    left.taxRate,
+    right.taxRate,
+  )
+}
+
+function compareLia220Rows(left: TaxVolumeItem, right: TaxVolumeItem) {
+  const categoryResult = compareCategoryRows(left, right)
+  if (categoryResult !== 0) return categoryResult
+
+  const leftAbv = Number.isFinite(left.abv) ? Number(left.abv) : Number.NEGATIVE_INFINITY
+  const rightAbv = Number.isFinite(right.abv) ? Number(right.abv) : Number.NEGATIVE_INFINITY
+  if (leftAbv !== rightAbv) return rightAbv - leftAbv
+
+  const taxRateResult = compareNullableFiniteNumbers(
+    nullableFiniteNumber(left.tax_rate),
+    nullableFiniteNumber(right.tax_rate),
+  )
+  if (taxRateResult !== 0) return taxRateResult
+
+  return String(left.key).localeCompare(String(right.key))
+}
+
+function isLia220SubtotalRow(item: Pick<TaxVolumeItem, 'kubun_code'>) {
+  return Number(item.kubun_code) === 7
+}
+
 function compareLia110Rows(left: TaxVolumeItem, right: TaxVolumeItem) {
   const categoryResult = compareCategoryRows(left, right)
   if (categoryResult !== 0) return categoryResult
@@ -700,6 +828,10 @@ function compareCategoryRows(left: TaxVolumeItem | undefined, right: TaxVolumeIt
 }
 
 function taxRateGroupKey(value: number | null | undefined) {
+  return numericGroupKey(value)
+}
+
+function numericGroupKey(value: number | null | undefined) {
   const numeric = nullableFiniteNumber(value)
   if (numeric == null) return 'missing'
   if (Number.isInteger(numeric)) return String(numeric)
@@ -814,12 +946,13 @@ export async function buildXmlPayload(options: {
     : buildLia110ReportRows(lia110DetailItems)
   const returnItems = disposeOnly
     ? []
-    : sourceBreakdown.filter((item) => isReturnTaxEvent(item.move_type, item.tax_event))
+    : buildLia220ReturnRows(sourceBreakdown)
+  const returnSubtotalItems = returnItems.filter(isLia220SubtotalRow)
   const exportExemptItems = disposeOnly
     ? []
     : sourceBreakdown.filter((item) => resolveTaxEvent(item.move_type, item.tax_event) === 'EXPORT_EXEMPT')
   const currentMonthStandardTaxAmount = roundNonNegativeTax(calculateTaxTotalAmount(lia110DetailItems))
-  const returnStandardTaxAmount = roundNonNegativeTax(Math.abs(calculateTaxTotalAmount(returnItems)))
+  const returnStandardTaxAmount = roundNonNegativeTax(Math.abs(calculateTaxTotalAmount(returnSubtotalItems)))
   const rawNetStandardTaxAmount = currentMonthStandardTaxAmount - returnStandardTaxAmount
   const netStandardTaxAmount = roundNonNegativeTax(rawNetStandardTaxAmount)
   const rawTotalTaxAmount = disposeOnly ? calculateTaxTotalAmount(sourceBreakdown) : rawNetStandardTaxAmount

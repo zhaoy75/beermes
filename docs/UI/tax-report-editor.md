@@ -224,13 +224,18 @@
 
 ### LIA220 Panel (`戻入れ酒類の控除(還付)税額計算書`)
 - Edit mode:
-  - shows return rows where `tax_event = RETURN_TO_FACTORY`
-  - groups rows by alcohol category/code, alcohol percentage, and e-Tax tax-rate application `区分`
-  - adds `区分 = 7` tax-rate-application subtotal rows where required
+  - shows source return rows where `tax_event = RETURN_TO_FACTORY` for review and correction
   - allows editing user-owned row values when required for report review
-  - keeps generated totals read-only
+  - does not treat generated LIA220 subtotal rows as editable source rows
 - Preview mode:
   - renders one or more `LIA220` paper-like pages when return rows exist
+  - outputs source/detail rows with `区分 = 1`
+  - outputs generated subtotal rows with `区分 = 7`
+  - subtotal rows are generated per alcohol category/code and ABV
+  - subtotal rows split further by tax rate when the same alcohol category/code and ABV contain multiple tax rates, because one subtotal row must have one constant tax rate
+  - subtotal rows sum quantity and tax amount from the matching detail rows
+  - uses stored `tax_amount` when available; it must not reverse-calculate tax rate from truncated tax amount
+  - LIA130 return/deduction totals consume only the generated `区分 = 7` subtotal rows, so previewing both detail and subtotal rows does not double-count the deduction
 
 ### LIA260 Panel (`輸出免税酒類輸出明細書兼輸出酒類販売場における購入明細書`)
 - Edit mode:
@@ -338,7 +343,12 @@
     - read-only and recalculated whenever detail rows change
   - `LIA220` return rows:
     - rows where `tax_event = RETURN_TO_FACTORY`
-    - shown separately from `LIA110` `区分` rows when return editing/review is required
+    - raw source rows are shown separately from `LIA110` `区分` rows when return editing/review is required
+    - preview/XML include source/detail rows with `区分 = 1`
+    - preview/XML include generated subtotal rows grouped by alcohol category/code and ABV with `区分 = 7`
+    - if the same alcohol category/code and ABV has multiple tax rates, preview/XML keeps separate subtotal rows per tax rate
+    - generated LIA220 subtotal rows are output rows, not editable source rows, and are recalculated from the source return rows
+    - LIA130 return/deduction totals are calculated from the generated `区分 = 7` subtotal rows only
     - output to `LIA220`, not to `LIA110`
 - Default sort:
   - `酒類分類` asc
@@ -593,12 +603,19 @@
 - `LIA130` output:
   - `EQC00010` = prior fiscal-year cumulative standard tax amount from saved `tax_reports.total_tax_amount`
   - current-month standard tax before returns comes from the `LIA110` grand total
-  - return/deduction standard tax comes from the `LIA220` return rows
+  - return/deduction standard tax comes from the generated `LIA220` `kubun_CD = 7` subtotal rows only
   - net standard tax = current-month standard tax minus return/deduction standard tax
   - reduced net tax = `floor(current-month standard tax * 0.8) - floor(return/deduction standard tax * 0.8)` for category `Ａ`
   - `EQE00040` = reduced net tax
 - `LIA220` output:
   - uses `RETURN_TO_FACTORY` return rows
+  - XML uses the same detail + subtotal LIA220 row sequence as the preview
+  - source/detail rows use `EKD00010/kubun_CD = 1`
+  - generated subtotal rows use `EKD00010/kubun_CD = 7`
+  - subtotal rows are grouped by alcohol category/code and ABV
+  - subtotal rows are additionally split by tax rate when needed so each subtotal XML row has a single constant tax rate
+  - each subtotal row sums grouped quantity and tax amount; stored `tax_amount` is preferred before fallback calculation
+  - XML and preview must show the same LIA220 row count, category, ABV, quantity, tax rate, and tax amount
 - `LIA260` output:
   - enabled when `EXPORT_EXEMPT` rows exist
   - uses `EXPORT_EXEMPT` detail rows rather than the summarized `LIA110/EHD00070` quantity alone

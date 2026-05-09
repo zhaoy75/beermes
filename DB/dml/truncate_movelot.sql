@@ -1,3 +1,5 @@
+truncate table public.mes_batch cascade;
+
 truncate table public.lot_edge cascade;
 
 truncate table public.inv_movement_lines cascade;

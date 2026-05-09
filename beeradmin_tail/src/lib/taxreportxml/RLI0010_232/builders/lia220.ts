@@ -35,19 +35,25 @@ export function buildLia220Xml(input: RLI0010_232_Input) {
 }
 
 function buildLia220Row(item: TaxVolumeItem) {
+  const kubunCode = lia220KubunCodeForItem(item)
   const volume = formatXmlVolume(item.volume_l)
   const taxRate = Math.max(0, Math.round(item.tax_rate || 0))
   const taxAmount = taxAmountForRow(item)
   return element('EKD00000', joinXml([
-    element('EKD00010', optionalElement('kubun_CD', 1)),
+    element('EKD00010', optionalElement('kubun_CD', kubunCode)),
     optionalElement('EKD00020', resolveCategoryCode(item)),
     optionalElement('EKD00030', item.categoryName),
     optionalElement('EKD00040', item.abv != null ? item.abv.toFixed(1) : null, { AutoCalc: 1 }),
     optionalElement('EKD00080', volume, { AutoCalc: 1 }),
     optionalElement('EKD00090', taxRate, { AutoCalc: 1 }),
     optionalElement('EKD00100', taxAmount, { AutoCalc: 1 }),
-    optionalElement('EKD00120', moveTypeSummary(item.tax_event)),
+    optionalElement('EKD00120', kubunCode === 1 ? moveTypeSummary(item.tax_event) : null),
   ]))
+}
+
+function lia220KubunCodeForItem(item: TaxVolumeItem) {
+  if (Number.isFinite(item.kubun_code)) return Number(item.kubun_code)
+  return 1
 }
 
 function taxAmountForRow(item: TaxVolumeItem) {

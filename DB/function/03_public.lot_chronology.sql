@@ -7,6 +7,7 @@ as $$
 declare
   v_tenant uuid;
   v_created_at timestamptz;
+  v_produce_movement_at timestamptz;
 begin
   if p_lot_id is null then
     raise exception 'LOT_TIME001: p_lot_id is required';
@@ -15,7 +16,7 @@ begin
   v_tenant := public._assert_tenant();
 
   select min(m.movement_at)
-    into v_created_at
+    into v_produce_movement_at
   from public.lot_edge e
   join public.inv_movements m
     on m.id = e.movement_id
@@ -24,13 +25,12 @@ begin
     and e.to_lot_id = p_lot_id
     and coalesce(m.status, '') <> 'void';
 
-  if v_created_at is not null then
-    return v_created_at;
-  end if;
-
-  select coalesce(l.produced_at, l.created_at)
+  select coalesce(b.actual_start, v_produce_movement_at, l.produced_at, l.created_at)
     into v_created_at
   from public.lot l
+  left join public.mes_batches b
+    on b.tenant_id = l.tenant_id
+   and b.id = l.batch_id
   where l.tenant_id = v_tenant
     and l.id = p_lot_id;
 

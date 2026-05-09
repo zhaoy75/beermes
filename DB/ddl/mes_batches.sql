@@ -38,8 +38,7 @@ CREATE TABLE public.mes_batches (
 	product_name text NULL,
 	actual_yield numeric NULL,
 	actual_yield_uom uuid NULL,
-	CONSTRAINT mes_batches_pkey PRIMARY KEY (id),
-	CONSTRAINT mes_batches_tenant_id_batch_code_key UNIQUE (tenant_id, batch_code)
+	CONSTRAINT mes_batches_pkey PRIMARY KEY (id)
 );
 CREATE INDEX idx_mes_batches_created_at ON public.mes_batches USING btree (created_at);
 CREATE INDEX idx_mes_batches_planned_start ON public.mes_batches USING btree (planned_start);

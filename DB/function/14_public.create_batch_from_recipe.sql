@@ -3,7 +3,7 @@
 -- Releases the selected recipe version from mes.mst_recipe_version.recipe_body_json
 -- into public.mes_batches, mes.batch_step, and mes.batch_material_plan.
 
-create or replace function create_batch_from_recipe(
+create or replace function public.create_batch_from_recipe(
   _tenant_id uuid,
   _recipe_id text,
   _batch_code text,
@@ -121,48 +121,44 @@ begin
     nullif(trim(v_recipe_name), '')
   );
 
-  begin
-    insert into public.mes_batches (
-      tenant_id,
-      batch_code,
-      recipe_id,
-      mes_recipe_id,
-      recipe_version_id,
-      recipe_json,
-      planned_start,
-      status,
-      notes,
-      product_name,
-      released_reference_json
-    )
-    values (
-      _tenant_id,
-      trim(_batch_code),
-      null,
-      v_mes_recipe_id,
-      v_recipe_version_id,
-      case when v_mes_recipe_id is null then null else v_recipe_body end,
-      coalesce(_planned_start, now()),
-      'planned',
-      v_batch_note,
-      v_product_name,
-      case
-        when v_mes_recipe_id is null then '{}'::jsonb
-        else coalesce(v_resolved_reference, '{}'::jsonb) || jsonb_build_object(
-          'mes_recipe_id', v_mes_recipe_id,
-          'recipe_code', v_recipe_code,
-          'recipe_name', v_recipe_name,
-          'recipe_version_id', v_recipe_version_id,
-          'version_no', v_version_no,
-          'version_label', v_version_label,
-          'released_at', now()
-        )
-      end
-    )
-    returning id into v_batch_id;
-  exception when unique_violation then
-    raise exception 'Batch code % already exists for tenant %', _batch_code, _tenant_id;
-  end;
+  insert into public.mes_batches (
+    tenant_id,
+    batch_code,
+    recipe_id,
+    mes_recipe_id,
+    recipe_version_id,
+    recipe_json,
+    planned_start,
+    status,
+    notes,
+    product_name,
+    released_reference_json
+  )
+  values (
+    _tenant_id,
+    trim(_batch_code),
+    null,
+    v_mes_recipe_id,
+    v_recipe_version_id,
+    case when v_mes_recipe_id is null then null else v_recipe_body end,
+    coalesce(_planned_start, now()),
+    'planned',
+    v_batch_note,
+    v_product_name,
+    case
+      when v_mes_recipe_id is null then '{}'::jsonb
+      else coalesce(v_resolved_reference, '{}'::jsonb) || jsonb_build_object(
+        'mes_recipe_id', v_mes_recipe_id,
+        'recipe_code', v_recipe_code,
+        'recipe_name', v_recipe_name,
+        'recipe_version_id', v_recipe_version_id,
+        'version_no', v_version_no,
+        'version_label', v_version_label,
+        'released_at', now()
+      )
+    end
+  )
+  returning id into v_batch_id;
 
   insert into entity_attr_set (
     tenant_id,

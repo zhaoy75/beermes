@@ -468,10 +468,10 @@
                   <tr>
                     <th class="px-3 py-2 text-left">{{ t('batch.packaging.dialog.fillingTable.packageType') }}</th>
                     <th class="px-3 py-2 text-left">{{ t('batch.packaging.dialog.fillingTable.lotCode') }}</th>
-                    <th class="px-3 py-2 text-right">{{ t('batch.packaging.dialog.fillingTable.input') }}</th>
-                    <th class="px-3 py-2 text-center">{{ t('batch.packaging.dialog.fillingTable.sampleFlg') }}</th>
-                    <th class="px-3 py-2 text-right">{{ t('batch.packaging.dialog.fillingTable.unitVolume') }}</th>
+                    <th class="px-3 py-2 text-right">{{ t('batch.packaging.dialog.fillingTable.containerCount') }}</th>
+                    <th class="px-3 py-2 text-right">{{ t('batch.packaging.dialog.fillingTable.capacityReference') }}</th>
                     <th class="px-3 py-2 text-right">{{ t('batch.packaging.dialog.fillingTable.totalVolume') }}</th>
+                    <th class="px-3 py-2 text-center">{{ t('batch.packaging.dialog.fillingTable.sampleFlg') }}</th>
                     <th class="px-3 py-2 text-left">{{ t('common.actions') }}</th>
                   </tr>
                 </thead>
@@ -488,13 +488,26 @@
                     </td>
                     <td class="px-3 py-2 text-right">
                       <input
-                        v-if="isPackageVolumeFixed(line.package_type_id)"
                         v-model="line.qty"
                         type="number"
                         min="1"
                         step="1"
                         class="w-full h-[36px] border rounded px-2 text-right"
                       />
+                    </td>
+                    <td class="px-3 py-2 text-right text-gray-600">
+                      <div>{{ formatFillingUnitVolume(line.package_type_id) }}</div>
+                      <div v-if="formatFillingLineAverageVolume(line)" class="mt-1 text-xs text-gray-500">
+                        {{ t('batch.packaging.dialog.fillingTable.averageVolume', { volume: formatFillingLineAverageVolume(line) }) }}
+                      </div>
+                    </td>
+                    <td class="px-3 py-2 text-right">
+                      <div
+                        v-if="isPackageVolumeFixed(line.package_type_id)"
+                        class="min-h-[36px] rounded border border-gray-200 bg-gray-50 px-2 py-2 text-right text-gray-600"
+                      >
+                        {{ formatFillingLineTotal(line) }}
+                      </div>
                       <input
                         v-else
                         v-model="line.volume"
@@ -503,12 +516,13 @@
                         step="0.001"
                         class="w-full h-[36px] border rounded px-2 text-right"
                       />
+                      <p v-if="isFillingLineCapacityExceeded(line)" class="mt-1 text-xs text-amber-600">
+                        {{ t('batch.packaging.dialog.fillingTable.capacityWarning') }}
+                      </p>
                     </td>
                     <td class="px-3 py-2 text-center">
                       <input v-model="line.sample_flg" type="checkbox" class="h-4 w-4" />
                     </td>
-                    <td class="px-3 py-2 text-right text-gray-600">{{ formatFillingUnitVolume(line.package_type_id) }}</td>
-                    <td class="px-3 py-2 text-right text-gray-600">{{ formatFillingLineTotal(line) }}</td>
                     <td class="px-3 py-2">
                       <button class="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-100" type="button" @click="removeFillingLine(index)">
                         {{ t('batch.packaging.actions.delete') }}
@@ -718,6 +732,8 @@ import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { useConfirmDialog } from '@/composables/useConfirmDialog'
 import {
   fillingUnitsFromEvent,
+  litersToMilliliters,
+  millilitersToLiters,
   packingFillingPayoutFromEvent as derivePackingFillingPayoutFromEvent,
   packingFillingRemainingFromEvent as derivePackingFillingRemainingFromEvent,
   packingLossFromEvent as derivePackingLossFromEvent,
@@ -887,7 +903,7 @@ const MOVEMENT_SITE_TYPE_KEYS: Record<Exclude<PackingType, 'unpack'>, string[]> 
 type PackingFillingLine = {
   id: string
   package_type_id: string
-  qty: number
+  qty: number | null
   volume: number | null
   lot_code?: string | null
   sample_flg: boolean
@@ -1106,11 +1122,11 @@ function resolveFillingLineVolumeFromForm(line: PackingFillingLineForm) {
     const qty = toNumber(line.qty)
     const unitVolume = resolvePackageUnitVolume(line.package_type_id)
     if (qty == null || unitVolume == null) return null
-    return qty * unitVolume
+    return normalizeLitersForCalculation(qty * unitVolume)
   }
   const inputVolume = toNumber(line.volume)
   if (inputVolume == null) return null
-  return inputVolume
+  return normalizeLitersForCalculation(inputVolume)
 }
 
 function fillingCalculationOptions() {
@@ -2028,8 +2044,8 @@ async function loadPackingEvents() {
       const fillingLines = Array.isArray(meta.filling_lines)
         ? meta.filling_lines.map((line: any) => ({
           id: String(line?.id ?? generateLocalId()),
-          package_type_id: String(line?.package_type_id ?? ''),
-          qty: toNumber(line?.qty) ?? 0,
+          package_type_id: String(line?.package_id ?? line?.package_type_id ?? ''),
+          qty: line?.qty != null ? toNumber(line?.qty) : null,
           volume: line?.volume != null ? toNumber(line?.volume) : null,
           lot_code: typeof line?.lot_code === 'string' ? line.lot_code : '',
           sample_flg: line?.sample_flg === true || line?.sample_flg === 'true',
@@ -2406,9 +2422,7 @@ function openPackingEditInternal(event: PackingEvent, readOnly = false) {
       id: line.id ?? generateLocalId(),
       package_type_id: line.package_type_id,
       qty: String(line.qty ?? ''),
-      volume: line.volume != null
-        ? String(line.volume)
-        : (!isPackageVolumeFixed(line.package_type_id) && line.qty != null ? String(line.qty) : ''),
+      volume: line.volume != null ? String(line.volume) : '',
       lot_code: line.lot_code ?? '',
       sample_flg: Boolean(line.sample_flg),
     })),
@@ -2994,9 +3008,10 @@ async function persistPackingEvent(form: PackingFormState, isEditing: boolean) {
   const selectedTank = tankOptions.value.find((row) => row.value === form.tank_id)
   const fillingLinesMeta = form.filling_lines.map((line) => ({
     id: line.id,
+    package_id: line.package_type_id,
     package_type_id: line.package_type_id,
-    qty: isPackageVolumeFixed(line.package_type_id) ? toNumber(line.qty) : null,
-    volume: isPackageVolumeFixed(line.package_type_id) ? null : toNumber(line.volume),
+    qty: toNumber(line.qty),
+    volume: isPackageVolumeFixed(line.package_type_id) ? null : resolveFillingLineVolumeFromForm(line),
     lot_code: line.lot_code ? line.lot_code.trim() : null,
     sample_flg: Boolean(line.sample_flg),
   }))
@@ -3056,7 +3071,10 @@ async function persistPackingEvent(form: PackingFormState, isEditing: boolean) {
       throw new Error('Sample volume must be greater than or equal to 0.')
     }
     const effectiveLossQtyLiters = tankLossQtyLiters + sampleQtyLiters
-    const lossQtySourceUom = convertFromLiters(effectiveLossQtyLiters, sourceUomCode) ?? effectiveLossQtyLiters
+    const lossQtySourceUom = convertFromLitersStrict(effectiveLossQtyLiters, sourceUomCode)
+    if (lossQtySourceUom == null) {
+      throw new Error(t('batch.packaging.errors.fillingUomConversionFailed'))
+    }
 
     const lines = form.filling_lines
       .filter((line) => !line.sample_flg)
@@ -3066,14 +3084,19 @@ async function persistPackingEvent(form: PackingFormState, isEditing: boolean) {
         const lineVolumeLiters = resolveFillingLineVolumeFromForm(line)
         if (lineVolumeLiters == null || lineVolumeLiters <= 0) return null
         if (volumeFix && (qtyUnits == null || qtyUnits <= 0 || !Number.isInteger(qtyUnits))) return null
+        if (!volumeFix && qtyUnits != null && (qtyUnits <= 0 || !Number.isInteger(qtyUnits))) return null
+        const lineQtySourceUom = convertFromLitersStrict(lineVolumeLiters, sourceUomCode)
+        if (lineQtySourceUom == null) {
+          throw new Error(t('batch.packaging.errors.fillingUomConversionFailed'))
+        }
         return {
           line_no: index + 1,
           lot_no: line.lot_code ? line.lot_code.trim() : null,
           package_id: line.package_type_id || null,
-          qty: convertFromLiters(lineVolumeLiters, sourceUomCode) ?? lineVolumeLiters,
-          unit: volumeFix ? qtyUnits : null,
+          qty: lineQtySourceUom,
+          unit: qtyUnits ?? null,
           meta: {
-            unit_count: volumeFix ? qtyUnits : null,
+            unit_count: qtyUnits ?? null,
             input_volume_l: volumeFix ? null : lineVolumeLiters,
             volume_fix_flg: volumeFix,
             sample_flg: false,
@@ -3307,9 +3330,13 @@ function validatePackingForm(form: PackingFormState) {
         if (volumeFix) {
           const qty = toNumber(line.qty)
           if (qty == null || qty < 1 || !Number.isInteger(qty)) return true
+          const unitVolume = resolvePackageUnitVolume(line.package_type_id)
+          if (unitVolume == null || unitVolume <= 0) return true
         } else {
           const volume = toNumber(line.volume)
           if (volume == null || volume <= 0) return true
+          const qty = toNumber(line.qty)
+          if (qty != null && (qty < 1 || !Number.isInteger(qty))) return true
         }
         return typeof line.sample_flg !== 'boolean'
       })
@@ -3321,7 +3348,7 @@ function validatePackingForm(form: PackingFormState) {
 
 function computeFillingTotals(lines: PackingFillingLineForm[]) {
   let totalUnits = 0
-  let totalVolume = 0
+  let totalMilliliters = 0
   let hasMissing = false
   lines.forEach((line) => {
     if (line.sample_flg) return
@@ -3330,41 +3357,74 @@ function computeFillingTotals(lines: PackingFillingLineForm[]) {
       hasMissing = true
       return
     }
-    if (isPackageVolumeFixed(line.package_type_id)) {
-      const qty = toNumber(line.qty)
-      if (qty != null && Number.isFinite(qty)) totalUnits += qty
-    }
-    totalVolume += lineVolume
+    const qty = toNumber(line.qty)
+    if (qty != null && Number.isFinite(qty)) totalUnits += qty
+    totalMilliliters += litersToMilliliters(lineVolume) ?? 0
   })
   return {
     totalUnits,
-    totalVolume: hasMissing ? null : totalVolume,
+    totalVolume: hasMissing ? null : millilitersToLiters(totalMilliliters),
   }
 }
 
 function computeFillingSampleVolume(lines: PackingFillingLineForm[]) {
-  return lines.reduce((sum, line) => {
+  const totalMilliliters = lines.reduce((sum, line) => {
     if (!line.sample_flg) return sum
     const lineVolume = resolveFillingLineVolumeFromForm(line)
     if (lineVolume == null) return sum
-    return sum + lineVolume
+    return sum + (litersToMilliliters(lineVolume) ?? 0)
   }, 0)
+  return millilitersToLiters(totalMilliliters) ?? 0
 }
 
 function resolvePackageUnitVolume(packageTypeId: string) {
   const row = resolvePackageOption(packageTypeId)
   if (!row || row.unit_volume == null) return null
-  return convertToLiters(row.unit_volume, resolveUomCode(row.volume_uom))
+  return convertToLitersStrict(row.unit_volume, resolveUomCode(row.volume_uom))
 }
 
 function formatFillingUnitVolume(packageTypeId: string) {
-  if (!isPackageVolumeFixed(packageTypeId)) return '—'
   const row = resolvePackageOption(packageTypeId)
-  if (!row || row.unit_volume == null) return '—'
+  if (!row) return '—'
+  const referenceValue = row.volume_fix_flg === false
+    ? (row.max_volume ?? row.unit_volume)
+    : row.unit_volume
+  if (referenceValue == null) return '—'
   const uomCode = resolveUomCode(row.volume_uom)
-  const qty = Number(row.unit_volume)
+  const qty = Number(referenceValue)
   const display = Number.isFinite(qty) ? formatVolumeNumber(qty, locale.value) : String(row.unit_volume)
   return uomCode ? `${display} ${uomCode}` : display
+}
+
+function resolvePackageCapacityReferenceLiters(packageTypeId: string) {
+  const row = resolvePackageOption(packageTypeId)
+  if (!row) return null
+  const referenceValue = row.max_volume ?? row.unit_volume
+  const liters = convertToLitersStrict(referenceValue, resolveUomCode(row.volume_uom))
+  return normalizeLitersForCalculation(liters)
+}
+
+function isFillingLineCapacityExceeded(line: PackingFillingLineForm) {
+  if (!line.package_type_id || isPackageVolumeFixed(line.package_type_id)) return false
+  const lineVolumeLiters = resolveFillingLineVolumeFromForm(line)
+  const capacityLiters = resolvePackageCapacityReferenceLiters(line.package_type_id)
+  if (lineVolumeLiters == null || capacityLiters == null || capacityLiters <= 0) return false
+  const count = toNumber(line.qty)
+  const limitLiters = count != null && count > 0 ? capacityLiters * count : capacityLiters
+  const lineMilliliters = litersToMilliliters(lineVolumeLiters)
+  const limitMilliliters = litersToMilliliters(limitLiters)
+  if (lineMilliliters == null || limitMilliliters == null) return false
+  return lineMilliliters > limitMilliliters
+}
+
+function formatFillingLineAverageVolume(line: PackingFillingLineForm) {
+  if (!line.package_type_id || isPackageVolumeFixed(line.package_type_id)) return ''
+  const count = toNumber(line.qty)
+  if (count == null || count <= 0) return ''
+  const lineVolumeLiters = resolveFillingLineVolumeFromForm(line)
+  if (lineVolumeLiters == null) return ''
+  const average = normalizeLitersForCalculation(lineVolumeLiters / count)
+  return average == null ? '' : formatVolumeValue(average)
 }
 
 function formatFillingLineTotal(line: PackingFillingLineForm) {
@@ -3829,6 +3889,20 @@ function convertToLiters(size: number | null | undefined, uomCode: string | null
   }
 }
 
+function convertToLitersStrict(size: number | null | undefined, uomCode: string | null | undefined) {
+  if (size == null || Number.isNaN(Number(size)) || !uomCode) return null
+  switch (uomCode) {
+    case 'L':
+      return Number(size)
+    case 'mL':
+      return Number(size) / 1000
+    case 'gal_us':
+      return Number(size) * 3.78541
+    default:
+      return null
+  }
+}
+
 function convertFromLiters(sizeInLiters: number | null | undefined, uomCode: string | null | undefined) {
   if (sizeInLiters == null || Number.isNaN(Number(sizeInLiters))) return null
   if (!uomCode) return Number(sizeInLiters)
@@ -3841,6 +3915,26 @@ function convertFromLiters(sizeInLiters: number | null | undefined, uomCode: str
       return Number(sizeInLiters) / 3.78541
     default:
       return Number(sizeInLiters)
+  }
+}
+
+function normalizeLitersForCalculation(value: number | null | undefined) {
+  const milliliters = litersToMilliliters(value)
+  return millilitersToLiters(milliliters)
+}
+
+function convertFromLitersStrict(sizeInLiters: number | null | undefined, uomCode: string | null | undefined) {
+  const normalizedLiters = normalizeLitersForCalculation(sizeInLiters)
+  if (normalizedLiters == null || !uomCode) return null
+  switch (uomCode) {
+    case 'L':
+      return normalizedLiters
+    case 'mL':
+      return litersToMilliliters(normalizedLiters)
+    case 'gal_us':
+      return normalizedLiters / 3.78541
+    default:
+      return null
   }
 }
 

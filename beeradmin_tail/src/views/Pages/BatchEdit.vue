@@ -1690,7 +1690,7 @@ async function loadPackingEvents() {
       const fillingLines = Array.isArray(meta.filling_lines)
         ? meta.filling_lines.map((line: any) => ({
           id: String(line?.id ?? generateLocalId()),
-          package_type_id: String(line?.package_type_id ?? ''),
+          package_type_id: String(line?.package_id ?? line?.package_type_id ?? ''),
           qty: line?.qty != null ? toNumber(line?.qty) : null,
           volume: line?.volume != null ? toNumber(line?.volume) : null,
           lot_code: typeof line?.lot_code === 'string' ? line.lot_code : '',

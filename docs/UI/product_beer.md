@@ -136,6 +136,13 @@
     - `L`
     - `mL`
     - `gal_us`
+- Fast movement and New movement package count:
+  - Candidate lot loading must include `lot.unit`, `lot.qty`, `lot.uom_id`, `lot.meta`, and package `volume_fix_flg`.
+  - For fixed-volume packages, users may enter package count and the page may calculate movement volume from `mst_package.unit_volume`.
+  - For non-fixed-volume packages, users enter movement volume; package count display is informational.
+  - For non-fixed-volume packages, package count must be derived from saved lot count prorated by moved volume.
+  - Do not calculate non-fixed package count as `movement volume / mst_package.unit_volume`.
+  - When saved count is unavailable for a non-fixed package, save movement `unit` and `meta.package_qty` as `null`.
 
 ## Data Handling
 - Auth:

@@ -156,6 +156,20 @@
 - clicking the unfold toggle shows the merged row detail directly below the parent row
 - the detail view lists the underlying lots and their quantities for that merged row
 
+### Quantity Rules
+- `Qty (L)` is the inventory volume converted from `inv_inventory.qty` and `inv_inventory.uom_id`.
+- `Qty (Packages)` / `数量(本/箱)` is package count, not derived volume.
+- Preferred package-count source:
+  - use `lot.unit` when present and greater than zero.
+  - if the visible `inv_inventory` row is only part of the lot, prorate `lot.unit` by `inv_inventory.qty / lot.qty` after both quantities are converted to liters.
+- Fixed-volume fallback:
+  - if `lot.unit` is missing and the package has `volume_fix_flg != false`, derive package count as `qtyLiters / mst_package.unit_volume_liters`.
+- Non-fixed-volume behavior:
+  - if `volume_fix_flg = false`, do not derive package count from volume.
+  - use saved count only (`lot.unit`, or proportional `lot.unit` for partial rows).
+  - if saved count is missing, display blank/`—` for package count rather than a misleading calculated count.
+- Merged rows sum package counts only from rows where package count is known.
+
 ## ProducedBeer Page Changes
 - Remove the inventory section from `ProducedBeer.vue`.
 - Remove inventory loading from the page-level refresh action.

@@ -41,6 +41,7 @@ interface PackageCategoryRow {
   name_i18n: Record<string, string> | null
   unit_volume: number | null
   volume_uom: string | null
+  volume_fix_flg: boolean | null
 }
 
 interface InventoryRow {
@@ -93,6 +94,7 @@ interface PackageInfo {
   packageCode: string | null
   packageBarcode: string | null
   unitSizeLiters: number | null
+  volumeFix: boolean
   containerKind: ContainerKind
 }
 
@@ -171,6 +173,7 @@ export function useProducedBeerInventory() {
         packageBarcode: string | null
         size: number | null
         uomId: string | null
+        volumeFix: boolean
         containerKind: ContainerKind
       }
     >()
@@ -183,6 +186,7 @@ export function useProducedBeerInventory() {
         packageBarcode: row.barcode ?? null,
         size: row.unit_volume ?? null,
         uomId: row.volume_uom ?? null,
+        volumeFix: row.volume_fix_flg !== false,
         containerKind: resolveContainerKind(row.package_code, label),
       })
     })
@@ -298,6 +302,42 @@ export function useProducedBeerInventory() {
     return millilitersToLiters(quantityToMilliliters(size, uomCode))
   }
 
+  function resolveInventoryPackageCount(
+    lot: JsonMap,
+    inventoryQtyLiters: number,
+    inventoryUomCode: string | null,
+    pkgInfo: PackageInfo | undefined,
+  ) {
+    const lotMeta = lot.meta && typeof lot.meta === 'object' && !Array.isArray(lot.meta)
+      ? (lot.meta as JsonMap)
+      : null
+    const savedUnit =
+      toNumber(lot.unit)
+      ?? toNumber(lotMeta?.unit_count)
+      ?? toNumber(lotMeta?.package_qty)
+    if (savedUnit != null && savedUnit > 0) {
+      const lotQty = toNumber(lot.qty)
+      const lotUomId = toStringOrNull(lot.uom_id)
+      const lotUomCode = lotUomId ? (uomMap.value.get(lotUomId) ?? null) : inventoryUomCode
+      const lotQtyLiters = lotQty != null ? convertToLiters(lotQty, lotUomCode) : null
+      if (
+        lotQtyLiters != null
+        && lotQtyLiters > 0
+        && inventoryQtyLiters > 0
+        && Math.abs(lotQtyLiters - inventoryQtyLiters) > 0.000001
+      ) {
+        return savedUnit * (inventoryQtyLiters / lotQtyLiters)
+      }
+      return savedUnit
+    }
+
+    if (pkgInfo?.volumeFix !== false && pkgInfo?.unitSizeLiters != null && pkgInfo.unitSizeLiters > 0) {
+      return inventoryQtyLiters / pkgInfo.unitSizeLiters
+    }
+
+    return null
+  }
+
   async function ensureTenant() {
     if (tenantId.value) return tenantId.value
     const { data, error } = await supabase.auth.getUser()
@@ -318,7 +358,7 @@ export function useProducedBeerInventory() {
     const tenant = await ensureTenant()
     const { data, error } = await supabase
       .from('mst_package')
-      .select('id, package_code, barcode, name_i18n, unit_volume, volume_uom, is_active')
+      .select('id, package_code, barcode, name_i18n, unit_volume, volume_uom, volume_fix_flg, is_active')
       .eq('tenant_id', tenant)
       .eq('is_active', true)
       .order('package_code', { ascending: true })
@@ -378,6 +418,7 @@ export function useProducedBeerInventory() {
         packageCode: category?.packageCode ?? null,
         packageBarcode: category?.packageBarcode ?? null,
         unitSizeLiters,
+        volumeFix: category?.volumeFix ?? true,
         containerKind: category?.containerKind ?? 'other',
       })
     })
@@ -562,7 +603,7 @@ export function useProducedBeerInventory() {
 
       const { data: lots, error: lotError } = await supabase
         .from('lot')
-        .select('id, lot_no, lot_tax_type, batch_id, package_id, produced_at, status, meta')
+        .select('id, lot_no, lot_tax_type, batch_id, package_id, produced_at, qty, unit, uom_id, status, meta')
         .eq('tenant_id', tenant)
         .in('id', lotIds)
         .neq('status', 'void')
@@ -655,9 +696,7 @@ export function useProducedBeerInventory() {
         const inventoryUomId = toStringOrNull(row.uom_id)
         const inventoryUomCode = inventoryUomId ? (uomMap.value.get(inventoryUomId) ?? null) : null
         const qtyLiters = convertToLiters(inventoryQty, inventoryUomCode) ?? 0
-        const unitSizeLiters = pkgInfo?.unitSizeLiters ?? null
-        const qtyPackages =
-          unitSizeLiters != null && unitSizeLiters > 0 ? qtyLiters / unitSizeLiters : 0
+        const qtyPackages = resolveInventoryPackageCount(lot, qtyLiters, inventoryUomCode, pkgInfo)
         const packageGroupKey = pkgInfo?.packageId ?? `label:${pkgInfo?.packageTypeLabel ?? ''}`
         const batchGroupKey = batchId ?? ''
         const lotNoGroupKey = String(lot.lot_no ?? '')
@@ -722,7 +761,7 @@ export function useProducedBeerInventory() {
         const siteName = siteLabel(siteId)
         if (siteName && siteName !== '—') entry.siteLabels.add(siteName)
         entry.qtyLiters += qtyLiters
-        entry.qtyPackages += qtyPackages
+        if (qtyPackages != null && Number.isFinite(qtyPackages)) entry.qtyPackages += qtyPackages
         pushKeyword(entry.keywordParts, lot.id)
         const producedAt = toStringOrNull(lot.produced_at)
         if (!entry.productionDate && producedAt) entry.productionDate = producedAt
@@ -738,7 +777,9 @@ export function useProducedBeerInventory() {
         const detail = entry.detailMap.get(detailKey)
         if (detail) {
           detail.qtyLiters = (detail.qtyLiters ?? 0) + qtyLiters
-          detail.qtyPackages = (detail.qtyPackages ?? 0) + qtyPackages
+          if (qtyPackages != null && Number.isFinite(qtyPackages)) {
+            detail.qtyPackages = (detail.qtyPackages ?? 0) + qtyPackages
+          }
           if (!detail.productionDate && producedAt) detail.productionDate = producedAt
         } else {
           entry.detailMap.set(detailKey, {
@@ -747,7 +788,7 @@ export function useProducedBeerInventory() {
             lotNo: toStringOrNull(lot.lot_no),
             lotTaxType: toStringOrNull(lot.lot_tax_type),
             productionDate: producedAt,
-            qtyPackages: qtyPackages > 0 ? qtyPackages : null,
+            qtyPackages: qtyPackages != null && qtyPackages > 0 ? qtyPackages : null,
             qtyLiters: qtyLiters > 0 ? qtyLiters : null,
             siteId,
           })

@@ -436,6 +436,8 @@ type LotOption = {
   packageId: string | null
   packageVolume: number | null
   packageUom: string | null
+  packageVolumeFix: boolean
+  packageUnitCount: number | null
   quantity: number | null
   uomId: string | null
   uomCode: string | null
@@ -449,6 +451,7 @@ type LotReferenceMaps = {
   uomMap: Map<string, string>
   packageVolumeMap: Map<string, number | null>
   packageUomMap: Map<string, string | null>
+  packageVolumeFixMap: Map<string, boolean>
 }
 
 const siteOptions = ref<SiteOption[]>([])
@@ -562,28 +565,112 @@ function fromLiters(valueLiters: number, uomCode: string | null | undefined) {
   return null
 }
 
-function packageUnitVolumeInLotUom(lot: LotOption) {
-  if (lot.packageVolume == null || !Number.isFinite(lot.packageVolume) || lot.packageVolume <= 0) return null
-  const fromUom = normalizeVolumeUom(lot.packageUom)
-  const toUom = normalizeVolumeUom(lot.uomCode)
-  if (!fromUom || !toUom || fromUom === toUom) return lot.packageVolume
-  const liters = toLiters(lot.packageVolume, fromUom)
+function packageUnitVolumeForUom(
+  packageVolume: number | null,
+  packageUom: string | null,
+  targetUomCode: string | null | undefined,
+) {
+  if (packageVolume == null || !Number.isFinite(packageVolume) || packageVolume <= 0) return null
+  const fromUom = normalizeVolumeUom(packageUom)
+  const toUom = normalizeVolumeUom(targetUomCode)
+  if (!fromUom || !toUom || fromUom === toUom) return packageVolume
+  const liters = toLiters(packageVolume, fromUom)
   if (liters == null) return null
   return fromLiters(liters, toUom)
 }
 
+function packageUnitVolumeInLotUom(lot: LotOption) {
+  return packageUnitVolumeForUom(lot.packageVolume, lot.packageUom, lot.uomCode)
+}
+
+function asJsonRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null
+}
+
+function resolveSavedPackageCount(lotRow: unknown) {
+  const lot = asJsonRecord(lotRow)
+  if (!lot) return null
+  const meta = asJsonRecord(lot.meta)
+  return (
+    toNumber(lot.unit)
+    ?? toNumber(meta?.unit_count)
+    ?? toNumber(meta?.package_qty)
+  )
+}
+
+function roundPackageCount(value: number | null | undefined) {
+  if (value == null || !Number.isFinite(value) || value <= 0) return null
+  const rounded = Math.round(value * 1000000) / 1000000
+  return Math.abs(rounded - Math.round(rounded)) < 0.0000001 ? Math.round(rounded) : rounded
+}
+
+function resolveAvailablePackageCount(
+  lotRow: unknown,
+  availableQty: number | null,
+  availableUomCode: string | null,
+  packageInfo: {
+    packageVolume: number | null
+    packageUom: string | null
+    packageVolumeFix: boolean
+  },
+  uomMap: Map<string, string>,
+) {
+  const lot = asJsonRecord(lotRow)
+  const savedUnit = resolveSavedPackageCount(lotRow)
+  if (savedUnit != null && savedUnit > 0) {
+    const lotQty = toNumber(lot?.qty)
+    const lotUomId = typeof lot?.uom_id === 'string' ? String(lot.uom_id) : null
+    const lotUomCode = lotUomId ? (uomMap.get(lotUomId) ?? null) : availableUomCode
+    const lotQtyLiters = lotQty != null ? toLiters(lotQty, lotUomCode) : null
+    const availableQtyLiters = availableQty != null ? toLiters(availableQty, availableUomCode) : null
+    if (
+      lotQtyLiters != null
+      && lotQtyLiters > 0
+      && availableQtyLiters != null
+      && availableQtyLiters > 0
+      && Math.abs(lotQtyLiters - availableQtyLiters) > 0.000001
+    ) {
+      return roundPackageCount(savedUnit * (availableQtyLiters / lotQtyLiters))
+    }
+    return roundPackageCount(savedUnit)
+  }
+
+  if (packageInfo.packageVolumeFix !== false) {
+    const unitVolume = packageUnitVolumeForUom(
+      packageInfo.packageVolume,
+      packageInfo.packageUom,
+      availableUomCode,
+    )
+    if (unitVolume != null && unitVolume > 0 && availableQty != null && availableQty > 0) {
+      return roundPackageCount(availableQty / unitVolume)
+    }
+  }
+
+  return null
+}
+
 function isPackagedMoveInput(lot: LotOption) {
   if (!lot.packageId) return false
+  if (lot.packageVolumeFix === false) return false
   const unitVolume = packageUnitVolumeInLotUom(lot)
   return unitVolume != null && unitVolume > 0
+}
+
+function availablePackageCount(lot: LotOption) {
+  if (!isPackagedMoveInput(lot)) return null
+  if (lot.packageUnitCount != null && lot.packageUnitCount > 0) return lot.packageUnitCount
+  if (lot.quantity == null || !Number.isFinite(lot.quantity) || lot.quantity <= 0) return null
+  const unitVolume = packageUnitVolumeInLotUom(lot)
+  if (unitVolume == null || unitVolume <= 0) return null
+  return roundPackageCount(lot.quantity / unitVolume)
 }
 
 function displayLotQuantity(lot: LotOption) {
   if (lot.quantity == null || Number.isNaN(lot.quantity)) return null
   if (!isPackagedMoveInput(lot)) return lot.quantity
-  const unitVolume = packageUnitVolumeInLotUom(lot)
-  if (unitVolume != null && unitVolume > 0) return lot.quantity / unitVolume
-  return lot.quantity
+  return availablePackageCount(lot)
 }
 
 function movementInputUomLabel(lot: LotOption) {
@@ -600,7 +687,24 @@ function resolvedMovementQuantity(lot: LotOption) {
     : inputQty
 }
 
+function resolveMovedPackageCount(lot: LotOption, qty: number) {
+  if (lot.packageUnitCount != null && lot.packageUnitCount > 0 && lot.quantity != null && lot.quantity > 0) {
+    return roundPackageCount(lot.packageUnitCount * (qty / lot.quantity))
+  }
+  if (lot.packageVolumeFix !== false) {
+    const unitVolume = packageUnitVolumeInLotUom(lot)
+    if (unitVolume != null && unitVolume > 0) return roundPackageCount(qty / unitVolume)
+  }
+  return null
+}
+
 function isSelectedLotRowValid(lot: LotOption) {
+  const inputQty = toNumber(movementForm.srcLotMoveQty[lot.id])
+  if (isPackagedMoveInput(lot)) {
+    if (inputQty == null || inputQty <= 0 || !Number.isInteger(inputQty)) return false
+    const maxPackages = availablePackageCount(lot)
+    if (maxPackages != null && inputQty > maxPackages + 1e-9) return false
+  }
   const qty = resolvedMovementQuantity(lot)
   if (qty == null || qty <= 0) return false
   if (!lot.uomId) return false
@@ -738,6 +842,13 @@ async function saveMovement() {
       if (inputQty == null || inputQty <= 0) errors.push(`invalid movement quantity for lot ${lot.lotCode || lot.id}`)
       if (!lot.uomId) errors.push(`uom is missing for lot ${lot.lotCode || lot.id}`)
       const usePackageInput = isPackagedMoveInput(lot)
+      if (usePackageInput && inputQty != null && !Number.isInteger(inputQty)) {
+        errors.push(`package quantity must be an integer for lot ${lot.lotCode || lot.id}`)
+      }
+      const maxPackages = usePackageInput ? availablePackageCount(lot) : null
+      if (usePackageInput && inputQty != null && maxPackages != null && inputQty > maxPackages + 1e-9) {
+        errors.push(`package quantity exceeds available quantity for lot ${lot.lotCode || lot.id}`)
+      }
       const unitVolume = packageUnitVolumeInLotUom(lot)
       const qty = usePackageInput
         ? ((unitVolume != null && unitVolume > 0) ? (inputQty ?? 0) * unitVolume : (inputQty ?? 0))
@@ -751,7 +862,7 @@ async function saveMovement() {
       return {
         lot,
         qty,
-        packageQty: usePackageInput ? (inputQty ?? 0) : null,
+        packageQty: usePackageInput ? (inputQty ?? 0) : resolveMovedPackageCount(lot, qty),
       }
     })
     if (errors.length) throw new Error(errors[0])
@@ -1507,10 +1618,11 @@ async function loadLotReferenceMaps(
 
   const packageVolumeMap = new Map<string, number | null>()
   const packageUomMap = new Map<string, string | null>()
+  const packageVolumeFixMap = new Map<string, boolean>()
   if (packageIds.length) {
     const { data: pkgRows, error: pkgError } = await supabase
       .from('mst_package')
-      .select('id, unit_volume, volume_uom')
+      .select('id, unit_volume, volume_uom, volume_fix_flg')
       .in('id', packageIds)
     if (pkgError) throw pkgError
 
@@ -1528,6 +1640,7 @@ async function loadLotReferenceMaps(
 
     ;(pkgRows ?? []).forEach((row: any) => {
       packageVolumeMap.set(row.id, toNumber(row.unit_volume))
+      packageVolumeFixMap.set(row.id, row.volume_fix_flg !== false)
       if (typeof row.volume_uom === 'string') {
         packageUomMap.set(row.id, uomMap.get(row.volume_uom) ?? row.volume_uom)
       } else {
@@ -1544,6 +1657,7 @@ async function loadLotReferenceMaps(
     uomMap,
     packageVolumeMap,
     packageUomMap,
+    packageVolumeFixMap,
   }
 }
 
@@ -1556,9 +1670,27 @@ function buildLotOptionsFromInventoryRows(rows: any[], refs: LotReferenceMaps) {
     const batchId = lotRow?.batch_id ?? null
     const qtyValue = Number(row.qty)
     const qty = Number.isFinite(qtyValue) ? qtyValue : 0
+    const uomId = row.uom_id ? String(row.uom_id) : null
+    const uomCode = uomId ? refs.uomMap.get(uomId) ?? null : null
+    const packageId = lotRow?.package_id ? String(lotRow.package_id) : null
+    const packageInfo = {
+      packageVolume: packageId ? refs.packageVolumeMap.get(packageId) ?? null : null,
+      packageUom: packageId ? refs.packageUomMap.get(packageId) ?? null : null,
+      packageVolumeFix: packageId ? refs.packageVolumeFixMap.get(packageId) ?? true : true,
+    }
+    const packageUnitCount = resolveAvailablePackageCount(
+      lotRow,
+      qty,
+      uomCode,
+      packageInfo,
+      refs.uomMap,
+    )
     const existing = optionMap.get(lotId)
     if (existing) {
       existing.quantity = (existing.quantity ?? 0) + qty
+      if (packageUnitCount != null) {
+        existing.packageUnitCount = (existing.packageUnitCount ?? 0) + packageUnitCount
+      }
       return
     }
     optionMap.set(lotId, {
@@ -1573,12 +1705,14 @@ function buildLotOptionsFromInventoryRows(rows: any[], refs: LotReferenceMaps) {
       beerCategoryId: batchId ? refs.batchCategoryMap.get(batchId) ?? null : null,
       targetAbv: batchId ? refs.batchTargetAbvMap.get(batchId) ?? null : null,
       styleName: batchId ? refs.batchStyleMap.get(batchId) ?? null : null,
-      packageId: lotRow?.package_id ? String(lotRow.package_id) : null,
-      packageVolume: lotRow?.package_id ? refs.packageVolumeMap.get(lotRow.package_id) ?? null : null,
-      packageUom: lotRow?.package_id ? refs.packageUomMap.get(lotRow.package_id) ?? null : null,
+      packageId,
+      packageVolume: packageInfo.packageVolume,
+      packageUom: packageInfo.packageUom,
+      packageVolumeFix: packageInfo.packageVolumeFix,
+      packageUnitCount,
       quantity: qty,
-      uomId: row.uom_id ? String(row.uom_id) : null,
-      uomCode: row.uom_id ? refs.uomMap.get(row.uom_id) ?? null : null,
+      uomId,
+      uomCode,
     })
   })
 
@@ -1593,6 +1727,15 @@ function buildLotOptionsFromLotRows(rows: any[], refs: LotReferenceMaps) {
       const batchId = typeof row.batch_id === 'string' ? row.batch_id : null
       const lotId = String(row.id ?? '')
       if (!lotId) return null
+      const uomId = row.uom_id ? String(row.uom_id) : null
+      const uomCode = uomId ? refs.uomMap.get(uomId) ?? null : null
+      const packageId = row.package_id ? String(row.package_id) : null
+      const packageInfo = {
+        packageVolume: packageId ? refs.packageVolumeMap.get(packageId) ?? null : null,
+        packageUom: packageId ? refs.packageUomMap.get(packageId) ?? null : null,
+        packageVolumeFix: packageId ? refs.packageVolumeFixMap.get(packageId) ?? true : true,
+      }
+      const qty = toNumber(row.qty)
       return {
         id: lotId,
         label: row.lot_no ?? lotId,
@@ -1605,12 +1748,14 @@ function buildLotOptionsFromLotRows(rows: any[], refs: LotReferenceMaps) {
         beerCategoryId: batchId ? refs.batchCategoryMap.get(batchId) ?? null : null,
         targetAbv: batchId ? refs.batchTargetAbvMap.get(batchId) ?? null : null,
         styleName: batchId ? refs.batchStyleMap.get(batchId) ?? null : null,
-        packageId: row.package_id ? String(row.package_id) : null,
-        packageVolume: row.package_id ? refs.packageVolumeMap.get(row.package_id) ?? null : null,
-        packageUom: row.package_id ? refs.packageUomMap.get(row.package_id) ?? null : null,
-        quantity: toNumber(row.qty),
-        uomId: row.uom_id ? String(row.uom_id) : null,
-        uomCode: row.uom_id ? refs.uomMap.get(row.uom_id) ?? null : null,
+        packageId,
+        packageVolume: packageInfo.packageVolume,
+        packageUom: packageInfo.packageUom,
+        packageVolumeFix: packageInfo.packageVolumeFix,
+        packageUnitCount: resolveAvailablePackageCount(row, qty, uomCode, packageInfo, refs.uomMap),
+        quantity: qty,
+        uomId,
+        uomCode,
       } satisfies LotOption
     })
     .filter((row): row is LotOption => row != null)
@@ -1626,7 +1771,7 @@ async function loadLotsForSite(siteId: string) {
   if (!useTenantWideFilledLotLookup) {
     const { data: inventoryRows, error } = await supabase
       .from('inv_inventory')
-      .select('id, site_id, lot_id, qty, uom_id, lot:lot_id ( id, lot_no, batch_id, package_id, lot_tax_type, status, produced_at )')
+      .select('id, site_id, lot_id, qty, uom_id, lot:lot_id ( id, lot_no, batch_id, package_id, lot_tax_type, status, produced_at, qty, unit, uom_id, meta )')
       .eq('tenant_id', tenant)
       .eq('site_id', siteId)
       .gt('qty', 0)
@@ -1641,7 +1786,12 @@ async function loadLotsForSite(siteId: string) {
       const batchIds = Array.from(new Set(activeRows
         .map((row: any) => (Array.isArray(row.lot) ? row.lot[0] : row.lot)?.batch_id)
         .filter(Boolean)))
-      const uomIds = Array.from(new Set(activeRows.map((row: any) => row.uom_id).filter(Boolean)))
+      const uomIds = Array.from(new Set(activeRows
+        .flatMap((row: any) => {
+          const lotRow = Array.isArray(row.lot) ? row.lot[0] : row.lot
+          return [row.uom_id, lotRow?.uom_id]
+        })
+        .filter(Boolean)))
       const packageIds = Array.from(new Set(activeRows
         .map((row: any) => (Array.isArray(row.lot) ? row.lot[0] : row.lot)?.package_id)
         .filter(Boolean)))
@@ -1658,7 +1808,7 @@ async function loadLotsForSite(siteId: string) {
   if (useTenantWideFilledLotLookup) {
     const { data: tenantFilledLotRows, error: tenantFilledLotError } = await supabase
       .from('lot')
-      .select('id, lot_no, site_id, produced_at, batch_id, package_id, lot_tax_type, status, qty, uom_id')
+      .select('id, lot_no, site_id, produced_at, batch_id, package_id, lot_tax_type, status, qty, unit, uom_id, meta')
       .eq('tenant_id', tenant)
       .not('package_id', 'is', null)
       .neq('status', 'void')
@@ -1670,7 +1820,7 @@ async function loadLotsForSite(siteId: string) {
   } else {
     const { data: scopedLotRows, error: scopedLotError } = await supabase
       .from('lot')
-      .select('id, lot_no, site_id, produced_at, batch_id, package_id, lot_tax_type, status, qty, uom_id')
+      .select('id, lot_no, site_id, produced_at, batch_id, package_id, lot_tax_type, status, qty, unit, uom_id, meta')
       .eq('tenant_id', tenant)
       .or(`site_id.eq.${siteId},site_id.is.null`)
       .neq('status', 'void')
@@ -1683,7 +1833,7 @@ async function loadLotsForSite(siteId: string) {
     if (!activeLots.length) {
       const { data: tenantLotRows, error: tenantLotError } = await supabase
         .from('lot')
-        .select('id, lot_no, site_id, produced_at, batch_id, package_id, lot_tax_type, status, qty, uom_id')
+        .select('id, lot_no, site_id, produced_at, batch_id, package_id, lot_tax_type, status, qty, unit, uom_id, meta')
         .eq('tenant_id', tenant)
         .neq('status', 'void')
         .gt('qty', 0)

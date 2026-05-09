@@ -434,6 +434,7 @@ type MovementLineRow = {
   package_id: string | null
   qty: number | string | null
   unit: number | string | null
+  uom_id: string | null
   meta: JsonRecord | null
 }
 
@@ -690,6 +691,10 @@ function convertToLiters(size: number | null, uomCode: string | null | undefined
     default:
       return size
   }
+}
+
+function isLiterUomCode(value: string | null | undefined) {
+  return (value ?? '').trim().toLowerCase() === 'l'
 }
 
 function formatAbv(value: number | null | undefined) {
@@ -1049,7 +1054,7 @@ async function loadPackageLookup(tenant: string) {
       packageTypeId,
       lookup: {
         packageCode,
-        volumeFix: row.volume_fix_flg === true,
+        volumeFix: row.volume_fix_flg !== false,
         unitVolumeLiters,
         volumeUomCode,
       } satisfies PackageLookup,
@@ -1226,31 +1231,32 @@ async function loadBatchInfo(batchIds: string[], alcoholTypeLabels: Map<string, 
   return infoMap
 }
 
-function normalizeFillingLines(rawLines: unknown, lookup: Map<string, PackageLookup>): FillingHistoryLine[] {
+function normalizeFillingLines(rawLines: unknown): FillingHistoryLine[] {
   if (!Array.isArray(rawLines)) return []
   return rawLines.map((line) => {
     const record = isRecord(line) ? line : {}
     const packageTypeId =
-      typeof record.package_type_id === 'string' && record.package_type_id.trim()
-        ? record.package_type_id.trim()
-        : null
-    const packageDef = packageTypeId ? lookup.get(packageTypeId) : null
+      typeof record.package_id === 'string' && record.package_id.trim()
+        ? record.package_id.trim()
+        : typeof record.package_type_id === 'string' && record.package_type_id.trim()
+          ? record.package_type_id.trim()
+          : null
     const rawQty = toNumber(record.qty)
     const rawVolume = toNumber(record.volume)
-    const normalizedVolume =
-      packageDef?.volumeFix === false
-        ? convertToLiters(rawVolume ?? rawQty, packageDef?.volumeUomCode ?? null)
-        : rawVolume
     return {
       package_type_id: packageTypeId,
       qty: rawQty,
-      volume: normalizedVolume,
+      volume: rawVolume,
       sample_flg: record.sample_flg === true || record.sample_flg === 'true',
     } satisfies FillingHistoryLine
   })
 }
 
-function deriveFillingLinesFromMovementLines(lines: MovementLineRow[], lookup: Map<string, PackageLookup>) {
+function deriveFillingLinesFromMovementLines(
+  lines: MovementLineRow[],
+  lookup: Map<string, PackageLookup>,
+  uomCodeById: Map<string, string>,
+) {
   return lines.flatMap((line) => {
     const packageId =
       typeof line.package_id === 'string' && line.package_id.trim() ? line.package_id.trim() : ''
@@ -1261,11 +1267,16 @@ function deriveFillingLinesFromMovementLines(lines: MovementLineRow[], lookup: M
     const unit = toNumber(line.unit)
     const unitCount = toNumber(meta?.unit_count)
     const inputVolumeLiters = toNumber(meta?.input_volume_l)
+    const lineUomCode =
+      typeof line.uom_id === 'string' && line.uom_id.trim()
+        ? (uomCodeById.get(line.uom_id) ?? line.uom_id)
+        : null
+    const fallbackVolumeLiters = isLiterUomCode(lineUomCode) ? qty : null
     const sampleFlag = meta?.sample_flg === true || meta?.sample_flg === 'true'
     return [{
       package_type_id: packageId,
-      qty: packageDef?.volumeFix ? (unitCount ?? unit) : null,
-      volume: packageDef?.volumeFix ? null : (inputVolumeLiters ?? qty),
+      qty: unitCount ?? unit,
+      volume: packageDef?.volumeFix ? null : (inputVolumeLiters ?? fallbackVolumeLiters),
       sample_flg: sampleFlag,
     } satisfies FillingHistoryLine]
   })
@@ -1277,8 +1288,12 @@ function fillingEventFromMovement(
   lookup: Map<string, PackageLookup>,
 ) {
   const meta = isRecord(movement.meta) ? movement.meta : {}
-  const metaLines = normalizeFillingLines(meta.filling_lines, lookup)
-  const fallbackLines = deriveFillingLinesFromMovementLines(linesByMovementId.get(String(movement.id)) ?? [], lookup)
+  const metaLines = normalizeFillingLines(meta.filling_lines)
+  const fallbackLines = deriveFillingLinesFromMovementLines(
+    linesByMovementId.get(String(movement.id)) ?? [],
+    lookup,
+    volumeUomCodeById.value,
+  )
   const fillingLines = metaLines.length ? metaLines : fallbackLines
   return {
     tank_fill_start_volume: toNumber(meta.tank_fill_start_volume),
@@ -1314,7 +1329,7 @@ function packageNumberFromLine(line: FillingHistoryLine, lookup: Map<string, Pac
   if (!packageTypeId) return null
   const packageDef = lookup.get(packageTypeId)
   if (packageDef?.volumeFix) return toNumber(line.qty)
-  return toNumber(line.qty) ?? toNumber(line.volume)
+  return toNumber(line.qty)
 }
 
 function compareTimestamp(a: string | null | undefined, b: string | null | undefined) {
@@ -1651,7 +1666,7 @@ async function loadReport() {
     const [{ data: lineRows, error: lineError }, batchInfoById] = await Promise.all([
       supabase
         .from('inv_movement_lines')
-        .select('movement_id, package_id, qty, unit, meta')
+        .select('movement_id, package_id, qty, unit, uom_id, meta')
         .in('movement_id', movementIds),
       loadBatchInfo(batchIds, alcoholTypeLabels),
     ])

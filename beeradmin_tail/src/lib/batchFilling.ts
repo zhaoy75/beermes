@@ -21,6 +21,21 @@ function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value)
 }
 
+export function litersToMilliliters(value: number | null | undefined) {
+  if (!isFiniteNumber(value)) return null
+  return Math.round(value * 1000)
+}
+
+export function millilitersToLiters(value: number | null | undefined) {
+  if (!isFiniteNumber(value)) return null
+  return value / 1000
+}
+
+function normalizeLiters(value: number | null | undefined) {
+  const milliliters = litersToMilliliters(value)
+  return millilitersToLiters(milliliters)
+}
+
 export function resolveFillingLineVolumeFromEvent(
   line: FillingHistoryLine,
   options: FillingCalculationOptions,
@@ -31,10 +46,9 @@ export function resolveFillingLineVolumeFromEvent(
     const unitVolume = options.resolvePackageUnitVolume(packageTypeId)
     if (!isFiniteNumber(unitVolume)) return null
     const qty = isFiniteNumber(line.qty) ? line.qty : 0
-    return qty * unitVolume
+    return normalizeLiters(qty * unitVolume)
   }
-  if (isFiniteNumber(line.volume)) return line.volume
-  if (isFiniteNumber(line.qty)) return line.qty
+  if (isFiniteNumber(line.volume)) return normalizeLiters(line.volume)
   return null
 }
 
@@ -42,34 +56,37 @@ export function fillingLinesVolumeFromEvent(
   lines: FillingHistoryLine[],
   options: FillingCalculationOptions,
 ) {
-  return lines.reduce((sum, line) => {
+  const totalMilliliters = lines.reduce((sum, line) => {
     if (line.sample_flg) return sum
     const volume = resolveFillingLineVolumeFromEvent(line, options)
     if (!isFiniteNumber(volume)) return sum
-    return sum + volume
+    return sum + (litersToMilliliters(volume) ?? 0)
   }, 0)
+  return millilitersToLiters(totalMilliliters) ?? 0
 }
 
 export function fillingSampleVolumeFromEvent(
   lines: FillingHistoryLine[],
   options: FillingCalculationOptions,
 ) {
-  return lines.reduce((sum, line) => {
+  const totalMilliliters = lines.reduce((sum, line) => {
     if (!line.sample_flg) return sum
     const volume = resolveFillingLineVolumeFromEvent(line, options)
     if (!isFiniteNumber(volume)) return sum
-    return sum + volume
+    return sum + (litersToMilliliters(volume) ?? 0)
   }, 0)
+  return millilitersToLiters(totalMilliliters) ?? 0
 }
 
 export function fillingUnitsFromEvent(
   lines: FillingHistoryLine[],
   options: FillingCalculationOptions,
 ) {
+  void options
   return lines.reduce((sum, line) => {
     if (line.sample_flg) return sum
     const packageTypeId = typeof line.package_type_id === 'string' ? line.package_type_id : ''
-    if (!packageTypeId || !options.isPackageVolumeFixed(packageTypeId)) return sum
+    if (!packageTypeId) return sum
     const qty = isFiniteNumber(line.qty) ? line.qty : 0
     return sum + qty
   }, 0)

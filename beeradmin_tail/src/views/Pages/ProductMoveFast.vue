@@ -443,7 +443,8 @@
                   min="0"
                   step="1"
                   inputmode="numeric"
-                  class="w-full h-[38px] border rounded-lg px-3 text-right bg-white"
+                  :disabled="quickEntryUnitDisabled"
+                  class="w-full h-[38px] border rounded-lg px-3 text-right bg-white disabled:bg-gray-100 disabled:text-gray-400"
                   :placeholder="t('producedBeer.movementFast.placeholders.unit')"
                   @keydown.enter.exact.prevent="addLineFromQuickEntry"
                 />
@@ -690,6 +691,8 @@ type BeerLotOption = {
   packageLabel: string | null
   packageUnitVolumeLiters: number | null
   packageVolumeUomCode: string | null
+  packageVolumeFix: boolean
+  packageUnitCount: number | null
   inventoryQty: number
   qtyLiters: number
   uomId: string
@@ -715,6 +718,7 @@ type PackageOption = {
   label: string
   unitVolumeLiters: number | null
   volumeUomCode: string | null
+  volumeFix: boolean
 }
 
 type UomDefinition = {
@@ -947,6 +951,68 @@ function convertFromLiters(value: number, uomCode: string | null | undefined) {
   return value / factor
 }
 
+function asJsonRecord(value: unknown): JsonRecord | null {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as JsonRecord)
+    : null
+}
+
+function resolveSavedPackageCount(lotRow: unknown) {
+  const lot = asJsonRecord(lotRow)
+  if (!lot) return null
+  const meta = asJsonRecord(lot.meta)
+  return (
+    toNumber(lot.unit)
+    ?? toNumber(meta?.unit_count)
+    ?? toNumber(meta?.package_qty)
+  )
+}
+
+function roundPackageCount(value: number | null | undefined) {
+  if (value == null || !Number.isFinite(value) || value <= 0) return null
+  const rounded = Math.round(value * 1000000) / 1000000
+  return Math.abs(rounded - Math.round(rounded)) < 0.0000001 ? Math.round(rounded) : rounded
+}
+
+function resolveInventoryPackageCountForLot(
+  lotRow: unknown,
+  inventoryQtyLiters: number,
+  inventoryUomCode: string | null,
+  packageInfo:
+    | { unitVolumeLiters: number | null; volumeFix: boolean }
+    | null
+    | undefined,
+  uomMap: Map<string, string>,
+) {
+  const lot = asJsonRecord(lotRow)
+  const savedUnit = resolveSavedPackageCount(lotRow)
+  if (savedUnit != null && savedUnit > 0) {
+    const lotQty = toNumber(lot?.qty)
+    const lotUomId = typeof lot?.uom_id === 'string' ? String(lot.uom_id) : null
+    const lotUomCode = lotUomId ? (uomMap.get(lotUomId) ?? null) : inventoryUomCode
+    const lotQtyLiters = lotQty != null ? convertToLiters(lotQty, lotUomCode) : null
+    if (
+      lotQtyLiters != null
+      && lotQtyLiters > 0
+      && inventoryQtyLiters > 0
+      && Math.abs(lotQtyLiters - inventoryQtyLiters) > 0.000001
+    ) {
+      return roundPackageCount(savedUnit * (inventoryQtyLiters / lotQtyLiters))
+    }
+    return roundPackageCount(savedUnit)
+  }
+
+  if (
+    packageInfo?.volumeFix !== false
+    && packageInfo?.unitVolumeLiters != null
+    && packageInfo.unitVolumeLiters > 0
+  ) {
+    return roundPackageCount(inventoryQtyLiters / packageInfo.unitVolumeLiters)
+  }
+
+  return null
+}
+
 function setBeerInputRef(id: string, el: unknown) {
   if (el instanceof HTMLInputElement) beerInputRefs.set(id, el)
   else beerInputRefs.delete(id)
@@ -1104,7 +1170,7 @@ async function loadBeerOptionsForSite(siteId: string) {
     const { data: inventoryRows, error } = await supabase
       .from('inv_inventory')
       .select(
-        'lot_id, qty, uom_id, lot:lot_id ( id, lot_no, batch_id, package_id, produced_at, expires_at, lot_tax_type, status )',
+        'lot_id, qty, uom_id, lot:lot_id ( id, lot_no, batch_id, package_id, produced_at, expires_at, lot_tax_type, status, qty, unit, uom_id, meta )',
       )
       .eq('tenant_id', auth.tenantId)
       .eq('site_id', siteId)
@@ -1131,7 +1197,15 @@ async function loadBeerOptionsForSite(siteId: string) {
       ),
     )
     const uomIds = Array.from(
-      new Set(activeRows.map((row: any) => String(row.uom_id ?? '')).filter(Boolean)),
+      new Set(
+        activeRows
+          .flatMap((row: any) => {
+            const lotRow = Array.isArray(row.lot) ? row.lot[0] : row.lot
+            return [row.uom_id, lotRow?.uom_id]
+          })
+          .map((value: any) => String(value ?? ''))
+          .filter(Boolean),
+      ),
     )
     const packageIds = Array.from(
       new Set(
@@ -1158,12 +1232,17 @@ async function loadBeerOptionsForSite(siteId: string) {
 
     const packageMap = new Map<
       string,
-      { label: string; unitVolumeLiters: number | null; volumeUomCode: string | null }
+      {
+        label: string
+        unitVolumeLiters: number | null
+        volumeUomCode: string | null
+        volumeFix: boolean
+      }
     >()
     if (packageIds.length) {
       const { data: packages, error: packageError } = await supabase
         .from('mst_package')
-        .select('id, package_code, name_i18n, unit_volume, volume_uom')
+        .select('id, package_code, name_i18n, unit_volume, volume_uom, volume_fix_flg')
         .in('id', packageIds)
       if (packageError) throw packageError
       ;(packages ?? []).forEach((row: any) => {
@@ -1179,6 +1258,7 @@ async function loadBeerOptionsForSite(siteId: string) {
           unitVolumeLiters:
             unitVolumeLiters != null && Number.isFinite(unitVolumeLiters) ? unitVolumeLiters : null,
           volumeUomCode,
+          volumeFix: row.volume_fix_flg !== false,
         })
       })
     }
@@ -1327,6 +1407,14 @@ async function loadBeerOptionsForSite(siteId: string) {
       const packageInfo = packageId ? packageMap.get(packageId) : null
       const packageLabel = packageInfo?.label ?? (packageId || null)
       if (packageLabel) option.searchIndex = `${option.searchIndex} ${packageLabel.toLowerCase()}`
+      const inventoryUomCode = uomMap.get(String(row.uom_id ?? '')) ?? null
+      const packageUnitCount = resolveInventoryPackageCountForLot(
+        lotRow,
+        qtyLiters,
+        inventoryUomCode,
+        packageInfo,
+        uomMap,
+      )
       option.candidateLots.push({
         lotId: String(lotRow.id),
         lotNo: lotRow.lot_no ? String(lotRow.lot_no) : null,
@@ -1336,10 +1424,12 @@ async function loadBeerOptionsForSite(siteId: string) {
         packageLabel,
         packageUnitVolumeLiters: packageInfo?.unitVolumeLiters ?? null,
         packageVolumeUomCode: packageInfo?.volumeUomCode ?? null,
+        packageVolumeFix: packageInfo?.volumeFix ?? true,
+        packageUnitCount,
         inventoryQty: qtyValue,
         qtyLiters,
         uomId: String(row.uom_id),
-        uomCode: uomMap.get(String(row.uom_id ?? '')) ?? null,
+        uomCode: inventoryUomCode,
         lotTaxType: typeof lotRow.lot_tax_type === 'string' ? String(lotRow.lot_tax_type) : null,
         producedAt: typeof lotRow.produced_at === 'string' ? lotRow.produced_at : null,
         expiresAt: typeof lotRow.expires_at === 'string' ? lotRow.expires_at : null,
@@ -1403,10 +1493,11 @@ function handleInventorySearchSelection(row: InventorySearchSelection) {
     row.packageId && matchedOption.candidateLots.some((lot) => lot.packageId === row.packageId)
       ? row.packageId
       : ''
+  const matchedLot = matchedOption.candidateLots.find((lot) => lot.lotId === row.lotId)
   const qtyPackages = toNumber(row.qtyPackages)
   const qtyLiters = toNumber(row.qtyLiters)
 
-  if (quickEntry.packageId && qtyPackages != null && qtyPackages > 0) {
+  if (quickEntry.packageId && matchedLot?.packageVolumeFix !== false && qtyPackages != null && qtyPackages > 0) {
     quickEntry.unitText = String(roundQty(qtyPackages))
     quickEntry.volumeText = qtyLiters != null && qtyLiters > 0 ? String(roundQty(qtyLiters)) : ''
   } else {
@@ -1417,7 +1508,11 @@ function handleInventorySearchSelection(row: InventorySearchSelection) {
 }
 
 function focusAfterInventorySearchSelection(row: InventorySearchSelection) {
-  if (row.packageId) {
+  const matchedOption = beerOptions.value.find((option) =>
+    option.candidateLots.some((lot) => lot.lotId === row.lotId),
+  )
+  const matchedLot = matchedOption?.candidateLots.find((lot) => lot.lotId === row.lotId)
+  if (row.packageId && matchedLot?.packageVolumeFix !== false) {
     focusQuickAmountInput()
     return
   }
@@ -1438,7 +1533,12 @@ const selectedQuickBeer = computed(() => {
 const quickPackageOptions = computed<PackageOption[]>(() => {
   const map = new Map<
     string,
-    { label: string; unitVolumeLiters: number | null; volumeUomCode: string | null }
+    {
+      label: string
+      unitVolumeLiters: number | null
+      volumeUomCode: string | null
+      volumeFix: boolean
+    }
   >()
   const targets = selectedQuickBeer.value ? [selectedQuickBeer.value] : beerOptions.value
   targets.forEach((option) => {
@@ -1448,6 +1548,7 @@ const quickPackageOptions = computed<PackageOption[]>(() => {
         label: lot.packageLabel || lot.packageId,
         unitVolumeLiters: lot.packageUnitVolumeLiters,
         volumeUomCode: lot.packageVolumeUomCode,
+        volumeFix: lot.packageVolumeFix,
       })
     })
   })
@@ -1457,9 +1558,19 @@ const quickPackageOptions = computed<PackageOption[]>(() => {
       label: value.label,
       unitVolumeLiters: value.unitVolumeLiters,
       volumeUomCode: value.volumeUomCode,
+      volumeFix: value.volumeFix,
     }))
     .sort((a, b) => a.label.localeCompare(b.label))
 })
+
+const selectedQuickPackageOption = computed(() => {
+  if (!quickEntry.packageId) return null
+  return quickPackageOptions.value.find((entry) => entry.id === quickEntry.packageId) ?? null
+})
+
+const quickEntryUnitDisabled = computed(
+  () => selectedQuickPackageOption.value?.volumeFix === false,
+)
 
 function formatUomForDisplay(code: string | null | undefined) {
   const normalized = normalizeVolumeUom(code)
@@ -1547,12 +1658,19 @@ function resolveRequestedVolumeLiters() {
   const volume = toNumber(quickEntry.volumeText)
   if (quickEntry.packageId && unit != null && unit > 0) {
     const packageInfo = quickPackageOptions.value.find((entry) => entry.id === quickEntry.packageId)
-    if (packageInfo?.unitVolumeLiters != null && packageInfo.unitVolumeLiters > 0) {
+    if (
+      packageInfo?.volumeFix !== false
+      && packageInfo?.unitVolumeLiters != null
+      && packageInfo.unitVolumeLiters > 0
+    ) {
       const calculated = packageInfo.unitVolumeLiters * unit
       quickEntry.volumeText = String(roundQty(calculated))
       return calculated
     }
     if (volume != null && volume > 0) return volume
+    if (packageInfo?.volumeFix === false) {
+      throw new Error(t('producedBeer.movementFast.errors.volumeRequired'))
+    }
     throw new Error(t('producedBeer.movementFast.errors.packageVolumeUnavailable'))
   }
   if (unit != null && unit > 0 && !quickEntry.packageId) {
@@ -1690,6 +1808,20 @@ function selectedLotForRow(row: LineRow, option: BeerOption | null | undefined) 
   return option.candidateLots.find((lot) => lot.lotId === row.selectedLotId) ?? null
 }
 
+function resolveMovedPackageCount(lot: BeerLotOption, qtyLiters: number) {
+  if (lot.packageUnitCount != null && lot.packageUnitCount > 0 && lot.qtyLiters > 0) {
+    return roundPackageCount(lot.packageUnitCount * (qtyLiters / lot.qtyLiters))
+  }
+  if (
+    lot.packageVolumeFix !== false
+    && lot.packageUnitVolumeLiters != null
+    && lot.packageUnitVolumeLiters > 0
+  ) {
+    return roundPackageCount(qtyLiters / lot.packageUnitVolumeLiters)
+  }
+  return null
+}
+
 function resolvedLotLabelForRow(row: LineRow) {
   const option = row.beerKey ? beerOptionByKey.value.get(row.beerKey) : null
   const lot = selectedLotForRow(row, option)
@@ -1708,10 +1840,10 @@ function resolvedUnitDisplayForRow(row: LineRow) {
   if (qtyLiters == null || qtyLiters <= 0) return '—'
   const option = row.beerKey ? beerOptionByKey.value.get(row.beerKey) : null
   const lot = selectedLotForRow(row, option)
-  if (lot?.packageUnitVolumeLiters != null && lot.packageUnitVolumeLiters > 0) {
-    return formatNumber(qtyLiters / lot.packageUnitVolumeLiters)
-  }
-  return formatNumber(qtyLiters)
+  if (!lot) return formatNumber(qtyLiters)
+  if (!lot.packageId) return formatNumber(qtyLiters)
+  const packageCount = resolveMovedPackageCount(lot, qtyLiters)
+  return packageCount != null ? formatNumber(packageCount) : '—'
 }
 
 function filteredBeerOptions(index: number) {
@@ -2293,14 +2425,6 @@ type AllocatedMoveSegment = {
 }
 
 function allocateLine(line: ValidatedLine, remainingByLotId?: Map<string, number>) {
-  const unitCountForLot = (lot: BeerLotOption, qtyLiters: number) => {
-    if (lot.packageUnitVolumeLiters == null || lot.packageUnitVolumeLiters <= 0) return null
-    const raw = qtyLiters / lot.packageUnitVolumeLiters
-    if (!Number.isFinite(raw) || raw <= 0) return null
-    const rounded = Math.round(raw * 1000000) / 1000000
-    return Math.abs(rounded - Math.round(rounded)) < 0.0000001 ? Math.round(rounded) : rounded
-  }
-
   const availableForLot = (lot: BeerLotOption) => {
     if (!remainingByLotId) return lot.qtyLiters
     return remainingByLotId.get(lot.lotId) ?? lot.qtyLiters
@@ -2335,7 +2459,7 @@ function allocateLine(line: ValidatedLine, remainingByLotId?: Map<string, number
         beerName: line.option.beerName,
         qtyLiters: line.qtyLiters,
         qtySourceUom,
-        unit: unitCountForLot(manualLot, line.qtyLiters),
+        unit: resolveMovedPackageCount(manualLot, line.qtyLiters),
         lotId: manualLot.lotId,
         lotNo: manualLot.lotNo,
         lotTaxType: manualLot.lotTaxType,
@@ -2375,7 +2499,7 @@ function allocateLine(line: ValidatedLine, remainingByLotId?: Map<string, number
       beerName: line.option.beerName,
       qtyLiters: takeLiters,
       qtySourceUom,
-      unit: unitCountForLot(lot, takeLiters),
+      unit: resolveMovedPackageCount(lot, takeLiters),
       lotId: lot.lotId,
       lotNo: lot.lotNo,
       lotTaxType: lot.lotTaxType,
@@ -2767,6 +2891,10 @@ watch(
     const unit = toNumber(quickEntry.unitText)
     if (!quickEntry.packageId || unit == null || unit <= 0) return
     const packageInfo = quickPackageOptions.value.find((entry) => entry.id === quickEntry.packageId)
+    if (packageInfo?.volumeFix === false) {
+      quickEntry.unitText = ''
+      return
+    }
     if (packageInfo?.unitVolumeLiters == null || packageInfo.unitVolumeLiters <= 0) return
     quickEntry.volumeText = String(roundQty(packageInfo.unitVolumeLiters * unit))
   },

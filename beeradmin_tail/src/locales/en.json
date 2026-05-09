@@ -836,10 +836,14 @@
           "packageType": "Package type",
           "lotCode": "Lot code",
           "input": "Qty / Volume",
-          "qty": "Quantity",
+          "qty": "Container count",
+          "containerCount": "Container count",
           "sampleFlg": "Sample",
-          "unitVolume": "Volume per unit",
-          "totalVolume": "Total volume"
+          "unitVolume": "Volume per container",
+          "capacityReference": "Volume / capacity",
+          "totalVolume": "Total filled volume (L)",
+          "averageVolume": "Avg {volume} / container",
+          "capacityWarning": "Exceeds capacity reference."
         },
         "fillingTotals": {
           "units": "Total units: {count}",
@@ -870,7 +874,8 @@
         "tankVolumeCalcFailed": "Failed to calculate tank volume from depth.",
         "fillingRequired": "Add at least one filling line.",
         "nonSampleRequired": "Add at least one non-sample filling line.",
-        "fillingLineInvalid": "Each filling line needs a package type and valid quantity or volume.",
+        "fillingLineInvalid": "Each filling line needs a package type, valid container count, and valid total filled volume.",
+        "fillingUomConversionFailed": "Filled volume cannot be converted to the source lot unit.",
         "saveFailed": "Failed to save packing event.",
         "deleteFailed": "Failed to delete packing event."
       },

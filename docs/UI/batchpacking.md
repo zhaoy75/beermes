@@ -184,8 +184,19 @@ Components:
 
 Filling line fields:
 - Package type (dropdown from `mst_package`)
-- Quantity (integer, >= 1)
 - lot_code
+- Container count / 容器数
+  - fixed-volume package: required integer, `>= 1`
+  - non-fixed-volume package: optional integer, `>= 1` when entered
+- Volume per container / capacity reference
+  - fixed-volume package: read-only `mst_package.unit_volume`, converted by `mst_package.volume_uom` for calculations
+  - non-fixed-volume package: reference only, from `mst_package.max_volume` or `mst_package.unit_volume` when available
+  - capacity reference must be converted to liters before display comparison: `convertToLiters(max_volume ?? unit_volume, volume_uom)`
+- Total filled volume / 総充填容量(L)
+  - fixed-volume package: read-only calculated value
+  - non-fixed-volume package: required user input, stored as liters
+  - if non-fixed total volume exceeds the capacity reference, show a warning but allow save
+  - if non-fixed container count is entered, show average volume per container: `総充填容量(L) / 容器数`
 - sample_flg (boolean toggle)
   - `true`: sample line, treated as loss (not inventory)
   - `false`: normal filling line, treated as inventory movement
@@ -197,7 +208,7 @@ Table actions:
 Derived values:
 - Tank Fill Start Volume = get_volume_by_tank (tank id, Tank Fill Start Depth )
 - Tank Fill Left Volume　= get_volume_by_tank (tank id, Tank Fill Left Depth )
-- Volume per unit
+- Volume per unit / capacity reference
 - Total line volume = sum of filling line volume where `sample_flg = false` (inventory only)
 - Sample Volume = sum of filling line volume where `sample_flg = true`
 - Sample Volume input field is read-only and auto-updated when filling lines change
@@ -209,15 +220,24 @@ Common filling calculation rules:
 - Batch Packing filling logic is the source of truth for any page that shows filling totals or filling-derived history columns
 - Filling line volume resolution order:
   - if package type is fixed-volume package: `qty * package unit volume`
-  - otherwise use line `volume`
-  - if line `volume` is not available, fallback to line `qty`
+  - if package type is non-fixed-volume package: use line `volume`
+  - non-fixed `volume` is total filled volume in liters
+  - never use non-fixed `qty` as a volume fallback
+- Precision rule:
+  - non-fixed total volume remains stored in metadata as liters for compatibility
+  - before comparison, aggregation, warning calculation, or source-lot UOM conversion, normalize liters to integer milliliters
+  - convert integer milliliters back to liters only for display and compatible metadata fields that explicitly store liters
 - `sample_flg = true` lines are sample-only:
   - excluded from `Total line volume`
   - excluded from package count shown in packing history
   - included in `Sample Volume`
 - `sample_flg = false` lines are inventory lines:
   - included in `Total line volume`
-  - included in package count when package type is qty-based
+  - included in package count when `qty` is present
+- Package count rules:
+  - fixed-volume `qty` is required container count
+  - non-fixed-volume `qty` is optional container count
+  - never use non-fixed `volume` as package count fallback
 - Filling history derived columns must be calculated as:
   - `詰口払出数量 = Tank Fill Start Volume - Tank Fill Left Volume`
   - `明細総容量 = sum(filling line volume where sample_flg = false)`
@@ -227,6 +247,7 @@ Common filling calculation rules:
 - These rules apply to:
   - Batch Packing page
   - Batch Edit page packing history list
+  - Filling Report / 詰口一覧表
   - any shared packing/filling history component
 
 Batch Edit consistency requirement:
@@ -283,14 +304,28 @@ Shows:
 
 ## Validation Rules
 - Packing type required
-- Quantity > 0
+- Quantity > 0 applies only to non-Filling Volume/Movement sections
 - Site required when movement is present
 - At least one filling line for Filling
-- Filling quantity must be integer >= 1
+- Filling fixed-volume line:
+  - container count must be an integer `>= 1`
+  - package `unit_volume` must exist, be greater than zero, and be convertible to liters
+- Filling non-fixed-volume line:
+  - total filled volume must be greater than zero and is stored as liters
+  - container count is optional
+  - if container count is entered, it must be an integer `>= 1`
+- Filling RPC quantity conversion:
+  - filled liters must be convertible to the source lot UOM before calling `public.product_filling`
+  - if conversion fails, block save and show an inline error on the filling line or review summary
 - `sample_flg` must be boolean
 
 Warnings:
 - Movement quantity differs from volume or filling total
+- Non-fixed total filled volume exceeds the capacity reference:
+  - first calculate `capacity_reference_liters = convertToLiters(max_volume ?? unit_volume, volume_uom)`
+  - warn when `総充填容量(L) > capacity_reference_liters * 容器数`
+  - if container count is not entered, warn when `総充填容量(L) > capacity_reference_liters`
+  - this warning must not block save in this task
 
 ## Save Behavior
 - Disable Save during submission
@@ -325,7 +360,10 @@ Warnings:
 - For `product_filling` payload `lines[]`:
   - include only filling lines where `sample_flg = false`
   - exclude all lines where `sample_flg = true` (sample is not inventory)
-  - include `unit` and `tax_rate` when those values are available for the packed line
+  - `qty` must be filled volume converted from liters to the source lot UOM
+  - `unit` must be container count when entered
+  - include `tax_rate` when available for the packed line
+- If filled liters cannot be converted to the source lot UOM, UI must block save before calling `product_filling`.
 - If not found, show error: `product_produce must be executed first`
 - UI must not insert/update `inv_movements`, `inv_movement_lines`, `lot`, `lot_edge` directly
 - If a previous filling row was deleted through rollback, the next filling save must still call `product_filling` normally. Rollback `MERGE` lineage must be handled inside the database function and must not be followed by UI code as source ancestry.
@@ -352,20 +390,51 @@ Warnings:
   "lines": [
     {
       "line_no": 1,
-      "package_id": "...",
+      "package_id": "fixed-package-id",
       "qty": 120,
       "unit": 240,
       "tax_rate": 0.1,
-      "lot_no": "BATCH20260218_001"
+      "lot_no": "BATCH20260218_001",
+      "meta": {
+        "unit_count": 240,
+        "volume_fix_flg": true
+      }
+    },
+    {
+      "line_no": 2,
+      "package_id": "variable-package-id",
+      "qty": 57.5,
+      "unit": 3,
+      "tax_rate": 0.1,
+      "lot_no": "BATCH20260218_002",
+      "meta": {
+        "unit_count": 3,
+        "input_volume_l": 57.5,
+        "volume_fix_flg": false
+      }
     }
   ]
 }
 ```
+- The example assumes the source lot UOM is liters. If the source lot UOM is not liters, `lines[].qty` must contain the converted value.
 - UI-to-RPC field mapping for Filling:
   - `Tank_No` -> `tank_id`
   - `Tank_Loss_Volume + Sample_Volume` -> `loss_qty`
   - `filling_lines(sample_flg=false)` -> `lines[]`
   - `filling_lines(sample_flg=true)` -> excluded from `lines[]` and counted in `loss_qty`
+  - fixed package line:
+    - `lines[].qty` = `container count * package unit volume`, converted to source lot UOM
+    - `lines[].unit` = container count
+    - `lines[].meta.unit_count` = container count
+    - `meta.filling_lines[].qty` = container count
+    - `meta.filling_lines[].volume` = `null`
+  - non-fixed package line:
+    - `meta.filling_lines[].volume` = total filled volume in liters
+    - `meta.filling_lines[].qty` = optional container count
+    - `lines[].qty` = total filled volume converted to source lot UOM
+    - `lines[].unit` = optional container count when entered
+    - `lines[].meta.unit_count` = optional container count when entered
+    - `lines[].meta.input_volume_l` = total filled volume in liters
 
 ### Transfer (社内非納税移出) save rule
 - UI must call stored function `public.product_move(p_doc jsonb)`
@@ -395,18 +464,21 @@ Warnings:
   "Sample_Volume" : 1,
   "Tank_Loss_Volume" : 10,
   "volume_qty": null,
-	  "src_site_id": "...",
-	  "dest_site_id": "...",
-	  "filling_lines": [
-	    { "package_type_id": "keg_10l", "qty": 24, "sample_flg": false },
-	    { "package_type_id": "bottle_330ml", "qty": 6, "sample_flg": true }
-	  ]
-	}
-	```
+  "src_site_id": "...",
+  "dest_site_id": "...",
+  "filling_lines": [
+    { "package_id": "keg_variable_package_id", "qty": 3, "volume": 57.5, "sample_flg": false },
+    { "package_id": "bottle_330ml_package_id", "qty": 6, "volume": null, "sample_flg": true }
+  ]
+}
+```
 - In this example:
   - `src_site_id` is derived from the batch manufacturing site.
   - `dest_site_id` should be the same as `src_site_id`.
   - derived movement quantity should reflect only non-sample filling lines total volume.
+  - `package_id` means the selected `mst_package.id`; it must not be confused with `mst_package.package_type_id`.
+  - `keg_variable_package_id.volume = 57.5` is liters and `keg_variable_package_id.qty = 3` is container count.
+  - `bottle_330ml_package_id.qty = 6` is container count and its volume is calculated from package unit volume.
   - `loss_qty` sent to `product_filling` should be `Tank_Loss_Volume + Sample_Volume`.
   - any line with `sample_flg = true` must not be included in RPC `lines[]`.
 

@@ -839,10 +839,14 @@
           "packageType": "詰口種別",
           "lotCode": "ロットコード",
           "input": "個数/容量(L)",
-          "qty": "数量",
+          "qty": "容器数",
+          "containerCount": "容器数",
           "sampleFlg": "サンプル",
-          "unitVolume": "単位容量",
-          "totalVolume": "総容量"
+          "unitVolume": "1容器あたり容量",
+          "capacityReference": "容量/容量目安",
+          "totalVolume": "総充填容量(L)",
+          "averageVolume": "平均 {volume} / 容器",
+          "capacityWarning": "容量目安を超えています。"
         },
         "fillingTotals": {
           "units": "合計本数: {count}",
@@ -873,7 +877,8 @@
         "tankVolumeCalcFailed": "深さからタンク容量を算出できませんでした。",
         "fillingRequired": "充填明細を1件以上追加してください。",
         "nonSampleRequired": "サンプル以外の詰口明細を1件以上追加してください。",
-        "fillingLineInvalid": "詰口種別と有効な数量または容量を入力してください。",
+        "fillingLineInvalid": "詰口種別、有効な容器数、総充填容量を入力してください。",
+        "fillingUomConversionFailed": "充填容量を移出元ロットの単位へ変換できません。",
         "saveFailed": "移送詰口管理の保存に失敗しました。",
         "deleteFailed": "移送詰口管理の削除に失敗しました。"
       },

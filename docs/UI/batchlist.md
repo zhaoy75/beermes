@@ -72,7 +72,9 @@
    
 ## Business Rules
 - default value of search section
-  開始日 should be two months previous
+  開始日 should be two months previous when no remembered 開始日 exists
+- 開始日 and 終了日 search values should be remembered in the browser immediately after either value changes and restored when the user returns to バッチ管理
+- Reset restores 開始日 to the two-month default and clears 終了日, and the reset values become the remembered values
 - 開始日 and 終了日 are date-only business dates; do not show or save time
 - 終了日 filters are inclusive for the whole selected day
 - normal user can not delete batch whose status is in_progress or completed

@@ -13,9 +13,13 @@ export interface FillingHistoryLine {
 export interface FillingHistoryEvent {
   tank_fill_start_volume?: number | null
   tank_left_volume?: number | null
+  tank_loss_calc_mode?: string | null
+  tank_loss_volume?: number | null
   sample_volume?: number | null
   filling_lines?: FillingHistoryLine[] | null
 }
+
+export type TankLossCalcMode = 'ignore_loss' | 'calculate_loss'
 
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value)
@@ -34,6 +38,10 @@ export function millilitersToLiters(value: number | null | undefined) {
 function normalizeLiters(value: number | null | undefined) {
   const milliliters = litersToMilliliters(value)
   return millilitersToLiters(milliliters)
+}
+
+export function normalizeTankLossCalcMode(value: unknown): TankLossCalcMode {
+  return value === 'calculate_loss' ? 'calculate_loss' : 'ignore_loss'
 }
 
 export function resolveFillingLineVolumeFromEvent(
@@ -118,6 +126,8 @@ export function packingLossFromEvent(
   event: FillingHistoryEvent,
   options: FillingCalculationOptions,
 ) {
+  if (normalizeTankLossCalcMode(event.tank_loss_calc_mode) === 'ignore_loss') return 0
+  if (isFiniteNumber(event.tank_loss_volume)) return normalizeLiters(event.tank_loss_volume)
   if (!isFiniteNumber(event.tank_fill_start_volume) || !isFiniteNumber(event.tank_left_volume)) return null
   const lines = Array.isArray(event.filling_lines) ? event.filling_lines : []
   const sampleVolume = isFiniteNumber(event.sample_volume)

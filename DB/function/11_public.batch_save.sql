@@ -15,11 +15,18 @@ begin
   if p_patch is null then
     raise exception 'p_patch is required';
   end if;
+  if p_patch ? 'batch_code' and nullif(btrim(p_patch ->> 'batch_code'), '') is null then
+    raise exception 'batch_code is required';
+  end if;
 
   v_tenant := public._assert_tenant();
 
   update public.mes_batches b
-     set batch_label = coalesce(p_patch ->> 'batch_label', b.batch_label),
+     set batch_code = case
+           when p_patch ? 'batch_code' then btrim(p_patch ->> 'batch_code')
+           else b.batch_code
+         end,
+         batch_label = coalesce(p_patch ->> 'batch_label', b.batch_label),
          scale_factor = coalesce(nullif(p_patch ->> 'scale_factor','')::numeric, b.scale_factor),
          planned_start = coalesce(nullif(p_patch ->> 'planned_start','')::date::timestamptz, b.planned_start),
          planned_end = coalesce(nullif(p_patch ->> 'planned_end','')::date::timestamptz, b.planned_end),
@@ -41,4 +48,4 @@ begin
   return p_batch_id;
 end;
 $$;
-comment on function public.batch_save(uuid, jsonb) is '{"version":1}';
+comment on function public.batch_save(uuid, jsonb) is '{"version":2}';

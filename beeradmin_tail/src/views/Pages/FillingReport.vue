@@ -345,6 +345,7 @@ import {
 } from '@/lib/batchRecipeSnapshot'
 import {
   fillingSampleVolumeFromEvent,
+  normalizeTankLossCalcMode,
   packingLossFromEvent,
   packingTotalLineVolumeFromEvent,
   resolveFillingLineVolumeFromEvent,
@@ -1298,6 +1299,8 @@ function fillingEventFromMovement(
   return {
     tank_fill_start_volume: toNumber(meta.tank_fill_start_volume),
     tank_left_volume: toNumber(meta.tank_left_volume),
+    tank_loss_calc_mode: resolveMetaString(meta, 'tank_loss_calc_mode'),
+    tank_loss_volume: toNumber(meta.tank_loss_volume),
     sample_volume: toNumber(meta.sample_volume),
     filling_lines: fillingLines,
   } satisfies FillingHistoryEvent
@@ -1318,6 +1321,7 @@ function lossVolumeFromMovement(
   event: FillingHistoryEvent,
   options: FillingCalculationOptions,
 ) {
+  if (normalizeTankLossCalcMode(event.tank_loss_calc_mode) === 'ignore_loss') return 0
   const persistedLoss = toNumber(meta?.tank_loss_volume)
   if (persistedLoss != null && Number.isFinite(persistedLoss)) return persistedLoss
   return packingLossFromEvent(event, options)

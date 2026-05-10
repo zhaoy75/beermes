@@ -37,6 +37,10 @@
 ## Field Definitions
 ### basic information section 
     バッチコード
+      editable
+      required
+      saved to `mes_batches.batch_code`
+      duplicate values are allowed; `mes_batches.id` remains the canonical identifier
     ステータス
     product_name 
 	　actual_yield 

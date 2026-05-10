@@ -302,7 +302,10 @@
       </section>
     </div>
 
-    <div v-if="packingDialog.open && packingDialog.form" :class="isPackingPage ? 'mt-4' : 'fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4'">
+    <div
+      v-if="packingDialog.open && packingDialog.form"
+      :class="isPackingPage ? 'mt-4' : 'fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4'"
+    >
       <div :class="isPackingPage ? 'w-full bg-white rounded-xl shadow border border-gray-200' : 'w-full max-w-4xl bg-white rounded-xl shadow-lg border border-gray-200'">
         <header class="flex items-start justify-between px-4 py-3 border-b gap-4">
           <div>
@@ -415,6 +418,20 @@
               <h4 class="text-sm font-semibold text-gray-700">{{ t('batch.packaging.dialog.fillingSection') }}</h4>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <div class="md:col-span-4">
+                <label class="block text-sm text-gray-600 mb-1">{{ t('batch.packaging.dialog.tankLossCalcMode') }}</label>
+                <div class="inline-flex rounded border border-gray-300 bg-white p-1">
+                  <label
+                    v-for="option in tankLossCalcModeOptions"
+                    :key="option.value"
+                    class="inline-flex cursor-pointer items-center gap-2 rounded px-3 py-1.5 text-sm"
+                    :class="packingDialog.form.tank_loss_calc_mode === option.value ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-50'"
+                  >
+                    <input v-model="packingDialog.form.tank_loss_calc_mode" type="radio" class="sr-only" :value="option.value" />
+                    {{ option.label }}
+                  </label>
+                </div>
+              </div>
               <div class="md:col-span-4 md:max-w-sm">
                 <label class="block text-sm text-gray-600 mb-1" for="tankNo">{{ t('batch.packaging.dialog.tankNo') }}</label>
                 <select id="tankNo" v-model="packingDialog.form.tank_id" class="w-full h-[36px] border rounded px-2 bg-white">
@@ -431,19 +448,22 @@
               <div>
                 <label class="block text-sm text-gray-600 mb-1" for="tankFillStart">{{ t('batch.packaging.dialog.tankFillStart') }}</label>
                 <input id="tankFillStart" v-model="packingDialog.form.tank_fill_start_volume" type="number" step="0.001" class="w-full h-[36px] border rounded px-2 text-right" />
+                <p v-if="packingDialog.errors.tank_fill_start_volume" class="mt-1 text-xs text-red-600">{{ packingDialog.errors.tank_fill_start_volume }}</p>
               </div>
               <div>
                 <label class="block text-sm text-gray-600 mb-1" for="tankFillLeftDepth">{{ t('batch.packaging.dialog.tankFillLeftDepth') }}</label>
-                <input id="tankFillLeftDepth" v-model="packingDialog.form.tank_fill_left_depth" type="number" min="0" step="0.001" class="w-full h-[36px] border rounded px-2 text-right" />
+                <input id="tankFillLeftDepth" v-model="packingDialog.form.tank_fill_left_depth" type="number" min="0" step="0.001" class="w-full h-[36px] border rounded px-2 text-right disabled:bg-gray-50 disabled:text-gray-500" :disabled="packingDialog.form.tank_loss_calc_mode === 'ignore_loss'" />
                 <p v-if="packingDialog.errors.tank_fill_left_depth" class="mt-1 text-xs text-red-600">{{ packingDialog.errors.tank_fill_left_depth }}</p>
               </div>
               <div>
                 <label class="block text-sm text-gray-600 mb-1" for="tankLeft">{{ t('batch.packaging.dialog.tankLeft') }}</label>
-                <input id="tankLeft" v-model="packingDialog.form.tank_left_volume" type="number" step="0.001" class="w-full h-[36px] border rounded px-2 text-right" />
+                <input id="tankLeft" v-model="packingDialog.form.tank_left_volume" type="number" step="0.001" class="w-full h-[36px] border rounded px-2 text-right" :class="packingDialog.form.tank_loss_calc_mode === 'ignore_loss' ? 'bg-gray-50 text-gray-600' : ''" :readonly="packingDialog.form.tank_loss_calc_mode === 'ignore_loss'" />
+                <p v-if="packingDialog.errors.tank_left_volume" class="mt-1 text-xs text-red-600">{{ packingDialog.errors.tank_left_volume }}</p>
               </div>
               <div>
                 <label class="block text-sm text-gray-600 mb-1" for="sampleVolume">{{ t('batch.packaging.dialog.sampleVolume') }}</label>
-                <input id="sampleVolume" v-model="packingDialog.form.sample_volume" type="number" min="0" step="0.001" class="w-full h-[36px] border rounded px-2 text-right bg-gray-50 text-gray-600" readonly />
+                <input id="sampleVolume" v-model="packingDialog.form.sample_volume" type="number" min="0" step="0.001" class="w-full h-[36px] border rounded px-2 text-right" />
+                <p v-if="packingDialog.errors.sample_volume" class="mt-1 text-xs text-red-600">{{ packingDialog.errors.sample_volume }}</p>
               </div>
               <div>
                 <label class="block text-sm text-gray-600 mb-1">{{ t('batch.packaging.dialog.tankLoss') }}</label>
@@ -734,11 +754,13 @@ import {
   fillingUnitsFromEvent,
   litersToMilliliters,
   millilitersToLiters,
+  normalizeTankLossCalcMode,
   packingFillingPayoutFromEvent as derivePackingFillingPayoutFromEvent,
   packingFillingRemainingFromEvent as derivePackingFillingRemainingFromEvent,
   packingLossFromEvent as derivePackingLossFromEvent,
   packingTotalLineVolumeFromEvent as derivePackingTotalLineVolumeFromEvent,
   processedFillingVolumeFromEvent,
+  type TankLossCalcMode,
 } from '@/lib/batchFilling'
 import {
   buildAlcoholTypeLabelMap,
@@ -924,6 +946,8 @@ type PackingEvent = {
   tank_fill_start_volume: number | null
   tank_fill_left_depth: number | null
   tank_left_volume: number | null
+  tank_loss_calc_mode: TankLossCalcMode
+  tank_loss_volume: number | null
   sample_volume: number | null
   loss_qty: number | null
   loss_uom: string | null
@@ -962,6 +986,7 @@ type PackingFormState = {
   tank_fill_start_volume: string
   tank_fill_left_depth: string
   tank_left_volume: string
+  tank_loss_calc_mode: TankLossCalcMode
   sample_volume: string
 }
 
@@ -1153,20 +1178,8 @@ function processedVolumeFromPackingEvent(event: PackingEvent) {
 
 function processedVolumeFromPackingForm(form: PackingFormState) {
   if (form.packing_type === 'filling') {
-    let total = 0
-    const fillingTotals = computeFillingTotals(form.filling_lines)
-    if (fillingTotals.totalVolume != null && Number.isFinite(fillingTotals.totalVolume)) {
-      total += fillingTotals.totalVolume
-    }
-    const sample = toNumber(form.sample_volume) ?? computeFillingSampleVolume(form.filling_lines)
-    if (Number.isFinite(sample)) total += sample
-    const start = toNumber(form.tank_fill_start_volume)
-    const left = toNumber(form.tank_left_volume)
-    if (start != null && left != null && fillingTotals.totalVolume != null) {
-      const loss = start - left - fillingTotals.totalVolume - sample
-      if (Number.isFinite(loss)) total += loss
-    }
-    return total
+    const values = tankLossValuesFromForm(form)
+    return (values.totalLineVolume ?? 0) + values.sampleVolume + (values.tankLossVolume ?? 0)
   }
   const volume = formVolumeInLiters(form)
   if (volume != null) return volume
@@ -1218,6 +1231,11 @@ const packingTypeButtonOptions = computed(() => {
   }
   return packingTypeOptions.value
 })
+
+const tankLossCalcModeOptions = computed(() => ([
+  { value: 'ignore_loss', label: t('batch.packaging.dialog.tankLossCalcIgnore') },
+  { value: 'calculate_loss', label: t('batch.packaging.dialog.tankLossCalcCalculate') },
+] as Array<{ value: TankLossCalcMode, label: string }>))
 
 const packageCategoryOptions = computed(() =>
   packageCategories.value.map((row) => ({
@@ -1362,14 +1380,65 @@ const packingFillingSampleVolume = computed(() => {
   return computeFillingSampleVolume(lines)
 })
 
+function tankLossValuesFromForm(form: PackingFormState) {
+  const mode = normalizeTankLossCalcMode(form.tank_loss_calc_mode)
+  const startVolume = toNumber(form.tank_fill_start_volume)
+  const sampleVolume = toNumber(form.sample_volume) ?? computeFillingSampleVolume(form.filling_lines)
+  const totalLineVolume = computeFillingTotals(form.filling_lines).totalVolume
+  const inputLeftVolume = toNumber(form.tank_left_volume)
+
+  if (startVolume == null || totalLineVolume == null) {
+    return {
+      mode,
+      startVolume,
+      tankLeftVolume: inputLeftVolume,
+      sampleVolume,
+      totalLineVolume,
+      tankLossVolume: null,
+      effectiveLossVolume: null,
+    }
+  }
+
+  if (mode === 'ignore_loss') {
+    const tankLeftVolume = normalizeLitersForCalculation(startVolume - totalLineVolume - sampleVolume)
+    return {
+      mode,
+      startVolume,
+      tankLeftVolume,
+      sampleVolume,
+      totalLineVolume,
+      tankLossVolume: 0,
+      effectiveLossVolume: sampleVolume,
+    }
+  }
+
+  if (inputLeftVolume == null) {
+    return {
+      mode,
+      startVolume,
+      tankLeftVolume: null,
+      sampleVolume,
+      totalLineVolume,
+      tankLossVolume: null,
+      effectiveLossVolume: null,
+    }
+  }
+
+  const tankLossVolume = normalizeLitersForCalculation(startVolume - inputLeftVolume - totalLineVolume - sampleVolume)
+  return {
+    mode,
+    startVolume,
+    tankLeftVolume: inputLeftVolume,
+    sampleVolume,
+    totalLineVolume,
+    tankLossVolume,
+    effectiveLossVolume: tankLossVolume == null ? null : normalizeLitersForCalculation(tankLossVolume + sampleVolume),
+  }
+}
+
 const tankLossVolume = computed(() => {
   if (!packingDialog.form) return null
-  const start = toNumber(packingDialog.form.tank_fill_start_volume)
-  const left = toNumber(packingDialog.form.tank_left_volume)
-  const sample = toNumber(packingDialog.form.sample_volume) ?? 0
-  const total = packingFillingTotals.value.totalVolume
-  if (start == null || left == null || total == null) return null
-  return start - left - total - sample
+  return tankLossValuesFromForm(packingDialog.form).tankLossVolume
 })
 
 const tankLossVolumeText = computed(() => {
@@ -2070,6 +2139,8 @@ async function loadPackingEvents() {
         tank_fill_start_volume: meta.tank_fill_start_volume != null ? toNumber(meta.tank_fill_start_volume) : null,
         tank_fill_left_depth: meta.tank_fill_left_depth != null ? toNumber(meta.tank_fill_left_depth) : null,
         tank_left_volume: meta.tank_left_volume != null ? toNumber(meta.tank_left_volume) : null,
+        tank_loss_calc_mode: normalizeTankLossCalcMode(meta.tank_loss_calc_mode),
+        tank_loss_volume: meta.tank_loss_volume != null ? toNumber(meta.tank_loss_volume) : null,
         sample_volume: meta.sample_volume != null ? toNumber(meta.sample_volume) : null,
         loss_qty: meta.loss_qty != null ? toNumber(meta.loss_qty) : null,
         loss_uom: meta.loss_uom != null ? String(meta.loss_uom) : null,
@@ -2370,6 +2441,7 @@ function openPackingDialogInternal(type: PackingType) {
   packingDialog.globalError = ''
   packingDialog.errors = {}
   packingDialog.form = newPackingForm(type)
+  syncIgnoredTankLeftVolume()
   packingMovementQtyTouched.value = false
 }
 
@@ -2431,6 +2503,7 @@ function openPackingEditInternal(event: PackingEvent, readOnly = false) {
     tank_fill_start_volume: event.tank_fill_start_volume != null ? String(event.tank_fill_start_volume) : '',
     tank_fill_left_depth: event.tank_fill_left_depth != null ? String(event.tank_fill_left_depth) : '0',
     tank_left_volume: event.tank_left_volume != null ? String(event.tank_left_volume) : '',
+    tank_loss_calc_mode: event.tank_loss_calc_mode,
     sample_volume: event.sample_volume != null ? String(event.sample_volume) : '',
   }
   packingMovementQtyTouched.value = true
@@ -2575,7 +2648,16 @@ function resetPackingFormForType(form: PackingFormState, prevType: PackingType) 
     form.tank_fill_start_volume = ''
     form.tank_fill_left_depth = '0'
     form.tank_left_volume = ''
+    form.tank_loss_calc_mode = 'ignore_loss'
     form.sample_volume = ''
+  } else if (prevType !== 'filling') {
+    form.tank_fill_start_depth = '0'
+    form.tank_fill_start_volume = defaultFillingStartVolumeInput()
+    form.tank_fill_left_depth = '0'
+    form.tank_left_volume = ''
+    form.tank_loss_calc_mode = 'ignore_loss'
+    form.sample_volume = ''
+    syncIgnoredTankLeftVolume()
   }
   ensureMovementSiteSelection(form)
 }
@@ -2629,6 +2711,33 @@ function addFillingLine() {
   })
 }
 
+function isNativeEnterTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return false
+  if (target.isContentEditable) return true
+  return Boolean(target.closest('button,a,select,textarea,[contenteditable="true"]'))
+}
+
+function handlePackingShortcutKeydown(event: KeyboardEvent) {
+  if (event.defaultPrevented) return
+  if (event.key !== 'Enter' || event.isComposing || event.repeat) return
+  if (!isPackingPage.value) return
+  if (confirmDialog.open || relationDialog.open || actualYieldDialog.open) return
+  if (!packingDialog.open || !packingDialog.form || packingDialog.readOnly || packingDialog.loading) return
+
+  if (event.ctrlKey || event.metaKey) {
+    event.preventDefault()
+    void savePackingEvent(false)
+    return
+  }
+
+  if (event.altKey || event.shiftKey) return
+  if (packingDialog.form.packing_type !== 'filling') return
+  if (isNativeEnterTarget(event.target)) return
+
+  event.preventDefault()
+  addFillingLine()
+}
+
 function removeFillingLine(index: number) {
   if (!packingDialog.form) return
   packingDialog.form.filling_lines.splice(index, 1)
@@ -2641,6 +2750,7 @@ function isUuidLike(value: string) {
 async function calculateTankVolume(target: 'start' | 'left') {
   if (!packingDialog.form || packingDialog.form.packing_type !== 'filling') return
   if (packingDialog.readOnly) return
+  if (target === 'left' && packingDialog.form.tank_loss_calc_mode === 'ignore_loss') return
   const tankId = packingDialog.form.tank_id
   if (!tankId) return
   const depth = target === 'start'
@@ -2714,6 +2824,13 @@ function autoFillDisposeVolumeQty() {
   delete packingDialog.errors.volume_qty
 }
 
+function defaultFillingStartVolumeInput() {
+  if (totalProductVolume.value == null) return ''
+  const remaining = totalProductVolume.value - persistedProcessedVolume.value
+  if (!Number.isFinite(remaining)) return ''
+  return formatVolumeInputValue(Math.max(remaining, 0))
+}
+
 async function savePackingEvent(addAnother: boolean) {
   if (packingDialog.readOnly) return
   if (!packingDialog.form || !batchId.value) return
@@ -2739,6 +2856,7 @@ async function savePackingEvent(addAnother: boolean) {
     if (addAnother) {
       packingDialog.open = true
       packingDialog.form = newPackingForm(savedType)
+      syncIgnoredTankLeftVolume()
       packingDialog.editing = false
       packingDialog.readOnly = false
       packingMovementQtyTouched.value = false
@@ -3034,6 +3152,7 @@ async function persistPackingEvent(form: PackingFormState, isEditing: boolean) {
   const derivedFillingSiteId = form.packing_type === 'filling'
     ? resolveProduceSiteId(batch.value)
     : null
+  const tankValues = form.packing_type === 'filling' ? tankLossValuesFromForm(form) : null
   const packingMeta = {
     source: 'packing',
     batch_id: batchId.value,
@@ -3056,11 +3175,12 @@ async function persistPackingEvent(form: PackingFormState, isEditing: boolean) {
     tank_id: includeTank ? (form.tank_id || null) : null,
     tank_no: includeTank ? (selectedTank?.code ?? null) : null,
     tank_fill_start_depth: toNumber(form.tank_fill_start_depth),
-    tank_fill_start_volume: toNumber(form.tank_fill_start_volume),
+    tank_fill_start_volume: tankValues?.startVolume ?? toNumber(form.tank_fill_start_volume),
     tank_fill_left_depth: toNumber(form.tank_fill_left_depth),
-    tank_left_volume: toNumber(form.tank_left_volume),
-    sample_volume: toNumber(form.sample_volume),
-    tank_loss_volume: tankLossVolume.value,
+    tank_left_volume: tankValues?.tankLeftVolume ?? toNumber(form.tank_left_volume),
+    sample_volume: tankValues?.sampleVolume ?? toNumber(form.sample_volume),
+    tank_loss_calc_mode: form.packing_type === 'filling' ? (tankValues?.mode ?? form.tank_loss_calc_mode) : null,
+    tank_loss_volume: form.packing_type === 'filling' ? (tankValues?.tankLossVolume ?? tankLossVolume.value) : null,
   }
 
   if (form.packing_type === 'filling') {
@@ -3075,15 +3195,15 @@ async function persistPackingEvent(form: PackingFormState, isEditing: boolean) {
     const sourceSiteId = sourceLot.site_id
     const sourceUomId = sourceLot.uom_id
     const sourceUomCode = resolveUomCode(sourceUomId)
-    const tankLossQtyLiters = tankLossVolume.value ?? 0
+    const tankLossQtyLiters = tankValues?.tankLossVolume ?? 0
     if (tankLossQtyLiters < 0) {
       throw new Error('Tank loss volume must be greater than or equal to 0.')
     }
-    const sampleQtyLiters = toNumber(form.sample_volume) ?? computeFillingSampleVolume(form.filling_lines)
+    const sampleQtyLiters = tankValues?.sampleVolume ?? toNumber(form.sample_volume) ?? computeFillingSampleVolume(form.filling_lines)
     if (sampleQtyLiters < 0) {
       throw new Error('Sample volume must be greater than or equal to 0.')
     }
-    const effectiveLossQtyLiters = tankLossQtyLiters + sampleQtyLiters
+    const effectiveLossQtyLiters = tankValues?.effectiveLossVolume ?? normalizeLitersForCalculation(tankLossQtyLiters + sampleQtyLiters) ?? 0
     const lossQtySourceUom = convertFromLitersStrict(effectiveLossQtyLiters, sourceUomCode)
     if (lossQtySourceUom == null) {
       throw new Error(t('batch.packaging.errors.fillingUomConversionFailed'))
@@ -3330,6 +3450,23 @@ function validatePackingForm(form: PackingFormState) {
     if (startDepth == null || startDepth < 0) errors.tank_fill_start_depth = t('batch.packaging.errors.depthRequired')
     const leftDepth = toNumber(form.tank_fill_left_depth)
     if (leftDepth == null || leftDepth < 0) errors.tank_fill_left_depth = t('batch.packaging.errors.depthRequired')
+    const tankValues = tankLossValuesFromForm(form)
+    if (tankValues.startVolume == null || tankValues.startVolume < 0) {
+      errors.tank_fill_start_volume = t('batch.packaging.errors.tankFillStartRequired')
+    }
+    const enteredSampleVolume = toNumber(form.sample_volume)
+    if (enteredSampleVolume != null && enteredSampleVolume < 0) {
+      errors.sample_volume = t('batch.packaging.errors.sampleVolumeNegative')
+    }
+    if (tankValues.mode === 'ignore_loss' && tankValues.tankLeftVolume != null && tankValues.tankLeftVolume < 0) {
+      errors.tank_left_volume = t('batch.packaging.errors.tankLeftNegative')
+    }
+    if (tankValues.mode === 'calculate_loss' && (tankValues.tankLeftVolume == null || tankValues.tankLeftVolume < 0)) {
+      errors.tank_left_volume = t('batch.packaging.errors.tankLeftRequired')
+    }
+    if (tankValues.mode === 'calculate_loss' && tankValues.tankLossVolume != null && tankValues.tankLossVolume < 0) {
+      errors.tank_left_volume = t('batch.packaging.errors.tankLossNegative')
+    }
     if (!form.filling_lines.length) {
       errors.filling_lines = t('batch.packaging.errors.fillingRequired')
     } else {
@@ -3708,8 +3845,31 @@ watch(
   }
 )
 
+function syncIgnoredTankLeftVolume() {
+  const form = packingDialog.form
+  if (!form || form.packing_type !== 'filling') return
+  if (form.tank_loss_calc_mode !== 'ignore_loss') return
+  const values = tankLossValuesFromForm(form)
+  form.tank_fill_left_depth = '0'
+  form.tank_left_volume = values.tankLeftVolume == null ? '' : formatVolumeInputValue(values.tankLeftVolume)
+}
+
 watch(
-  () => [packingDialog.form?.packing_type, packingDialog.form?.tank_id, packingDialog.form?.tank_fill_start_depth],
+  () => [
+    packingDialog.form?.packing_type,
+    packingDialog.form?.tank_loss_calc_mode,
+    packingDialog.form?.tank_fill_start_volume,
+    packingDialog.form?.sample_volume,
+    packingFillingTotals.value.totalVolume,
+  ],
+  () => {
+    if (packingDialog.readOnly) return
+    syncIgnoredTankLeftVolume()
+  }
+)
+
+watch(
+  () => [packingDialog.form?.packing_type, packingDialog.form?.tank_fill_start_depth],
   () => {
     if (!packingDialog.form || packingDialog.form.packing_type !== 'filling') return
     const depth = toNumber(packingDialog.form.tank_fill_start_depth)
@@ -3720,9 +3880,10 @@ watch(
 )
 
 watch(
-  () => [packingDialog.form?.packing_type, packingDialog.form?.tank_id, packingDialog.form?.tank_fill_left_depth],
+  () => [packingDialog.form?.packing_type, packingDialog.form?.tank_id, packingDialog.form?.tank_fill_left_depth, packingDialog.form?.tank_loss_calc_mode],
   () => {
     if (!packingDialog.form || packingDialog.form.packing_type !== 'filling') return
+    if (packingDialog.form.tank_loss_calc_mode === 'ignore_loss') return
     const depth = toNumber(packingDialog.form.tank_fill_left_depth)
     if (!packingDialog.form.tank_id || depth == null || depth < 0) return
     delete packingDialog.errors.tank_fill_left_depth
@@ -3961,6 +4122,7 @@ function formatVolumeInputValue(value: number | null | undefined) {
 }
 
 function newPackingForm(type: PackingType): PackingFormState {
+  const isFilling = type === 'filling'
   return {
     packing_type: type,
     event_time: toInputDateTime(new Date().toISOString()),
@@ -3974,14 +4136,16 @@ function newPackingForm(type: PackingType): PackingFormState {
     reason: '',
     tank_id: '',
     tank_fill_start_depth: '0',
-    tank_fill_start_volume: '',
+    tank_fill_start_volume: isFilling ? defaultFillingStartVolumeInput() : '',
     tank_fill_left_depth: '0',
     tank_left_volume: '',
+    tank_loss_calc_mode: 'ignore_loss',
     sample_volume: '',
   }
 }
 
 onMounted(async () => {
+  window.addEventListener('keydown', handlePackingShortcutKeydown)
   try {
     await ensureTenant()
     await Promise.all([loadBatchOptions(), loadBatchStatusOptions(), loadSites(), loadBeerCategories(), loadTankOptions(), loadVolumeUoms(), loadUoms(), fetchPackageCategories(), loadPackingEvents(), loadBatchRelations()])
@@ -3991,6 +4155,7 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handlePackingShortcutKeydown)
   clearHighlightedPackingEvent()
   if (tankVolumeStartTimer != null) {
     window.clearTimeout(tankVolumeStartTimer)

@@ -110,6 +110,10 @@
    - 保存
    - Cancel (discard local input and return to History mode)
    - In View mode, only Close is shown
+5) Keyboard Shortcuts
+   - In editable Filling mode, `Enter` adds one filling line using the same behavior as `詰口を追加`
+   - In editable packing form, `Ctrl+Enter` saves using the same behavior as `保存`
+   - Shortcuts are disabled while saving and in View mode
 
 ## Field Definitions
 ### Product Summary Section
@@ -168,14 +172,27 @@ Defaults:
 
 ### Filling Section (Filling only)
 Components:
+- Filling Volume Calculation Method (詰口容量計算方法)
+  - UI: radio button or segmented control
+  - values:
+    - `ignore_loss`: 欠減容量なし
+    - `calculate_loss`: 欠減容量あり
+  - default: `ignore_loss`
 - Tank No (dropdown list to choose tank from mst_equipment and mst_equipement_tank)
-
 - Tank Fill Start Depth (タンク詰め前 深さ (mm))
-- Tank Fill Start Volume (タンク詰め前 容量 (L)) autocaculated by can be modify
+- Tank Fill Start Volume (タンク詰め前 容量 (L))
+  - default value: current batch remaining volume before this draft filling event
+  - can also be auto-calculated from Tank Fill Start Depth by `get_volume_by_tank`
+  - selecting or changing Tank No must not overwrite this value in either Filling Method
+  - user may manually override the value
 - Tank Fill Left Depth (タンク残 深さ(mm))
-- Tank Fill Left Volume (タンク残 容量(L)) autocaculated by can be modify
-- Sample Volume (サンプル) auto-calculated from filling lines where `sample_flg = true`
-- Tank Loss Volume (欠減)
+- Tank Fill Left Volume (タンク残 容量(L))
+  - behavior depends on Filling Method
+- Sample Volume (サンプル)
+  - editable numeric field, liters, `>= 0`
+  - auto-updated from filling lines where `sample_flg = true` when sample-line totals change
+  - user may manually override the value after auto-update
+- Tank Loss Volume (欠減), read-only derived value
 - horizontal line
 - Add Filling button
   - must be visually prominent as the primary action for the filling-line table
@@ -207,13 +224,29 @@ Table actions:
 
 Derived values:
 - Tank Fill Start Volume = get_volume_by_tank (tank id, Tank Fill Start Depth )
-- Tank Fill Left Volume　= get_volume_by_tank (tank id, Tank Fill Left Depth )
 - Volume per unit / capacity reference
 - Total line volume = sum of filling line volume where `sample_flg = false` (inventory only)
-- Sample Volume = sum of filling line volume where `sample_flg = true`
-- Sample Volume input field is read-only and auto-updated when filling lines change
-- Tank Loss Volume = Fill Start Volume - Left Volume - Total line volume - Sample Volume
-- Effective Loss Qty (for RPC) = Tank Loss Volume + Sample Volume
+- Sample Volume = current Sample Volume input value
+- Sample Volume input field is editable and auto-updated when sample-line totals change
+- Tank Fill Left Volume and Tank Loss Volume depend on Filling Method:
+  - `ignore_loss` / 欠減容量なし:
+    - intended for normal operation when the operator does not measure actual remaining tank depth
+    - selecting a tank must not overwrite the default Tank Fill Start Volume when Tank Fill Start Depth is the default `0`
+    - Tank Fill Left Depth is optional and should stay blank or `0`
+    - Tank Fill Left Volume is read-only and auto-derived:
+      - `Tank Fill Left Volume = Tank Fill Start Volume - Total line volume - Sample Volume`
+    - Tank Loss Volume is always `0`
+    - if derived Tank Fill Left Volume is negative, save must be blocked because filled + sample volume exceeds available start volume
+  - `calculate_loss` / 欠減容量あり:
+    - intended for end-of-tank reconciliation, abnormal loss tracking, QA review, or when actual tank loss must be recorded
+    - Tank Fill Left Depth is used to calculate Tank Fill Left Volume by `get_volume_by_tank`
+    - Tank Fill Left Volume may be manually corrected if tank calibration is unavailable or wrong
+    - Tank Loss Volume is read-only and auto-derived:
+      - `Tank Loss Volume = Tank Fill Start Volume - Tank Fill Left Volume - Total line volume - Sample Volume`
+    - if Tank Loss Volume is negative, save must be blocked because the measured remaining volume conflicts with filled + sample volume
+- Effective Loss Qty (for RPC):
+  - `ignore_loss`: `Sample Volume`
+  - `calculate_loss`: `Tank Loss Volume + Sample Volume`
 - Loss and Sample Volume must be included in Processed volume
 
 Common filling calculation rules:
@@ -242,8 +275,11 @@ Common filling calculation rules:
   - `詰口払出数量 = Tank Fill Start Volume - Tank Fill Left Volume`
   - `明細総容量 = sum(filling line volume where sample_flg = false)`
   - `詰口残数量 = 詰口払出数量 - 明細総容量`
-  - `欠減 = Tank Fill Start Volume - Tank Fill Left Volume - 明細総容量 - Sample Volume`
+  - `欠減`:
+    - `ignore_loss`: `0`
+    - `calculate_loss`: `Tank Fill Start Volume - Tank Fill Left Volume - 明細総容量 - Sample Volume`
 - If persisted `sample_volume` is missing, UI must derive `Sample Volume` from sample lines instead of assuming zero
+- Because this feature is unreleased, rows without `tank_loss_calc_mode` do not require compatibility behavior; consumers may use the default `ignore_loss` behavior if the mode is missing
 - These rules apply to:
   - Batch Packing page
   - Batch Edit page packing history list
@@ -266,7 +302,7 @@ Batch attribute validation requirement:
 - For Filling rows, Batch Edit page must display:
   - `明細総容量` using the same `sample_flg = false` line-total rule as Batch Packing
   - `詰口残数量` using the same `詰口払出数量 - 明細総容量` rule as Batch Packing
-  - `欠減` using the same `Tank Fill Start Volume - Tank Fill Left Volume - 明細総容量 - Sample Volume` rule as Batch Packing
+  - `欠減` using the same tank loss calculation mode rule as Batch Packing
 - If a shared component or shared calculation module exists, Batch Edit page should reuse it instead of duplicating logic
 
 Totals:
@@ -356,7 +392,12 @@ Warnings:
 - `dest_site_id` must default to `src_site_id`
 - `product_filling` RPC payload must include:
   - `tank_id`: selected tank id
-  - `loss_qty`: effective filling loss quantity (`Tank_Loss_Volume + Sample_Volume`)
+  - `loss_qty`: effective filling loss quantity:
+    - `ignore_loss`: `Sample_Volume`
+    - `calculate_loss`: `Tank_Loss_Volume + Sample_Volume`
+  - movement metadata:
+    - `tank_loss_calc_mode`: `ignore_loss` or `calculate_loss`
+    - `tank_loss_volume`: derived Tank Loss Volume
 - For `product_filling` payload `lines[]`:
   - include only filling lines where `sample_flg = false`
   - exclude all lines where `sample_flg = true` (sample is not inventory)
@@ -385,8 +426,15 @@ Warnings:
   "from_lot_id": "...",
   "uom_id": "...",
   "tank_id": "...",
-  "loss_qty": 10,
+  "loss_qty": 1,
   "notes": "...",
+  "meta": {
+    "tank_loss_calc_mode": "ignore_loss",
+    "tank_loss_volume": 0,
+    "sample_volume": 1,
+    "tank_fill_start_volume": 1000,
+    "tank_left_volume": 821.5
+  },
   "lines": [
     {
       "line_no": 1,
@@ -419,7 +467,11 @@ Warnings:
 - The example assumes the source lot UOM is liters. If the source lot UOM is not liters, `lines[].qty` must contain the converted value.
 - UI-to-RPC field mapping for Filling:
   - `Tank_No` -> `tank_id`
-  - `Tank_Loss_Volume + Sample_Volume` -> `loss_qty`
+  - `tank_loss_calc_mode` -> `meta.tank_loss_calc_mode`
+  - `Tank_Loss_Volume` -> `meta.tank_loss_volume`
+  - effective loss quantity -> `loss_qty`
+    - `ignore_loss`: `Sample_Volume`
+    - `calculate_loss`: `Tank_Loss_Volume + Sample_Volume`
   - `filling_lines(sample_flg=false)` -> `lines[]`
   - `filling_lines(sample_flg=true)` -> excluded from `lines[]` and counted in `loss_qty`
   - fixed package line:
@@ -462,7 +514,8 @@ Warnings:
   "Tank_Fill_Left_Depth" : 0,
   "Tank_Fill_Left_Volume" : 500,
   "Sample_Volume" : 1,
-  "Tank_Loss_Volume" : 10,
+  "Tank_Loss_Calc_Mode": "ignore_loss",
+  "Tank_Loss_Volume" : 0,
   "volume_qty": null,
   "src_site_id": "...",
   "dest_site_id": "...",
@@ -479,7 +532,9 @@ Warnings:
   - `package_id` means the selected `mst_package.id`; it must not be confused with `mst_package.package_type_id`.
   - `keg_variable_package_id.volume = 57.5` is liters and `keg_variable_package_id.qty = 3` is container count.
   - `bottle_330ml_package_id.qty = 6` is container count and its volume is calculated from package unit volume.
-  - `loss_qty` sent to `product_filling` should be `Tank_Loss_Volume + Sample_Volume`.
+  - `loss_qty` sent to `product_filling` should follow `Tank_Loss_Calc_Mode`:
+    - `ignore_loss`: `Sample_Volume`
+    - `calculate_loss`: `Tank_Loss_Volume + Sample_Volume`
   - any line with `sample_flg = true` must not be included in RPC `lines[]`.
 
 ## Data Handling

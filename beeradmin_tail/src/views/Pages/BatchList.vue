@@ -28,11 +28,11 @@
         </div>
         <div>
           <label class="block text-sm text-gray-600 mb-1" for="startFilter">{{ t('batch.list.startDate') }}</label>
-          <input id="startFilter" v-model="search.start" type="date" class="w-full h-[36px] border rounded px-3" />
+          <input id="startFilter" v-model="search.start" type="date" class="w-full h-[36px] border rounded px-3" @change="rememberDateFilters" />
         </div>
         <div>
           <label class="block text-sm text-gray-600 mb-1" for="endFilter">{{ t('batch.list.endDate') }}</label>
-          <input id="endFilter" v-model="search.end" type="date" class="w-full h-[36px] border rounded px-3" />
+          <input id="endFilter" v-model="search.end" type="date" class="w-full h-[36px] border rounded px-3" @change="rememberDateFilters" />
         </div>
         <div class="flex items-end">
           <button class="text-sm px-3 py-2 rounded border border-gray-300 hover:bg-gray-100" type="button" @click="resetFilters">{{ t('common.reset') }}</button>
@@ -175,7 +175,7 @@
 
 <script setup lang="ts">
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { computed, reactive, ref, onMounted } from 'vue'
+import { computed, reactive, ref, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { toast } from 'vue3-toastify'
@@ -209,6 +209,7 @@ const { t, locale } = useI18n()
 const router = useRouter()
 
 const pageTitle = computed(() => t('batch.list.title'))
+const BATCH_LIST_DATE_FILTER_STORAGE_KEY = 'beeradmin.batchList.dateFilters.v1'
 
 interface RawBatchRow {
   id: string
@@ -278,6 +279,11 @@ type BatchCreatePayload = {
   attrValues: Record<string, unknown>
 }
 
+type StoredBatchListDateFilters = {
+  start?: unknown
+  end?: unknown
+}
+
 const baseColumns: ColumnDef[] = [
   { key: 'label', label: 'batch.list.colName', sortable: true, i18n: true },
   { key: 'status', label: 'batch.list.colStatus', sortable: true, i18n: true },
@@ -315,6 +321,46 @@ const attrLoading = ref(false)
 const attrValuesByBatch = ref<Record<string, Record<string, unknown>>>({})
 const attrRefOptions = ref<Record<string, Array<{ value: string | number, label: string }>>>({})
 const attrRefLabelMaps = ref<Record<string, Map<string, string>>>({})
+
+function readStoredDateFilters(): { start: string; end: string } {
+  if (typeof window === 'undefined') return { start: defaultStartDate(), end: '' }
+  try {
+    const raw = window.localStorage.getItem(BATCH_LIST_DATE_FILTER_STORAGE_KEY)
+    if (!raw) return { start: defaultStartDate(), end: '' }
+    const parsed = JSON.parse(raw) as StoredBatchListDateFilters
+    const start = normalizeDateOnly(parsed.start)
+    const end = normalizeDateOnly(parsed.end)
+    return {
+      start: start || defaultStartDate(),
+      end,
+    }
+  } catch (error) {
+    console.warn('Failed to read batch list date filters', error)
+    return { start: defaultStartDate(), end: '' }
+  }
+}
+
+function rememberDateFilters() {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(BATCH_LIST_DATE_FILTER_STORAGE_KEY, JSON.stringify({
+      start: normalizeDateOnly(search.start) || defaultStartDate(),
+      end: normalizeDateOnly(search.end),
+    }))
+  } catch (error) {
+    console.warn('Failed to remember batch list date filters', error)
+  }
+}
+
+const rememberedDateFilters = readStoredDateFilters()
+search.start = rememberedDateFilters.start
+search.end = rememberedDateFilters.end
+
+watch(
+  () => [search.start, search.end],
+  () => rememberDateFilters(),
+  { flush: 'sync' },
+)
 
 const attrSearchFields = computed(() => attrFields.value)
 const createAttrFields = computed(() =>
@@ -721,6 +767,7 @@ function resetFilters() {
   search.status = ''
   search.start = defaultStartDate()
   search.end = ''
+  rememberDateFilters()
   attrSearchFields.value.forEach((field) => {
     search.attr[String(field.attr_id)] = ''
   })

@@ -42,13 +42,7 @@
         <form class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" @submit.prevent>
           <div>
             <label class="block text-sm text-gray-600 mb-1" for="batchCode">{{ t('batch.edit.batchCode') }}</label>
-            <input
-              id="batchCode"
-              :value="batch?.batch_code ?? '—'"
-              type="text"
-              class="w-full h-[40px] border rounded px-3 bg-gray-50 text-gray-600"
-              readonly
-            />
+            <input id="batchCode" v-model.trim="batchForm.batch_code" type="text" class="w-full h-[40px] border rounded px-3" />
           </div>
           <div>
             <label class="block text-sm text-gray-600 mb-1" for="batchStatus">{{ t('batch.edit.status') }}</label>
@@ -573,6 +567,7 @@ const loadingBatch = ref(false)
 const savingBatch = ref(false)
 
 const batchForm = reactive({
+  batch_code: '',
   batch_label: '',
   status: '',
   product_name: '',
@@ -708,6 +703,8 @@ type PackingEvent = {
   tank_no: string | null
   tank_fill_start_volume: number | null
   tank_left_volume: number | null
+  tank_loss_calc_mode: string | null
+  tank_loss_volume: number | null
   sample_volume: number | null
   loss_qty: number | null
   loss_uom: string | null
@@ -1062,6 +1059,7 @@ async function fetchBatch() {
     const header = detail?.batch ?? null
     batch.value = header
     if (header) {
+      batchForm.batch_code = header.batch_code ?? ''
       batchForm.batch_label = header.batch_label ?? resolveMetaLabel(header.meta) ?? ''
       batchForm.status = header.status ?? ''
       batchForm.product_name = header.product_name ?? ''
@@ -1714,6 +1712,8 @@ async function loadPackingEvents() {
         tank_no: meta.tank_no != null ? String(meta.tank_no) : null,
         tank_fill_start_volume: meta.tank_fill_start_volume != null ? toNumber(meta.tank_fill_start_volume) : null,
         tank_left_volume: meta.tank_left_volume != null ? toNumber(meta.tank_left_volume) : null,
+        tank_loss_calc_mode: meta.tank_loss_calc_mode != null ? String(meta.tank_loss_calc_mode) : null,
+        tank_loss_volume: meta.tank_loss_volume != null ? toNumber(meta.tank_loss_volume) : null,
         sample_volume: meta.sample_volume != null ? toNumber(meta.sample_volume) : null,
         loss_qty: meta.loss_qty != null ? toNumber(meta.loss_qty) : null,
         loss_uom: meta.loss_uom != null ? String(meta.loss_uom) : null,
@@ -1775,9 +1775,15 @@ async function saveBatch() {
     savingBatch.value = true
     batchSaveError.value = ''
     if (!validateBatchAttributes()) return
+    const trimmedBatchCode = batchForm.batch_code.trim()
+    if (!trimmedBatchCode) {
+      batchSaveError.value = t('batch.edit.errors.batchCodeRequired')
+      return
+    }
     const meta = buildBatchMeta(batch.value?.meta)
     const trimmedBatchLabel = batchForm.batch_label.trim()
     const update: Record<string, any> = {
+      batch_code: trimmedBatchCode,
       status: batchForm.status || null,
       batch_label: trimmedBatchLabel || null,
       product_name: batchForm.product_name.trim() || null,

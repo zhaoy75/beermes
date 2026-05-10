@@ -34,3 +34,4 @@ begin
   return;
 end;
 $$;
+comment on function public._upsert_batch_steps(uuid, jsonb) is '{"version":1}';

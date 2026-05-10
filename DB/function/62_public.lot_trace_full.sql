@@ -49,3 +49,4 @@ begin
   return v_result;
 end;
 $$;
+comment on function public.lot_trace_full(uuid, int) is '{"version":1}';

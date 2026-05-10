@@ -293,3 +293,4 @@ begin
   );
 end;
 $$;
+comment on function public.batch_step_save_equipment_assignments(uuid, jsonb) is '{"version":1}';

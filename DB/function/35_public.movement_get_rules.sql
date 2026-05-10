@@ -82,3 +82,4 @@ begin
   );
 end;
 $$;
+comment on function public.movement_get_rules(text) is '{"version":1}';

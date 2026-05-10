@@ -753,7 +753,6 @@ import {
   dateOnlyToUtcStartOfDayIso,
   normalizeDateOnly,
 } from '@/lib/dateOnly'
-import { checkLotChronology, lotChronologyViolationMessage } from '@/lib/lotChronology'
 import { formatRpcErrorMessage, toRpcUserError } from '@/lib/rpcErrors'
 import { supabase } from '@/lib/supabase'
 import { VOLUME_DISPLAY_DECIMALS, formatVolume, formatVolumeNumber } from '@/lib/volumeFormat'
@@ -2892,12 +2891,13 @@ type RootSourceLot = {
   uom_id: string
   site_id: string
   lot_no: string | null
+  produced_at: string | null
 }
 
 async function resolveRootSourceLot(batchIdValue: string, preferredSiteId?: string | null): Promise<RootSourceLot | null> {
   const { data: candidates, error: candidateError } = await supabase
     .from('lot')
-    .select('id, uom_id, site_id, lot_no')
+    .select('id, uom_id, site_id, lot_no, produced_at')
     .eq('batch_id', batchIdValue)
     .neq('status', 'void')
     .gt('qty', 0)
@@ -2937,6 +2937,7 @@ async function resolveRootSourceLot(batchIdValue: string, preferredSiteId?: stri
         uom_id: candidate.uom_id as string,
         site_id: candidate.site_id as string,
         lot_no: typeof candidate.lot_no === 'string' ? candidate.lot_no : null,
+        produced_at: typeof candidate.produced_at === 'string' ? candidate.produced_at : null,
       }
     }
   }
@@ -2952,7 +2953,7 @@ async function resolveFillingSourceLot(batchIdValue: string) {
 
   const { data: lotRow, error: lotError } = await supabase
     .from('lot')
-    .select('id, uom_id, site_id, lot_no')
+    .select('id, uom_id, site_id, lot_no, produced_at')
     .eq('id', sourceLotId)
     .maybeSingle()
   if (lotError) throw lotError
@@ -2963,25 +2964,37 @@ async function resolveFillingSourceLot(batchIdValue: string) {
     uom_id: String(lotRow.uom_id),
     site_id: String(lotRow.site_id),
     lot_no: typeof lotRow.lot_no === 'string' ? lotRow.lot_no : null,
+    produced_at: typeof lotRow.produced_at === 'string' ? lotRow.produced_at : null,
   }
 }
 
-async function assertPackingSourceLotChronology(sourceLot: RootSourceLot, movementAt: string) {
-  const result = await checkLotChronology({
-    supabase,
-    movementAt,
-    lots: [{
+function packingChronologyErrorMessage(sourceLot: RootSourceLot, movementDate: string, sourceDate: string, sourceLabel: string) {
+  const lotLabel = sourceLot.lot_no || sourceLot.id
+  if (String(locale.value ?? '').toLowerCase().startsWith('ja')) {
+    return `移動日は${sourceLabel}より前にできません。 ロット: ${lotLabel} 移動日: ${movementDate} ${sourceLabel}: ${sourceDate}`
+  }
+  return `Movement date cannot be before ${sourceLabel}. Lot: ${lotLabel} Movement date: ${movementDate} ${sourceLabel}: ${sourceDate}`
+}
+
+function assertPackingSourceLotChronology(sourceLot: RootSourceLot, movementAt: string) {
+  const movementDate = normalizeDateOnly(movementAt)
+  if (!movementDate) return
+
+  const batchActualStartDate = normalizeDateOnly(batch.value?.actual_start)
+  const sourceProducedDate = normalizeDateOnly(sourceLot.produced_at)
+  const sourceDate = batchActualStartDate || sourceProducedDate
+  if (!sourceDate) {
+    console.warn('Packing source lot chronology check skipped because batch actual_start and lot produced_at are unavailable', {
       lotId: sourceLot.id,
-      lotLabel: sourceLot.lot_no || sourceLot.id,
-    }],
-  })
-  if (result.unavailableReason) {
-    console.warn('Lot chronology early-warning check unavailable', result.unavailableReason)
+    })
     return
   }
-  const violation = result.violations[0]
-  if (violation) {
-    throw new Error(lotChronologyViolationMessage(violation, locale.value))
+
+  if (movementDate < sourceDate) {
+    const sourceLabel = batchActualStartDate
+      ? (String(locale.value ?? '').toLowerCase().startsWith('ja') ? 'バッチ実績開始日' : 'batch actual start date')
+      : (String(locale.value ?? '').toLowerCase().startsWith('ja') ? 'ロット製造日' : 'lot produced date')
+    throw new Error(packingChronologyErrorMessage(sourceLot, movementDate, sourceDate, sourceLabel))
   }
 }
 

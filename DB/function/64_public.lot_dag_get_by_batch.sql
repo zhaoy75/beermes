@@ -95,3 +95,4 @@ begin
   return v_result;
 end;
 $$;
+comment on function public.lot_dag_get_by_batch(uuid) is '{"version":1}';

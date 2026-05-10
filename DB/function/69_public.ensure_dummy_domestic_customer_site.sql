@@ -94,3 +94,4 @@ begin
   return v_site_id;
 end;
 $$;
+comment on function public.ensure_dummy_domestic_customer_site() is '{"version":1}';

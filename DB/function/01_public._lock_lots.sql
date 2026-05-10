@@ -35,3 +35,4 @@ begin
   for update;
 end;
 $$;
+comment on function public._lock_lots(uuid[]) is '{"version":1}';

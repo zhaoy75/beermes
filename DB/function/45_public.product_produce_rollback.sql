@@ -282,3 +282,4 @@ exception
     end if;
 end;
 $$;
+comment on function public.product_produce_rollback(jsonb) is '{"version":1}';

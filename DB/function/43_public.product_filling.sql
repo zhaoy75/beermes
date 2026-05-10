@@ -420,3 +420,4 @@ exception
     end if;
 end;
 $$;
+comment on function public.product_filling(jsonb) is '{"version":1}';

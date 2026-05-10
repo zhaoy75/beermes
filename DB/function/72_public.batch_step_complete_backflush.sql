@@ -623,3 +623,4 @@ begin
   );
 end;
 $$;
+comment on function public.batch_step_complete_backflush(uuid, jsonb) is '{"version":1}';

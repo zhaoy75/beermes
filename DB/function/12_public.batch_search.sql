@@ -37,3 +37,4 @@ begin
   limit v_limit offset v_offset;
 end;
 $$;
+comment on function public.batch_search(jsonb) is '{"version":1}';

@@ -241,3 +241,4 @@ begin
   return v_temp_volume;
 end;
 $$;
+comment on function public.get_volume_by_tank(uuid, numeric, numeric) is '{"version":1}';

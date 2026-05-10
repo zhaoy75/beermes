@@ -542,3 +542,4 @@ exception
     end if;
 end;
 $$;
+comment on function public.product_unpacking(jsonb) is '{"version":1}';

@@ -41,3 +41,4 @@ begin
   return p_movement_id;
 end;
 $$;
+comment on function public.movement_save(uuid, jsonb) is '{"version":1}';

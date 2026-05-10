@@ -737,3 +737,4 @@ exception
     end if;
 end;
 $$;
+comment on function public.product_move(jsonb) is '{"version":1}';

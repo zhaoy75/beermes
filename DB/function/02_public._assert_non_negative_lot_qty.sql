@@ -27,3 +27,4 @@ begin
   end if;
 end;
 $$;
+comment on function public._assert_non_negative_lot_qty(uuid) is '{"version":1}';

@@ -41,3 +41,4 @@ begin
   return p_batch_id;
 end;
 $$;
+comment on function public.batch_save(uuid, jsonb) is '{"version":1}';

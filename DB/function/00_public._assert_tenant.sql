@@ -19,3 +19,4 @@ exception
     raise exception 'Invalid tenant_id format in JWT app_metadata';
 end;
 $$;
+comment on function public._assert_tenant() is '{"version":1}';

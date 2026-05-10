@@ -218,3 +218,4 @@ begin
   return v_movement_id;
 end;
 $$;
+comment on function public.inventory_lot_void(uuid, text, uuid) is '{"version":1}';

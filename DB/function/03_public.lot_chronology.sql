@@ -25,7 +25,7 @@ begin
     and e.to_lot_id = p_lot_id
     and coalesce(m.status, '') <> 'void';
 
-  select coalesce(b.actual_start, v_produce_movement_at, l.produced_at, l.created_at)
+  select coalesce(b.actual_start, l.produced_at, v_produce_movement_at, l.created_at)
     into v_created_at
   from public.lot l
   left join public.mes_batches b
@@ -41,6 +41,7 @@ begin
   return v_created_at;
 end;
 $$;
+comment on function public.lot_effective_created_at(uuid) is '{"version":2}';
 
 create or replace function public._assert_source_lot_not_after_movement(
   p_movement_at timestamptz,
@@ -86,7 +87,7 @@ begin
 
     if date_trunc('minute', v_created_at) > date_trunc('minute', p_movement_at) then
       raise exception
-        'LOT_TIME004: movement_at % is before source lot % creation time % (context=%)',
+        'LOT_TIME004: movement_at % is before source lot % effective start time % (context=%)',
         p_movement_at,
         v_lot_no,
         v_created_at,
@@ -95,6 +96,7 @@ begin
   end loop;
 end;
 $$;
+comment on function public._assert_source_lot_not_after_movement(timestamptz, uuid[], text) is '{"version":2}';
 
 create or replace function public.trg_lot_edge_source_chronology()
 returns trigger
@@ -132,6 +134,7 @@ begin
   return new;
 end;
 $$;
+comment on function public.trg_lot_edge_source_chronology() is '{"version":1}';
 
 drop trigger if exists trg_lot_edge_source_chronology on public.lot_edge;
 create trigger trg_lot_edge_source_chronology
@@ -187,6 +190,7 @@ begin
   return new;
 end;
 $$;
+comment on function public.trg_inv_movement_line_source_chronology() is '{"version":1}';
 
 drop trigger if exists trg_inv_movement_line_source_chronology on public.inv_movement_lines;
 create trigger trg_inv_movement_line_source_chronology
@@ -306,6 +310,7 @@ begin
   return new;
 end;
 $$;
+comment on function public.trg_inv_movement_chronology_update() is '{"version":1}';
 
 drop trigger if exists trg_inv_movement_chronology_update on public.inv_movements;
 create trigger trg_inv_movement_chronology_update

@@ -180,3 +180,4 @@ begin
   return v_movement_id;
 end;
 $$;
+comment on function public.domestic_removal_complete(uuid, uuid, text) is '{"version":1}';

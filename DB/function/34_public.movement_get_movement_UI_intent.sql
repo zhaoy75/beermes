@@ -51,3 +51,4 @@ as $$
   where coalesce(lower(l.label ->> 'show_in_movement_wizard') = 'true', false)
   order by i.sort_order;
 $$;
+comment on function public.movement_get_movement_ui_intent() is '{"version":1}';

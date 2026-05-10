@@ -544,3 +544,4 @@ exception
     end if;
 end;
 $$;
+comment on function public.product_move_rollback(jsonb) is '{"version":1}';

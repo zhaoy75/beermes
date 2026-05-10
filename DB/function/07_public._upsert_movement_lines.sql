@@ -59,3 +59,4 @@ begin
   end loop;
 end;
 $$;
+comment on function public._upsert_movement_lines(uuid, jsonb) is '{"version":1}';

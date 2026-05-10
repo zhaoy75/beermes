@@ -48,3 +48,4 @@ begin
   );
 end;
 $$;
+comment on function public.ruleengine_get_ui_labels() is '{"version":1}';

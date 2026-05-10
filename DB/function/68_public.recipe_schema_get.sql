@@ -55,3 +55,4 @@ begin
   );
 end;
 $$;
+comment on function public.recipe_schema_get(text) is '{"version":1}';

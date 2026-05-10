@@ -82,3 +82,4 @@ begin
   return v_tax_rate;
 end;
 $$;
+comment on function public.get_current_tax_rate(text, date) is '{"version":1}';

@@ -45,3 +45,4 @@ begin
   return v_source_lot_id;
 end;
 $$;
+comment on function public.get_packing_source_lotid(uuid) is '{"version":1}';

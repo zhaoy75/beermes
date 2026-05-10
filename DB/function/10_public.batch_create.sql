@@ -39,3 +39,4 @@ begin
   return v_batch_id;
 end;
 $$;
+comment on function public.batch_create(jsonb) is '{"version":1}';

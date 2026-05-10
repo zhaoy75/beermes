@@ -449,3 +449,4 @@ begin
   );
 end;
 $$;
+comment on function public.tax_report_generate(jsonb) is '{"version":1}';

@@ -46,3 +46,4 @@ begin
   return v_count;
 end;
 $$;
+comment on function public.tax_report_mark_stale_for_movement(uuid) is '{"version":1}';

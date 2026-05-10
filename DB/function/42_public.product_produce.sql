@@ -253,3 +253,4 @@ exception
     end if;
 end;
 $$;
+comment on function public.product_produce(jsonb) is '{"version":1}';

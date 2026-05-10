@@ -402,3 +402,4 @@ begin
   return v_batch_id;
 end;
 $$;
+comment on function public.create_batch_from_recipe(uuid, text, text, timestamptz, int, text) is '{"version":1}';

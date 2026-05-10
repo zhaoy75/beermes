@@ -73,3 +73,4 @@ begin
   return p_tax_report_id;
 end;
 $$;
+comment on function public.tax_report_set_status(uuid, text, text) is '{"version":1}';

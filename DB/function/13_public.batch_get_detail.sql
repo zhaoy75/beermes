@@ -35,3 +35,4 @@ begin
   return v_result;
 end;
 $$;
+comment on function public.batch_get_detail(uuid) is '{"version":1}';

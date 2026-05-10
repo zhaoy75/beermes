@@ -40,3 +40,4 @@ begin
   );
 end;
 $$;
+comment on function public.product_move_fast_post(jsonb) is '{"version":1}';

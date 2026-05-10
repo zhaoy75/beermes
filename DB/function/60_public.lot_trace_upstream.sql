@@ -79,3 +79,4 @@ begin
   order by occurred_at asc;
 end;
 $$;
+comment on function public.lot_trace_upstream(uuid) is '{"version":1}';

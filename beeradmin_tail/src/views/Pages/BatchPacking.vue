@@ -362,7 +362,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
                 <label class="block text-sm text-gray-600 mb-1" for="packingEventTime">{{ t('batch.packaging.dialog.eventTime') }}</label>
-                <AppDateTimePicker id="packingEventTime" v-model="packingDialog.form.event_time" mode="datetime" class="w-full h-[40px] border rounded px-3" />
+                <AppDateTimePicker id="packingEventTime" v-model="packingDialog.form.event_time" class="w-full h-[40px] border rounded px-3" />
                 <p v-if="packingDialog.errors.event_time" class="mt-1 text-xs text-red-600">{{ packingDialog.errors.event_time }}</p>
               </div>
               <div>
@@ -478,11 +478,31 @@
             </div>
             <hr class="border-gray-200" />
             <div v-if="packingDialog.errors.filling_lines" class="text-xs text-red-600">{{ packingDialog.errors.filling_lines }}</div>
-            <div class="flex items-center justify-end">
+            <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+              <div class="flex min-w-0 flex-wrap items-center gap-2">
+                <span class="text-xs font-medium uppercase tracking-wide text-gray-500">
+                  {{ t('batch.packaging.dialog.favoritePackages.label') }}
+                </span>
+                <button
+                  v-for="option in favoritePackageShortcutOptions"
+                  :key="option.value"
+                  class="max-w-[12rem] truncate rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  type="button"
+                  :disabled="packingDialog.readOnly || packingDialog.loading"
+                  :title="option.label"
+                  @click="addFillingLine(option.value, { focusQty: true })"
+                >
+                  {{ option.label }}
+                </button>
+                <span v-if="favoritePackageShortcutOptions.length === 0" class="text-xs text-gray-400">
+                  {{ t('batch.packaging.dialog.favoritePackages.empty') }}
+                </span>
+              </div>
               <button
                 class="inline-flex items-center gap-2 rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                 type="button"
-                @click="addFillingLine"
+                :disabled="packingDialog.readOnly || packingDialog.loading"
+                @click="addFillingLine()"
               >
                 <span aria-hidden="true" class="text-base leading-none">+</span>
                 {{ t('batch.packaging.dialog.addFilling') }}
@@ -504,16 +524,32 @@
                 <tbody class="divide-y divide-gray-100">
                   <tr v-for="(line, index) in packingDialog.form.filling_lines" :key="line.id">
                     <td class="px-3 py-2">
-                      <select v-model="line.package_type_id" class="w-full h-[36px] border rounded px-2 bg-white">
-                        <option value="">{{ t('common.select') }}</option>
-                        <option v-for="option in packageCategoryOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-                      </select>
+                      <div class="flex items-center gap-2">
+                        <select v-model="line.package_type_id" class="h-[36px] min-w-[12rem] flex-1 rounded border bg-white px-2">
+                          <option value="">{{ t('common.select') }}</option>
+                          <option v-for="option in packageCategoryOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+                        </select>
+                        <button
+                          class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded border border-gray-200 text-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                          type="button"
+                          :disabled="!line.package_type_id || packingDialog.readOnly || packingDialog.loading"
+                          :title="isFavoritePackageType(line.package_type_id) ? t('batch.packaging.dialog.favoritePackages.remove') : t('batch.packaging.dialog.favoritePackages.add')"
+                          :aria-label="isFavoritePackageType(line.package_type_id) ? t('batch.packaging.dialog.favoritePackages.remove') : t('batch.packaging.dialog.favoritePackages.add')"
+                          @click="toggleFavoritePackageType(line.package_type_id)"
+                        >
+                          <StaredIcon
+                            class="h-4 w-4"
+                            :class="isFavoritePackageType(line.package_type_id) ? 'text-amber-500' : 'text-gray-300'"
+                          />
+                        </button>
+                      </div>
                     </td>
                     <td class="px-3 py-2">
                       <input v-model.trim="line.lot_code" type="text" class="w-full h-[36px] border rounded px-2" />
                     </td>
                     <td class="px-3 py-2 text-right">
                       <input
+                        :ref="(el) => setFillingQtyInputRef(el, line.id)"
                         v-model="line.qty"
                         type="number"
                         min="1"
@@ -749,13 +785,14 @@
 
 <script setup lang="ts">
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch, type ComponentPublicInstance } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import ConfirmActionDialog from '@/components/common/ConfirmActionDialog.vue'
 import AppDateTimePicker from '@/components/common/AppDateTimePicker.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import { StaredIcon } from '@/icons'
 import { useConfirmDialog } from '@/composables/useConfirmDialog'
 import {
   fillingUnitsFromEvent,
@@ -780,6 +817,7 @@ import {
 } from '@/lib/batchAttrValidation'
 import {
   dateOnlyToUtcStartOfDayIso,
+  formatDateOnly,
   normalizeDateOnly,
 } from '@/lib/dateOnly'
 import { formatRpcErrorMessage, toRpcUserError } from '@/lib/rpcErrors'
@@ -795,8 +833,13 @@ const batchId = computed(() => route.params.batchId as string | undefined)
 const isPackingPage = computed(() => route.name === 'batchPacking')
 const pageTitle = computed(() => (isPackingPage.value ? t('batch.packaging.dialog.title') : t('batch.edit.title')))
 const ZERO_UUID = '00000000-0000-0000-0000-000000000000'
+const PACKING_META_KEY = 'batch_packing'
+const PACKING_FAVORITE_PACKAGES_META_KEY = 'favorite_package_types'
+const FAVORITE_PACKAGE_SHORTCUT_LIMIT = 6
+const DEFAULT_FILLING_TANK_LOSS_CALC_MODE: TankLossCalcMode = 'calculate_loss'
 
 const tenantId = ref<string | null>(null)
+const userId = ref<string | null>(null)
 const batch = ref<any>(null)
 const loadingBatch = ref(false)
 const savingBatch = ref(false)
@@ -976,6 +1019,13 @@ type PackingFillingLineForm = {
   sample_flg: boolean
 }
 
+type JsonRecord = Record<string, unknown>
+
+type FavoritePackageShortcut = {
+  packageTypeId: string
+  lastUsedAt: string
+}
+
 type PackingFormState = {
   id?: string
   packing_type: PackingType
@@ -1016,6 +1066,9 @@ const recipeCategoryId = ref<string | null>(null)
 const volumeUoms = ref<VolumeUomOption[]>([])
 const uomOptionsRaw = ref<UomOption[]>([])
 const packingEvents = ref<PackingEvent[]>([])
+const tenantMemberMeta = ref<JsonRecord>({})
+const favoritePackageShortcuts = ref<FavoritePackageShortcut[]>([])
+const fillingQtyInputRefs = new Map<string, HTMLInputElement>()
 const packingNotice = ref('')
 const batchSaveError = ref('')
 const highlightedPackingEventId = ref('')
@@ -1250,6 +1303,13 @@ const packageCategoryOptions = computed(() =>
     value: row.id,
     label: formatPackageLabel(row),
   }))
+)
+
+const favoritePackageShortcutOptions = computed(() =>
+  favoritePackageShortcuts.value
+    .map((favorite) => packageCategoryOptions.value.find((option) => option.value === favorite.packageTypeId))
+    .filter((option): option is { value: string, label: string } => !!option)
+    .slice(0, FAVORITE_PACKAGE_SHORTCUT_LIMIT)
 )
 
 const volumeUomOptions = computed(() =>
@@ -1506,13 +1566,130 @@ function attrLabel(field: AttrField) {
 }
 
 async function ensureTenant() {
-  if (tenantId.value) return tenantId.value
+  if (tenantId.value && userId.value) return tenantId.value
   const { data, error } = await supabase.auth.getUser()
   if (error) throw error
   const id = data.user?.app_metadata?.tenant_id as string | undefined
   if (!id) throw new Error('Tenant not resolved')
+  if (!data.user?.id) throw new Error('User not resolved')
   tenantId.value = id
+  userId.value = data.user.id
   return id
+}
+
+function normalizeFavoritePackageShortcut(input: unknown): FavoritePackageShortcut | null {
+  if (typeof input === 'string') {
+    const packageTypeId = input.trim()
+    return packageTypeId ? { packageTypeId, lastUsedAt: new Date(0).toISOString() } : null
+  }
+  if (!input || typeof input !== 'object') return null
+  const row = input as Record<string, unknown>
+  const packageTypeId = typeof row.packageTypeId === 'string'
+    ? row.packageTypeId.trim()
+    : typeof row.id === 'string'
+      ? row.id.trim()
+      : ''
+  if (!packageTypeId) return null
+  return {
+    packageTypeId,
+    lastUsedAt: typeof row.lastUsedAt === 'string' ? row.lastUsedAt : new Date(0).toISOString(),
+  }
+}
+
+function normalizeFavoritePackageShortcutList(input: unknown) {
+  if (!Array.isArray(input)) return []
+  const seen = new Set<string>()
+  return input
+    .map((entry) => normalizeFavoritePackageShortcut(entry))
+    .filter((entry): entry is FavoritePackageShortcut => {
+      if (!entry || seen.has(entry.packageTypeId)) return false
+      seen.add(entry.packageTypeId)
+      return true
+    })
+}
+
+function favoritePackageMetaPayload() {
+  const currentMeta = tenantMemberMeta.value
+  const currentSection =
+    currentMeta[PACKING_META_KEY] && typeof currentMeta[PACKING_META_KEY] === 'object'
+      ? (currentMeta[PACKING_META_KEY] as JsonRecord)
+      : {}
+  return {
+    ...currentMeta,
+    [PACKING_META_KEY]: {
+      ...currentSection,
+      [PACKING_FAVORITE_PACKAGES_META_KEY]: favoritePackageShortcuts.value.slice(0, 20),
+    },
+  } satisfies JsonRecord
+}
+
+async function loadFavoritePackageShortcuts() {
+  await ensureTenant()
+  if (!tenantId.value || !userId.value) return
+  try {
+    const { data, error } = await supabase
+      .from('tenant_members')
+      .select('meta')
+      .eq('tenant_id', tenantId.value)
+      .eq('user_id', userId.value)
+      .maybeSingle()
+    if (error) throw error
+    const meta =
+      data?.meta && typeof data.meta === 'object' && !Array.isArray(data.meta)
+        ? (data.meta as JsonRecord)
+        : {}
+    tenantMemberMeta.value = meta
+    const section =
+      meta[PACKING_META_KEY] && typeof meta[PACKING_META_KEY] === 'object'
+        ? (meta[PACKING_META_KEY] as JsonRecord)
+        : {}
+    favoritePackageShortcuts.value = normalizeFavoritePackageShortcutList(
+      section[PACKING_FAVORITE_PACKAGES_META_KEY],
+    )
+  } catch (error) {
+    console.warn('Failed to load BatchPacking favorite package shortcuts', error)
+    tenantMemberMeta.value = {}
+    favoritePackageShortcuts.value = []
+  }
+}
+
+async function persistFavoritePackageShortcuts() {
+  await ensureTenant()
+  if (!tenantId.value || !userId.value) return
+  const nextMeta = favoritePackageMetaPayload()
+  const { error } = await supabase
+    .from('tenant_members')
+    .update({ meta: nextMeta })
+    .eq('tenant_id', tenantId.value)
+    .eq('user_id', userId.value)
+  if (error) throw error
+  tenantMemberMeta.value = nextMeta
+}
+
+function isFavoritePackageType(packageTypeId: string | null | undefined) {
+  const value = packageTypeId?.trim()
+  if (!value) return false
+  return favoritePackageShortcuts.value.some((favorite) => favorite.packageTypeId === value)
+}
+
+async function toggleFavoritePackageType(packageTypeId: string | null | undefined) {
+  const value = packageTypeId?.trim()
+  if (!value) return
+  const previous = favoritePackageShortcuts.value
+  if (isFavoritePackageType(value)) {
+    favoritePackageShortcuts.value = previous.filter((favorite) => favorite.packageTypeId !== value)
+  } else {
+    favoritePackageShortcuts.value = [
+      { packageTypeId: value, lastUsedAt: new Date().toISOString() },
+      ...previous,
+    ]
+  }
+  try {
+    await persistFavoritePackageShortcuts()
+  } catch (error) {
+    favoritePackageShortcuts.value = previous
+    packingDialog.globalError = error instanceof Error ? error.message : String(error)
+  }
 }
 
 watch(batchId, (val) => {
@@ -1545,7 +1722,7 @@ async function fetchBatch() {
   try {
     loadingBatch.value = true
     await ensureTenant()
-    await Promise.all([loadBatchOptions(), loadBatchStatusOptions(), loadSites(), loadBeerCategories(), loadTankOptions(), fetchPackageCategories(), loadVolumeUoms(), loadUoms()])
+    await Promise.all([loadBatchOptions(), loadBatchStatusOptions(), loadSites(), loadBeerCategories(), loadTankOptions(), fetchPackageCategories(), loadVolumeUoms(), loadUoms(), loadFavoritePackageShortcuts()])
     const { data, error } = await supabase.rpc('batch_get_detail', {
       p_batch_id: batchId.value,
     })
@@ -2490,7 +2667,7 @@ function openPackingEditInternal(event: PackingEvent, readOnly = false) {
   packingDialog.form = {
     id: event.id,
     packing_type: event.packing_type,
-    event_time: toInputDateTime(event.event_time),
+    event_time: toInputDate(event.event_time),
     memo: event.memo ?? '',
     volume_qty: event.volume_qty != null ? String(event.volume_qty) : '',
     volume_uom: resolveUomId(event.volume_uom) || defaultVolumeUomId(),
@@ -2681,10 +2858,10 @@ function resetPackingFormForType(form: PackingFormState, prevType: PackingType) 
     form.tank_fill_start_depth = '0'
     form.tank_fill_start_volume = defaultFillingStartVolumeInput()
     form.tank_fill_left_depth = '0'
-    form.tank_left_volume = ''
-    form.tank_loss_calc_mode = 'ignore_loss'
+    form.tank_left_volume = '0'
+    form.tank_loss_calc_mode = DEFAULT_FILLING_TANK_LOSS_CALC_MODE
     form.sample_volume = ''
-    syncIgnoredTankLeftVolume()
+    suppressNextLeftTankVolumeCalc.value = true
   }
   ensureMovementSiteSelection(form)
 }
@@ -2720,22 +2897,33 @@ function ensureMovementSiteSelection(form: PackingFormState) {
   form.movement_site_id = ''
 }
 
-function isSelectedTankValid(tankId: string | null | undefined) {
-  const value = tankId?.trim()
-  if (!value) return false
-  return tankOptions.value.some((row) => row.value === value)
+function setFillingQtyInputRef(el: Element | ComponentPublicInstance | null, lineId: string) {
+  if (el instanceof HTMLInputElement) {
+    fillingQtyInputRefs.set(lineId, el)
+  } else {
+    fillingQtyInputRefs.delete(lineId)
+  }
 }
 
-function addFillingLine() {
-  if (!packingDialog.form) return
-  packingDialog.form.filling_lines.push({
+async function focusFillingQtyInput(lineId: string) {
+  await nextTick()
+  const target = fillingQtyInputRefs.get(lineId)
+  target?.focus()
+  target?.select()
+}
+
+function addFillingLine(packageTypeId = '', options: { focusQty?: boolean } = {}) {
+  if (!packingDialog.form || packingDialog.readOnly || packingDialog.loading) return
+  const line = {
     id: generateLocalId(),
-    package_type_id: '',
+    package_type_id: packageTypeId,
     qty: '',
     volume: '',
     lot_code: '',
     sample_flg: false,
-  })
+  }
+  packingDialog.form.filling_lines.push(line)
+  if (options.focusQty) void focusFillingQtyInput(line.id)
 }
 
 function isNativeEnterTarget(target: EventTarget | null) {
@@ -3160,7 +3348,8 @@ async function persistPackingEvent(form: PackingFormState, isEditing: boolean) {
   const volumeUomId = resolveUomId(form.volume_uom)
   const lineUomId = resolveLitersUomId()
   const packingId = form.id ?? generateLocalId()
-  const movementAt = fromInputDateTime(form.event_time) ?? new Date().toISOString()
+  const movementAt = dateOnlyToUtcStartOfDayIso(form.event_time)
+  if (!movementAt) throw new Error(t('batch.packaging.errors.eventTimeRequired'))
   const docNo = `PACK-${batchCode}-${Date.now()}`
   const includeTank = form.packing_type === 'filling' || form.packing_type === 'ship' || form.packing_type === 'transfer'
   const selectedTank = tankOptions.value.find((row) => row.value === form.tank_id)
@@ -3452,17 +3641,11 @@ async function persistPackingEvent(form: PackingFormState, isEditing: boolean) {
 function validatePackingForm(form: PackingFormState) {
   const errors: Record<string, string> = {}
   if (!form.packing_type) errors.packing_type = t('batch.packaging.errors.typeRequired')
-  if (!form.event_time) errors.event_time = t('batch.packaging.errors.eventTimeRequired')
+  if (!normalizeDateOnly(form.event_time)) errors.event_time = t('batch.packaging.errors.eventTimeRequired')
   if (isVolumeType(form.packing_type)) {
     const qty = toNumber(form.volume_qty)
     if (qty == null || qty <= 0) errors.volume_qty = t('batch.packaging.errors.volumeRequired')
     if (!form.volume_uom) errors.volume_uom = t('batch.packaging.errors.volumeUomRequired')
-  }
-  if (
-    (form.packing_type === 'ship' || form.packing_type === 'transfer' || form.packing_type === 'filling') &&
-    (!form.tank_id || !isSelectedTankValid(form.tank_id))
-  ) {
-    errors.tank_id = t('batch.packaging.errors.tankRequired')
   }
   if (isMovementType(form.packing_type)) {
     if (!form.movement_site_id) errors.movement_site_id = t('batch.packaging.errors.siteRequired')
@@ -3623,11 +3806,7 @@ function formatPackingType(type: PackingType) {
 
 function formatPackingDate(value: string) {
   if (!value) return '—'
-  try {
-    return new Date(value).toLocaleString()
-  } catch {
-    return value
-  }
+  return formatDateOnly(value, locale.value)
 }
 
 function beerCategoryLabel(categoryValue: string | null | undefined) {
@@ -4157,7 +4336,7 @@ function newPackingForm(type: PackingType): PackingFormState {
   const isFilling = type === 'filling'
   return {
     packing_type: type,
-    event_time: toInputDateTime(new Date().toISOString()),
+    event_time: '',
     memo: '',
     volume_qty: '',
     volume_uom: defaultVolumeUomId(),
@@ -4170,8 +4349,8 @@ function newPackingForm(type: PackingType): PackingFormState {
     tank_fill_start_depth: '0',
     tank_fill_start_volume: isFilling ? defaultFillingStartVolumeInput() : '',
     tank_fill_left_depth: '0',
-    tank_left_volume: '',
-    tank_loss_calc_mode: 'ignore_loss',
+    tank_left_volume: isFilling ? '0' : '',
+    tank_loss_calc_mode: isFilling ? DEFAULT_FILLING_TANK_LOSS_CALC_MODE : 'ignore_loss',
     sample_volume: '',
   }
 }

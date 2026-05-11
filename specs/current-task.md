@@ -1,80 +1,48 @@
 # Current Task
 
 ## Goal
-- Reuse the Flatpickr date picker for all frontend date and date-time entry so blank dates display consistently in Safari and Chrome.
+- Show 詰口一覧表 `最終充填日` as a date-only value on screen and in Excel export.
 
 ## Scope
-- Add a shared date/date-time picker wrapper around the existing `vue-flatpickr-component` dependency.
-- Use it for all remaining native date and date-time inputs under `beeradmin_tail/src`.
-- Keep all existing model values as strings:
-  - date: `YYYY-MM-DD`
-  - date-time: `YYYY-MM-DDTHH:mm`
+- Main Filling Report table should display `最終充填日` without time.
+- Excel summary sheet should export `最終充填日` without time.
+- Keep sorting and filtering based on the original latest filling timestamp.
+- Keep detail-row `日付` values as datetime because they are movement event timestamps.
 
 ## Non-Goals
-- Do not change stored functions or database schema.
-- Do not change date/time conversion semantics.
-- Do not introduce a new dependency.
+- Do not change database schema or stored values.
+- Do not change movement timestamp capture.
+- Do not change detail sheet movement `日付` datetime display.
+- Do not change tax/report stored functions.
 
 ## Affected Files
 - `specs/current-task.md`
-- `specs/date-input-behavior.md`
-- `specs/batch-list-page.md`
-- `specs/batch-edit-page.md`
-- `docs/UI/batchlist.md`
-- `docs/UI/batchedit.md`
-- `docs/UI/batch_step_execution.md`
-- `beeradmin_tail/src/components/common/AppDateTimePicker.vue`
-- `beeradmin_tail/src/views/Others/Calendar.vue`
-- `beeradmin_tail/src/views/Pages/AlcoholTaxMaster.vue`
-- `beeradmin_tail/src/views/Pages/BatchList.vue`
-- `beeradmin_tail/src/views/Pages/components/BatchCreateDialog.vue`
-- `beeradmin_tail/src/views/Pages/BatchEdit.vue`
-- `beeradmin_tail/src/views/Pages/BatchPacking.vue`
-- `beeradmin_tail/src/views/Pages/BatchStepExecution.vue`
-- `beeradmin_tail/src/views/Pages/BatchYieldSummary.vue`
-- `beeradmin_tail/src/views/Pages/BeerDash.vue`
-- `beeradmin_tail/src/views/Pages/EquipmentMaster.vue`
-- `beeradmin_tail/src/views/Pages/EquipmentScheduleBoard.vue`
-- `beeradmin_tail/src/views/Pages/ProductMoveFast.vue`
-- `beeradmin_tail/src/views/Pages/ProducedBeer.vue`
-- `beeradmin_tail/src/views/Pages/ProducedBeerMovementEdit.vue`
-- `beeradmin_tail/src/views/Pages/RawMaterialInventoryEdit.vue`
-- `beeradmin_tail/src/views/Pages/RawMaterialReceipts.vue`
-- `beeradmin_tail/src/views/Pages/RecipeEdit.vue`
-- `beeradmin_tail/src/views/Pages/SiteMovement.vue`
-- `beeradmin_tail/src/views/Pages/WasteList.vue`
-- `beeradmin_tail/src/views/Pages/components/BatchPackageDialog.vue`
-- `beeradmin_tail/src/views/Pages/components/EquipmentReservationDialog.vue`
+- `docs/UI/filling-report.md`
+- `beeradmin_tail/src/views/Pages/FillingReport.vue`
 
 ## Data Model / API Changes
 - No schema changes.
 - No RPC signature changes.
-- Date-only values remain `YYYY-MM-DD`.
-- Date-time values remain browser-local input strings before existing conversion logic.
+- No persisted data changes.
 
 ## Planned File Changes
-- Add a shared `AppDateTimePicker` wrapper with Flatpickr config for date and date-time modes.
-- Configure Flatpickr with `allowInput: true` and `disableMobile: true` to avoid Safari native date defaults.
-- Replace all remaining native date/date-time inputs with the shared component.
-- Update specs to make Flatpickr the required frontend date input.
+- Add/use a date-only formatter for the main report `最終充填日`.
+- Use the same date-only formatter in the Excel summary sheet.
+- Update the Filling Report UI spec to distinguish `最終充填日` date-only display from detail movement datetime display.
 
 ## Validation Plan
 - Run `git diff --check`.
 - Run `npm run type-check` in `beeradmin_tail`.
-- Run focused ESLint on changed Vue files.
+- Run focused ESLint on changed files.
 
 ## Final Decisions
-- Added shared `AppDateTimePicker` around `vue-flatpickr-component`.
-- Frontend date/date-time fields now use the shared picker instead of native date inputs.
-- Date mode emits `YYYY-MM-DD`; date-time mode emits `YYYY-MM-DDTHH:mm`.
-- The wrapper emits `change` after model updates so existing date filter handlers continue to run.
-- `disableMobile: true` is used so Safari does not show its native current-date placeholder for blank values.
-- All native date and date-time inputs found under `beeradmin_tail/src` are migrated.
-- Existing lint debt in touched legacy pages is isolated with file-level ESLint disables where required to keep the changed-file lint check passing.
+- `最終充填日` keeps using the latest `inv_movements.movement_at` timestamp for source, sorting, and filtering.
+- Main report table display now formats `最終充填日` as date only.
+- Excel summary sheet now exports `最終充填日` as date only.
+- Detail movement `日付` remains datetime because it represents each movement event timestamp.
 
 ## Validation Results
-- `rg -n 'datetime-local|type="date"|type="datetime' beeradmin_tail/src -g '*.vue'` found no remaining native Vue date/date-time inputs.
 - `git diff --check` passed.
 - `npm run type-check` passed in `beeradmin_tail`.
-- Focused ESLint passed for the changed Vue files.
-- Unit tests were not run because `beeradmin_tail/package.json` has no `test` or unit-test script.
+- `npx eslint src/views/Pages/FillingReport.vue` passed.
+- Unit tests were not run because `beeradmin_tail/package.json` has no `test`, `unit`, or `test:unit` script.

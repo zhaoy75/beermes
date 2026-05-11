@@ -72,10 +72,13 @@
   - display `mes_batches.product_name`
   - fallback: `mes_batches.batch_label`
 - `最終充填日`
-  - latest filling datetime for the batch
+  - latest filling date for the batch
   - source: latest `inv_movements.movement_at` among filling movements
-- `総量 (L)`
-  - display `mes_batches.actual_yield`
+  - display date only, without time
+- `詰口総量(L)`
+  - sum non-sample packaged liters across filling movements of the batch
+  - exclude sample lines
+  - do not use `mes_batches.actual_yield`
 - `酒類コード`
   - batch category/code value
   - resolution order:
@@ -143,10 +146,10 @@
   - render as three sub columns:
     - `樽`
     - `缶・瓶`
-    - `総量 (L)`
+    - `詰口総量(L)`
   - `樽`: keg unit count for that movement
   - `缶・瓶`: non-keg unit count for that movement
-  - `総量 (L)`: non-sample packaged liters for that movement
+  - `詰口総量(L)`: non-sample packaged liters for that movement
 - `タンク残`
   - `tank_left_volume` for that movement
 - `欠減`
@@ -167,14 +170,17 @@
   - render as three sub columns
   - `樽`: sum of keg unit counts across the selected batch's movement rows
   - `缶・瓶`: sum of non-keg unit counts across the selected batch's movement rows
-  - `総量 (L)`: sum of packaged liters across the selected batch's movement rows
+  - `詰口総量(L)`: sum of non-sample packaged liters across the selected batch's movement rows
 - `タンク残`
   - show the last movement row's `タンク残` in ascending `日付` order
 - `欠減`
   - sum across the selected batch's movement rows
 
 ### Formatting
-- Datetime:
+- `最終充填日`:
+  - use local date-only display style
+  - Excel summary export must also output date only
+- Detail movement `日付`:
   - use local datetime display style consistent with other admin pages
 - Volume / numeric fields:
   - use numeric formatting with reasonable decimal precision

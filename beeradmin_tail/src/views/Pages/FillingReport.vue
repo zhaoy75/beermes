@@ -175,7 +175,7 @@
                   </button>
                 </td>
                 <td class="px-3 py-2">{{ row.displayName || '—' }}</td>
-                <td class="px-3 py-2 text-xs text-gray-500">{{ formatDateTime(row.latestFillingAt) }}</td>
+                <td class="px-3 py-2 text-xs text-gray-500">{{ formatDateOnlyFromTimestamp(row.latestFillingAt) }}</td>
                 <td class="px-3 py-2 text-right">{{ formatVolumeValue(row.totalVolume) }}</td>
                 <td class="px-3 py-2 text-gray-700">{{ row.liquorCodeLabel || row.liquorCode || '—' }}</td>
                 <td class="px-3 py-2 text-right">{{ formatAbv(row.abv) }}</td>
@@ -417,7 +417,6 @@ type BatchRow = {
   batch_code: string | null
   batch_label: string | null
   product_name: string | null
-  actual_yield: number | string | null
   meta: JsonRecord | null
   mes_recipe_id: string | null
   released_reference_json: JsonRecord | null
@@ -442,7 +441,6 @@ type MovementLineRow = {
 type BatchInfo = {
   batchCode: string | null
   displayName: string | null
-  actualYield: number | null
   liquorCode: string | null
   liquorCodeLabel: string | null
   abv: number | null
@@ -778,6 +776,17 @@ function formatDateTime(value: string | null | undefined) {
   }
 }
 
+function formatDateOnlyFromTimestamp(value: string | null | undefined) {
+  if (!value) return '—'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return new Intl.DateTimeFormat(locale.value, {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(date)
+}
+
 function formatTankSummary(tanks: string[]) {
   const values = tanks.map((value) => value.trim()).filter((value) => value.length > 0)
   return values.length ? values.join(', ') : '—'
@@ -832,7 +841,7 @@ function buildSummarySheetRows(createdAtLabel: string): WorkbookCell[][] {
     borderedRow([
       row.batchCode ?? '',
       row.displayName ?? '',
-      row.latestFillingAt ? formatDateTime(row.latestFillingAt) : '',
+      row.latestFillingAt ? formatDateOnlyFromTimestamp(row.latestFillingAt) : '',
       row.totalVolume ?? null,
       row.liquorCodeLabel || row.liquorCode || '',
       row.abv == null ? '' : formatAbv(row.abv),
@@ -1201,7 +1210,7 @@ async function loadBatchInfo(batchIds: string[], alcoholTypeLabels: Map<string, 
 
   const { data: batches, error: batchError } = await supabase
     .from('mes_batches')
-    .select('id, batch_code, batch_label, product_name, actual_yield, meta, mes_recipe_id, released_reference_json, recipe_json')
+    .select('id, batch_code, batch_label, product_name, meta, mes_recipe_id, released_reference_json, recipe_json')
     .eq('tenant_id', tenant)
     .in('id', uniqueIds)
   if (batchError) throw batchError
@@ -1214,7 +1223,6 @@ async function loadBatchInfo(batchIds: string[], alcoholTypeLabels: Map<string, 
     infoMap.set(String(row.id), {
       batchCode: row.batch_code ?? null,
       displayName: resolveBatchDisplayName(row),
-      actualYield: toNumber(row.actual_yield),
       liquorCode,
       liquorCodeLabel:
         resolveAlcoholTypeLabel(
@@ -1463,7 +1471,7 @@ function buildReportRows(
           (typeof meta.batch_code === 'string' && meta.batch_code.trim() ? meta.batch_code.trim() : null),
         displayName: batchInfo?.displayName ?? null,
         latestFillingAt: movement.movement_at ?? null,
-        totalVolume: batchInfo?.actualYield ?? null,
+        totalVolume: 0,
         liquorCode: batchInfo?.liquorCode ?? null,
         liquorCodeLabel: batchInfo?.liquorCodeLabel ?? batchInfo?.liquorCode ?? null,
         abv: batchInfo?.abv ?? null,
@@ -1486,6 +1494,10 @@ function buildReportRows(
 
     if (sampleVolume != null && Number.isFinite(sampleVolume)) {
       row.sampleVolume += sampleVolume
+    }
+
+    if (totalQuantity != null && Number.isFinite(totalQuantity)) {
+      row.totalVolume = (row.totalVolume ?? 0) + totalQuantity
     }
 
     if (lossVolume == null) row.lossVolumeKnown = false

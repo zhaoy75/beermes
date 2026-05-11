@@ -841,6 +841,12 @@
         "tankLoss": "欠減容量",
         "tankFillEnd": "タンク充填終了",
         "addFilling": "詰口を追加",
+        "favoritePackages": {
+          "label": "お気に入り詰口種別",
+          "empty": "行の星ボタンで追加",
+          "add": "お気に入りに追加",
+          "remove": "お気に入りから削除"
+        },
         "noFillingLines": "詰口明細がありません。",
         "fillingTable": {
           "packageType": "詰口種別",
@@ -2546,7 +2552,7 @@
       "batchCode": "ロット番号",
       "name": "名前",
       "latestFillingAt": "最終充填日",
-      "totalVolume": "総量 (L)",
+      "totalVolume": "詰口総量(L)",
       "liquorCode": "酒類分類",
       "abv": "ABV",
       "sampleVolume": "サンプル(Liter)",
@@ -2569,7 +2575,7 @@
         "totalQuantity": "総数量",
         "kegVolume": "樽",
         "canBottleVolume": "缶・瓶",
-        "totalVolume": "総量 (L)",
+        "totalVolume": "詰口総量(L)",
         "tankLeftVolume": "タンク残",
         "lossVolume": "欠減"
       }

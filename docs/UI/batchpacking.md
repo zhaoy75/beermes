@@ -99,7 +99,10 @@
    - Default: Filling
    - phase 1 unpacking is not created from this selector; it is launched from inventory and consumed here only as history
 2) Common Fields
-   - Event time (default now)
+   - Event date
+     - UI input is date-only (`YYYY-MM-DD`)
+     - default is blank / null for new packing forms
+     - saving requires a selected date and converts it to the existing movement timestamp payload
    - Memo (optional)
 3) Dynamic Sections (order fixed)
    - Volume Section
@@ -135,7 +138,7 @@
 Shown for: Ship, Transfer, Loss, Dispose
 
 Fields:
-- Tank (dropdown list selected from `mst_equipment_tank`)
+- Tank (optional dropdown list selected from `mst_equipment_tank`)
 - Volume Auto Fill Button (only shown for dispose)
 - Quantity (numeric, required, > 0)
 - Unit of measure (dropdown from `mst_uom` where dimension = volume)
@@ -177,8 +180,10 @@ Components:
   - values:
     - `ignore_loss`: 欠減容量なし
     - `calculate_loss`: 欠減容量あり
-  - default: `ignore_loss`
-- Tank No (dropdown list to choose tank from mst_equipment and mst_equipement_tank)
+  - default for new Filling forms: `calculate_loss` / 欠減容量あり
+- Tank No (optional dropdown list to choose tank from mst_equipment and mst_equipement_tank)
+  - not required for save
+  - required only when using depth-based auto-calculation from tank calibration
 - Tank Fill Start Depth (タンク詰め前 深さ (mm))
 - Tank Fill Start Volume (タンク詰め前 容量 (L))
   - default value: current batch remaining volume before this draft filling event
@@ -194,6 +199,17 @@ Components:
   - user may manually override the value after auto-update
 - Tank Loss Volume (欠減), read-only derived value
 - horizontal line
+- Favorite Package Type Shortcuts
+  - displayed on the left side of `詰口を追加`
+  - compact chips show the user's favorite `詰口種別`
+  - clicking a chip adds a new filling line with only `Package type` prefilled
+  - after a chip click, focus moves to the new row's `容器数` input
+  - `lot_code`, container count, total volume, and sample flag remain blank/default
+  - shortcuts are disabled in read-only mode and while saving
+  - favorites are user-specific and stored in `tenant_members.meta.batch_packing.favorite_package_types`
+  - each filling row shows a star button next to the package type select:
+    - empty star adds the selected package type to favorites
+    - filled star removes it from favorites
 - Add Filling button
   - must be visually prominent as the primary action for the filling-line table
   - use a filled primary button style and enough padding so users can find it quickly
@@ -239,7 +255,7 @@ Derived values:
     - if derived Tank Fill Left Volume is negative, save must be blocked because filled + sample volume exceeds available start volume
   - `calculate_loss` / 欠減容量あり:
     - intended for end-of-tank reconciliation, abnormal loss tracking, QA review, or when actual tank loss must be recorded
-    - when the operator switches from `ignore_loss` to `calculate_loss`, default Tank Fill Left Volume to `0`
+    - when the operator creates a new Filling event or switches from `ignore_loss` to `calculate_loss`, default Tank Fill Left Volume to `0`
     - Tank Fill Left Depth is used to calculate Tank Fill Left Volume by `get_volume_by_tank`
     - Tank Fill Left Volume may be manually corrected if tank calibration is unavailable or wrong
     - Tank Loss Volume is read-only and auto-derived:
@@ -280,7 +296,7 @@ Common filling calculation rules:
     - `ignore_loss`: `0`
     - `calculate_loss`: `Tank Fill Start Volume - Tank Fill Left Volume - 明細総容量 - Sample Volume`
 - If persisted `sample_volume` is missing, UI must derive `Sample Volume` from sample lines instead of assuming zero
-- Because this feature is unreleased, rows without `tank_loss_calc_mode` do not require compatibility behavior; consumers may use the default `ignore_loss` behavior if the mode is missing
+- Because this feature is unreleased, rows without `tank_loss_calc_mode` do not require compatibility behavior; consumers may keep legacy fallback handling, but new Filling forms must default to `calculate_loss`
 - These rules apply to:
   - Batch Packing page
   - Batch Edit page packing history list
@@ -392,7 +408,7 @@ Warnings:
 - `src_site_id` must be auto-derived from the batch BREWERY_MANUFACTUR site
 - `dest_site_id` must default to `src_site_id`
 - `product_filling` RPC payload must include:
-  - `tank_id`: selected tank id
+  - `tank_id`: selected tank id or `null` when Tank No is blank
   - `loss_qty`: effective filling loss quantity:
     - `ignore_loss`: `Sample_Volume`
     - `calculate_loss`: `Tank_Loss_Volume + Sample_Volume`

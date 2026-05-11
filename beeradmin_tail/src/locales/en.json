@@ -838,6 +838,12 @@
         "tankLoss": "Tank Loss Volume",
         "tankFillEnd": "Tank filling end",
         "addFilling": "Add Filling",
+        "favoritePackages": {
+          "label": "Favorite package types",
+          "empty": "Use the star on a row",
+          "add": "Add to favorites",
+          "remove": "Remove from favorites"
+        },
         "noFillingLines": "No filling lines added.",
         "fillingTable": {
           "packageType": "Package type",
@@ -2551,7 +2557,7 @@
       "batchCode": "Lot No",
       "name": "Name",
       "latestFillingAt": "Latest Filling At",
-      "totalVolume": "Total Volume (L)",
+      "totalVolume": "Filling Total (L)",
       "liquorCode": "Liquor Code",
       "abv": "ABV",
       "sampleVolume": "Sample (Liter)",
@@ -2574,7 +2580,7 @@
         "totalQuantity": "Total Quantity",
         "kegVolume": "Keg",
         "canBottleVolume": "Can / Bottle",
-        "totalVolume": "Total Volume (L)",
+        "totalVolume": "Filling Total (L)",
         "tankLeftVolume": "Tank Left",
         "lossVolume": "Loss"
       }

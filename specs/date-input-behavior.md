@@ -4,16 +4,17 @@
 - Define one consistent rule for date-capable inputs across the app.
 
 ## Scope
-- `beeradmin_tail` pages, page components, and shared screens that use native `input[type="date"]` or `input[type="datetime-local"]`.
+- `beeradmin_tail` pages, page components, and shared screens that accept date or date-time input.
 
 ## Rules
-- Native `input[type="date"]` inputs must open the browser calendar picker on focus when the browser supports `showPicker()`.
-- Native `input[type="datetime-local"]` inputs must open the browser date/time picker on focus when the browser supports `showPicker()`.
-- The shared behavior must ignore disabled and readonly inputs.
-- If the browser does not support `showPicker()`, the input must continue to work as a normal native field without throwing errors.
-- This behavior should be provided centrally so newly added pages inherit the same rule without page-specific duplicate handlers.
+- All frontend date and date-time inputs under `beeradmin_tail/src` must use the shared `AppDateTimePicker` Flatpickr wrapper.
+- The shared picker must render blank values as visually blank in Safari and Chrome.
+- Date mode must emit `YYYY-MM-DD`.
+- Date-time mode must emit `YYYY-MM-DDTHH:mm` before page-specific conversion to UTC/API payloads.
+- The shared picker must emit `change` after model updates so existing search/filter handlers continue to work.
+- The picker must use `disableMobile: true` to avoid Safari native date placeholders.
+- New native `type="date"` and `type="datetime-local"` inputs should not be added to Vue pages.
 
 ## Non-Goals
-- Do not introduce a third-party date-picker library.
-- Do not override locale-specific browser formatting.
+- Do not introduce any new date-picker dependency beyond the existing Flatpickr package.
 - Do not change stored values or API payload formats.

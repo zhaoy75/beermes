@@ -214,19 +214,18 @@
                         class="w-full rounded border border-gray-300 px-3 py-2 font-mono text-sm"
                         @input="updateAttrText(field, $event)"
                       />
-                      <input
+                      <AppDateTimePicker
                         v-else-if="attrInputKind(field) === 'date'"
-                        :value="attrTextValue(field)"
-                        type="date"
+                        :model-value="attrTextValue(field)"
                         class="h-[40px] w-full rounded border border-gray-300 px-3"
-                        @input="updateAttrText(field, $event)"
+                        @update:model-value="(value) => updateAttrValue(field, value)"
                       />
-                      <input
+                      <AppDateTimePicker
                         v-else-if="attrInputKind(field) === 'timestamp'"
-                        :value="attrTextValue(field)"
-                        type="datetime-local"
+                        :model-value="attrTextValue(field)"
+                        mode="datetime"
                         class="h-[40px] w-full rounded border border-gray-300 px-3"
-                        @input="updateAttrText(field, $event)"
+                        @update:model-value="(value) => updateAttrValue(field, value)"
                       />
                       <input
                         v-else
@@ -266,6 +265,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
+import AppDateTimePicker from '@/components/common/AppDateTimePicker.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { openTypeDefGraph, type TypeDefGraphSelection } from '@/composables/useTypeDefGraphModal'
 import { supabase } from '@/lib/supabase'
@@ -1078,6 +1078,10 @@ function attrTextValue(field: AttrField) {
 function updateAttrText(field: AttrField, event: Event) {
   const target = event.target as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null
   field.value = target?.value ?? ''
+}
+
+function updateAttrValue(field: AttrField, value: string) {
+  field.value = value
 }
 
 function updateAttrBoolean(field: AttrField, event: Event) {

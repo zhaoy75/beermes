@@ -28,11 +28,11 @@
         </div>
         <div>
           <label class="block text-sm text-gray-600 mb-1" for="startFilter">{{ t('batch.list.startDate') }}</label>
-          <input id="startFilter" v-model="search.start" type="date" class="w-full h-[36px] border rounded px-3" @change="rememberDateFilters" />
+          <AppDateTimePicker id="startFilter" v-model="search.start" class="w-full h-[36px] border rounded px-3" @change="rememberDateFilters" />
         </div>
         <div>
           <label class="block text-sm text-gray-600 mb-1" for="endFilter">{{ t('batch.list.endDate') }}</label>
-          <input id="endFilter" v-model="search.end" type="date" class="w-full h-[36px] border rounded px-3" @change="rememberDateFilters" />
+          <AppDateTimePicker id="endFilter" v-model="search.end" class="w-full h-[36px] border rounded px-3" @change="rememberDateFilters" />
         </div>
         <div class="flex items-end">
           <button class="text-sm px-3 py-2 rounded border border-gray-300 hover:bg-gray-100" type="button" @click="resetFilters">{{ t('common.reset') }}</button>
@@ -63,18 +63,17 @@
             <option value="true">{{ t('common.yes') }}</option>
             <option value="false">{{ t('common.no') }}</option>
           </select>
-          <input
+          <AppDateTimePicker
             v-else-if="field.data_type === 'date'"
             :id="`attr-search-${field.attr_id}`"
             v-model="search.attr[String(field.attr_id)]"
-            type="date"
             class="w-full h-[36px] border rounded px-3"
           />
-          <input
+          <AppDateTimePicker
             v-else-if="field.data_type === 'timestamp'"
             :id="`attr-search-${field.attr_id}`"
             v-model="search.attr[String(field.attr_id)]"
-            type="datetime-local"
+            mode="datetime"
             class="w-full h-[36px] border rounded px-3"
           />
           <template v-else-if="field.data_type === 'number'">
@@ -181,6 +180,7 @@ import { useRouter } from 'vue-router'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
+import AppDateTimePicker from '@/components/common/AppDateTimePicker.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import {
   buildAlcoholTypeLabelMap,

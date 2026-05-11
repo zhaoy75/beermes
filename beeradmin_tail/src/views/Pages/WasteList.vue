@@ -12,11 +12,11 @@
       <form class="grid grid-cols-1 md:grid-cols-4 gap-4" @submit.prevent>
         <div>
           <label class="block text-sm text-gray-600 mb-1" for="fromDate">{{ t('waste.list.startDate') }}</label>
-          <input id="fromDate" v-model="search.start" type="date" class="w-full h-[36px] border rounded px-3" />
+          <AppDateTimePicker id="fromDate" v-model="search.start" class="w-full h-[36px] border rounded px-3" />
         </div>
         <div>
           <label class="block text-sm text-gray-600 mb-1" for="toDate">{{ t('waste.list.endDate') }}</label>
-          <input id="toDate" v-model="search.end" type="date" class="w-full h-[36px] border rounded px-3" />
+          <AppDateTimePicker id="toDate" v-model="search.end" class="w-full h-[36px] border rounded px-3" />
         </div>
         <div>
           <label class="block text-sm text-gray-600 mb-1" for="batchFilter">{{ t('waste.list.batchCode') }}</label>
@@ -86,8 +86,10 @@
 </template>
 
 <script setup lang="ts">
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { computed, reactive, ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import AppDateTimePicker from '@/components/common/AppDateTimePicker.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { supabase } from '@/lib/supabase'

@@ -121,9 +121,8 @@
               <label class="block text-sm text-gray-600 mb-1">{{
                 t('producedBeer.movement.filters.dateFrom')
               }}</label>
-              <input
+              <AppDateTimePicker
                 v-model="movementFilters.dateFrom"
-                type="date"
                 class="w-full h-[40px] border rounded px-3"
               />
             </div>
@@ -131,9 +130,8 @@
               <label class="block text-sm text-gray-600 mb-1">{{
                 t('producedBeer.movement.filters.dateTo')
               }}</label>
-              <input
+              <AppDateTimePicker
                 v-model="movementFilters.dateTo"
-                type="date"
                 class="w-full h-[40px] border rounded px-3"
               />
             </div>
@@ -417,6 +415,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
+import AppDateTimePicker from '@/components/common/AppDateTimePicker.vue'
 import ConfirmActionDialog from '@/components/common/ConfirmActionDialog.vue'
 import TableColumnHeader from '@/components/common/TableColumnHeader.vue'
 import { loadAlcoholTypeReferenceData } from '@/lib/alcoholTypeRegistry'

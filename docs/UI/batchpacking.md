@@ -239,6 +239,7 @@ Derived values:
     - if derived Tank Fill Left Volume is negative, save must be blocked because filled + sample volume exceeds available start volume
   - `calculate_loss` / 欠減容量あり:
     - intended for end-of-tank reconciliation, abnormal loss tracking, QA review, or when actual tank loss must be recorded
+    - when the operator switches from `ignore_loss` to `calculate_loss`, default Tank Fill Left Volume to `0`
     - Tank Fill Left Depth is used to calculate Tank Fill Left Volume by `get_volume_by_tank`
     - Tank Fill Left Volume may be manually corrected if tank calibration is unavailable or wrong
     - Tank Loss Volume is read-only and auto-derived:

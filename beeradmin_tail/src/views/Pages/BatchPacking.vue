@@ -63,19 +63,19 @@
           </div>
           <div>
             <label class="block text-sm text-gray-600 mb-1" for="batchPlannedStart">{{ t('batch.edit.plannedStart') }}</label>
-            <input id="batchPlannedStart" v-model="batchForm.planned_start" type="date" class="w-full h-[40px] border rounded px-3" />
+            <AppDateTimePicker id="batchPlannedStart" v-model="batchForm.planned_start" class="w-full h-[40px] border rounded px-3" />
           </div>
           <div>
             <label class="block text-sm text-gray-600 mb-1" for="batchPlannedEnd">{{ t('batch.edit.plannedEnd') }}</label>
-            <input id="batchPlannedEnd" v-model="batchForm.planned_end" type="date" class="w-full h-[40px] border rounded px-3" />
+            <AppDateTimePicker id="batchPlannedEnd" v-model="batchForm.planned_end" class="w-full h-[40px] border rounded px-3" />
           </div>
           <div>
             <label class="block text-sm text-gray-600 mb-1" for="batchActualStart">{{ t('batch.edit.actualStart') }}</label>
-            <input id="batchActualStart" v-model="batchForm.actual_start" type="date" class="w-full h-[40px] border rounded px-3" />
+            <AppDateTimePicker id="batchActualStart" v-model="batchForm.actual_start" class="w-full h-[40px] border rounded px-3" />
           </div>
           <div>
             <label class="block text-sm text-gray-600 mb-1" for="batchActualEnd">{{ t('batch.edit.actualEnd') }}</label>
-            <input id="batchActualEnd" v-model="batchForm.actual_end" type="date" class="w-full h-[40px] border rounded px-3" />
+            <AppDateTimePicker id="batchActualEnd" v-model="batchForm.actual_end" class="w-full h-[40px] border rounded px-3" />
           </div>
         </form>
 
@@ -108,10 +108,10 @@
                 </label>
               </template>
               <template v-else-if="field.data_type === 'date'">
-                <input v-model="field.value" type="date" class="w-full h-[40px] border rounded px-3" />
+                <AppDateTimePicker v-model="field.value" class="w-full h-[40px] border rounded px-3" />
               </template>
               <template v-else-if="field.data_type === 'timestamp'">
-                <input v-model="field.value" type="datetime-local" class="w-full h-[40px] border rounded px-3" />
+                <AppDateTimePicker v-model="field.value" mode="datetime" class="w-full h-[40px] border rounded px-3" />
               </template>
               <template v-else-if="field.data_type === 'json'">
                 <textarea v-model.trim="field.value" rows="3" class="w-full border rounded px-3 py-2 font-mono text-xs"></textarea>
@@ -362,7 +362,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
                 <label class="block text-sm text-gray-600 mb-1" for="packingEventTime">{{ t('batch.packaging.dialog.eventTime') }}</label>
-                <input id="packingEventTime" v-model="packingDialog.form.event_time" type="datetime-local" class="w-full h-[40px] border rounded px-3" />
+                <AppDateTimePicker id="packingEventTime" v-model="packingDialog.form.event_time" mode="datetime" class="w-full h-[40px] border rounded px-3" />
                 <p v-if="packingDialog.errors.event_time" class="mt-1 text-xs text-red-600">{{ packingDialog.errors.event_time }}</p>
               </div>
               <div>
@@ -427,7 +427,13 @@
                     class="inline-flex cursor-pointer items-center gap-2 rounded px-3 py-1.5 text-sm"
                     :class="packingDialog.form.tank_loss_calc_mode === option.value ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-50'"
                   >
-                    <input v-model="packingDialog.form.tank_loss_calc_mode" type="radio" class="sr-only" :value="option.value" />
+                    <input
+                      :checked="packingDialog.form.tank_loss_calc_mode === option.value"
+                      type="radio"
+                      class="sr-only"
+                      :value="option.value"
+                      @change="selectTankLossCalcMode(option.value)"
+                    />
                     {{ option.label }}
                   </label>
                 </div>
@@ -631,7 +637,7 @@
             </div>
             <div>
               <label class="block text-sm text-gray-600 mb-1">{{ t('batch.relation.fields.effectiveAt') }}</label>
-              <input v-model="relationDialog.form.effective_at" type="datetime-local" class="w-full h-[40px] border rounded px-3" />
+              <AppDateTimePicker v-model="relationDialog.form.effective_at" mode="datetime" class="w-full h-[40px] border rounded px-3" />
               <p v-if="relationDialog.errors.effective_at" class="mt-1 text-xs text-red-600">{{ relationDialog.errors.effective_at }}</p>
             </div>
             <div>
@@ -747,6 +753,7 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import ConfirmActionDialog from '@/components/common/ConfirmActionDialog.vue'
+import AppDateTimePicker from '@/components/common/AppDateTimePicker.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { useConfirmDialog } from '@/composables/useConfirmDialog'
@@ -1017,6 +1024,7 @@ const packingMovementQtyTouched = ref(false)
 const DEFAULT_TANK_TEMPERATURE_C = 20
 const TANK_VOLUME_CALC_DEBOUNCE_MS = 250
 const tankVolumeRequestToken = reactive({ start: 0, left: 0 })
+const suppressNextLeftTankVolumeCalc = ref(false)
 let tankVolumeStartTimer: number | null = null
 let tankVolumeLeftTimer: number | null = null
 const packingDialog = reactive({
@@ -2610,6 +2618,25 @@ async function selectPackingType(value: PackingType) {
   packingMovementQtyTouched.value = false
 }
 
+function selectTankLossCalcMode(value: TankLossCalcMode) {
+  const form = packingDialog.form
+  if (!form || packingDialog.readOnly) return
+  const nextMode = normalizeTankLossCalcMode(value)
+  if (form.tank_loss_calc_mode === nextMode) return
+  form.tank_loss_calc_mode = nextMode
+  delete packingDialog.errors.tank_left_volume
+  delete packingDialog.errors.tank_fill_left_depth
+
+  if (nextMode === 'calculate_loss') {
+    if (!form.tank_fill_left_depth) form.tank_fill_left_depth = '0'
+    form.tank_left_volume = '0'
+    suppressNextLeftTankVolumeCalc.value = true
+  } else {
+    suppressNextLeftTankVolumeCalc.value = false
+    syncIgnoredTankLeftVolume()
+  }
+}
+
 function shouldConfirmPackingTypeChange(form: PackingFormState, next: PackingType) {
   const wasFilling = form.packing_type === 'filling'
   const willBeFilling = next === 'filling'
@@ -3886,6 +3913,11 @@ watch(
     if (packingDialog.form.tank_loss_calc_mode === 'ignore_loss') return
     const depth = toNumber(packingDialog.form.tank_fill_left_depth)
     if (!packingDialog.form.tank_id || depth == null || depth < 0) return
+    if (suppressNextLeftTankVolumeCalc.value && depth === 0) {
+      suppressNextLeftTankVolumeCalc.value = false
+      return
+    }
+    suppressNextLeftTankVolumeCalc.value = false
     delete packingDialog.errors.tank_fill_left_depth
     scheduleTankVolumeCalc('left')
   }

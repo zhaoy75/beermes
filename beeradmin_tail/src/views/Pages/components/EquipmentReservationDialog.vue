@@ -101,9 +101,9 @@
             <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
               {{ t('equipmentSchedule.modal.fields.startAt') }}
             </label>
-            <input
+            <AppDateTimePicker
               v-model="formState.start_at"
-              type="datetime-local"
+              mode="datetime"
               class="h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
             />
           </div>
@@ -112,9 +112,9 @@
             <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
               {{ t('equipmentSchedule.modal.fields.endAt') }}
             </label>
-            <input
+            <AppDateTimePicker
               v-model="formState.end_at"
-              type="datetime-local"
+              mode="datetime"
               class="h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
             />
           </div>
@@ -170,6 +170,7 @@
 import { reactive, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+import AppDateTimePicker from '@/components/common/AppDateTimePicker.vue'
 import Modal from '@/components/profile/Modal.vue'
 
 import type { ReservationFormState, SelectOption } from '../equipment-schedule/types'

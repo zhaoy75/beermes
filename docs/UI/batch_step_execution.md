@@ -59,8 +59,8 @@
 ## Step Execution Control
 - editable:
   - status
-  - started at
-  - ended at
+  - started at with shared Flatpickr date-time picker
+  - ended at with shared Flatpickr date-time picker
   - notes
 - save target:
   - `mes.batch_step`
@@ -87,7 +87,7 @@
 - editable:
   - result status
   - result value
-  - checked at
+  - checked at with shared Flatpickr date-time picker
   - checked by
   - result note
 - save target:
@@ -104,7 +104,7 @@
   - lot
   - actual qty
   - uom
-  - consumed at
+  - consumed at with shared Flatpickr date-time picker
   - note
 - save target:
   - `mes.batch_material_actual`
@@ -113,15 +113,15 @@
 - editable rows:
   - equipment
   - assignment role
-  - assigned at
-  - released at
+  - assigned at with shared Flatpickr date-time picker
+  - released at with shared Flatpickr date-time picker
 - save target:
   - `mes.batch_equipment_assignment`
 
 ## Execution Logs
 - editable rows:
   - event type
-  - event at
+  - event at with shared Flatpickr date-time picker
   - comment
 - save target:
   - `mes.batch_execution_log`
@@ -132,8 +132,8 @@
   - summary
   - severity
   - status
-  - opened at
-  - closed at
+  - opened at with shared Flatpickr date-time picker
+  - closed at with shared Flatpickr date-time picker
   - note
 - save target:
   - `mes.batch_deviation`

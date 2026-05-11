@@ -265,7 +265,7 @@
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                   <label class="block text-sm text-gray-600 mb-1">移動日時</label>
-                  <input v-model="movementForm.movedAt" type="datetime-local" class="w-full h-[40px] border rounded px-3" />
+                  <AppDateTimePicker v-model="movementForm.movedAt" mode="datetime" class="w-full h-[40px] border rounded px-3" />
                 </div>
                 <div>
                   <label class="block text-sm text-gray-600 mb-1">{{ t('producedBeer.movementWizard.fields.unitPrice') }}</label>
@@ -329,9 +329,11 @@
 </template>
 
 <script setup lang="ts">
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import AppDateTimePicker from '@/components/common/AppDateTimePicker.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import {

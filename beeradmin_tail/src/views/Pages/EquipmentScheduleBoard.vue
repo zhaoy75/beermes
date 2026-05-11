@@ -50,18 +50,16 @@
 
           <div>
             <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('equipmentSchedule.filters.dateFrom') }}</label>
-            <input
+            <AppDateTimePicker
               v-model="filters.rangeStart"
-              type="date"
               class="h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
             />
           </div>
 
           <div>
             <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('equipmentSchedule.filters.dateTo') }}</label>
-            <input
+            <AppDateTimePicker
               v-model="filters.rangeEnd"
-              type="date"
               class="h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
             />
           </div>
@@ -197,6 +195,7 @@ import {
 } from 'vis-timeline'
 
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import AppDateTimePicker from '@/components/common/AppDateTimePicker.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import { supabase } from '@/lib/supabase'
 import EquipmentReservationDialog from './components/EquipmentReservationDialog.vue'

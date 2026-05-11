@@ -76,11 +76,11 @@
             </div>
             <div>
               <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.effectiveFrom') }}</label>
-              <input v-model="versionForm.effective_from" type="datetime-local" class="h-[40px] w-full rounded border px-3" />
+              <AppDateTimePicker v-model="versionForm.effective_from" mode="datetime" class="h-[40px] w-full rounded border px-3" />
             </div>
             <div>
               <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.effectiveTo') }}</label>
-              <input v-model="versionForm.effective_to" type="datetime-local" class="h-[40px] w-full rounded border px-3" />
+              <AppDateTimePicker v-model="versionForm.effective_to" mode="datetime" class="h-[40px] w-full rounded border px-3" />
             </div>
             <div class="md:col-span-2">
               <label class="mb-1 block text-sm text-gray-600">{{ t('recipe.edit.changeSummary') }}</label>
@@ -833,6 +833,7 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
+import AppDateTimePicker from '@/components/common/AppDateTimePicker.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { formatRpcErrorMessage } from '@/lib/rpcErrors'
 import { supabase } from '@/lib/supabase'

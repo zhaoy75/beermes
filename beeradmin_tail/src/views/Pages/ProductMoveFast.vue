@@ -84,9 +84,9 @@
             <label class="block text-sm text-gray-600 mb-1">{{
               t('producedBeer.movementFast.fields.movedAt')
             }}</label>
-            <input
+            <AppDateTimePicker
               v-model="routeForm.movedAt"
-              type="datetime-local"
+              mode="datetime"
               class="w-full h-[42px] border rounded-lg px-3"
             />
           </div>
@@ -617,11 +617,13 @@
 </template>
 
 <script setup lang="ts">
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import AppDateTimePicker from '@/components/common/AppDateTimePicker.vue'
 import { StaredIcon, TrashIcon } from '@/icons'
 import {
   registerInventorySearchContext,

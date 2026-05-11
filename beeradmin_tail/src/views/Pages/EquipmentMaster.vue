@@ -183,11 +183,11 @@
             </div>
             <div>
               <label class="block text-sm text-gray-600 mb-1">{{ t('equipment.fields.commissionedAt') }}</label>
-              <input v-model="form.commissioned_at" type="date" class="w-full h-[40px] border rounded px-3" />
+              <AppDateTimePicker v-model="form.commissioned_at" class="w-full h-[40px] border rounded px-3" />
             </div>
             <div>
               <label class="block text-sm text-gray-600 mb-1">{{ t('equipment.fields.decommissionedAt') }}</label>
-              <input v-model="form.decommissioned_at" type="date" class="w-full h-[40px] border rounded px-3" />
+              <AppDateTimePicker v-model="form.decommissioned_at" class="w-full h-[40px] border rounded px-3" />
               <p v-if="errors.decommissioned_at" class="text-xs text-red-600 mt-1">{{ errors.decommissioned_at }}</p>
             </div>
             <div class="md:col-span-2">
@@ -458,6 +458,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import AppDateTimePicker from '@/components/common/AppDateTimePicker.vue'
 import ConfirmActionDialog from '@/components/common/ConfirmActionDialog.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'

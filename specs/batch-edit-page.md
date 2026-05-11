@@ -74,8 +74,11 @@
 
 ### Rules
 - batch code is readonly after create
-- planned start and planned end must use calendar-selectable date inputs
-- actual start and actual end must use calendar-selectable date inputs
+- changing batch header status must require a confirmation dialog before the new status is accepted in the form
+- canceling the status confirmation must restore the previous status value
+- planned start and planned end must use the shared Flatpickr date picker
+- actual start and actual end must use the shared Flatpickr date picker
+- actual start must remain blank when no actual start is saved; do not default it from planned start
 - dynamic batch attributes on Batch Edit should validate entered values against `attr_def` rules, including numeric `num_min` / `num_max`, but missing / blank values must not block save
 - save should block when dynamic attribute validation fails
 - `actual_yield` dialog remains part of this section

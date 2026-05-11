@@ -42,6 +42,8 @@
       saved to `mes_batches.batch_code`
       duplicate values are allowed; `mes_batches.id` remains the canonical identifier
     ステータス
+      changing status should show a confirmation dialog before the selected value is accepted
+      if the user cancels the confirmation dialog, restore the previous status value
     product_name 
 	　actual_yield 
       can only be input when batch status is 製造中 or 完了
@@ -49,10 +51,11 @@
 	  actual_yield_uom dropdown list from uom with domain volume
       actual_yield site dropdown list from mst_sites
         only sites with site_type = BREWERY_MANUFACTUR can be shown and selected
-    予定開始日  with calendar picker
-    予定終了日  with calendar picker
-    実績開始日　with calendar picker
-　　 実績終了日  with calendar picker
+    予定開始日  with shared Flatpickr calendar picker
+    予定終了日  with shared Flatpickr calendar picker
+    実績開始日　with shared Flatpickr calendar picker
+      if no actual_start is saved, this field must stay blank; do not default from 予定開始日
+　　 実績終了日  with shared Flatpickr calendar picker
     
     a horizontal line 
       fields in entity_attr_set in domain "batch". 

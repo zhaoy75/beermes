@@ -197,12 +197,12 @@
               </div>
               <div>
                 <label class="block text-sm text-gray-600 mb-1">{{ t('alcoholTax.form.startDate') }}<span class="text-red-600">*</span></label>
-                <input v-model.trim="form.start_date" type="date" class="w-full h-[40px] border rounded px-3" />
+                <AppDateTimePicker v-model="form.start_date" class="w-full h-[40px] border rounded px-3" />
                 <p v-if="errors.start_date" class="mt-1 text-xs text-red-600">{{ errors.start_date }}</p>
               </div>
               <div>
                 <label class="block text-sm text-gray-600 mb-1">{{ t('alcoholTax.form.expirationDate') }}</label>
-                <input v-model.trim="form.expiration_date" type="date" class="w-full h-[40px] border rounded px-3" />
+                <AppDateTimePicker v-model="form.expiration_date" class="w-full h-[40px] border rounded px-3" />
                 <p v-if="errors.expiration_date" class="mt-1 text-xs text-red-600">{{ errors.expiration_date }}</p>
               </div>
             </div>
@@ -248,6 +248,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { supabase } from '@/lib/supabase'
+import AppDateTimePicker from '@/components/common/AppDateTimePicker.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { toast } from 'vue3-toastify'

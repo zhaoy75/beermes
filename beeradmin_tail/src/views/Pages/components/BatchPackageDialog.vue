@@ -18,7 +18,7 @@
           </div>
           <div>
             <label class="block text-sm text-gray-600 mb-1" for="fillDate">{{ t('batch.packaging.columns.fillDate') }}</label>
-            <input id="fillDate" v-model="form.fill_at" type="date" class="w-full h-[40px] border rounded px-3" />
+            <AppDateTimePicker id="fillDate" v-model="form.fill_at" class="w-full h-[40px] border rounded px-3" />
           </div>
           <div>
             <label class="block text-sm text-gray-600 mb-1" for="outputSite">{{ t('batch.packaging.columns.outputSite') }}</label>
@@ -60,6 +60,7 @@
 <script setup lang="ts">
 import { computed, reactive, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import AppDateTimePicker from '@/components/common/AppDateTimePicker.vue'
 import { formatVolume } from '@/lib/volumeFormat'
 
 type CategoryOption = {

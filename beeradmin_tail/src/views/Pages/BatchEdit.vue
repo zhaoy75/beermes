@@ -46,8 +46,8 @@
           </div>
           <div>
             <label class="block text-sm text-gray-600 mb-1" for="batchStatus">{{ t('batch.edit.status') }}</label>
-            <select id="batchStatus" v-model="batchForm.status" class="w-full h-[40px] border rounded px-3 bg-white" :disabled="batchStatusLoading">
-              <option value="">{{ t('common.select') }}</option>
+            <select id="batchStatus" :value="batchForm.status" class="w-full h-[40px] border rounded px-3 bg-white" :disabled="batchStatusLoading || savingBatch" @change="handleBatchStatusChange">
+              <option value="" disabled>{{ t('common.select') }}</option>
               <option v-for="option in batchStatusOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
             </select>
           </div>
@@ -63,19 +63,19 @@
           </div>
           <div>
             <label class="block text-sm text-gray-600 mb-1" for="batchPlannedStart">{{ t('batch.edit.plannedStart') }}</label>
-            <input id="batchPlannedStart" v-model="batchForm.planned_start" type="date" class="w-full h-[40px] border rounded px-3" />
+            <AppDateTimePicker id="batchPlannedStart" v-model="batchForm.planned_start" class="w-full h-[40px] border rounded px-3" />
           </div>
           <div>
             <label class="block text-sm text-gray-600 mb-1" for="batchPlannedEnd">{{ t('batch.edit.plannedEnd') }}</label>
-            <input id="batchPlannedEnd" v-model="batchForm.planned_end" type="date" class="w-full h-[40px] border rounded px-3" />
+            <AppDateTimePicker id="batchPlannedEnd" v-model="batchForm.planned_end" class="w-full h-[40px] border rounded px-3" />
           </div>
           <div>
             <label class="block text-sm text-gray-600 mb-1" for="batchActualStart">{{ t('batch.edit.actualStart') }}</label>
-            <input id="batchActualStart" v-model="batchForm.actual_start" type="date" class="w-full h-[40px] border rounded px-3" />
+            <AppDateTimePicker id="batchActualStart" v-model="batchForm.actual_start" class="w-full h-[40px] border rounded px-3" />
           </div>
           <div>
             <label class="block text-sm text-gray-600 mb-1" for="batchActualEnd">{{ t('batch.edit.actualEnd') }}</label>
-            <input id="batchActualEnd" v-model="batchForm.actual_end" type="date" class="w-full h-[40px] border rounded px-3" />
+            <AppDateTimePicker id="batchActualEnd" v-model="batchForm.actual_end" class="w-full h-[40px] border rounded px-3" />
           </div>
         </form>
 
@@ -139,10 +139,10 @@
                 </label>
               </template>
               <template v-else-if="field.data_type === 'date'">
-                <input v-model="field.value" type="date" class="w-full h-[40px] border rounded px-3" />
+                <AppDateTimePicker v-model="field.value" class="w-full h-[40px] border rounded px-3" />
               </template>
               <template v-else-if="field.data_type === 'timestamp'">
-                <input v-model="field.value" type="datetime-local" class="w-full h-[40px] border rounded px-3" />
+                <AppDateTimePicker v-model="field.value" mode="datetime" class="w-full h-[40px] border rounded px-3" />
               </template>
               <template v-else-if="field.data_type === 'json'">
                 <textarea v-model.trim="field.value" rows="3" class="w-full border rounded px-3 py-2 font-mono text-xs"></textarea>
@@ -395,7 +395,7 @@
             </div>
             <div>
               <label class="block text-sm text-gray-600 mb-1">{{ t('batch.relation.fields.effectiveAt') }}</label>
-              <input v-model="relationDialog.form.effective_at" type="datetime-local" class="w-full h-[40px] border rounded px-3" />
+              <AppDateTimePicker v-model="relationDialog.form.effective_at" mode="datetime" class="w-full h-[40px] border rounded px-3" />
               <p v-if="relationDialog.errors.effective_at" class="mt-1 text-xs text-red-600">{{ relationDialog.errors.effective_at }}</p>
             </div>
             <div>
@@ -519,6 +519,7 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import ConfirmActionDialog from '@/components/common/ConfirmActionDialog.vue'
+import AppDateTimePicker from '@/components/common/AppDateTimePicker.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { useConfirmDialog } from '@/composables/useConfirmDialog'
@@ -1027,6 +1028,34 @@ function isActualYieldAllowedStatus(status: string | null | undefined) {
   return ACTUAL_YIELD_ALLOWED_STATUSES.has(value)
 }
 
+async function handleBatchStatusChange(event: Event) {
+  const select = event.target as HTMLSelectElement
+  const nextStatus = select.value
+  const previousStatus = batchForm.status
+  if (nextStatus === previousStatus) return
+  if (!nextStatus) {
+    select.value = previousStatus
+    return
+  }
+
+  const confirmed = await requestConfirmation({
+    title: t('batch.edit.statusChangeConfirmTitle'),
+    message: t('batch.edit.statusChangeConfirmMessage', {
+      from: statusLabel(previousStatus),
+      to: statusLabel(nextStatus),
+    }),
+    confirmLabel: t('batch.edit.statusChangeConfirmButton'),
+    cancelLabel: t('common.cancel'),
+    tone: 'warning',
+  })
+
+  if (confirmed) {
+    batchForm.status = nextStatus
+  } else {
+    select.value = previousStatus
+  }
+}
+
 const canInputActualYield = computed(() =>
   isActualYieldAllowedStatus(batchForm.status || batch.value?.status),
 )
@@ -1067,7 +1096,7 @@ async function fetchBatch() {
       batchForm.actual_yield_uom = header.actual_yield_uom ?? ''
       batchForm.planned_start = toInputDate(header.planned_start)
       batchForm.planned_end = toInputDate(header.planned_end)
-      batchForm.actual_start = toInputDate(header.actual_start)
+      batchForm.actual_start = header.actual_start ? toInputDate(header.actual_start) : ''
       batchForm.actual_end = toInputDate(header.actual_end)
       batchForm.related_batch_id = resolveMetaString(header.meta, 'related_batch_id') ?? ''
       recipeCategoryId.value = await loadRecipeCategory(header.mes_recipe_id ?? null)

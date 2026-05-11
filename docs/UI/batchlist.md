@@ -28,8 +28,8 @@
     search field should include:
       バッチ名
       ステータス
-      開始日  with calendar picker, date-only YYYY-MM-DD
-      終了日  with calendar picker, date-only YYYY-MM-DD
+	      開始日  with shared Flatpickr calendar picker, date-only YYYY-MM-DD
+	      終了日  with shared Flatpickr calendar picker, date-only YYYY-MM-DD
       a horizontal line 
       fields in entity_attr_set in domain "batch". 
         field name should be choose according to system language setting
@@ -43,8 +43,10 @@
     Modal dialog to let user input 
       レシピ (optional, only shown when development mode is on)
       バッチ名 (should not to be blank)
-      開始日  with calendar picker, saved as YYYY-MM-DD
-      終了日  with calendar picker, saved as YYYY-MM-DD
+	      開始日  with Flatpickr calendar picker, saved as YYYY-MM-DD or null when blank
+	        blank dates must render blank in Safari and Chrome
+	      終了日  with Flatpickr calendar picker, saved as YYYY-MM-DD or null when blank
+	        blank dates must render blank in Safari and Chrome
       fields from entity_attr_set in domain "batch" (all optional at create time)
     A cancel and confirm button 
     

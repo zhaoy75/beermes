@@ -33,11 +33,11 @@
           </div>
           <div>
             <label class="block text-sm text-gray-600 mb-1">{{ t('batchYield.filters.dateFrom') }}</label>
-            <input v-model="filters.dateFrom" type="date" class="w-full h-[40px] border rounded px-3" />
+            <AppDateTimePicker v-model="filters.dateFrom" class="w-full h-[40px] border rounded px-3" />
           </div>
           <div>
             <label class="block text-sm text-gray-600 mb-1">{{ t('batchYield.filters.dateTo') }}</label>
-            <input v-model="filters.dateTo" type="date" class="w-full h-[40px] border rounded px-3" />
+            <AppDateTimePicker v-model="filters.dateTo" class="w-full h-[40px] border rounded px-3" />
           </div>
         </form>
       </section>
@@ -122,6 +122,7 @@ import { computed, reactive, ref, watch, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
+import AppDateTimePicker from '@/components/common/AppDateTimePicker.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import {
   resolveBatchStyleName,

@@ -1,3 +1,4 @@
+<!-- eslint-disable vue/block-lang -->
 <template>
   <AdminLayout>
     <PageBreadcrumb :pageTitle="currentPageTitle" />
@@ -85,9 +86,8 @@
               @keyup.enter="createTodo"
             />
             <div class="flex flex-col gap-3 sm:flex-row sm:gap-2">
-              <input
+              <AppDateTimePicker
                 v-model="newTodoDue"
-                type="date"
                 class="w-full rounded-full border border-slate-200 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
               />
               <button
@@ -129,11 +129,13 @@
   </AdminLayout>
 </template>
 
+<!-- eslint-disable-next-line vue/block-lang -->
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, reactive, watch } from "vue";
 import { useI18n } from 'vue-i18n'
 import AdminLayout from "@/components/layout/AdminLayout.vue";
 import PageBreadcrumb from "@/components/common/PageBreadcrumb.vue";
+import AppDateTimePicker from '@/components/common/AppDateTimePicker.vue'
 
 const { t } = useI18n()
 const currentPageTitle = computed(() => t('dashboard.title'))

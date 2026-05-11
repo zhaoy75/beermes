@@ -108,11 +108,11 @@
               </div>
               <div>
                 <label class="mb-1 block text-xs font-medium text-gray-600">{{ t('batch.edit.stepStartedAt') }}</label>
-                <input v-model="stepForm.started_at" type="datetime-local" class="h-[36px] w-full rounded border px-2.5 text-sm" />
+                <AppDateTimePicker v-model="stepForm.started_at" mode="datetime" class="h-[36px] w-full rounded border px-2.5 text-sm" />
               </div>
               <div>
                 <label class="mb-1 block text-xs font-medium text-gray-600">{{ t('batch.edit.stepEndedAt') }}</label>
-                <input v-model="stepForm.ended_at" type="datetime-local" class="h-[36px] w-full rounded border px-2.5 text-sm" />
+                <AppDateTimePicker v-model="stepForm.ended_at" mode="datetime" class="h-[36px] w-full rounded border px-2.5 text-sm" />
               </div>
               <div>
                 <label class="mb-1 block text-xs font-medium text-gray-600">{{ t('batch.edit.stepDuration') }}</label>
@@ -240,7 +240,7 @@
                           </div>
                           <div>
                             <label class="mb-1 block text-xs font-medium text-gray-600">{{ t('batch.edit.stepConsumedAt') }}</label>
-                            <input v-model="displayRow.row.consumed_at" type="datetime-local" class="h-[36px] w-full rounded border px-2 text-sm" />
+                            <AppDateTimePicker v-model="displayRow.row.consumed_at" mode="datetime" class="h-[36px] w-full rounded border px-2 text-sm" />
                           </div>
                           <div>
                             <label class="mb-1 block text-xs font-medium text-gray-600">{{ t('batch.edit.notes') }}</label>
@@ -531,11 +531,11 @@
                     </div>
                     <div>
                       <label class="mb-1 block text-xs font-medium text-gray-600">{{ t('batch.edit.stepAssignedAt') }}</label>
-                      <input v-model="row.assigned_at" type="datetime-local" class="h-[36px] w-full rounded border px-2 text-sm" />
+                      <AppDateTimePicker v-model="row.assigned_at" mode="datetime" class="h-[36px] w-full rounded border px-2 text-sm" />
                     </div>
                     <div>
                       <label class="mb-1 block text-xs font-medium text-gray-600">{{ t('batch.edit.stepReleasedAt') }}</label>
-                      <input v-model="row.released_at" type="datetime-local" class="h-[36px] w-full rounded border px-2 text-sm" />
+                      <AppDateTimePicker v-model="row.released_at" mode="datetime" class="h-[36px] w-full rounded border px-2 text-sm" />
                     </div>
                     <div class="md:col-span-2 xl:col-span-3">
                       <label class="mb-1 block text-xs font-medium text-gray-600">{{ t('batch.edit.stepAssignmentNote') }}</label>
@@ -699,7 +699,7 @@
                       <input v-model.trim="row.result_value" type="text" class="h-[36px] w-full rounded border px-2" />
                     </td>
                     <td class="px-3 py-2">
-                      <input v-model="row.checked_at" type="datetime-local" class="h-[36px] w-full rounded border px-2" />
+                      <AppDateTimePicker v-model="row.checked_at" mode="datetime" class="h-[36px] w-full rounded border px-2" />
                     </td>
                     <td class="px-3 py-2">
                       <input v-model.trim="row.checked_by" type="text" class="h-[36px] w-full rounded border px-2" />
@@ -736,7 +736,7 @@
                       </select>
                     </td>
                     <td class="px-3 py-2">
-                      <input v-model="row.event_at" type="datetime-local" class="h-[36px] w-full rounded border px-2" />
+                      <AppDateTimePicker v-model="row.event_at" mode="datetime" class="h-[36px] w-full rounded border px-2" />
                     </td>
                     <td class="px-3 py-2">
                       <input v-model.trim="row.comment" type="text" class="h-[36px] w-full rounded border px-2" />
@@ -791,10 +791,10 @@
                       </select>
                     </td>
                     <td class="px-3 py-2">
-                      <input v-model="row.opened_at" type="datetime-local" class="h-[36px] w-full rounded border px-2" />
+                      <AppDateTimePicker v-model="row.opened_at" mode="datetime" class="h-[36px] w-full rounded border px-2" />
                     </td>
                     <td class="px-3 py-2">
-                      <input v-model="row.closed_at" type="datetime-local" class="h-[36px] w-full rounded border px-2" />
+                      <AppDateTimePicker v-model="row.closed_at" mode="datetime" class="h-[36px] w-full rounded border px-2" />
                     </td>
                     <td class="px-3 py-2">
                       <input v-model.trim="row.note" type="text" class="h-[36px] w-full rounded border px-2" />
@@ -820,6 +820,7 @@
 import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
+import AppDateTimePicker from '@/components/common/AppDateTimePicker.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { checkLotChronology, lotChronologyViolationMessage } from '@/lib/lotChronology'

@@ -38,7 +38,7 @@
 
 ### Rules
 - default planned start from = two months before today
-- `planned start from` and `planned start to` must use calendar-selectable date inputs
+- `planned start from` and `planned start to` must use the shared Flatpickr date picker
 - `planned start from` and `planned start to` are date-only `YYYY-MM-DD` values
 - `planned start to` is inclusive for the whole selected day and should be implemented as `< next day`
 - dynamic batch attribute filters follow `attr_def` data type behavior
@@ -156,8 +156,8 @@
 - input control follows `attr_def.data_type`:
   - `number`: numeric input with configured min/max
   - `bool`: checkbox
-  - `date`: date input
-  - `timestamp`: datetime-local input
+  - `date`: shared Flatpickr date picker
+  - `timestamp`: shared Flatpickr date-time picker
   - `json`: textarea with JSON validation
   - `ref`: select from configured reference options
   - text/enum: text input, with allowed-value validation when configured
@@ -168,8 +168,9 @@
 
 ### Rules
 - recipe is nullable
-- `planned start` and `planned end` must use calendar-selectable date inputs
+- `planned start` and `planned end` must use the shared Flatpickr date picker, not native `input[type="date"]`, so blank dates render blank consistently in Safari and Chrome
 - `planned start` and `planned end` are date-only `YYYY-MM-DD` values and should not show or save time
+- blank planned start and planned end values submit `null`
 - date attributes in the create dialog are saved to `entity_attr.value_date` as `YYYY-MM-DD`
 - if recipe is selected:
   - call `create_batch_from_recipe`

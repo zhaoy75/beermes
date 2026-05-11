@@ -25,20 +25,18 @@
         </div>
         <div>
           <label class="block text-sm text-gray-600 mb-1" for="plannedStart">{{ t('batch.create.plannedStart') }}</label>
-          <input
+          <AppDateTimePicker
             id="plannedStart"
             v-model="form.plannedStart"
-            type="date"
             class="w-full h-[40px] border rounded px-3"
             placeholder="YYYY-MM-DD"
           />
         </div>
         <div>
           <label class="block text-sm text-gray-600 mb-1" for="plannedEnd">{{ t('batch.create.plannedEnd') }}</label>
-          <input
+          <AppDateTimePicker
             id="plannedEnd"
             v-model="form.plannedEnd"
-            type="date"
             class="w-full h-[40px] border rounded px-3"
             placeholder="YYYY-MM-DD"
           />
@@ -112,22 +110,21 @@
                 </label>
               </template>
               <template v-else-if="field.data_type === 'date'">
-                <input
+                <AppDateTimePicker
                   :id="`batch-create-attr-${field.attr_id}`"
                   v-model="attrValues[String(field.attr_id)]"
-                  type="date"
                   :class="inputClass(field)"
-                  @input="validateAttrField(field)"
+                  @change="validateAttrField(field)"
                   @blur="validateAttrField(field)"
                 />
               </template>
               <template v-else-if="field.data_type === 'timestamp'">
-                <input
+                <AppDateTimePicker
                   :id="`batch-create-attr-${field.attr_id}`"
                   v-model="attrValues[String(field.attr_id)]"
-                  type="datetime-local"
+                  mode="datetime"
                   :class="inputClass(field)"
-                  @input="validateAttrField(field)"
+                  @change="validateAttrField(field)"
                   @blur="validateAttrField(field)"
                 />
               </template>
@@ -172,6 +169,7 @@
 <script setup lang="ts">
 import { reactive, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import AppDateTimePicker from '@/components/common/AppDateTimePicker.vue'
 import {
   normalizeBatchAttrDataType,
   validateBatchAttrField,

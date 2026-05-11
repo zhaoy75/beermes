@@ -29,11 +29,11 @@
           </div>
           <div>
             <label class="block text-sm text-gray-600 mb-1">{{ t('rawMaterialReceipts.filters.dateFrom') }}</label>
-            <input v-model="filters.dateFrom" type="date" class="w-full h-[40px] border rounded px-3" />
+            <AppDateTimePicker v-model="filters.dateFrom" class="w-full h-[40px] border rounded px-3" />
           </div>
           <div>
             <label class="block text-sm text-gray-600 mb-1">{{ t('rawMaterialReceipts.filters.dateTo') }}</label>
-            <input v-model="filters.dateTo" type="date" class="w-full h-[40px] border rounded px-3" />
+            <AppDateTimePicker v-model="filters.dateTo" class="w-full h-[40px] border rounded px-3" />
           </div>
           <div class="flex items-end gap-2">
             <button class="px-3 py-2 rounded border hover:bg-gray-50" type="button" @click="resetFilters">{{ t('common.reset') }}</button>
@@ -161,7 +161,7 @@
               </div>
               <div>
                 <label class="block text-sm text-gray-600 mb-1">{{ t('rawMaterialReceipts.form.movementDate') }}<span class="text-red-600">*</span></label>
-                <input v-model="form.movement_at" type="datetime-local" class="w-full h-[40px] border rounded px-3" :disabled="readOnly" />
+                <AppDateTimePicker v-model="form.movement_at" mode="datetime" class="w-full h-[40px] border rounded px-3" :disabled="readOnly" />
                 <p v-if="errors.movement_at" class="text-xs text-red-600 mt-1">{{ errors.movement_at }}</p>
               </div>
               <div>
@@ -272,10 +272,12 @@
 </template>
 
 <script setup lang="ts">
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { supabase } from '../../lib/supabase'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
+import AppDateTimePicker from '@/components/common/AppDateTimePicker.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'

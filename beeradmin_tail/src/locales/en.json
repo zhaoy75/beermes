@@ -424,6 +424,7 @@
         "attrAllowedValues": "{field} must match one of the configured values.",
         "attrJson": "{field} must be valid JSON.",
         "attrReference": "{field} reference value is invalid.",
+        "actualStartRequiredForPacking": "Save Actual start before opening Packing.",
         "saveFailed": "Failed to save batch information."
       },
       "relatedBatch": "Related batch",

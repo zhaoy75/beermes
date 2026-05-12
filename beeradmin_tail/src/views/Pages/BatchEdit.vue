@@ -518,6 +518,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
+import { toast } from 'vue3-toastify'
 import ConfirmActionDialog from '@/components/common/ConfirmActionDialog.vue'
 import AppDateTimePicker from '@/components/common/AppDateTimePicker.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
@@ -2112,12 +2113,25 @@ async function openLotDagPage() {
 
 async function goToPackingPage(eventId?: string) {
   if (!batchId.value) return
+  if (!hasSavedActualStart()) {
+    const message = t('batch.edit.errors.actualStartRequiredForPacking')
+    batchSaveError.value = message
+    toast.error(message)
+    return
+  }
   const query = eventId ? { eventId } : undefined
   await router.push({
     name: 'batchPacking',
     params: { batchId: batchId.value },
     query,
   })
+}
+
+function hasSavedActualStart() {
+  const actualStart = batch.value?.actual_start
+  return typeof actualStart === 'string'
+    ? actualStart.trim().length > 0
+    : actualStart != null
 }
 
 function openPackingDialog() {

@@ -32,6 +32,8 @@
 
 ### Navigation
 - Batch Packing button (移送詰口管理): navigate to Batch Packing page for current batch
+  - before navigation, saved `mes_batches.actual_start` must exist
+  - if `実績開始日` is entered in the form but not saved yet, block navigation and ask the user to save it first
 
 
 ## Field Definitions
@@ -51,10 +53,11 @@
 	  actual_yield_uom dropdown list from uom with domain volume
       actual_yield site dropdown list from mst_sites
         only sites with site_type = BREWERY_MANUFACTUR can be shown and selected
-    予定開始日  with shared Flatpickr calendar picker
-    予定終了日  with shared Flatpickr calendar picker
+    計画開始日  with shared Flatpickr calendar picker
+    計画終了日  with shared Flatpickr calendar picker
     実績開始日　with shared Flatpickr calendar picker
-      if no actual_start is saved, this field must stay blank; do not default from 予定開始日
+      if no actual_start is saved, this field must stay blank; do not default from 計画開始日
+      this value must be saved before the user can open 移送詰口管理 from this page
 　　 実績終了日  with shared Flatpickr calendar picker
     
     a horizontal line 

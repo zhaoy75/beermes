@@ -129,7 +129,7 @@
               />
             </button>
           </div>
-          <div class="lg:col-span-4">
+          <div class="lg:col-span-3">
             <label class="block text-sm text-gray-600 mb-1">{{
               t('producedBeer.movementFast.fields.movementIntent')
             }}</label>
@@ -139,7 +139,7 @@
               {{ movementIntentDisplay }}
             </div>
           </div>
-          <div class="lg:col-span-4">
+          <div class="lg:col-span-3">
             <label class="block text-sm text-gray-600 mb-1">{{
               t('producedBeer.movementFast.fields.taxEvent')
             }}</label>
@@ -149,7 +149,7 @@
               {{ derivedTaxEventDisplay }}
             </div>
           </div>
-          <div class="lg:col-span-4">
+          <div class="lg:col-span-3">
             <label class="block text-sm text-gray-600 mb-1">{{
               t('producedBeer.movementFast.fields.taxDecisionCode')
             }}</label>
@@ -168,7 +168,7 @@
               </option>
             </select>
           </div>
-          <div class="lg:col-span-12">
+          <div class="lg:col-span-3">
             <label class="block text-sm text-gray-600 mb-1">{{
               t('producedBeer.movementFast.fields.note')
             }}</label>
@@ -190,16 +190,6 @@
         </div>
 
         <div class="mt-3 border-t border-gray-100 pt-2">
-          <div class="flex items-center justify-between mb-2">
-            <div>
-              <h2 class="text-xs font-semibold uppercase tracking-wide text-gray-700">
-                {{ t('producedBeer.movementFast.panels.routes') }}
-              </h2>
-              <p class="text-xs text-gray-500">
-                {{ t('producedBeer.movementFast.hints.routes') }}
-              </p>
-            </div>
-          </div>
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-2">
             <section class="rounded-lg border border-gray-200 p-2">
               <h3 class="text-[11px] uppercase tracking-wide text-gray-400 mb-1">
@@ -262,46 +252,43 @@
           </section>
 
           <aside class="space-y-4">
-            <section class="border border-gray-200 rounded-2xl bg-white shadow-sm p-4 space-y-4">
+            <section class="border border-gray-200 rounded-2xl bg-white shadow-sm p-3 space-y-2">
               <div>
                 <h2 class="text-sm font-semibold text-gray-900">
                   {{ t('producedBeer.movementFast.panels.summary') }}
                 </h2>
-                <p class="text-xs text-gray-500">
-                  {{ t('producedBeer.movementFast.hints.summary') }}
-                </p>
               </div>
 
-              <dl class="space-y-2 text-sm">
-                <div class="flex items-center justify-between gap-4">
+              <dl class="space-y-1 text-xs">
+                <div class="flex items-center justify-between gap-3">
                   <dt class="text-gray-500">{{ t('producedBeer.movementFast.summary.route') }}</dt>
                   <dd class="text-right font-medium text-gray-900">{{ routeSummaryText }}</dd>
                 </div>
-                <div class="flex items-center justify-between gap-4">
+                <div class="flex items-center justify-between gap-3">
                   <dt class="text-gray-500">{{ t('producedBeer.movementFast.summary.policy') }}</dt>
                   <dd class="text-right font-medium text-gray-900">
                     {{ allocationPolicyLabel(routeForm.allocationPolicy) }}
                   </dd>
                 </div>
-                <div class="flex items-center justify-between gap-4">
+                <div class="flex items-center justify-between gap-3">
                   <dt class="text-gray-500">{{ t('producedBeer.movementFast.summary.intent') }}</dt>
                   <dd class="text-right font-medium text-gray-900">{{ movementIntentDisplay }}</dd>
                 </div>
-                <div class="flex items-center justify-between gap-4">
+                <div class="flex items-center justify-between gap-3">
                   <dt class="text-gray-500">{{ t('producedBeer.movementFast.summary.taxEvent') }}</dt>
                   <dd class="text-right font-medium text-gray-900">{{ derivedTaxEventDisplay }}</dd>
                 </div>
-                <div class="flex items-center justify-between gap-4">
+                <div class="flex items-center justify-between gap-3">
                   <dt class="text-gray-500">
                     {{ t('producedBeer.movementFast.summary.taxDecision') }}
                   </dt>
                   <dd class="text-right font-medium text-gray-900">{{ taxDecisionDisplay }}</dd>
                 </div>
-                <div class="flex items-center justify-between gap-4">
+                <div class="flex items-center justify-between gap-3">
                   <dt class="text-gray-500">{{ t('producedBeer.movementFast.summary.lines') }}</dt>
                   <dd class="text-right font-medium text-gray-900">{{ validLineCount }}</dd>
                 </div>
-                <div class="flex items-center justify-between gap-4">
+                <div class="flex items-center justify-between gap-3">
                   <dt class="text-gray-500">{{ t('producedBeer.movementFast.summary.totalQty') }}</dt>
                   <dd class="text-right font-medium text-gray-900">
                     {{ formatNumber(totalQtyLiters) }}
@@ -310,31 +297,31 @@
               </dl>
 
               <div>
-                <h3 class="text-xs uppercase tracking-wide text-gray-400 mb-2">
+                <h3 class="mb-1 text-[11px] uppercase tracking-wide text-gray-400">
                   {{ t('producedBeer.movementFast.panels.validation') }}
                 </h3>
-                <div class="space-y-2">
-                  <p v-if="displayErrors.length === 0 && validLineCount > 0" class="text-sm text-emerald-700">
+                <div class="space-y-1">
+                  <p v-if="displayErrors.length === 0 && validLineCount > 0" class="text-xs text-emerald-700">
                     {{ t('producedBeer.movementFast.labels.ready') }}
                   </p>
-                  <p v-else-if="displayErrors.length === 0" class="text-sm text-gray-500">
+                  <p v-else-if="displayErrors.length === 0" class="text-xs text-gray-500">
                     {{ t('common.noData') }}
                   </p>
-                  <p v-for="error in displayErrors" :key="error" class="text-sm text-red-600">
+                  <p v-for="error in displayErrors" :key="error" class="text-xs text-red-600">
                     {{ error }}
                   </p>
                 </div>
               </div>
 
               <div>
-                <h3 class="text-xs uppercase tracking-wide text-gray-400 mb-2">
+                <h3 class="mb-1 text-[11px] uppercase tracking-wide text-gray-400">
                   {{ t('producedBeer.movementFast.panels.warnings') }}
                 </h3>
-                <div class="space-y-2">
-                  <p v-if="warnings.length === 0" class="text-sm text-gray-500">
+                <div class="space-y-1">
+                  <p v-if="warnings.length === 0" class="text-xs text-gray-500">
                     {{ t('common.none') }}
                   </p>
-                  <p v-for="warning in warnings" :key="warning" class="text-sm text-amber-600">
+                  <p v-for="warning in warnings" :key="warning" class="text-xs text-amber-600">
                     {{ warning }}
                   </p>
                 </div>
@@ -342,7 +329,7 @@
 
               <div
                 v-if="routeForm.allocationPolicy === 'MANUAL'"
-                class="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800"
+                class="rounded-xl border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800"
               >
                 {{ t('producedBeer.movementFast.hints.manualMode') }}
               </div>

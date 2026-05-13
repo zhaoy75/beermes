@@ -1,20 +1,20 @@
 <template>
-  <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
-    <h2 class="text-xl font-semibold text-gray-800 dark:text-white/90" x-text="pageTitle">
+  <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+    <h2 class="text-lg font-semibold leading-6 text-gray-800 dark:text-white/90" x-text="pageTitle">
       {{ pageTitle }}
     </h2>
     <nav>
-      <ol class="flex items-center gap-1.5">
+      <ol class="flex items-center gap-1">
         <li>
           <router-link
-            class="inline-flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400"
+            class="inline-flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400"
             to="/"
           >
             Home
             <svg
               class="stroke-current"
-              width="17"
-              height="16"
+              width="14"
+              height="14"
               viewBox="0 0 17 16"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
@@ -29,7 +29,7 @@
             </svg>
           </router-link>
         </li>
-        <li class="text-sm text-gray-800 dark:text-white/90">
+        <li class="text-xs text-gray-800 dark:text-white/90">
           {{ pageTitle }}
         </li>
       </ol>

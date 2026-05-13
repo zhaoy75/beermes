@@ -4,11 +4,11 @@
   >
     <div class="flex flex-col items-center justify-between grow lg:flex-row lg:px-6">
       <div
-        class="flex items-center justify-between w-full gap-2 px-3 py-3 border-b border-gray-200 dark:border-gray-800 sm:gap-4 lg:justify-normal lg:border-b-0 lg:px-0 lg:py-4"
+        class="flex items-center justify-between w-full gap-2 px-3 py-1 border-b border-gray-200 dark:border-gray-800 sm:gap-4 lg:justify-normal lg:border-b-0 lg:px-0 lg:py-1"
       >
         <button
           @click="handleToggle"
-          class="flex items-center justify-center w-10 h-10 text-gray-500 border-gray-200 rounded-lg z-99999 dark:border-gray-800 dark:text-gray-400 lg:h-11 lg:w-11 lg:border"
+          class="flex items-center justify-center w-7 h-7 text-gray-500 border-gray-200 rounded-lg z-99999 dark:border-gray-800 dark:text-gray-400 lg:h-8 lg:w-8 lg:border"
           :class="[
             isMobileOpen
               ? 'lg:bg-transparent dark:lg:bg-transparent bg-gray-100 dark:bg-gray-800'
@@ -50,7 +50,7 @@
         <HeaderLogo />
         <button
           @click="toggleApplicationMenu"
-          class="flex items-center justify-center w-10 h-10 text-gray-700 rounded-lg z-99999 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 lg:hidden"
+          class="flex items-center justify-center w-7 h-7 text-gray-700 rounded-lg z-99999 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 lg:hidden"
         >
           <svg
             width="24"
@@ -72,12 +72,12 @@
 
       <div
         :class="[isApplicationMenuOpen ? 'flex' : 'hidden']"
-        class="items-center justify-between w-full gap-4 px-5 py-4 shadow-theme-md lg:flex lg:justify-end lg:px-0 lg:shadow-none"
+        class="items-center justify-between w-full gap-4 px-5 py-1 shadow-theme-md lg:flex lg:justify-end lg:px-0 lg:shadow-none"
       >
         <div class="flex items-center gap-2 2xsm:gap-3">
           <!-- <ThemeToggler /> -->
           <select
-            class="h-9 border rounded px-2 text-sm bg-white dark:bg-gray-900 dark:border-gray-700"
+            class="h-7 border rounded px-2 text-sm bg-white dark:bg-gray-900 dark:border-gray-700"
             v-model="lang"
             @change="onChangeLang"
             aria-label="Language selector"
@@ -97,7 +97,6 @@
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useSidebar } from '@/composables/useSidebar'
-import ThemeToggler from '../common/ThemeToggler.vue'
 import SearchBar from './header/SearchBar.vue'
 import HeaderLogo from './header/HeaderLogo.vue'
 import NotificationMenu from './header/NotificationMenu.vue'
@@ -111,14 +110,6 @@ const handleToggle = () => {
   } else {
     toggleMobileSidebar()
   }
-}
-
-const dropdownOpen = ref(false)
-const notifying = ref(false)
-
-const toggleDropdown = () => {
-  dropdownOpen.value = !dropdownOpen.value
-  notifying.value = false
 }
 
 const isApplicationMenuOpen = ref(false)

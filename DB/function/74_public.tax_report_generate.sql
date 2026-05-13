@@ -84,6 +84,69 @@ begin
       ml.id as movement_line_id,
       m.movement_at,
       m.doc_type::text as move_type,
+      upper(coalesce(
+        nullif(btrim(ml.meta ->> 'tax_attachment_form'), ''),
+        nullif(btrim(m.meta ->> 'tax_attachment_form'), ''),
+        nullif(btrim(ml.meta ->> 'tax_form'), ''),
+        nullif(btrim(m.meta ->> 'tax_form'), '')
+      )) as tax_attachment_form,
+      case
+        when nullif(btrim(ml.meta ->> 'reduced_tax_amount'), '') ~ '^[0-9]+(\.[0-9]+)?$' then
+          nullif(btrim(ml.meta ->> 'reduced_tax_amount'), '')::numeric
+        when nullif(btrim(m.meta ->> 'reduced_tax_amount'), '') ~ '^[0-9]+(\.[0-9]+)?$' then
+          nullif(btrim(m.meta ->> 'reduced_tax_amount'), '')::numeric
+        else null
+      end as reduced_tax_amount,
+      case
+        when nullif(btrim(ml.meta ->> 'disaster_compensation_amount'), '') ~ '^[0-9]+(\.[0-9]+)?$' then
+          nullif(btrim(ml.meta ->> 'disaster_compensation_amount'), '')::numeric
+        when nullif(btrim(m.meta ->> 'disaster_compensation_amount'), '') ~ '^[0-9]+(\.[0-9]+)?$' then
+          nullif(btrim(m.meta ->> 'disaster_compensation_amount'), '')::numeric
+        else null
+      end as disaster_compensation_amount,
+      coalesce(nullif(btrim(ml.meta ->> 'remarks'), ''), nullif(btrim(m.meta ->> 'remarks'), ''), nullif(btrim(ml.meta ->> 'notes'), ''), nullif(btrim(m.meta ->> 'notes'), '')) as remarks,
+      coalesce(nullif(btrim(ml.meta ->> 'removal_date'), ''), nullif(btrim(m.meta ->> 'removal_date'), '')) as removal_date,
+      coalesce(nullif(btrim(ml.meta ->> 'receipt_date'), ''), nullif(btrim(m.meta ->> 'receipt_date'), '')) as receipt_date,
+      case
+        when nullif(btrim(ml.meta ->> 'removal_temperature'), '') ~ '^-?[0-9]+(\.[0-9]+)?$' then
+          nullif(btrim(ml.meta ->> 'removal_temperature'), '')::numeric
+        when nullif(btrim(m.meta ->> 'removal_temperature'), '') ~ '^-?[0-9]+(\.[0-9]+)?$' then
+          nullif(btrim(m.meta ->> 'removal_temperature'), '')::numeric
+        else null
+      end as removal_temperature,
+      case
+        when nullif(btrim(ml.meta ->> 'receipt_temperature'), '') ~ '^-?[0-9]+(\.[0-9]+)?$' then
+          nullif(btrim(ml.meta ->> 'receipt_temperature'), '')::numeric
+        when nullif(btrim(m.meta ->> 'receipt_temperature'), '') ~ '^-?[0-9]+(\.[0-9]+)?$' then
+          nullif(btrim(m.meta ->> 'receipt_temperature'), '')::numeric
+        else null
+      end as receipt_temperature,
+      case
+        when nullif(btrim(ml.meta ->> 'receipt_abv'), '') ~ '^[0-9]+(\.[0-9]+)?$' then
+          nullif(btrim(ml.meta ->> 'receipt_abv'), '')::numeric
+        when nullif(btrim(m.meta ->> 'receipt_abv'), '') ~ '^[0-9]+(\.[0-9]+)?$' then
+          nullif(btrim(m.meta ->> 'receipt_abv'), '')::numeric
+        else null
+      end as receipt_abv,
+      case
+        when nullif(btrim(ml.meta ->> 'receipt_volume_ml'), '') ~ '^[0-9]+(\.[0-9]+)?$' then
+          nullif(btrim(ml.meta ->> 'receipt_volume_ml'), '')::numeric
+        when nullif(btrim(m.meta ->> 'receipt_volume_ml'), '') ~ '^[0-9]+(\.[0-9]+)?$' then
+          nullif(btrim(m.meta ->> 'receipt_volume_ml'), '')::numeric
+        else null
+      end as receipt_volume_ml,
+      case
+        when nullif(btrim(ml.meta ->> 'volume_delta_ml'), '') ~ '^-?[0-9]+(\.[0-9]+)?$' then
+          nullif(btrim(ml.meta ->> 'volume_delta_ml'), '')::numeric
+        when nullif(btrim(m.meta ->> 'volume_delta_ml'), '') ~ '^-?[0-9]+(\.[0-9]+)?$' then
+          nullif(btrim(m.meta ->> 'volume_delta_ml'), '')::numeric
+        else null
+      end as volume_delta_ml,
+      coalesce(nullif(btrim(ml.meta ->> 'importer_address'), ''), nullif(btrim(m.meta ->> 'importer_address'), '')) as importer_address,
+      coalesce(nullif(btrim(ml.meta ->> 'importer_name'), ''), nullif(btrim(m.meta ->> 'importer_name'), '')) as importer_name,
+      coalesce(nullif(btrim(ml.meta ->> 'receipt_place_address'), ''), nullif(btrim(m.meta ->> 'receipt_place_address'), '')) as receipt_place_address,
+      coalesce(nullif(btrim(ml.meta ->> 'receipt_place_name'), ''), nullif(btrim(m.meta ->> 'receipt_place_name'), '')) as receipt_place_name,
+      coalesce(nullif(btrim(ml.meta ->> 'receipt_purpose'), ''), nullif(btrim(m.meta ->> 'receipt_purpose'), '')) as receipt_purpose,
       coalesce(
         nullif(btrim(m.meta ->> 'tax_event'), ''),
         nullif(btrim(m.meta ->> 'tax_decision_code'), ''),
@@ -259,7 +322,7 @@ begin
     ) rate on true
     where s.raw_category_id is not null
       and s.volume_ml > 0
-      and coalesce(s.tax_event, '') not in ('NONE', 'RETURN_TO_FACTORY_NON_TAXABLE')
+      and coalesce(s.tax_event, '') <> 'NONE'
   ),
   line_amounts as (
     select
@@ -285,7 +348,24 @@ begin
           l.move_type || '-' || coalesce(l.tax_event, 'unknown') || '-' || l.category_id || '-' || coalesce(l.abv::text, 'na') || '-' || l.tax_rate_key
       end as key,
       min(l.move_type) as move_type,
+      min(l.movement_at)::date::text as movement_at,
       l.tax_event,
+      max(l.tax_attachment_form) as tax_attachment_form,
+      max(l.reduced_tax_amount) as reduced_tax_amount,
+      max(l.disaster_compensation_amount) as disaster_compensation_amount,
+      max(l.remarks) as remarks,
+      max(l.removal_date) as removal_date,
+      max(l.receipt_date) as receipt_date,
+      max(l.removal_temperature) as removal_temperature,
+      max(l.receipt_temperature) as receipt_temperature,
+      max(l.receipt_abv) as receipt_abv,
+      max(l.receipt_volume_ml) as receipt_volume_ml,
+      max(l.volume_delta_ml) as volume_delta_ml,
+      max(l.importer_address) as importer_address,
+      max(l.importer_name) as importer_name,
+      max(l.receipt_place_address) as receipt_place_address,
+      max(l.receipt_place_name) as receipt_place_name,
+      max(l.receipt_purpose) as receipt_purpose,
       l.category_id,
       l.category_code,
       l.category_name,
@@ -316,7 +396,24 @@ begin
         jsonb_build_object(
           'key', g.key,
           'move_type', g.move_type,
+          'movement_at', g.movement_at,
           'tax_event', g.tax_event,
+          'tax_attachment_form', g.tax_attachment_form,
+          'reduced_tax_amount', g.reduced_tax_amount,
+          'disaster_compensation_amount', g.disaster_compensation_amount,
+          'remarks', g.remarks,
+          'removal_date', g.removal_date,
+          'receipt_date', g.receipt_date,
+          'removal_temperature', g.removal_temperature,
+          'receipt_temperature', g.receipt_temperature,
+          'receipt_abv', g.receipt_abv,
+          'receipt_volume_ml', g.receipt_volume_ml,
+          'volume_delta_ml', g.volume_delta_ml,
+          'importer_address', g.importer_address,
+          'importer_name', g.importer_name,
+          'receipt_place_address', g.receipt_place_address,
+          'receipt_place_name', g.receipt_place_name,
+          'receipt_purpose', g.receipt_purpose,
           'categoryId', g.category_id,
           'categoryCode', g.category_code,
           'categoryName', g.category_name,
@@ -438,7 +535,7 @@ begin
   from source_lines s
   where s.raw_category_id is not null
     and s.volume_ml > 0
-    and coalesce(s.tax_event, '') not in ('NONE', 'RETURN_TO_FACTORY_NON_TAXABLE')
+    and coalesce(s.tax_event, '') <> 'NONE'
   on conflict do nothing;
 
   get diagnostics v_ref_count = row_count;
@@ -449,4 +546,4 @@ begin
   );
 end;
 $$;
-comment on function public.tax_report_generate(jsonb) is '{"version":1}';
+comment on function public.tax_report_generate(jsonb) is '{"version":2}';

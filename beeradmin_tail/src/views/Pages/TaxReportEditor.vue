@@ -1116,6 +1116,7 @@ import {
   fetchPriorFiscalYearStandardTaxAmount,
   type GeneratedTaxReportFile,
   inferStoredFileType,
+  isDisasterDeductionItem,
   mergeStoredFiles,
   normalizeReport,
   parseFileList,
@@ -2119,6 +2120,7 @@ function showValidationErrorToast() {
 
 async function buildSummaryXmlFile() {
   const summaryBreakdown = summaryItemsFromBreakdown(reportBreakdown.value)
+  const disasterBreakdown = disposeBreakdown.value.filter(isDisasterDeductionItem)
   if (summaryBreakdown.length === 0) return null
   const tenant = await ensureTenant()
   const priorStandardTaxAmount = await fetchPriorFiscalYearStandardTaxAmount({
@@ -2134,7 +2136,7 @@ async function buildSummaryXmlFile() {
     taxType: form.tax_type,
     taxYear: form.tax_year,
     taxMonth: form.tax_month,
-    breakdown: summaryBreakdown,
+    breakdown: [...summaryBreakdown, ...disasterBreakdown],
     profile: tenantProfile.value,
     tenantId: tenant,
     tenantName: tenantName.value,

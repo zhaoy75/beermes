@@ -32,6 +32,9 @@ export interface RLI0010_232_ReductionTotals {
   returnReducedTaxAmount: number
   netStandardTaxAmount: number
   netReducedTaxAmount: number
+  reimportDeductionTaxAmount?: number
+  disasterDeductionTaxAmount?: number
+  finalTaxAmount?: number
   cumulativeBeforeReturnStandardTaxAmount: number
   cumulativeAfterReturnStandardTaxAmount: number
   category: string
@@ -53,6 +56,8 @@ export interface RLI0010_232_Input {
   totals: {
     currentMonthStandardTaxAmount: number
     returnStandardTaxAmount: number
+    reimportDeductionTaxAmount?: number
+    disasterDeductionTaxAmount?: number
     netStandardTaxAmount: number
     totalTaxAmount: number
     refundableTaxAmount: number
@@ -66,6 +71,9 @@ export interface RLI0010_232_Input {
   breakdown: {
     summary: TaxVolumeItem[]
     returns: TaxVolumeItem[]
+    reimportDeductions: TaxVolumeItem[]
+    disasterDeductions: TaxVolumeItem[]
+    nonTaxableRemovals: TaxVolumeItem[]
     exportExempt: TaxVolumeItem[]
   }
   attachments: Array<{
@@ -86,6 +94,9 @@ export interface RLI0010_232_Result {
     LIA110: { included: boolean; pageCount: number; rowCount: number }
     LIA130: { included: boolean }
     LIA220: { included: boolean; pageCount: number; rowCount: number }
+    LIA230: { included: boolean; pageCount: number; rowCount: number }
+    LIA240: { included: boolean; pageCount: number; rowCount: number }
+    LIA250: { included: boolean; pageCount: number; rowCount: number }
     LIA260: { included: boolean; pageCount: number; rowCount: number }
   }
   validation: {

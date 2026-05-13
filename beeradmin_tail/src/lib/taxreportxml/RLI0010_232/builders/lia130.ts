@@ -14,7 +14,11 @@ export function buildLia130Xml(input: RLI0010_232_Input) {
       input.profile.SEIZOJO_NM ? element('EQB00000', emptyElement('EQB00020', { IDREF: 'SEIZOJO_NM' })) : '',
       buildDetailsXml(reduction),
       optionalElement('EQD00000', reduction.category),
-      element('EQE00000', optionalElement('EQE00040', amount(reduction.netReducedTaxAmount))),
+      element('EQE00000', joinXml([
+        optionalElement('EQE00020', amount(reduction.reimportDeductionTaxAmount ?? 0)),
+        optionalElement('EQE00030', amount(reduction.disasterDeductionTaxAmount ?? 0)),
+        optionalElement('EQE00040', amount(reduction.finalTaxAmount ?? reduction.netReducedTaxAmount)),
+      ])),
     ]),
     {
       VR: '1.0',

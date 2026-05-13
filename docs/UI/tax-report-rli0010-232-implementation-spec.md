@@ -18,11 +18,11 @@
   - `LIA110`
   - `LIA130`
   - `LIA220`
-- Optional forms that remain out of initial scope:
   - `LIA230`
   - `LIA240`
   - `LIA250`
   - `LIA260`
+- Optional form that remains out of initial scope:
   - `TENPU`
 
 ## Non-Goals
@@ -68,6 +68,9 @@ beeradmin_tail/src/lib/taxreportxml/
       lia110.ts
       lia130.ts
       lia220.ts
+      lia230.ts
+      lia240.ts
+      lia250.ts
     mappers/
       toIT.ts
       toLIA010.ts
@@ -220,6 +223,10 @@ type RLI0010_232_Result = {
     LIA110: { included: boolean; pageCount: number; rowCount: number }
     LIA130: { included: boolean }
     LIA220: { included: boolean; pageCount: number; rowCount: number }
+    LIA230: { included: boolean; pageCount: number; rowCount: number }
+    LIA240: { included: boolean; pageCount: number; rowCount: number }
+    LIA250: { included: boolean; pageCount: number; rowCount: number }
+    LIA260: { included: boolean; pageCount: number; rowCount: number }
   }
   validation: {
     businessValid: boolean
@@ -265,6 +272,10 @@ export const schemaMap = {
     LIA110: { required: true, version: '0.0.3', rowsPerPage: 18 },
     LIA130: { required: false, version: '1.0' },
     LIA220: { required: false, version: '0.0.2', rowsPerPage: 18 },
+    LIA230: { required: false, version: '2.0', rowsPerPage: 18 },
+    LIA240: { required: false, version: '2.0', rowsPerPage: 18 },
+    LIA250: { required: false, version: '2.0', rowsPerPage: 9 },
+    LIA260: { required: false, version: '3.0', rowsPerPage: 9 },
   },
   validation: {
     rootXsd: 'RLI0010-232.xsd',
@@ -322,6 +333,26 @@ export const schemaMap = {
 
 ### `mappers/toLIA220.ts`
 - Convert return-side breakdown rows into paged LIA220 payloads
+
+### `mappers/toLIA230.ts`
+- Convert re-import/re-removal deduction rows into paged LIA230 payloads.
+- Current source:
+  - `tax_event = RETURN_TO_FACTORY_NON_TAXABLE`
+  - or `tax_attachment_form = LIA230`
+- Include generated `区分 = 7` subtotal rows by alcohol code/category, ABV, and tax rate.
+
+### `mappers/toLIA240.ts`
+- Convert disaster deduction rows into paged LIA240 payloads.
+- Current source:
+  - `tax_attachment_form = LIA240`
+  - or rows carrying `disaster_compensation_amount`
+- Include generated `区分 = 7` subtotal rows by alcohol code/category, ABV, and tax rate.
+
+### `mappers/toLIA250.ts`
+- Convert non-taxable removal rows into paged LIA250 payloads.
+- Current source:
+  - `tax_event = NON_TAXABLE_REMOVAL`
+- Use movement/report date as the removal-date fallback when source metadata does not yet provide a specific removal date.
 
 ### `builders/*`
 - Render XML elements in schema order only
@@ -408,6 +439,50 @@ These are implementation assumptions based on the current template-driven flow.
   - subset of `volume_breakdown` where tax event is return/refund related
   - current practical assumption:
     - `RETURN_TO_FACTORY`
+
+### `LIA230`
+- Source:
+  - subset of `volume_breakdown` where `tax_event = RETURN_TO_FACTORY_NON_TAXABLE`
+  - or rows tagged with `tax_attachment_form = LIA230`
+- Optional metadata copied from movement/line `meta`:
+  - `reduced_tax_amount`
+  - `remarks`
+  - `receipt_purpose`
+- Deduction total source:
+  - prefer `reduced_tax_amount`
+  - fallback to `tax_amount`
+  - fallback to calculated `volume_l / 1000 * tax_rate`
+
+### `LIA240`
+- Source:
+  - rows tagged with `tax_attachment_form = LIA240`
+  - or rows carrying `disaster_compensation_amount`
+- Optional metadata copied from movement/line `meta`:
+  - `disaster_compensation_amount`
+  - `reduced_tax_amount`
+  - `remarks`
+- Deduction total source:
+  - prefer `disaster_compensation_amount`
+  - fallback to `tax_amount`
+  - fallback to calculated `volume_l / 1000 * tax_rate`
+
+### `LIA250`
+- Source:
+  - subset of `volume_breakdown` where `tax_event = NON_TAXABLE_REMOVAL`
+- Optional metadata copied from movement/line `meta`:
+  - `removal_date`
+  - `receipt_date`
+  - `removal_temperature`
+  - `receipt_temperature`
+  - `receipt_abv`
+  - `receipt_volume_ml`
+  - `volume_delta_ml`
+  - `importer_address`
+  - `importer_name`
+  - `receipt_place_address`
+  - `receipt_place_name`
+  - `receipt_purpose`
+  - `remarks`
 
 ### `CATALOG`
 - Source:

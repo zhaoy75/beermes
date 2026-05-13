@@ -14,6 +14,18 @@ export function buildLia220Id(page: number) {
   return `LIA220-${page}`
 }
 
+export function buildLia230Id(page: number) {
+  return `LIA230-${page}`
+}
+
+export function buildLia240Id(page: number) {
+  return `LIA240-${page}`
+}
+
+export function buildLia250Id(page: number) {
+  return `LIA250-${page}`
+}
+
 export function buildLia260Id(page: number) {
   return `LIA260-${page}`
 }

@@ -1,4 +1,6 @@
 import { buildXml } from './builders/root'
+import { buildLia230OutputRows } from './builders/lia230'
+import { buildLia240OutputRows } from './builders/lia240'
 import { reportName } from './constants'
 import { schemaMap } from './schemaMap'
 import type { RLI0010_232_Input, RLI0010_232_Result } from './types'
@@ -35,6 +37,9 @@ export async function generateRLI0010_232(options: Options): Promise<RLI0010_232
     })
   }
 
+  const lia230OutputRows = buildLia230OutputRows(input.breakdown.reimportDeductions)
+  const lia240OutputRows = buildLia240OutputRows(input.breakdown.disasterDeductions)
+
   return {
     reportName,
     xml,
@@ -58,6 +63,27 @@ export async function generateRLI0010_232(options: Options): Promise<RLI0010_232
           ? Math.ceil(input.breakdown.returns.length / schemaMap.forms.LIA220.rowsPerPage)
           : 0,
         rowCount: input.breakdown.returns.length,
+      },
+      LIA230: {
+        included: lia230OutputRows.length > 0,
+        pageCount: lia230OutputRows.length > 0
+          ? Math.ceil(lia230OutputRows.length / schemaMap.forms.LIA230.rowsPerPage)
+          : 0,
+        rowCount: lia230OutputRows.length,
+      },
+      LIA240: {
+        included: lia240OutputRows.length > 0,
+        pageCount: lia240OutputRows.length > 0
+          ? Math.ceil(lia240OutputRows.length / schemaMap.forms.LIA240.rowsPerPage)
+          : 0,
+        rowCount: lia240OutputRows.length,
+      },
+      LIA250: {
+        included: input.breakdown.nonTaxableRemovals.length > 0,
+        pageCount: input.breakdown.nonTaxableRemovals.length > 0
+          ? Math.ceil(input.breakdown.nonTaxableRemovals.length / schemaMap.forms.LIA250.rowsPerPage)
+          : 0,
+        rowCount: input.breakdown.nonTaxableRemovals.length,
       },
       LIA260: {
         included: input.breakdown.exportExempt.length > 0,

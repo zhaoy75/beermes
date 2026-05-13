@@ -300,6 +300,7 @@ import {
   disposeItemsFromBreakdown,
   fetchPriorFiscalYearStandardTaxAmount,
   inferStoredFileType,
+  isDisasterDeductionItem,
   isDisposeFilename,
   normalizeReport,
   resolveTaxEvent,
@@ -614,7 +615,10 @@ async function downloadXmlForRowFile(row: TaxReportRow, file: TaxReportStoredFil
 
   const breakdown = dispose
     ? disposeItemsFromBreakdown(row.volume_breakdown)
-    : summaryItemsFromBreakdown(row.volume_breakdown)
+    : [
+        ...summaryItemsFromBreakdown(row.volume_breakdown),
+        ...disposeItemsFromBreakdown(row.volume_breakdown).filter(isDisasterDeductionItem),
+      ]
   if (!breakdown.length) {
     toast.info(t('taxReport.emptyBreakdown'))
     return

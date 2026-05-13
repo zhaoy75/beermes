@@ -1008,3 +1008,67 @@ I want to compact tables with 7 above columns for usability. do you have some id
 - user dropdown menu for action (操作) if there are multiple actions for one record
 - use icons for actions instead of text to save space
 - if some columns are very long, consider compact it  and using focusing tooltip to show full content when user hover over the cell
+
+Still Not Implemented
+
+
+LIA230 移入酒類の再移出等控除(還付)税額計算書 is not implemented, though the guide section 4 requires it when applicable and the root schema allows it.
+
+LIA240 被災酒類に対する酒税の控除(還付)明細書 is not implemented, though the guide section 5 requires it when applicable.
+
+LIA250 未納税移出免税明細書 is not implemented, though RLI0010-232.xsd supports it.
+
+TENPU image/document attachments are not emitted in XML. The UI records attachment names, but XML generation passes attachments: []: taxReport.ts (line 1001).
+
+Actual upload/association of customer attachment PDFs for e-Tax submission is incomplete; save uploads generated files, not the user-selected attachment files: TaxReportEditor.vue (line 2265).
+
+LIA010 declaration type is hardcoded to kubun_CD=1, so deadline-after, amendment, and refund-claim declaration flows are not supported: lia010.ts (line 30).
+
+Current LIA010-004 fields EFJ00000 and EFK00000 are not emitted: LIA010-004.xsd (line 72).
+
+Tax accountant document flags EFF00010 / EFF00020 are not emitted.
+
+EFH00000 期限後申告等の理由 is not supported.
+
+
+Still Problematic
+
+
+LIA130 reduction calculation is too simplified. It hardcodes category Ａ and rate 0.8: taxReport.ts (line 83). The guide says the category must be chosen from A-D based on prior-year taxable removal volume.
+
+LIA130 only populates the 0円～5,000万円以下 band. The schema has additional bands for 5,000万円超～8,000万円以下, 8,000万円超～1億円以下, and 1億円超, but the builder does not populate them: lia130.ts (line 41), LIA130-001.xsd (line 176).
+
+LIA130 “all manufacturing sites” and “selected manufacturing site” amounts are treated as the same value. The guide distinguishes 全製造場 and 申告対象製造場.
+
+LIA130 final total omits non-reduced liquor tax, re-import deductions, and disaster deductions: EQE00010, EQE00020, EQE00030 are not emitted; only EQE00040 is emitted: lia130.ts (line 17).
+
+LIA110 区分 is derived from tax event, not from the special-measure/Okinawa/non-target category described in the guide. Taxable removal becomes 1, export/non-taxable becomes 0: taxReport.ts (line 222). This likely misclassifies rows.
+
+Quantities are rounded to milliliters, but the guide requires subtotal quantities with fractions under 10 ml to be truncated. Current builders use Math.round(value * 1000): lia110.ts (line 84), lia220.ts (line 79).
+
+XSD validation can be disabled by env flag, and if no validator URL is configured generation fails at runtime rather than being guaranteed by tests/fixtures: xsd.ts (line 22).
+
+Source data model does not capture enough inputs for the guide’s full scenario: prior-year category volumes, all-factory cumulative tax, re-import/raw-material deductions, disaster compensation, return-before cumulative bands, and attachment metadata.
+
+
+【酒税申告で未実装機能】
+
+・軽減税率の先月までの納税累計額の入力対応
+・ビール分類、ABVの変更対応
+・
+
+
+被災酒類に対する酒税の控除(還付)明細書
+
+LIA010 の申告区分が kubun_CD=1 にハードコードされているため、期限後申告、修正申告、還付請求申告のフローに対応できていません。lia010.ts（30行目）。
+
+LIA130の軽減税額計算が簡略化されすぎています。taxReport.ts（83行目）では、区分Aおよび率0.8がハードコードされています。手引きでは、前年の課税移出数量に基づいてA〜Dの区分を選択する必要があるとされています。
+
+LIA130では、「0円〜5,000万円以下」の区分しか設定されていません。スキーマには「5,000万円超〜8,000万円以下」「8,000万円超〜1億円以下」「1億円超」の区分も定義されていますが、ビルダーではこれらが設定されていません。該当箇所は lia130.ts（41行目）および LIA130-001.xsd（176行目）です。
+
+LIA130では、「全製造場」と「申告対象製造場」の金額が同じ値として扱われています。しかし、手引きでは「全製造場」と「申告対象製造場」は区別されています。
+
+LIA130の最終合計では、軽減前の酒税額、再移入控除、災害控除が含まれていません。EQE00010、EQE00020、EQE00030 が出力されておらず、EQE00040 のみが出力されています。該当箇所は lia130.ts（17行目）です。
+
+LIA110の「区分」は、手引きに記載されている特例措置・沖縄・対象外の区分ではなく、税イベントから導出されています。課税移出は1、輸出・非課税移出は0になっています。該当箇所は taxReport.ts（222行目）です。これにより、行が誤分類される可能性が高いです。
+

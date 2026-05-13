@@ -69,7 +69,7 @@
     - `RETURN_TO_FACTORY` contributes to `LIA220`, not to `LIA110`
   - `LIA130` row `⑭ 申告対象製造場 合計酒税額` is transferred to `LIA010` tax amount field `①`.
   - `LIA260` is the export detail attachment corresponding to export-exempt quantities, not a replacement for `LIA110` summary quantities.
-  - The guide and form list also include `LIA230`, `LIA240`, and `LIA250`; these remain future tabs unless the current business scope requires them.
+  - The guide and form list also include `LIA230`, `LIA240`, and `LIA250`; XML generation now includes these forms when source rows exist, while full editor tabs/previews remain future UI work.
 
 ## Page Layout
 ### Header
@@ -129,6 +129,10 @@
 - Edit-mode field-list panels should use compact rows and internal scrolling when the field list is long, so the panel does not consume excessive vertical space.
 - Tabs for optional forms should remain visible when the form is relevant to the current report.
 - Empty optional forms should show a clear empty state in edit mode and a blank/empty official-style form in preview mode only when that helps review.
+- Current optional XML-only forms without full tabs:
+  - `LIA230`
+  - `LIA240`
+  - `LIA250`
 
 ### LIA010 Panel (`酒税納税申告書`)
 - Edit mode:
@@ -624,6 +628,22 @@
   - `EOD00010/kubun_CD` uses the same tax-rate application code semantics as the guide
   - uses the report period date as the fallback `EOD00090` date until movement-level export date is persisted
   - omits optional destination/customs-office fields when source data is unavailable; do not write placeholder filing values
+- `LIA230` output:
+  - enabled when rows exist where `tax_event = RETURN_TO_FACTORY_NON_TAXABLE` or `tax_attachment_form = LIA230`
+  - outputs detail rows and generated `区分 = 7` subtotal rows
+  - outputs up to 18 rows per page
+  - contributes its deduction total to `LIA130/EQE00020`
+- `LIA240` output:
+  - enabled when rows are tagged `tax_attachment_form = LIA240` or carry `disaster_compensation_amount`
+  - outputs detail rows and generated `区分 = 7` subtotal rows
+  - outputs up to 18 rows per page
+  - contributes its deduction total to `LIA130/EQE00030`
+- `LIA250` output:
+  - enabled when `NON_TAXABLE_REMOVAL` rows exist
+  - outputs up to 9 rows per page
+  - uses movement/report date as a fallback removal date when source metadata has no explicit removal date
+- `LIA130` final total:
+  - `EQE00040` subtracts `LIA230` and `LIA240` deduction totals from the current supported reduced-tax amount.
 - File name format:
   - `R<n>年<m>月_納税申告.xtx`
 - Save behavior:

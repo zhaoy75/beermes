@@ -38,6 +38,24 @@ export interface TaxVolumeItem {
   export_exempt_volume_l?: number | null
   taxable_volume_l?: number | null
   tax_amount?: number | null
+  tax_attachment_form?: string | null
+  reduced_tax_amount?: number | null
+  disaster_compensation_amount?: number | null
+  remarks?: string | null
+  movement_at?: string | null
+  removal_date?: string | null
+  receipt_date?: string | null
+  removal_temperature?: number | null
+  receipt_temperature?: number | null
+  receipt_abv?: number | null
+  receipt_volume_l?: number | null
+  receipt_volume_ml?: number | null
+  volume_delta_ml?: number | null
+  importer_address?: string | null
+  importer_name?: string | null
+  receipt_place_address?: string | null
+  receipt_place_name?: string | null
+  receipt_purpose?: string | null
   export_date?: string | null
   export_destination?: string | null
   export_customs_office?: string | null
@@ -202,6 +220,20 @@ export function isTaxAffectingMoveType(value: string, taxEvent?: string | null) 
 
 export function isReturnTaxEvent(moveType: string, taxEvent?: string | null) {
   return resolveTaxEvent(moveType, taxEvent) === 'RETURN_TO_FACTORY'
+}
+
+export function isReimportDeductionItem(item: TaxVolumeItem) {
+  return normalizeAttachmentForm(item.tax_attachment_form) === 'LIA230' ||
+    resolveTaxEvent(item.move_type, item.tax_event) === 'RETURN_TO_FACTORY_NON_TAXABLE'
+}
+
+export function isDisasterDeductionItem(item: TaxVolumeItem) {
+  return normalizeAttachmentForm(item.tax_attachment_form) === 'LIA240' ||
+    Number.isFinite(item.disaster_compensation_amount)
+}
+
+export function isNonTaxableRemovalItem(item: TaxVolumeItem) {
+  return resolveTaxEvent(item.move_type, item.tax_event) === 'NON_TAXABLE_REMOVAL'
 }
 
 export function isGeneratedTaxVolumeItem(item: Pick<TaxVolumeItem, 'row_role'>) {
@@ -507,6 +539,24 @@ export function normalizeReport(row: JsonMap): TaxReportRow {
                 ? Number(record.taxRate)
                 : null,
         tax_amount: toNullableNumber(record.tax_amount ?? record.taxAmount),
+        tax_attachment_form: toNullableString(record.tax_attachment_form ?? record.taxAttachmentForm),
+        reduced_tax_amount: toNullableNumber(record.reduced_tax_amount ?? record.reducedTaxAmount),
+        disaster_compensation_amount: toNullableNumber(record.disaster_compensation_amount ?? record.disasterCompensationAmount),
+        remarks: toNullableString(record.remarks ?? record.notes),
+        movement_at: toNullableString(record.movement_at ?? record.movementAt),
+        removal_date: toNullableString(record.removal_date ?? record.removalDate),
+        receipt_date: toNullableString(record.receipt_date ?? record.receiptDate),
+        removal_temperature: toNullableNumber(record.removal_temperature ?? record.removalTemperature),
+        receipt_temperature: toNullableNumber(record.receipt_temperature ?? record.receiptTemperature),
+        receipt_abv: toNullableNumber(record.receipt_abv ?? record.receiptAbv),
+        receipt_volume_l: toNullableNumber(record.receipt_volume_l ?? record.receiptVolumeL),
+        receipt_volume_ml: toNullableNumber(record.receipt_volume_ml ?? record.receiptVolumeMl),
+        volume_delta_ml: toNullableNumber(record.volume_delta_ml ?? record.volumeDeltaMl),
+        importer_address: toNullableString(record.importer_address ?? record.importerAddress),
+        importer_name: toNullableString(record.importer_name ?? record.importerName),
+        receipt_place_address: toNullableString(record.receipt_place_address ?? record.receiptPlaceAddress),
+        receipt_place_name: toNullableString(record.receipt_place_name ?? record.receiptPlaceName),
+        receipt_purpose: toNullableString(record.receipt_purpose ?? record.receiptPurpose),
         export_date: toNullableString(record.export_date ?? record.exportDate),
         export_destination: toNullableString(record.export_destination ?? record.exportDestination),
         export_customs_office: toNullableString(record.export_customs_office ?? record.exportCustomsOffice),
@@ -641,6 +691,12 @@ function createLia220DetailRow(item: TaxVolumeItem): TaxVolumeItem {
     row_role: 'detail',
     kubun_code: 1,
   }
+}
+
+function normalizeAttachmentForm(value: unknown) {
+  if (typeof value !== 'string') return null
+  const normalized = value.trim().toUpperCase()
+  return normalized || null
 }
 
 function createLia220SubtotalRow(group: {
@@ -875,10 +931,14 @@ function buildLia130ReductionTotals(options: {
   priorFiscalYearStandardTaxAmount: number
   currentMonthStandardTaxAmount: number
   returnStandardTaxAmount: number
+  reimportDeductionTaxAmount?: number
+  disasterDeductionTaxAmount?: number
 }): RLI0010_232_ReductionTotals {
   const priorFiscalYearStandardTaxAmount = roundNonNegativeTax(options.priorFiscalYearStandardTaxAmount)
   const currentMonthStandardTaxAmount = roundNonNegativeTax(options.currentMonthStandardTaxAmount)
   const returnStandardTaxAmount = roundNonNegativeTax(options.returnStandardTaxAmount)
+  const reimportDeductionTaxAmount = roundNonNegativeTax(options.reimportDeductionTaxAmount ?? 0)
+  const disasterDeductionTaxAmount = roundNonNegativeTax(options.disasterDeductionTaxAmount ?? 0)
   const netStandardTaxAmount = roundNonNegativeTax(currentMonthStandardTaxAmount - returnStandardTaxAmount)
   const cumulativeBeforeReturnStandardTaxAmount = roundNonNegativeTax(
     priorFiscalYearStandardTaxAmount + currentMonthStandardTaxAmount,
@@ -888,6 +948,7 @@ function buildLia130ReductionTotals(options: {
   )
   const currentMonthReducedTaxAmount = reducedTaxAmount(currentMonthStandardTaxAmount)
   const returnReducedTaxAmount = reducedTaxAmount(returnStandardTaxAmount)
+  const netReducedTaxAmount = roundNonNegativeTax(currentMonthReducedTaxAmount - returnReducedTaxAmount)
 
   return {
     included: true,
@@ -897,7 +958,10 @@ function buildLia130ReductionTotals(options: {
     returnStandardTaxAmount,
     returnReducedTaxAmount,
     netStandardTaxAmount,
-    netReducedTaxAmount: roundNonNegativeTax(currentMonthReducedTaxAmount - returnReducedTaxAmount),
+    netReducedTaxAmount,
+    reimportDeductionTaxAmount,
+    disasterDeductionTaxAmount,
+    finalTaxAmount: roundNonNegativeTax(netReducedTaxAmount - reimportDeductionTaxAmount - disasterDeductionTaxAmount),
     cumulativeBeforeReturnStandardTaxAmount,
     cumulativeAfterReturnStandardTaxAmount,
     category: LIA130_REDUCTION_CATEGORY,
@@ -948,11 +1012,20 @@ export async function buildXmlPayload(options: {
     ? []
     : buildLia220ReturnRows(sourceBreakdown)
   const returnSubtotalItems = returnItems.filter(isLia220SubtotalRow)
+  const reimportDeductionItems = disposeOnly
+    ? []
+    : sourceBreakdown.filter(isReimportDeductionItem)
+  const disasterDeductionItems = sourceBreakdown.filter(isDisasterDeductionItem)
+  const nonTaxableRemovalItems = disposeOnly
+    ? []
+    : sourceBreakdown.filter(isNonTaxableRemovalItem)
   const exportExemptItems = disposeOnly
     ? []
     : sourceBreakdown.filter((item) => resolveTaxEvent(item.move_type, item.tax_event) === 'EXPORT_EXEMPT')
   const currentMonthStandardTaxAmount = roundNonNegativeTax(calculateTaxTotalAmount(lia110DetailItems))
   const returnStandardTaxAmount = roundNonNegativeTax(Math.abs(calculateTaxTotalAmount(returnSubtotalItems)))
+  const reimportDeductionTaxAmount = calculateDeductionTotalAmount(reimportDeductionItems)
+  const disasterDeductionTaxAmount = calculateDisasterDeductionTotalAmount(disasterDeductionItems)
   const rawNetStandardTaxAmount = currentMonthStandardTaxAmount - returnStandardTaxAmount
   const netStandardTaxAmount = roundNonNegativeTax(rawNetStandardTaxAmount)
   const rawTotalTaxAmount = disposeOnly ? calculateTaxTotalAmount(sourceBreakdown) : rawNetStandardTaxAmount
@@ -961,9 +1034,12 @@ export async function buildXmlPayload(options: {
         priorFiscalYearStandardTaxAmount,
         currentMonthStandardTaxAmount,
         returnStandardTaxAmount,
+        reimportDeductionTaxAmount,
+        disasterDeductionTaxAmount,
       })
     : undefined
-  const totalTaxAmount = reduction?.netReducedTaxAmount ?? nonNegativeYen(rawTotalTaxAmount)
+  const totalTaxAmount = reduction?.finalTaxAmount ??
+    nonNegativeYen(rawTotalTaxAmount - reimportDeductionTaxAmount - disasterDeductionTaxAmount)
   const roundedDownAmount = totalTaxAmount > 0 ? totalTaxAmount % 100 : 0
   const payableTaxAmount = Math.max(0, totalTaxAmount - roundedDownAmount)
   const refundableTaxAmount = Math.max(0, truncateYen(rawTotalTaxAmount < 0 ? Math.abs(rawTotalTaxAmount) : 0))
@@ -985,6 +1061,8 @@ export async function buildXmlPayload(options: {
       totals: {
         currentMonthStandardTaxAmount,
         returnStandardTaxAmount,
+        reimportDeductionTaxAmount,
+        disasterDeductionTaxAmount,
         netStandardTaxAmount,
         totalTaxAmount,
         refundableTaxAmount,
@@ -996,6 +1074,9 @@ export async function buildXmlPayload(options: {
       breakdown: {
         summary: summaryItems,
         returns: returnItems,
+        reimportDeductions: reimportDeductionItems,
+        disasterDeductions: disasterDeductionItems,
+        nonTaxableRemovals: nonTaxableRemovalItems,
         exportExempt: exportExemptItems,
       },
       attachments: [],
@@ -1003,6 +1084,25 @@ export async function buildXmlPayload(options: {
   })
 
   return result.xml
+}
+
+function calculateDeductionTotalAmount(items: TaxVolumeItem[]) {
+  return roundNonNegativeTax(sumNumbers(items.map((item) => deductionTaxAmountForItem(item))))
+}
+
+function calculateDisasterDeductionTotalAmount(items: TaxVolumeItem[]) {
+  return roundNonNegativeTax(sumNumbers(items.map((item) => {
+    if (Number.isFinite(item.disaster_compensation_amount)) {
+      return Number(item.disaster_compensation_amount)
+    }
+    return deductionTaxAmountForItem(item)
+  })))
+}
+
+function deductionTaxAmountForItem(item: TaxVolumeItem) {
+  if (Number.isFinite(item.reduced_tax_amount)) return Math.abs(Number(item.reduced_tax_amount))
+  if (Number.isFinite(item.tax_amount)) return Math.abs(Number(item.tax_amount))
+  return taxAmountFromLiters(item.volume_l || 0, item.tax_rate || 0)
 }
 
 export async function uploadGeneratedTaxReportFiles(options: {

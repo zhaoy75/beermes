@@ -2,36 +2,22 @@
   <AdminLayout>
     <PageBreadcrumb :pageTitle="pageTitle" />
     <div class="min-h-screen bg-white text-gray-900 p-4 space-y-4">
-      <header
-        class="sticky top-0 z-20 -mx-4 px-4 py-3 border-b border-gray-200 bg-white/95 backdrop-blur"
-      >
-        <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <header class="sticky top-0 z-20 -mx-4 px-4 py-1 bg-white/95 backdrop-blur">
+        <div class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h1 class="text-xl font-semibold">{{ t('producedBeer.movementFast.title') }}</h1>
-            <p class="text-sm text-gray-500">{{ t('producedBeer.movementFast.subtitle') }}</p>
+            <!-- <p class="text-sm text-gray-500">{{ t('producedBeer.movementFast.subtitle') }}</p> -->
           </div>
           <div class="flex flex-wrap items-center gap-2">
-            <button
-              class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-50"
-              type="button"
-              @click="goBack"
-            >
+            <button class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-50" type="button" @click="goBack">
               {{ t('producedBeer.movementFast.actions.back') }}
             </button>
-            <button
-              class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
-              type="button"
-              :disabled="saving"
-              @click="submit('post')"
-            >
+            <button class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-50 disabled:opacity-50" type="button"
+              :disabled="saving" @click="submit('post')">
               {{ t('producedBeer.movementFast.actions.post') }}
             </button>
-            <button
-              class="px-3 py-2 rounded bg-gray-900 text-white hover:bg-gray-800 disabled:opacity-50"
-              type="button"
-              :disabled="saving"
-              @click="submit('next')"
-            >
+            <button class="px-3 py-2 rounded bg-gray-900 text-white hover:bg-gray-800 disabled:opacity-50" type="button"
+              :disabled="saving" @click="submit('next')">
               {{ t('producedBeer.movementFast.actions.postNext') }}
             </button>
           </div>
@@ -39,220 +25,169 @@
       </header>
 
       <section class="sticky top-[88px] z-10">
-        <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_20rem] gap-4 items-start">
+        <div class="grid grid-cols-1 items-stretch gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
           <section class="border border-gray-200 rounded-2xl bg-white shadow-sm p-4">
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
-          <div class="lg:col-span-3">
-            <label class="block text-sm text-gray-600 mb-1">{{
-              t('producedBeer.movementFast.fields.fromSite')
-            }}</label>
-            <select
-              v-model="routeForm.fromSiteId"
-              class="w-full h-[42px] border rounded-lg px-3 bg-white"
-            >
-              <option value="">{{ t('common.select') }}</option>
-              <option v-for="site in sourceSiteOptions" :key="site.id" :value="site.id">
-                {{ siteOptionLabel(site) }}
-              </option>
-            </select>
-          </div>
-          <div class="lg:col-span-1 flex items-end">
-            <button
-              class="w-full h-[42px] rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
-              type="button"
-              :disabled="!routeForm.fromSiteId && !routeForm.toSiteId"
-              @click="swapRoute"
-            >
-              {{ t('producedBeer.movementFast.actions.swap') }}
-            </button>
-          </div>
-          <div class="lg:col-span-3">
-            <label class="block text-sm text-gray-600 mb-1">{{
-              t('producedBeer.movementFast.fields.toSite')
-            }}</label>
-            <select
-              v-model="routeForm.toSiteId"
-              class="w-full h-[42px] border rounded-lg px-3 bg-white"
-            >
-              <option value="">{{ t('common.select') }}</option>
-              <option v-for="site in destinationSiteOptions" :key="site.id" :value="site.id">
-                {{ siteOptionLabel(site) }}
-              </option>
-            </select>
-          </div>
-          <div class="lg:col-span-2">
-            <label class="block text-sm text-gray-600 mb-1">{{
-              t('producedBeer.movementFast.fields.movedAt')
-            }}</label>
-            <AppDateTimePicker
-              v-model="routeForm.movedAt"
-              mode="datetime"
-              class="w-full h-[42px] border rounded-lg px-3"
-            />
-          </div>
-          <div class="lg:col-span-2">
-            <label class="block text-sm text-gray-600 mb-1">{{
-              t('producedBeer.movementFast.fields.allocationPolicy')
-            }}</label>
-            <select
-              v-model="routeForm.allocationPolicy"
-              class="w-full h-[42px] border rounded-lg px-3 bg-white"
-            >
-              <option v-for="option in allocationOptions" :key="option.value" :value="option.value">
-                {{ option.label }}
-              </option>
-            </select>
-          </div>
-          <div class="lg:col-span-1">
-            <label class="mb-1 block select-none text-sm text-transparent">
-              &nbsp;
-            </label>
-            <button
-              class="flex h-[42px] w-full items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-500 hover:bg-gray-50 hover:text-amber-500 disabled:opacity-50"
-              type="button"
-              :disabled="!canToggleFavorite"
-              :title="
-                isCurrentRouteFavorite
-                  ? t('producedBeer.movementFast.actions.unfavorite')
-                  : t('producedBeer.movementFast.actions.favorite')
-              "
-              :aria-label="
-                isCurrentRouteFavorite
-                  ? t('producedBeer.movementFast.actions.unfavorite')
-                  : t('producedBeer.movementFast.actions.favorite')
-              "
-              @click="toggleCurrentRouteFavorite"
-            >
-              <StaredIcon
-                class="h-5 w-5"
-                :class="isCurrentRouteFavorite ? 'text-amber-500' : 'text-gray-300'"
-              />
-            </button>
-          </div>
-          <div class="lg:col-span-3">
-            <label class="block text-sm text-gray-600 mb-1">{{
-              t('producedBeer.movementFast.fields.movementIntent')
-            }}</label>
-            <div
-              class="w-full h-[42px] border rounded-lg px-3 bg-gray-50 text-sm text-gray-700 flex items-center"
-            >
-              {{ movementIntentDisplay }}
-            </div>
-          </div>
-          <div class="lg:col-span-3">
-            <label class="block text-sm text-gray-600 mb-1">{{
-              t('producedBeer.movementFast.fields.taxEvent')
-            }}</label>
-            <div
-              class="w-full h-[42px] border rounded-lg px-3 bg-gray-50 text-sm text-gray-700 flex items-center"
-            >
-              {{ derivedTaxEventDisplay }}
-            </div>
-          </div>
-          <div class="lg:col-span-3">
-            <label class="block text-sm text-gray-600 mb-1">{{
-              t('producedBeer.movementFast.fields.taxDecisionCode')
-            }}</label>
-            <select
-              v-model="routeForm.taxDecisionCode"
-              class="w-full h-[42px] border rounded-lg px-3 bg-white"
-              :disabled="taxDecisionOptions.length <= 1"
-            >
-              <option value="">{{ t('common.select') }}</option>
-              <option
-                v-for="option in taxDecisionOptions"
-                :key="option.value"
-                :value="option.value"
-              >
-                {{ option.label }}
-              </option>
-            </select>
-          </div>
-          <div class="lg:col-span-3">
-            <label class="block text-sm text-gray-600 mb-1">{{
-              t('producedBeer.movementFast.fields.note')
-            }}</label>
-            <input
-              v-model.trim="routeForm.note"
-              type="text"
-              class="w-full h-[42px] border rounded-lg px-3"
-            />
-          </div>
-        </div>
-        <div v-if="routeErrors.length" class="mt-3 flex flex-wrap gap-2">
-          <span
-            v-for="error in routeErrors"
-            :key="error"
-            class="inline-flex items-center rounded-full bg-red-50 px-3 py-1 text-xs text-red-700 border border-red-200"
-          >
-            {{ error }}
-          </span>
-        </div>
-
-        <div class="mt-3 border-t border-gray-100 pt-2">
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-2">
-            <section class="rounded-lg border border-gray-200 p-2">
-              <h3 class="text-[11px] uppercase tracking-wide text-gray-400 mb-1">
-                {{ t('producedBeer.movementFast.panels.favorites') }}
-              </h3>
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-1 max-h-32 overflow-auto pr-1">
-                <div
-                  v-for="preset in favoriteRoutes.slice(0, 6)"
-                  :key="`fav-${preset.key}`"
-                  class="flex items-center gap-1 rounded-md border border-gray-200 px-1.5 py-1"
-                >
-                  <button
-                    class="min-w-0 flex-1 text-left rounded-md px-1 py-0.5 hover:bg-gray-50"
-                    type="button"
-                    @click="applyRoutePreset(preset)"
-                  >
-                    <div class="text-xs font-medium text-gray-900 truncate">
-                      {{ preset.fromSiteName }} → {{ preset.toSiteName }}
-                    </div>
-                  </button>
-                  <button
-                    class="inline-flex h-7 w-7 items-center justify-center rounded-md text-gray-400 hover:bg-red-50 hover:text-red-600"
-                    type="button"
-                    :title="t('common.delete')"
-                    :aria-label="t('common.delete')"
-                    @click="removeFavoriteRoute(preset.key)"
-                  >
-                    <TrashIcon class="h-4 w-4" />
-                  </button>
-                </div>
-                <p v-if="favoriteRoutes.length === 0" class="text-xs text-gray-500 md:col-span-2">
-                  {{ t('common.noData') }}
-                </p>
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-2">
+              <div class="lg:col-span-3">
+                <label class="mb-0.5 block text-xs text-gray-600">{{
+                  t('producedBeer.movementFast.fields.fromSite')
+                  }}</label>
+                <select v-model="routeForm.fromSiteId" class="h-9 w-full rounded-lg border bg-white px-3 text-sm">
+                  <option value="">{{ t('common.select') }}</option>
+                  <option v-for="site in sourceSiteOptions" :key="site.id" :value="site.id">
+                    {{ siteOptionLabel(site) }}
+                  </option>
+                </select>
               </div>
-            </section>
-
-            <section class="rounded-lg border border-gray-200 p-2">
-              <h3 class="text-[11px] uppercase tracking-wide text-gray-400 mb-1">
-                {{ t('producedBeer.movementFast.panels.recent') }}
-              </h3>
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-1 max-h-32 overflow-auto pr-1">
+              <div class="lg:col-span-1 flex items-end">
                 <button
-                  v-for="preset in recentRoutes.slice(0, 6)"
-                  :key="`recent-${preset.key}`"
-                  class="w-full text-left rounded-md border border-gray-200 px-2 py-1.5 hover:bg-gray-50"
-                  type="button"
-                  @click="applyRoutePreset(preset)"
-                >
-                  <div class="text-xs font-medium text-gray-900 truncate">
-                    {{ preset.fromSiteName }} → {{ preset.toSiteName }}
-                  </div>
+                  class="h-9 w-full rounded-lg border border-gray-300 text-sm hover:bg-gray-50 disabled:opacity-50"
+                  type="button" :disabled="!routeForm.fromSiteId && !routeForm.toSiteId" @click="swapRoute">
+                  {{ t('producedBeer.movementFast.actions.swap') }}
                 </button>
-                <p v-if="recentRoutes.length === 0" class="text-xs text-gray-500 md:col-span-2">
-                  {{ t('common.noData') }}
-                </p>
               </div>
-            </section>
-          </div>
+              <div class="lg:col-span-3">
+                <label class="mb-0.5 block text-xs text-gray-600">{{
+                  t('producedBeer.movementFast.fields.toSite')
+                  }}</label>
+                <select v-model="routeForm.toSiteId" class="h-9 w-full rounded-lg border bg-white px-3 text-sm">
+                  <option value="">{{ t('common.select') }}</option>
+                  <option v-for="site in destinationSiteOptions" :key="site.id" :value="site.id">
+                    {{ siteOptionLabel(site) }}
+                  </option>
+                </select>
+              </div>
+              <div class="lg:col-span-2">
+                <label class="mb-0.5 block text-xs text-gray-600">{{
+                  t('producedBeer.movementFast.fields.movedAt')
+                  }}</label>
+                <AppDateTimePicker v-model="routeForm.movedAt" mode="datetime"
+                  class="h-9 w-full rounded-lg border px-3 text-sm" />
+              </div>
+              <div class="lg:col-span-2">
+                <label class="mb-0.5 block text-xs text-gray-600">{{
+                  t('producedBeer.movementFast.fields.allocationPolicy')
+                  }}</label>
+                <select v-model="routeForm.allocationPolicy" class="h-9 w-full rounded-lg border bg-white px-3 text-sm">
+                  <option v-for="option in allocationOptions" :key="option.value" :value="option.value">
+                    {{ option.label }}
+                  </option>
+                </select>
+              </div>
+              <div class="lg:col-span-1">
+                <label class="mb-0.5 block select-none text-xs text-transparent">
+                  &nbsp;
+                </label>
+                <button
+                  class="flex h-9 w-full items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-500 hover:bg-gray-50 hover:text-amber-500 disabled:opacity-50"
+                  type="button" :disabled="!canToggleFavorite" :title="isCurrentRouteFavorite
+                      ? t('producedBeer.movementFast.actions.unfavorite')
+                      : t('producedBeer.movementFast.actions.favorite')
+                    " :aria-label="isCurrentRouteFavorite
+                  ? t('producedBeer.movementFast.actions.unfavorite')
+                  : t('producedBeer.movementFast.actions.favorite')
+                " @click="toggleCurrentRouteFavorite">
+                  <StaredIcon class="h-5 w-5" :class="isCurrentRouteFavorite ? 'text-amber-500' : 'text-gray-300'" />
+                </button>
+              </div>
+              <div class="lg:col-span-3">
+                <label class="mb-0.5 block text-xs text-gray-600">{{
+                  t('producedBeer.movementFast.fields.movementIntent')
+                  }}</label>
+                <div class="flex h-9 w-full items-center rounded-lg border bg-gray-50 px-3 text-sm text-gray-700">
+                  {{ movementIntentDisplay }}
+                </div>
+              </div>
+              <div class="lg:col-span-3">
+                <label class="mb-0.5 block text-xs text-gray-600">{{
+                  t('producedBeer.movementFast.fields.taxEvent')
+                  }}</label>
+                <div class="flex h-9 w-full items-center rounded-lg border bg-gray-50 px-3 text-sm text-gray-700">
+                  {{ derivedTaxEventDisplay }}
+                </div>
+              </div>
+              <div class="lg:col-span-3">
+                <label class="mb-0.5 block text-xs text-gray-600">{{
+                  t('producedBeer.movementFast.fields.taxDecisionCode')
+                  }}</label>
+                <select v-model="routeForm.taxDecisionCode" class="h-9 w-full rounded-lg border bg-white px-3 text-sm"
+                  :disabled="taxDecisionOptions.length <= 1">
+                  <option value="">{{ t('common.select') }}</option>
+                  <option v-for="option in taxDecisionOptions" :key="option.value" :value="option.value">
+                    {{ option.label }}
+                  </option>
+                </select>
+              </div>
+              <div class="lg:col-span-3">
+                <label class="mb-0.5 block text-xs text-gray-600">{{
+                  t('producedBeer.movementFast.fields.note')
+                  }}</label>
+                <input v-model.trim="routeForm.note" type="text" class="h-9 w-full rounded-lg border px-3 text-sm" />
+              </div>
+            </div>
+            <div v-if="routeErrors.length" class="mt-3 flex flex-wrap gap-2">
+              <span v-for="error in routeErrors" :key="error"
+                class="inline-flex items-center rounded-full bg-red-50 px-3 py-1 text-xs text-red-700 border border-red-200">
+                {{ error }}
+              </span>
+            </div>
+
+            <div class="mt-2">
+              <div class="grid grid-cols-1 lg:grid-cols-2 gap-2">
+                <section class="rounded-lg border border-gray-200 p-2">
+                  <div class="flex max-h-16 flex-wrap items-center gap-x-1.5 gap-y-0.5 overflow-auto pr-1">
+                    <span class="text-[11px] font-medium uppercase tracking-wide text-gray-400">
+                      {{ t('producedBeer.movementFast.panels.favorites') }}:
+                    </span>
+                    <div v-for="(preset, index) in favoriteRoutes.slice(0, 6)" :key="`fav-${preset.key}`"
+                      class="inline-flex max-w-full items-center gap-0.5">
+                      <button
+                        class="max-w-[11rem] truncate text-left text-xs font-medium text-blue-700 underline-offset-2 hover:text-blue-900 hover:underline"
+                        type="button" @click="applyRoutePreset(preset)">
+                        {{ preset.fromSiteName }} → {{ preset.toSiteName }}
+                      </button>
+                      <button
+                        class="inline-flex h-6 w-6 items-center justify-center rounded-md text-gray-400 hover:bg-red-50 hover:text-red-600"
+                        type="button" :title="t('common.delete')" :aria-label="t('common.delete')"
+                        @click="removeFavoriteRoute(preset.key)">
+                        <TrashIcon class="h-3.5 w-3.5" />
+                      </button>
+                      <span v-if="index < favoriteRoutes.slice(0, 6).length - 1" class="text-xs text-gray-300">
+                        /
+                      </span>
+                    </div>
+                    <p v-if="favoriteRoutes.length === 0" class="text-xs text-gray-500">
+                      {{ t('common.noData') }}
+                    </p>
+                  </div>
+                </section>
+
+                <section class="rounded-lg border border-gray-200 p-2">
+                  <div class="flex max-h-16 flex-wrap items-center gap-x-1.5 gap-y-0.5 overflow-auto pr-1">
+                    <span class="text-[11px] font-medium uppercase tracking-wide text-gray-400">
+                      {{ t('producedBeer.movementFast.panels.recent') }}:
+                    </span>
+                    <template v-for="(preset, index) in recentRoutes.slice(0, 6)" :key="`recent-${preset.key}`">
+                      <button
+                        class="max-w-[11rem] truncate text-left text-xs font-medium text-blue-700 underline-offset-2 hover:text-blue-900 hover:underline"
+                        type="button" @click="applyRoutePreset(preset)">
+                        {{ preset.fromSiteName }} → {{ preset.toSiteName }}
+                      </button>
+                      <span v-if="index < recentRoutes.slice(0, 6).length - 1" class="text-xs text-gray-300">
+                        /
+                      </span>
+                    </template>
+                    <p v-if="recentRoutes.length === 0" class="text-xs text-gray-500">
+                      {{ t('common.noData') }}
+                    </p>
+                  </div>
+                </section>
+              </div>
             </div>
           </section>
 
-          <aside class="space-y-4">
-            <section class="border border-gray-200 rounded-2xl bg-white shadow-sm p-3 space-y-2">
+          <aside class="h-full">
+            <section class="h-full border border-gray-200 rounded-2xl bg-white shadow-sm p-3 space-y-2">
               <div>
                 <h2 class="text-sm font-semibold text-gray-900">
                   {{ t('producedBeer.movementFast.panels.summary') }}
@@ -269,20 +204,6 @@
                   <dd class="text-right font-medium text-gray-900">
                     {{ allocationPolicyLabel(routeForm.allocationPolicy) }}
                   </dd>
-                </div>
-                <div class="flex items-center justify-between gap-3">
-                  <dt class="text-gray-500">{{ t('producedBeer.movementFast.summary.intent') }}</dt>
-                  <dd class="text-right font-medium text-gray-900">{{ movementIntentDisplay }}</dd>
-                </div>
-                <div class="flex items-center justify-between gap-3">
-                  <dt class="text-gray-500">{{ t('producedBeer.movementFast.summary.taxEvent') }}</dt>
-                  <dd class="text-right font-medium text-gray-900">{{ derivedTaxEventDisplay }}</dd>
-                </div>
-                <div class="flex items-center justify-between gap-3">
-                  <dt class="text-gray-500">
-                    {{ t('producedBeer.movementFast.summary.taxDecision') }}
-                  </dt>
-                  <dd class="text-right font-medium text-gray-900">{{ taxDecisionDisplay }}</dd>
                 </div>
                 <div class="flex items-center justify-between gap-3">
                   <dt class="text-gray-500">{{ t('producedBeer.movementFast.summary.lines') }}</dt>
@@ -327,10 +248,8 @@
                 </div>
               </div>
 
-              <div
-                v-if="routeForm.allocationPolicy === 'MANUAL'"
-                class="rounded-xl border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800"
-              >
+              <div v-if="routeForm.allocationPolicy === 'MANUAL'"
+                class="rounded-xl border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">
                 {{ t('producedBeer.movementFast.hints.manualMode') }}
               </div>
             </section>
@@ -339,265 +258,194 @@
       </section>
 
       <section class="border border-gray-200 rounded-2xl bg-white shadow-sm p-4 space-y-4">
-          <div class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <h2 class="text-sm font-semibold text-gray-900">
-                {{ t('producedBeer.movementFast.panels.lines') }}
-              </h2>
-              <p class="text-xs text-gray-500">
-                {{
-                  routeForm.fromSiteId
-                    ? t('producedBeer.movementFast.hints.beerSearch')
-                    : t('producedBeer.movementFast.hints.selectSourceFirst')
-                }}
-              </p>
-            </div>
-            <div class="flex items-center gap-2">
-              <span v-if="inventoryLoading" class="text-xs text-gray-500">{{
-                t('common.loading')
-              }}</span>
-              <span v-else class="text-xs text-gray-500">{{
-                t('producedBeer.movementFast.labels.availableBeerCount', {
-                  count: beerOptions.length,
-                })
-              }}</span>
-            </div>
-          </div>
-
-          <div class="rounded-xl border border-gray-200 bg-gray-50 p-3">
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
-              <div class="lg:col-span-4">
-                <label class="block text-xs text-gray-600 mb-1">
-                  {{ t('producedBeer.movementFast.fields.keyword') }}
-                </label>
-                <div class="relative">
-                  <input
-                    ref="quickKeywordInputRef"
-                    v-model.trim="quickEntry.keyword"
-                    type="text"
-                    class="w-full h-[38px] border rounded-lg px-3 bg-white"
-                    :placeholder="t('producedBeer.movementFast.placeholders.keyword')"
-                    @focus="quickSuggestionOpen = true"
-                    @blur="handleQuickKeywordBlur"
-                    @input="handleQuickKeywordInput"
-                    @keydown="handleQuickKeywordKeydown"
-                  />
-                  <div
-                    v-if="quickSuggestionOpen && quickKeywordSuggestions.length"
-                    class="absolute z-20 mt-1 w-full rounded-xl border border-gray-200 bg-white shadow-lg"
-                  >
-                    <button
-                      v-for="option in quickKeywordSuggestions"
-                      :key="`quick-${option.key}`"
-                      class="w-full px-3 py-2 text-left hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
-                      type="button"
-                      @mousedown.prevent="selectQuickBeer(option)"
-                    >
-                      <div class="text-sm font-medium text-gray-900">
-                        {{ displayBeerOption(option) }}
-                      </div>
-                      <div class="text-xs text-gray-500">
-                        {{ quickSuggestionMeta(option) }}
-                      </div>
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div class="lg:col-span-3">
-                <label class="block text-xs text-gray-600 mb-1">
-                  {{ t('producedBeer.movementFast.fields.package') }}
-                </label>
-                <select
-                  v-model="quickEntry.packageId"
-                  class="w-full h-[38px] border rounded-lg px-3 bg-white"
-                >
-                  <option value="">{{ t('common.select') }}</option>
-                  <option v-for="pkg in quickPackageOptions" :key="pkg.id" :value="pkg.id">
-                    {{ pkg.label }}
-                  </option>
-                </select>
-              </div>
-
-              <div class="lg:col-span-2">
-                <label class="block text-xs text-gray-600 mb-1">
-                  {{ t('producedBeer.movementFast.fields.unit') }}
-                </label>
-                <input
-                  ref="quickAmountInputRef"
-                  v-model.trim="quickEntry.unitText"
-                  type="number"
-                  min="0"
-                  step="1"
-                  inputmode="numeric"
-                  :disabled="quickEntryUnitDisabled"
-                  class="w-full h-[38px] border rounded-lg px-3 text-right bg-white disabled:bg-gray-100 disabled:text-gray-400"
-                  :placeholder="t('producedBeer.movementFast.placeholders.unit')"
-                  @keydown.enter.exact.prevent="addLineFromQuickEntry"
-                />
-              </div>
-
-              <div class="lg:col-span-2">
-                <label class="block text-xs text-gray-600 mb-1">
-                  {{ t('producedBeer.movementFast.fields.volume') }}
-                </label>
-                <input
-                  ref="quickVolumeInputRef"
-                  v-model.trim="quickEntry.volumeText"
-                  type="number"
-                  min="0"
-                  step="0.001"
-                  inputmode="decimal"
-                  class="w-full h-[38px] border rounded-lg px-3 text-right bg-white"
-                  :placeholder="t('producedBeer.movementFast.placeholders.volume')"
-                  @keydown.enter.exact.prevent="addLineFromQuickEntry"
-                />
-              </div>
-
-              <div class="lg:col-span-1 flex items-end">
-                <button
-                  class="w-full h-[38px] rounded-lg border border-gray-300 hover:bg-gray-100 disabled:opacity-50"
-                  type="button"
-                  :disabled="!routeForm.fromSiteId"
-                  @click="addLineFromQuickEntry"
-                >
-                  {{ t('producedBeer.movementFast.actions.addLine') }}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200 text-sm">
-              <thead class="bg-gray-50 text-xs uppercase text-gray-500">
-                <tr>
-                  <th class="px-3 py-2 text-left w-14">#</th>
-                  <th class="px-3 py-2 text-left w-56 min-w-[14rem]">
-                    {{ t('producedBeer.movementFast.columns.beer') }}
-                  </th>
-                  <th class="px-3 py-2 text-left w-44 min-w-[10rem]">
-                    {{ t('producedBeer.movementFast.columns.lotNo') }}
-                  </th>
-                  <th class="px-3 py-2 text-left w-52 min-w-[11rem]">
-                    {{ t('producedBeer.movementFast.columns.packageInfo') }}
-                  </th>
-                  <th class="px-3 py-2 text-right w-32 min-w-[7rem]">
-                    {{ t('producedBeer.movementFast.columns.unit') }}
-                  </th>
-                  <th class="px-3 py-2 text-right w-40 min-w-[9rem]">
-                    {{ t('producedBeer.movementFast.columns.volume') }}
-                  </th>
-                  <th class="px-3 py-2 text-left min-w-[14rem]">
-                    {{ t('producedBeer.movementFast.columns.note') }}
-                  </th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-gray-100">
-                <tr v-for="(row, index) in lineRows" :key="row.id" class="align-top">
-                  <td class="px-3 py-2 text-xs text-gray-400">{{ index + 1 }}</td>
-                  <td class="px-3 py-2">
-                    <div
-                      class="h-[38px] border rounded-lg px-3 bg-gray-50 text-sm text-gray-700 flex items-center"
-                    >
-                      {{ row.searchText || '—' }}
-                    </div>
-                    <p
-                      v-if="row.beerKey && beerOptionByKey.get(row.beerKey)"
-                      class="mt-1 text-xs text-gray-500"
-                    >
-                      {{
-                        t('producedBeer.movementFast.labels.stock', {
-                          qty: formatNumber(
-                            beerOptionByKey.get(row.beerKey)?.totalQtyLiters ?? null,
-                          ),
-                        })
-                      }}
-                    </p>
-                    <p v-if="lineErrorMap[row.id]" class="mt-1 text-xs text-red-600">
-                      {{ lineErrorMap[row.id] }}
-                    </p>
-                  </td>
-                  <td class="px-3 py-2 min-w-[10rem]">
-                    <template v-if="routeForm.allocationPolicy === 'MANUAL'">
-                      <select
-                        v-model="row.selectedLotId"
-                        class="w-full h-[38px] border rounded-lg px-3 bg-white"
-                        :disabled="!row.beerKey"
-                      >
-                        <option value="">{{ t('common.select') }}</option>
-                        <option
-                          v-for="lot in lotOptionsForRow(row)"
-                          :key="lot.lotId"
-                          :value="lot.lotId"
-                        >
-                          {{ lotOptionLabel(lot) }}
-                        </option>
-                      </select>
-                    </template>
-                    <div
-                      v-else
-                      class="h-[38px] border rounded-lg px-3 bg-gray-50 text-sm text-gray-700 flex items-center"
-                    >
-                      {{
-                        resolvedLotLabelForRow(row) || t('producedBeer.movementFast.labels.autoAllocated')
-                      }}
-                    </div>
-                  </td>
-                  <td class="px-3 py-2 min-w-[11rem]">
-                    <div
-                      class="h-[38px] border rounded-lg px-3 bg-gray-50 text-sm text-gray-700 flex items-center truncate"
-                      :title="resolvedPackageInfoForRow(row)"
-                    >
-                      {{ resolvedPackageInfoForRow(row) }}
-                    </div>
-                  </td>
-                  <td class="px-3 py-2 min-w-[7rem]">
-                    <div
-                      class="h-[38px] border rounded-lg px-2 bg-gray-50 text-sm text-gray-700 flex items-center justify-end"
-                    >
-                      {{ resolvedUnitDisplayForRow(row) }}
-                    </div>
-                  </td>
-                  <td class="px-3 py-2 min-w-[9rem]">
-                    <input
-                      :ref="(el) => setQtyInputRef(row.id, el)"
-                      v-model="row.qtyText"
-                      type="number"
-                      min="0"
-                      step="0.001"
-                      inputmode="decimal"
-                      class="w-[8.5rem] max-w-full h-[38px] border rounded-lg px-2 text-right ml-auto"
-                      placeholder="0.000"
-                      @keydown="handleQtyKeydown($event, index)"
-                    />
-                  </td>
-                  <td class="px-3 py-2">
-                    <input
-                      v-model.trim="row.note"
-                      type="text"
-                      class="w-full h-[38px] border rounded-lg px-3"
-                      :placeholder="t('producedBeer.movementFast.placeholders.note')"
-                    />
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <div
-            class="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 pt-3"
-          >
+        <div class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h2 class="text-sm font-semibold text-gray-900">
+              {{ t('producedBeer.movementFast.panels.lines') }}
+            </h2>
             <p class="text-xs text-gray-500">
-              {{ t('producedBeer.movementFast.hints.pasteExample') }}
+              {{
+                routeForm.fromSiteId
+                  ? t('producedBeer.movementFast.hints.beerSearch')
+                  : t('producedBeer.movementFast.hints.selectSourceFirst')
+              }}
             </p>
-            <button
-              class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-50"
-              type="button"
-              @click="resetLines"
-            >
+          </div>
+          <div class="flex items-center gap-2">
+            <span v-if="inventoryLoading" class="text-xs text-gray-500">{{
+              t('common.loading')
+            }}</span>
+            <span v-else class="text-xs text-gray-500">{{
+              t('producedBeer.movementFast.labels.availableBeerCount', {
+                count: beerOptions.length,
+              })
+            }}</span>
+            <button class="px-3 py-2 rounded border border-gray-300 hover:bg-gray-50" type="button" @click="resetLines">
               {{ t('producedBeer.movementFast.actions.clearLines') }}
             </button>
           </div>
+        </div>
+
+        <div class="rounded-xl border border-gray-200 bg-gray-50 p-3">
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
+            <div class="lg:col-span-4">
+              <label class="block text-xs text-gray-600 mb-1">
+                {{ t('producedBeer.movementFast.fields.keyword') }}
+              </label>
+              <div class="relative">
+                <input ref="quickKeywordInputRef" v-model.trim="quickEntry.keyword" type="text"
+                  class="w-full h-[38px] border rounded-lg px-3 bg-white"
+                  :placeholder="t('producedBeer.movementFast.placeholders.keyword')" @focus="quickSuggestionOpen = true"
+                  @blur="handleQuickKeywordBlur" @input="handleQuickKeywordInput"
+                  @keydown="handleQuickKeywordKeydown" />
+                <div v-if="quickSuggestionOpen && quickKeywordSuggestions.length"
+                  class="absolute z-20 mt-1 w-full rounded-xl border border-gray-200 bg-white shadow-lg">
+                  <button v-for="option in quickKeywordSuggestions" :key="`quick-${option.key}`"
+                    class="w-full px-3 py-2 text-left hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                    type="button" @mousedown.prevent="selectQuickBeer(option)">
+                    <div class="text-sm font-medium text-gray-900">
+                      {{ displayBeerOption(option) }}
+                    </div>
+                    <div class="text-xs text-gray-500">
+                      {{ quickSuggestionMeta(option) }}
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="lg:col-span-3">
+              <label class="block text-xs text-gray-600 mb-1">
+                {{ t('producedBeer.movementFast.fields.package') }}
+              </label>
+              <select v-model="quickEntry.packageId" class="w-full h-[38px] border rounded-lg px-3 bg-white">
+                <option value="">{{ t('common.select') }}</option>
+                <option v-for="pkg in quickPackageOptions" :key="pkg.id" :value="pkg.id">
+                  {{ pkg.label }}
+                </option>
+              </select>
+            </div>
+
+            <div class="lg:col-span-2">
+              <label class="block text-xs text-gray-600 mb-1">
+                {{ t('producedBeer.movementFast.fields.unit') }}
+              </label>
+              <input ref="quickAmountInputRef" v-model.trim="quickEntry.unitText" type="number" min="0" step="1"
+                inputmode="numeric" :disabled="quickEntryUnitDisabled"
+                class="w-full h-[38px] border rounded-lg px-3 text-right bg-white disabled:bg-gray-100 disabled:text-gray-400"
+                :placeholder="t('producedBeer.movementFast.placeholders.unit')"
+                @keydown.enter.exact.prevent="addLineFromQuickEntry" />
+            </div>
+
+            <div class="lg:col-span-2">
+              <label class="block text-xs text-gray-600 mb-1">
+                {{ t('producedBeer.movementFast.fields.volume') }}
+              </label>
+              <input ref="quickVolumeInputRef" v-model.trim="quickEntry.volumeText" type="number" min="0" step="0.001"
+                inputmode="decimal" class="w-full h-[38px] border rounded-lg px-3 text-right bg-white"
+                :placeholder="t('producedBeer.movementFast.placeholders.volume')"
+                @keydown.enter.exact.prevent="addLineFromQuickEntry" />
+            </div>
+
+            <div class="lg:col-span-1 flex items-end">
+              <button class="w-full h-[38px] rounded-lg border border-gray-300 hover:bg-gray-100 disabled:opacity-50"
+                type="button" :disabled="!routeForm.fromSiteId" @click="addLineFromQuickEntry">
+                {{ t('producedBeer.movementFast.actions.addLine') }}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200 text-sm">
+            <thead class="bg-gray-50 text-xs uppercase text-gray-500">
+              <tr>
+                <th class="px-3 py-2 text-left w-14">#</th>
+                <th class="px-3 py-2 text-left w-56 min-w-[14rem]">
+                  {{ t('producedBeer.movementFast.columns.beer') }}
+                </th>
+                <th class="px-3 py-2 text-left w-44 min-w-[10rem]">
+                  {{ t('producedBeer.movementFast.columns.lotNo') }}
+                </th>
+                <th class="px-3 py-2 text-left w-52 min-w-[11rem]">
+                  {{ t('producedBeer.movementFast.columns.packageInfo') }}
+                </th>
+                <th class="px-3 py-2 text-right w-32 min-w-[7rem]">
+                  {{ t('producedBeer.movementFast.columns.unit') }}
+                </th>
+                <th class="px-3 py-2 text-right w-40 min-w-[9rem]">
+                  {{ t('producedBeer.movementFast.columns.volume') }}
+                </th>
+                <th class="px-3 py-2 text-left min-w-[14rem]">
+                  {{ t('producedBeer.movementFast.columns.note') }}
+                </th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              <tr v-for="(row, index) in lineRows" :key="row.id" class="align-top">
+                <td class="px-3 py-2 text-xs text-gray-400">{{ index + 1 }}</td>
+                <td class="px-3 py-2">
+                  <div class="h-[38px] border rounded-lg px-3 bg-gray-50 text-sm text-gray-700 flex items-center">
+                    {{ row.searchText || '—' }}
+                  </div>
+                  <p v-if="row.beerKey && beerOptionByKey.get(row.beerKey)" class="mt-1 text-xs text-gray-500">
+                    {{
+                      t('producedBeer.movementFast.labels.stock', {
+                        qty: formatNumber(
+                          beerOptionByKey.get(row.beerKey)?.totalQtyLiters ?? null,
+                        ),
+                      })
+                    }}
+                  </p>
+                  <p v-if="lineErrorMap[row.id]" class="mt-1 text-xs text-red-600">
+                    {{ lineErrorMap[row.id] }}
+                  </p>
+                </td>
+                <td class="px-3 py-2 min-w-[10rem]">
+                  <template v-if="routeForm.allocationPolicy === 'MANUAL'">
+                    <select v-model="row.selectedLotId" class="w-full h-[38px] border rounded-lg px-3 bg-white"
+                      :disabled="!row.beerKey">
+                      <option value="">{{ t('common.select') }}</option>
+                      <option v-for="lot in lotOptionsForRow(row)" :key="lot.lotId" :value="lot.lotId">
+                        {{ lotOptionLabel(lot) }}
+                      </option>
+                    </select>
+                  </template>
+                  <div v-else
+                    class="h-[38px] border rounded-lg px-3 bg-gray-50 text-sm text-gray-700 flex items-center">
+                    {{
+                      resolvedLotLabelForRow(row) || t('producedBeer.movementFast.labels.autoAllocated')
+                    }}
+                  </div>
+                </td>
+                <td class="px-3 py-2 min-w-[11rem]">
+                  <div
+                    class="h-[38px] border rounded-lg px-3 bg-gray-50 text-sm text-gray-700 flex items-center truncate"
+                    :title="resolvedPackageInfoForRow(row)">
+                    {{ resolvedPackageInfoForRow(row) }}
+                  </div>
+                </td>
+                <td class="px-3 py-2 min-w-[7rem]">
+                  <div
+                    class="h-[38px] border rounded-lg px-2 bg-gray-50 text-sm text-gray-700 flex items-center justify-end">
+                    {{ resolvedUnitDisplayForRow(row) }}
+                  </div>
+                </td>
+                <td class="px-3 py-2 min-w-[9rem]">
+                  <input :ref="(el) => setQtyInputRef(row.id, el)" v-model="row.qtyText" type="number" min="0"
+                    step="0.001" inputmode="decimal"
+                    class="w-[8.5rem] max-w-full h-[38px] border rounded-lg px-2 text-right ml-auto" placeholder="0.000"
+                    @keydown="handleQtyKeydown($event, index)" />
+                </td>
+                <td class="px-3 py-2">
+                  <input v-model.trim="row.note" type="text" class="w-full h-[38px] border rounded-lg px-3"
+                    :placeholder="t('producedBeer.movementFast.placeholders.note')" />
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
       </section>
     </div>
   </AdminLayout>
@@ -890,19 +738,19 @@ async function loadUomDefinitions() {
     .select('id, code, base_factor, base_code')
   if (error) throw error
   uomDefinitionsByKey.clear()
-  ;(data ?? []).forEach((row: any) => {
-    const id = String(row?.id ?? '').trim().toLowerCase()
-    const code = normalizeVolumeUom(row?.code ?? null)
-    if (!id && !code) return
-    const definition: UomDefinition = {
-      id,
-      code: code ?? '',
-      baseFactor: toNumber(row?.base_factor),
-      baseCode: normalizeVolumeUom(row?.base_code ?? null),
-    }
-    if (id) uomDefinitionsByKey.set(id, definition)
-    if (code) uomDefinitionsByKey.set(code, definition)
-  })
+    ; (data ?? []).forEach((row: any) => {
+      const id = String(row?.id ?? '').trim().toLowerCase()
+      const code = normalizeVolumeUom(row?.code ?? null)
+      if (!id && !code) return
+      const definition: UomDefinition = {
+        id,
+        code: code ?? '',
+        baseFactor: toNumber(row?.base_factor),
+        baseCode: normalizeVolumeUom(row?.base_code ?? null),
+      }
+      if (id) uomDefinitionsByKey.set(id, definition)
+      if (code) uomDefinitionsByKey.set(code, definition)
+    })
   uomDefinitionsLoaded.value = true
 }
 
@@ -1069,9 +917,9 @@ async function loadSites() {
   if (typeError) throw typeError
 
   const siteTypeMap = new Map<string, string>()
-  ;(siteTypeDefs ?? []).forEach((row: any) => {
-    if (row?.def_id) siteTypeMap.set(String(row.def_id), String(row.def_key ?? ''))
-  })
+    ; (siteTypeDefs ?? []).forEach((row: any) => {
+      if (row?.def_id) siteTypeMap.set(String(row.def_id), String(row.def_key ?? ''))
+    })
 
   const { data, error } = await supabase
     .from('mst_sites')
@@ -1214,9 +1062,9 @@ async function loadBeerOptionsForSite(siteId: string) {
         .select('id, code')
         .in('id', uomIds)
       if (uomError) throw uomError
-      ;(uoms ?? []).forEach((row: any) => {
-        if (row?.id) uomMap.set(String(row.id), String(row.code ?? ''))
-      })
+        ; (uoms ?? []).forEach((row: any) => {
+          if (row?.id) uomMap.set(String(row.id), String(row.code ?? ''))
+        })
     }
 
     const packageMap = new Map<
@@ -1234,22 +1082,22 @@ async function loadBeerOptionsForSite(siteId: string) {
         .select('id, package_code, name_i18n, unit_volume, volume_uom, volume_fix_flg')
         .in('id', packageIds)
       if (packageError) throw packageError
-      ;(packages ?? []).forEach((row: any) => {
-        if (!row?.id) return
-        const packageCode = typeof row.package_code === 'string' ? row.package_code.trim() : ''
-        const packageName = resolveLocalizedName(row.name_i18n)
-        const unitVolume = toNumber(row.unit_volume)
-        const volumeUomCode = normalizeVolumeUom(row.volume_uom ?? null)
-        const unitVolumeLiters =
-          unitVolume == null ? null : convertToLiters(unitVolume, volumeUomCode)
-        packageMap.set(String(row.id), {
-          label: packageName || packageCode || String(row.id),
-          unitVolumeLiters:
-            unitVolumeLiters != null && Number.isFinite(unitVolumeLiters) ? unitVolumeLiters : null,
-          volumeUomCode,
-          volumeFix: row.volume_fix_flg !== false,
+        ; (packages ?? []).forEach((row: any) => {
+          if (!row?.id) return
+          const packageCode = typeof row.package_code === 'string' ? row.package_code.trim() : ''
+          const packageName = resolveLocalizedName(row.name_i18n)
+          const unitVolume = toNumber(row.unit_volume)
+          const volumeUomCode = normalizeVolumeUom(row.volume_uom ?? null)
+          const unitVolumeLiters =
+            unitVolume == null ? null : convertToLiters(unitVolume, volumeUomCode)
+          packageMap.set(String(row.id), {
+            label: packageName || packageCode || String(row.id),
+            unitVolumeLiters:
+              unitVolumeLiters != null && Number.isFinite(unitVolumeLiters) ? unitVolumeLiters : null,
+            volumeUomCode,
+            volumeFix: row.volume_fix_flg !== false,
+          })
         })
-      })
     }
 
     const batchEntityAttrMap = new Map<string, string>()
@@ -1265,13 +1113,13 @@ async function loadBeerOptionsForSite(siteId: string) {
 
         const attrCodeById = new Map<string, string>()
         const attrIds: number[] = []
-        ;(attrDefs ?? []).forEach((row: any) => {
-          const attrId = Number(row.attr_id)
-          const code = typeof row.code === 'string' ? row.code.trim() : ''
-          if (!Number.isFinite(attrId) || !code) return
-          attrIds.push(attrId)
-          attrCodeById.set(String(attrId), code)
-        })
+          ; (attrDefs ?? []).forEach((row: any) => {
+            const attrId = Number(row.attr_id)
+            const code = typeof row.code === 'string' ? row.code.trim() : ''
+            if (!Number.isFinite(attrId) || !code) return
+            attrIds.push(attrId)
+            attrCodeById.set(String(attrId), code)
+          })
 
         if (attrIds.length) {
           const { data: attrRows, error: attrError } = await supabase
@@ -1283,24 +1131,24 @@ async function loadBeerOptionsForSite(siteId: string) {
           if (attrError) throw attrError
 
           const attrPartsByBatch = new Map<string, string[]>()
-          ;(attrRows ?? []).forEach((row: any) => {
-            const batchId = String(row.entity_id ?? '')
-            const attrCode = attrCodeById.get(String(row.attr_id))
-            if (!batchId || !attrCode) return
-            const textValue =
-              (typeof row.value_text === 'string' && row.value_text.trim()) ||
-              (row.value_num != null ? String(row.value_num) : '') ||
-              (row.value_json != null ? JSON.stringify(row.value_json) : '')
-            const trimmed = textValue.trim()
-            if (!trimmed) return
-            if (!attrPartsByBatch.has(batchId)) attrPartsByBatch.set(batchId, [])
-            const list = attrPartsByBatch.get(batchId)
-            if (!list) return
-            list.push(`${attrCode}:${trimmed}`)
-            if (attrCode === 'style_name') {
-              batchRecipeAttrMap.set(batchId, { styleName: trimmed })
-            }
-          })
+            ; (attrRows ?? []).forEach((row: any) => {
+              const batchId = String(row.entity_id ?? '')
+              const attrCode = attrCodeById.get(String(row.attr_id))
+              if (!batchId || !attrCode) return
+              const textValue =
+                (typeof row.value_text === 'string' && row.value_text.trim()) ||
+                (row.value_num != null ? String(row.value_num) : '') ||
+                (row.value_json != null ? JSON.stringify(row.value_json) : '')
+              const trimmed = textValue.trim()
+              if (!trimmed) return
+              if (!attrPartsByBatch.has(batchId)) attrPartsByBatch.set(batchId, [])
+              const list = attrPartsByBatch.get(batchId)
+              if (!list) return
+              list.push(`${attrCode}:${trimmed}`)
+              if (attrCode === 'style_name') {
+                batchRecipeAttrMap.set(batchId, { styleName: trimmed })
+              }
+            })
 
           attrPartsByBatch.forEach((parts, batchId) => {
             const unique = Array.from(new Set(parts))
@@ -1329,20 +1177,20 @@ async function loadBeerOptionsForSite(siteId: string) {
         .eq('tenant_id', auth.tenantId)
         .in('id', batchIds)
       if (batchError) throw batchError
-      ;(batches ?? []).forEach((row: any) => {
-        const batchCode = String(row.batch_code ?? row.id)
-        const attr = batchRecipeAttrMap.get(String(row.id))
-        const beerCode = resolveReleasedRecipeCode(row) ?? batchCode
-        const styleName = resolveBatchStyleName(row, attr)
-        const beerName = String(resolveBatchDisplayName(row) ?? styleName ?? beerCode)
-        batchMap.set(String(row.id), {
-          batchCode,
-          beerCode,
-          beerName,
-          styleName: styleName ?? null,
-          entityAttrSummary: batchEntityAttrMap.get(String(row.id)) ?? '',
+        ; (batches ?? []).forEach((row: any) => {
+          const batchCode = String(row.batch_code ?? row.id)
+          const attr = batchRecipeAttrMap.get(String(row.id))
+          const beerCode = resolveReleasedRecipeCode(row) ?? batchCode
+          const styleName = resolveBatchStyleName(row, attr)
+          const beerName = String(resolveBatchDisplayName(row) ?? styleName ?? beerCode)
+          batchMap.set(String(row.id), {
+            batchCode,
+            beerCode,
+            beerName,
+            styleName: styleName ?? null,
+            entityAttrSummary: batchEntityAttrMap.get(String(row.id)) ?? '',
+          })
         })
-      })
     }
 
     const optionMap = new Map<string, BeerOption>()
@@ -2231,14 +2079,14 @@ function matchingTaxRulesForRoute() {
 
 const taxDecisionOptions = computed(() => {
   const defs = new Map<string, { name_ja?: string; name_en?: string }>()
-  ;(movementRules.value?.tax_decision_definitions ?? []).forEach((row) => {
-    if (!row.tax_decision_code) return
-    defs.set(row.tax_decision_code, { name_ja: row.name_ja, name_en: row.name_en })
-  })
+    ; (movementRules.value?.tax_decision_definitions ?? []).forEach((row) => {
+      if (!row.tax_decision_code) return
+      defs.set(row.tax_decision_code, { name_ja: row.name_ja, name_en: row.name_en })
+    })
 
   const codes = new Set<string>()
   matchingTaxRulesForRoute().forEach((rule) => {
-    ;(rule.allowed_tax_decisions ?? []).forEach((decision) => {
+    ; (rule.allowed_tax_decisions ?? []).forEach((decision) => {
       if (decision.tax_decision_code) codes.add(decision.tax_decision_code)
     })
   })
@@ -2309,8 +2157,8 @@ const derivedTaxEventCodes = computed(() => {
   matchingTaxRulesForRoute().forEach((rule) => {
     const selectedDecision = routeForm.taxDecisionCode
       ? rule.allowed_tax_decisions?.find(
-          (entry) => entry.tax_decision_code === routeForm.taxDecisionCode,
-        )
+        (entry) => entry.tax_decision_code === routeForm.taxDecisionCode,
+      )
       : undefined
     const decision =
       selectedDecision ??

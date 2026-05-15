@@ -1,17 +1,17 @@
 # Current Task
 
 ## Goal
-- Decrease the height of the `サマリー` panel on the `製品ビール移出(社内移出)` page.
+- Remove the paste example hint from the 明細入力 section on the `製品ビール移出(社内移出)` page.
 
 ## Scope
-- Compact the right-side summary panel in `ProductMoveFast.vue`.
-- Reduce panel padding, row spacing, section spacing, and text sizes where appropriate.
-- Remove the helper subtitle below `サマリー` to save height.
-- Keep all summary, validation, warning, and manual-mode information visible.
+- Remove the visible paste example footer hint from `ProductMoveFast.vue`.
+- Remove the now-empty footer divider wrapper.
+- Keep route form, validation, warnings, and submit behavior unchanged.
 
 ## Non-Goals
-- Do not change summary calculations.
-- Do not change validation or warning behavior.
+- Do not change paste handling behavior.
+- Do not change line-entry table behavior.
+- Do not change route validation behavior.
 - Do not change movement submission behavior.
 - Do not redesign the rest of the page.
 
@@ -25,9 +25,7 @@
 - No stored-function changes.
 
 ## Planned File Changes
-- Reduce summary panel padding and internal vertical spacing.
-- Remove the summary helper subtitle.
-- Use smaller text and tighter spacing for summary rows, validation, warnings, and manual-mode hint.
+- Remove the footer block that renders `producedBeer.movementFast.hints.pasteExample`.
 
 ## Validation Plan
 - Run `git diff --check`.
@@ -35,11 +33,9 @@
 - Run `npm run type-check` in `beeradmin_tail`.
 
 ## Final Decisions
-- The summary panel card now uses `p-3 space-y-2` instead of `p-4 space-y-4`.
-- Removed the helper subtitle below the `サマリー` heading.
-- Summary rows now use `text-xs`, `space-y-1`, and tighter horizontal gaps.
-- Validation and warning sections now use smaller headings, tighter spacing, and `text-xs` messages.
-- Manual-mode hint padding and text size were reduced.
+- Removed the footer block that rendered `producedBeer.movementFast.hints.pasteExample`.
+- Removed the footer divider and padding with it.
+- Paste handling behavior remains unchanged.
 
 ## Validation Results
 - `git diff --check` passed.

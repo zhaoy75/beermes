@@ -1,6 +1,58 @@
 # Current Task
 
 ## Goal
+- Persist the `移入出登録` page search conditions so users returning to the page see the same filters and table view.
+
+## Scope
+- Persist the main movement search section fields:
+  - 製造バッチ
+  - 酒類分類
+  - パッケージ種別
+  - ビール名
+  - 開始日
+  - 終了日
+  - 税務移出種別
+  - 税務関連移入出のみ表示
+  - 取消済みの移動を表示
+- Persist movement table column filters and sort state because they are also part of the visible search/view condition.
+- Restore the persisted state before the first movement fetch.
+- Keep the existing reset behavior, but make reset overwrite the remembered state with default values.
+
+## Non-Goals
+- Do not change movement query semantics.
+- Do not change page layout.
+- Do not persist fetched movement results; only persist search/view state.
+- Do not add database tables or server APIs.
+
+## Affected Files
+- `specs/current-task.md`
+- `beeradmin_tail/src/views/Pages/ProducedBeer.vue`
+
+## Data Model / API Changes
+- No database schema changes.
+- No API changes.
+- Browser `localStorage` stores page-specific search/view state under a versioned key.
+
+## Validation Plan
+- Run `git diff --check` for changed files.
+- Run `npm run type-check` in `beeradmin_tail`.
+- Run focused ESLint on `src/views/Pages/ProducedBeer.vue`.
+
+## Final Decisions
+- Added a versioned `localStorage` key for the movement page search/view state.
+- Restored the saved state during setup before the initial `fetchMovements()` call.
+- Saved changes to the main movement filters, movement type filter, table column filters, and table sort state.
+- Kept fetched movement rows out of storage; the page still reloads data from Supabase.
+- Kept reset scoped to the existing movement search filters and movement type filter, then persisted those defaults.
+
+## Validation Results
+- `git diff --check -- specs/current-task.md beeradmin_tail/src/views/Pages/ProducedBeer.vue` passed.
+- `npm run type-check` passed in `beeradmin_tail`.
+- `npx eslint src/views/Pages/ProducedBeer.vue --no-fix` passed.
+- Full `npx eslint . --no-fix` failed on pre-existing unrelated lint issues outside this change, including missing Vue `lang` attributes, unused variables, component naming, and `any` usage.
+- Unit tests were not run because `beeradmin_tail/package.json` does not define a unit test script.
+
+## Previous Goal - Tax Calculation Consistency
 - Fix the 1 yen mismatch between `LIA110 税額算出表` tax amount and `LIA130 軽減税額算出表` standard tax amount.
 - Make `LIA130` use the same generated standard tax amount shown in `LIA110`.
 

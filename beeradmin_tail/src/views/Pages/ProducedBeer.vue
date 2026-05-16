@@ -615,21 +615,53 @@ interface MovementCardView extends MovementCard {
   totalLiters: number | null
 }
 
-type MovementTableSortKey =
-  | 'movementAt'
-  | 'batchCode'
-  | 'beerCategory'
-  | 'styleName'
-  | 'targetAbv'
-  | 'packageType'
-  | 'volumePerPackage'
-  | 'unitOfPackage'
-  | 'totalVolume'
-  | 'taxRate'
-  | 'source'
-  | 'destination'
-  | 'docNo'
-  | 'taxEvent'
+const MOVEMENT_SEARCH_STATE_STORAGE_KEY = 'beeradmin.producedBeer.movements.searchState.v1'
+const MOVEMENT_TYPE_FILTER_VALUES = [
+  'all',
+  'TAXABLE_REMOVAL',
+  'NON_TAXABLE_REMOVAL',
+  'EXPORT_EXEMPT',
+  'RETURN_TO_FACTORY',
+] as const
+const MOVEMENT_TABLE_SORT_KEYS = [
+  'movementAt',
+  'batchCode',
+  'beerCategory',
+  'styleName',
+  'targetAbv',
+  'packageType',
+  'volumePerPackage',
+  'unitOfPackage',
+  'totalVolume',
+  'taxRate',
+  'source',
+  'destination',
+  'docNo',
+  'taxEvent',
+] as const
+const DEFAULT_MOVEMENT_TYPE_FILTER = 'all'
+
+type MovementTypeFilter = typeof MOVEMENT_TYPE_FILTER_VALUES[number]
+type MovementTableSortKey = typeof MOVEMENT_TABLE_SORT_KEYS[number]
+
+interface MovementFiltersState {
+  beerName: string
+  category: string
+  packageType: string
+  batchNo: string
+  dateFrom: string
+  dateTo: string
+  taxMovementOnly: boolean
+  showReversedMovements: boolean
+}
+
+interface StoredMovementSearchState {
+  filters?: Partial<MovementFiltersState>
+  movementType?: MovementTypeFilter
+  columnFilters?: Partial<Record<MovementTableSortKey, string>>
+  sortKey?: MovementTableSortKey
+  sortDirection?: ColumnSortDirection
+}
 
 const { t, locale } = useI18n()
 const router = useRouter()
@@ -648,20 +680,15 @@ const siteOptions = ref<SiteOption[]>([])
 
 const movementCards = ref<MovementCard[]>([])
 const defaultMovementDateFrom = oneMonthAgoDateInput()
-const movementFilters = reactive({
-  beerName: '',
-  category: '',
-  packageType: '',
-  batchNo: '',
-  dateFrom: defaultMovementDateFrom,
-  dateTo: '',
-  taxMovementOnly: true,
-  showReversedMovements: false,
+const rememberedMovementSearchState = readStoredMovementSearchState()
+const movementFilters = reactive<MovementFiltersState>({
+  ...defaultMovementFilters(),
+  ...rememberedMovementSearchState.filters,
 })
 
-const movementTypeFilter = ref<
-  'all' | 'TAXABLE_REMOVAL' | 'NON_TAXABLE_REMOVAL' | 'EXPORT_EXEMPT' | 'RETURN_TO_FACTORY'
->('all')
+const movementTypeFilter = ref<MovementTypeFilter>(
+  rememberedMovementSearchState.movementType ?? DEFAULT_MOVEMENT_TYPE_FILTER,
+)
 
 const taxEventFilterOptions = computed(() => {
   const allowed = ['TAXABLE_REMOVAL', 'NON_TAXABLE_REMOVAL', 'EXPORT_EXEMPT', 'RETURN_TO_FACTORY']
@@ -761,6 +788,7 @@ const {
   'movementAt',
   'desc',
 )
+applyStoredMovementTableState(rememberedMovementSearchState)
 
 const movementTaxEventColumnFilterOptions = computed(() => {
   const options = taxEventFilterOptions.value.map((option) => ({
@@ -797,6 +825,121 @@ function formatDateInput(date: Date) {
   const month = String(date.getMonth() + 1).padStart(2, '0')
   const day = String(date.getDate()).padStart(2, '0')
   return `${year}-${month}-${day}`
+}
+
+function defaultMovementFilters(): MovementFiltersState {
+  return {
+    beerName: '',
+    category: '',
+    packageType: '',
+    batchNo: '',
+    dateFrom: defaultMovementDateFrom,
+    dateTo: '',
+    taxMovementOnly: true,
+    showReversedMovements: false,
+  }
+}
+
+function readStoredMovementSearchState(): StoredMovementSearchState {
+  if (typeof window === 'undefined') return {}
+  try {
+    const raw = window.localStorage.getItem(MOVEMENT_SEARCH_STATE_STORAGE_KEY)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw)
+    if (!isPlainRecord(parsed)) return {}
+    const rawFilters = isPlainRecord(parsed.filters) ? parsed.filters : {}
+    const rawColumnFilters = isPlainRecord(parsed.columnFilters) ? parsed.columnFilters : {}
+    const columnFilters = MOVEMENT_TABLE_SORT_KEYS.reduce<Partial<Record<MovementTableSortKey, string>>>(
+      (result, key) => {
+        const value = storedString(rawColumnFilters[key])
+        if (value) result[key] = value
+        return result
+      },
+      {},
+    )
+
+    return {
+      filters: {
+        beerName: storedString(rawFilters.beerName),
+        category: storedString(rawFilters.category),
+        packageType: storedString(rawFilters.packageType),
+        batchNo: storedString(rawFilters.batchNo),
+        dateFrom: storedString(rawFilters.dateFrom, defaultMovementDateFrom),
+        dateTo: storedString(rawFilters.dateTo),
+        taxMovementOnly: storedBoolean(rawFilters.taxMovementOnly, true),
+        showReversedMovements: storedBoolean(rawFilters.showReversedMovements, false),
+      },
+      movementType: isMovementTypeFilter(parsed.movementType)
+        ? parsed.movementType
+        : DEFAULT_MOVEMENT_TYPE_FILTER,
+      columnFilters,
+      sortKey: isMovementTableSortKey(parsed.sortKey) ? parsed.sortKey : undefined,
+      sortDirection: isColumnSortDirection(parsed.sortDirection) ? parsed.sortDirection : undefined,
+    }
+  } catch (error) {
+    console.warn('Failed to read movement search state', error)
+    return {}
+  }
+}
+
+function applyStoredMovementTableState(state: StoredMovementSearchState) {
+  Object.entries(state.columnFilters ?? {}).forEach(([key, value]) => {
+    if (isMovementTableSortKey(key)) movementColumnFilters[key] = value
+  })
+  if (state.sortKey) setMovementSort(state.sortKey, state.sortDirection ?? 'desc')
+}
+
+function rememberMovementSearchState() {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(
+      MOVEMENT_SEARCH_STATE_STORAGE_KEY,
+      JSON.stringify(movementSearchStatePayload()),
+    )
+  } catch (error) {
+    console.warn('Failed to remember movement search state', error)
+  }
+}
+
+function movementSearchStatePayload(): StoredMovementSearchState {
+  return {
+    filters: { ...movementFilters },
+    movementType: movementTypeFilter.value,
+    columnFilters: MOVEMENT_TABLE_SORT_KEYS.reduce<Partial<Record<MovementTableSortKey, string>>>(
+      (result, key) => {
+        const value = movementColumnFilters[key]?.trim()
+        if (value) result[key] = value
+        return result
+      },
+      {},
+    ),
+    sortKey: movementSortKey.value,
+    sortDirection: movementSortDirection.value,
+  }
+}
+
+function storedString(value: unknown, fallback = '') {
+  return typeof value === 'string' ? value : fallback
+}
+
+function storedBoolean(value: unknown, fallback: boolean) {
+  return typeof value === 'boolean' ? value : fallback
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function isMovementTypeFilter(value: unknown): value is MovementTypeFilter {
+  return typeof value === 'string' && MOVEMENT_TYPE_FILTER_VALUES.includes(value as MovementTypeFilter)
+}
+
+function isMovementTableSortKey(value: unknown): value is MovementTableSortKey {
+  return typeof value === 'string' && MOVEMENT_TABLE_SORT_KEYS.includes(value as MovementTableSortKey)
+}
+
+function isColumnSortDirection(value: unknown): value is ColumnSortDirection {
+  return value === 'asc' || value === 'desc'
 }
 
 function formatVolumeNumberValue(value: number | null | undefined) {
@@ -1359,15 +1502,9 @@ async function loadBatchInfo(batchIds: string[]) {
 }
 
 function resetMovementFilters() {
-  movementFilters.beerName = ''
-  movementFilters.category = ''
-  movementFilters.packageType = ''
-  movementFilters.batchNo = ''
-  movementFilters.dateFrom = defaultMovementDateFrom
-  movementFilters.dateTo = ''
-  movementFilters.taxMovementOnly = true
-  movementFilters.showReversedMovements = false
-  movementTypeFilter.value = 'all'
+  Object.assign(movementFilters, defaultMovementFilters())
+  movementTypeFilter.value = DEFAULT_MOVEMENT_TYPE_FILTER
+  rememberMovementSearchState()
 }
 
 function openMovementCreate() {
@@ -1427,6 +1564,12 @@ watch(
   async () => {
     await fetchMovements()
   },
+)
+
+watch(
+  () => movementSearchStatePayload(),
+  () => rememberMovementSearchState(),
+  { deep: true, flush: 'post' },
 )
 
 onMounted(async () => {

@@ -1432,7 +1432,10 @@ async function loadMovementIntents() {
   } catch (err: any) {
     console.error(err)
     intentOptions.value = []
-    intentLoadError.value = err?.message ?? t('producedBeer.movementWizard.errors.loadIntents')
+    intentLoadError.value = formatRpcErrorMessage(err, {
+      fallbackKey: 'producedBeer.movementWizard.errors.loadIntents',
+    })
+    toast.error(intentLoadError.value)
   } finally {
     intentsLoading.value = false
   }
@@ -1450,7 +1453,10 @@ async function loadRulesForIntent(movementIntent: string) {
   } catch (err: any) {
     console.error(err)
     rules.value = null
-    rulesLoadError.value = err?.message ?? t('producedBeer.movementWizard.errors.loadRules')
+    rulesLoadError.value = formatRpcErrorMessage(err, {
+      fallbackKey: 'producedBeer.movementWizard.errors.loadRules',
+    })
+    toast.error(rulesLoadError.value)
   } finally {
     rulesLoading.value = false
   }
@@ -1888,8 +1894,14 @@ function goBack() {
 onMounted(() => {
   ensureTenant()
     .then((tenant) => loadRuleengineLabels({ tenantId: tenant }))
-    .catch((err) => console.error(err))
-  loadMovementIntents().catch((err) => console.error(err))
+    .catch((err) => {
+      console.error(err)
+      toast.error(formatRpcErrorMessage(err))
+    })
+  loadMovementIntents().catch((err) => {
+    console.error(err)
+    toast.error(formatRpcErrorMessage(err))
+  })
   loadSites().catch((err) => console.error(err))
   loadAlcoholTypes().catch((err) => console.error(err))
 })

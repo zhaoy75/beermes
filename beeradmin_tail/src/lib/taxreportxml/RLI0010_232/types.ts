@@ -1,5 +1,5 @@
 import type { TaxReportProfile } from '@/lib/taxReportProfile'
-import type { TaxVolumeItem } from '@/lib/taxReport'
+import type { TaxDeclarationType, TaxVolumeItem } from '@/lib/taxReport'
 
 export type ValidationSource = 'business' | 'structural' | 'xsd'
 export type ValidationLevel = 'error' | 'warning'
@@ -26,6 +26,7 @@ export interface RLI0010_232_XsdValidateResponse {
 export interface RLI0010_232_ReductionTotals {
   included: boolean
   priorFiscalYearStandardTaxAmount: number
+  priorFiscalYearStandardTaxAmountSource?: 'calculated' | 'manual_override'
   currentMonthStandardTaxAmount: number
   currentMonthReducedTaxAmount: number
   returnStandardTaxAmount: number
@@ -46,6 +47,8 @@ export interface RLI0010_232_Input {
     taxType: 'monthly'
     taxYear: number
     taxMonth: number
+    declarationType?: TaxDeclarationType | string
+    declarationReason?: string | null
     generatedAt: string
   }
   tenant: {

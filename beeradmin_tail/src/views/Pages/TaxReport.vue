@@ -58,6 +58,13 @@
               </select>
             </div>
             <div>
+              <label class="mb-1 block text-sm text-gray-600">{{ t('taxReport.filters.declarationType') }}</label>
+              <select v-model="filters.declarationType" class="h-[40px] w-full rounded border bg-white px-3">
+                <option value="">{{ t('common.all') }}</option>
+                <option v-for="type in declarationTypeOptions" :key="type" :value="type">{{ declarationTypeLabel(type) }}</option>
+              </select>
+            </div>
+            <div>
               <label class="mb-1 block text-sm text-gray-600">{{ t('taxReport.filters.status') }}</label>
               <select v-model="filters.status" class="h-[40px] w-full rounded border bg-white px-3">
                 <option value="">{{ t('common.all') }}</option>
@@ -91,6 +98,19 @@
                     :filter-placeholder="t('common.search')"
                     :label="t('taxReport.card.period')"
                     sort-key="period"
+                    :sort-direction="sortDirection"
+                    @sort="setColumnSort"
+                  />
+                </th>
+                <th class="px-3 py-2 text-left">
+                  <TableColumnHeader
+                    v-model:filter-value="columnFilters.declarationType"
+                    :active-sort-key="sortKey"
+                    :all-label="t('common.all')"
+                    :filter-options="declarationTypeColumnFilterOptions"
+                    filter-type="select"
+                    :label="t('taxReport.card.declarationType')"
+                    sort-key="declarationType"
                     :sort-direction="sortDirection"
                     @sort="setColumnSort"
                   />
@@ -164,6 +184,7 @@
                     {{ formatPeriod(row) }}
                   </button>
                 </td>
+                <td class="px-3 py-3 text-gray-700">{{ declarationTypeLabel(row.declaration_type, row.amendment_no) }}</td>
                 <td class="px-3 py-3 text-gray-700">{{ statusLabel(row.status) }}</td>
                 <td class="px-3 py-3 text-right font-medium text-gray-900">{{ formatCurrency(displayTotalTax(row)) }}</td>
                 <td class="wrap-cell px-3 py-3 text-gray-700">
@@ -209,7 +230,7 @@
                 </td>
               </tr>
               <tr v-if="!loading && visibleReportRows.length === 0">
-                <td colspan="8" class="px-3 py-8 text-center text-gray-500">{{ t('common.noData') }}</td>
+                <td colspan="9" class="px-3 py-8 text-center text-gray-500">{{ t('common.noData') }}</td>
               </tr>
             </tbody>
           </table>
@@ -243,6 +264,29 @@
                   <select v-model.number="promptForm.tax_month" class="h-[40px] w-full rounded border bg-white px-3">
                     <option v-for="month in monthOptions" :key="month" :value="month">{{ month }}</option>
                   </select>
+                </div>
+                <div>
+                  <label class="mb-1 block text-sm text-gray-600">{{ t('taxReport.form.declarationType') }}</label>
+                  <select v-model="promptForm.declaration_type" class="h-[40px] w-full rounded border bg-white px-3">
+                    <option v-for="type in declarationTypeOptions" :key="type" :value="type">{{ declarationTypeLabel(type) }}</option>
+                  </select>
+                </div>
+                <div v-if="promptForm.declaration_type === 'amended'" class="md:col-span-3">
+                  <label class="mb-1 block text-sm text-gray-600">{{ t('taxReport.form.originalReport') }}</label>
+                  <select v-model="promptForm.original_report_id" class="h-[40px] w-full rounded border bg-white px-3">
+                    <option value="">{{ t('taxReport.createPrompt.selectOriginal') }}</option>
+                    <option v-for="report in amendmentSourceOptions" :key="report.id" :value="report.id">
+                      {{ originalReportOptionLabel(report) }}
+                    </option>
+                  </select>
+                </div>
+                <div v-if="promptForm.declaration_type === 'late' || promptForm.declaration_type === 'amended'" class="md:col-span-3">
+                  <label class="mb-1 block text-sm text-gray-600">{{ t('taxReport.form.declarationReason') }}</label>
+                  <textarea
+                    v-model="promptForm.declaration_reason"
+                    rows="3"
+                    class="w-full rounded border px-3 py-2"
+                  />
                 </div>
               </div>
             </section>
@@ -306,17 +350,22 @@ import {
   resolveTaxEvent,
   summaryItemsFromBreakdown,
   type JsonMap,
+  type TaxDeclarationType,
   type TaxReportStoredFile,
   type TaxReportRow,
   type TaxVolumeItem,
 } from '@/lib/taxReport'
 
 const TABLE = 'tax_reports'
+const TAX_REPORT_REDIRECT_ERROR_TOAST_KEY = 'beeradmin.taxReport.redirectErrorToast'
+const REPORT_SELECT = 'id, tax_type, tax_year, tax_month, status, declaration_type, declaration_reason, original_report_id, previous_report_id, amendment_no, previous_confirmed_payable_tax_amount, previous_confirmed_refund_tax_amount, correction_delta_tax_amount, total_tax_amount, volume_breakdown, comparison_breakdown, report_files, attachment_files, created_at, updated_at'
 const STATUS_OPTIONS = ['draft', 'stale', 'submitted', 'approved'] as const
 const TAX_TYPE_OPTIONS = ['monthly'] as const
+const DECLARATION_TYPE_OPTIONS: TaxDeclarationType[] = ['on_time', 'late', 'amended']
 type ReportTableSortKey =
   | 'taxType'
   | 'period'
+  | 'declarationType'
   | 'status'
   | 'totalTax'
   | 'productionVolume'
@@ -329,6 +378,7 @@ const { confirmDialog, requestConfirmation, cancelConfirmation, acceptConfirmati
 
 const pageTitle = computed(() => t('taxReport.title'))
 const rows = ref<TaxReportRow[]>([])
+const amendmentSourceRows = ref<TaxReportRow[]>([])
 const loading = ref(false)
 const deletingReportId = ref('')
 const showCreatePrompt = ref(false)
@@ -336,15 +386,19 @@ const tenantId = ref<string | null>(null)
 const tenantName = ref('')
 const tenantProfile = ref<TaxReportProfile>(createEmptyTaxReportProfile())
 
-const filters = reactive({ taxType: '', taxYear: '', taxMonth: '', status: '' })
+const filters = reactive({ taxType: '', taxYear: '', taxMonth: '', declarationType: '', status: '' })
 const promptForm = reactive({
   tax_type: 'monthly',
   tax_year: new Date().getFullYear(),
   tax_month: new Date().getMonth() + 1,
+  declaration_type: 'on_time' as TaxDeclarationType,
+  declaration_reason: '',
+  original_report_id: '',
 })
 
 const statusOptions = STATUS_OPTIONS
 const taxTypeOptions = TAX_TYPE_OPTIONS
+const declarationTypeOptions = DECLARATION_TYPE_OPTIONS
 const {
   sortKey,
   sortDirection,
@@ -358,6 +412,7 @@ const {
   [
     { key: 'taxType', sortValue: (row) => taxTypeLabel(row.tax_type), filterValue: (row) => row.tax_type, filterType: 'select' },
     { key: 'period', sortValue: (row) => row.tax_year * 100 + (row.tax_month ?? 0), filterValue: (row) => formatPeriod(row), filterType: 'text' },
+    { key: 'declarationType', sortValue: (row) => declarationTypeSortValue(row), filterValue: (row) => row.declaration_type, filterType: 'select' },
     { key: 'status', sortValue: (row) => statusLabel(row.status), filterValue: (row) => row.status, filterType: 'select' },
     { key: 'totalTax', sortValue: (row) => displayTotalTax(row), filterValue: (row) => formatCurrency(displayTotalTax(row)), filterType: 'text' },
     { key: 'productionVolume', sortValue: (row) => reportVolumeText(row), filterType: 'text' },
@@ -374,6 +429,22 @@ const taxTypeColumnFilterOptions = computed(() =>
 
 const statusColumnFilterOptions = computed(() =>
   statusOptions.map((status) => ({ value: status, label: statusLabel(status) })),
+)
+
+const declarationTypeColumnFilterOptions = computed(() =>
+  declarationTypeOptions.map((type) => ({ value: type, label: declarationTypeLabel(type) })),
+)
+
+const amendmentSourceOptions = computed(() =>
+  amendmentSourceRows.value
+    .filter((row) =>
+      row.tax_type === promptForm.tax_type &&
+      row.tax_year === promptForm.tax_year &&
+      row.tax_month === promptForm.tax_month &&
+      (row.status === 'submitted' || row.status === 'approved') &&
+      (row.declaration_type === 'on_time' || row.declaration_type === 'late' || row.declaration_type === 'amended'),
+    )
+    .sort((a, b) => declarationTypeSortValue(b).localeCompare(declarationTypeSortValue(a))),
 )
 
 const yearOptions = computed(() => {
@@ -397,6 +468,29 @@ function taxTypeLabel(taxType: string) {
   if (!map || typeof map !== 'object') return taxType
   const label = (map as Record<string, unknown>)[taxType]
   return typeof label === 'string' ? label : taxType
+}
+
+function declarationTypeLabel(type: string, amendmentNo?: number | null) {
+  const map = tm('taxReport.declarationTypeMap')
+  const label = map && typeof map === 'object'
+    ? (map as Record<string, unknown>)[type]
+    : null
+  const text = typeof label === 'string' ? label : type
+  if (type === 'amended' && Number.isFinite(amendmentNo)) return `${text} #${amendmentNo}`
+  return text
+}
+
+function declarationTypeSortValue(row: Pick<TaxReportRow, 'declaration_type' | 'amendment_no'>) {
+  const rank = row.declaration_type === 'amended'
+    ? 200 + (row.amendment_no ?? 0)
+    : row.declaration_type === 'late'
+      ? 100
+      : 0
+  return String(rank).padStart(4, '0')
+}
+
+function originalReportOptionLabel(row: TaxReportRow) {
+  return `${formatPeriod(row)} · ${declarationTypeLabel(row.declaration_type, row.amendment_no)} · ${statusLabel(row.status)} · ${formatCurrency(displayTotalTax(row))}`
 }
 
 function movementTypeLabel(value: string) {
@@ -483,6 +577,17 @@ function downloadTextFile(filename: string, content: string, mime = 'application
   downloadBlob(filename, new Blob([content], { type: mime }))
 }
 
+function showQueuedRedirectErrorToast() {
+  try {
+    const message = window.sessionStorage.getItem(TAX_REPORT_REDIRECT_ERROR_TOAST_KEY)
+    if (!message) return
+    window.sessionStorage.removeItem(TAX_REPORT_REDIRECT_ERROR_TOAST_KEY)
+    toast.error(message)
+  } catch (err) {
+    console.warn('Failed to read tax report redirect toast', err)
+  }
+}
+
 async function ensureTenant() {
   if (tenantId.value) return tenantId.value
   const { data, error } = await supabase.auth.getUser()
@@ -506,14 +611,17 @@ async function fetchReports() {
     const tenant = await ensureTenant()
     let query = supabase
       .from(TABLE)
-      .select('id, tax_type, tax_year, tax_month, status, total_tax_amount, volume_breakdown, report_files, attachment_files, created_at')
+      .select(REPORT_SELECT)
       .eq('tenant_id', tenant)
       .order('tax_year', { ascending: false })
       .order('tax_month', { ascending: false })
+      .order('declaration_type', { ascending: true })
+      .order('amendment_no', { ascending: true })
 
     if (filters.taxType) query = query.eq('tax_type', filters.taxType)
     if (filters.taxYear) query = query.eq('tax_year', Number(filters.taxYear))
     if (filters.taxMonth) query = query.eq('tax_month', Number(filters.taxMonth))
+    if (filters.declarationType) query = query.eq('declaration_type', filters.declarationType)
     if (filters.status) query = query.eq('status', filters.status)
 
     const { data, error } = await query
@@ -528,11 +636,37 @@ async function fetchReports() {
   }
 }
 
+async function fetchAmendmentSourceRows() {
+  try {
+    const tenant = await ensureTenant()
+    const { data, error } = await supabase
+      .from(TABLE)
+      .select(REPORT_SELECT)
+      .eq('tenant_id', tenant)
+      .eq('tax_type', promptForm.tax_type)
+      .eq('tax_year', promptForm.tax_year)
+      .eq('tax_month', promptForm.tax_month)
+      .in('status', ['submitted', 'approved'])
+      .order('declaration_type', { ascending: true })
+      .order('amendment_no', { ascending: true })
+    if (error) throw error
+    amendmentSourceRows.value = (data ?? []).map((row) => normalizeReport(row as JsonMap))
+  } catch (err) {
+    console.error(err)
+    amendmentSourceRows.value = []
+    toast.error(err instanceof Error ? err.message : String(err))
+  }
+}
+
 function openCreate() {
   promptForm.tax_type = filters.taxType || 'monthly'
   promptForm.tax_year = filters.taxYear ? Number(filters.taxYear) : new Date().getFullYear()
   promptForm.tax_month = filters.taxMonth ? Number(filters.taxMonth) : new Date().getMonth() + 1
+  promptForm.declaration_type = (filters.declarationType as TaxDeclarationType) || 'on_time'
+  promptForm.declaration_reason = ''
+  promptForm.original_report_id = ''
   showCreatePrompt.value = true
+  void fetchAmendmentSourceRows()
 }
 
 function closeCreatePrompt() {
@@ -548,6 +682,27 @@ async function startCreateFromPrompt() {
     toast.info(t('taxReport.errors.taxMonthRequired'))
     return
   }
+  if ((promptForm.declaration_type === 'late' || promptForm.declaration_type === 'amended') && !promptForm.declaration_reason.trim()) {
+    toast.info(t('taxReport.errors.declarationReasonRequired'))
+    return
+  }
+  if (promptForm.declaration_type === 'amended' && !promptForm.original_report_id) {
+    toast.info(t('taxReport.errors.originalReportRequired'))
+    return
+  }
+  if (promptForm.declaration_type !== 'amended') {
+    const lockedBase = rows.value.find((row) =>
+      row.tax_type === promptForm.tax_type &&
+      row.tax_year === promptForm.tax_year &&
+      row.tax_month === promptForm.tax_month &&
+      (row.declaration_type === 'on_time' || row.declaration_type === 'late') &&
+      (row.status === 'submitted' || row.status === 'approved'),
+    )
+    if (lockedBase) {
+      toast.info(t('taxReport.errors.baseDeclarationLocked'))
+      return
+    }
+  }
   showCreatePrompt.value = false
   await router.push({
     name: 'TaxReportCreate',
@@ -555,6 +710,9 @@ async function startCreateFromPrompt() {
       taxType: promptForm.tax_type,
       taxYear: String(promptForm.tax_year),
       taxMonth: promptForm.tax_type === 'monthly' ? String(promptForm.tax_month) : undefined,
+      declarationType: promptForm.declaration_type,
+      declarationReason: promptForm.declaration_reason.trim() || undefined,
+      originalReportId: promptForm.declaration_type === 'amended' ? promptForm.original_report_id : undefined,
     },
   })
 }
@@ -639,6 +797,10 @@ async function downloadXmlForRowFile(row: TaxReportRow, file: TaxReportStoredFil
       taxType: row.tax_type,
       taxYear: row.tax_year,
       taxMonth: row.tax_month,
+      declarationType: row.declaration_type,
+      declarationReason: row.declaration_reason,
+      previousConfirmedPayableTaxAmount: row.previous_confirmed_payable_tax_amount,
+      previousConfirmedRefundTaxAmount: row.previous_confirmed_refund_tax_amount,
       breakdown,
       profile: tenantProfile.value,
       tenantId: tenant,
@@ -654,6 +816,7 @@ async function downloadXmlForRowFile(row: TaxReportRow, file: TaxReportStoredFil
 }
 
 onMounted(async () => {
+  showQueuedRedirectErrorToast()
   try {
     await ensureTenant()
     await loadTenantTaxReportProfile()
@@ -676,6 +839,15 @@ watch(
   () => filters.taxType,
   (value) => {
     if (value === 'yearly') filters.taxMonth = ''
+  },
+)
+
+watch(
+  () => [showCreatePrompt.value, promptForm.tax_type, promptForm.tax_year, promptForm.tax_month],
+  () => {
+    if (!showCreatePrompt.value) return
+    promptForm.original_report_id = ''
+    void fetchAmendmentSourceRows()
   },
 )
 </script>

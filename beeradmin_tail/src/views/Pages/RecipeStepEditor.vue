@@ -1505,6 +1505,7 @@ async function loadSchema() {
     schemaError.value = t('recipe.edit.loadSchemaFailed', {
       message: formatRpcErrorMessage(error),
     })
+    toast.error(schemaError.value)
   }
 }
 

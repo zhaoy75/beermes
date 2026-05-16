@@ -2673,7 +2673,7 @@ watch(
     } catch (err) {
       console.error(err)
       beerOptions.value = []
-      toast.error(err instanceof Error ? err.message : String(err))
+      toast.error(formatRpcErrorMessage(err))
     }
   },
 )
@@ -2761,7 +2761,7 @@ onMounted(async () => {
     nextTick(() => focusQuickKeywordInput())
   } catch (err) {
     console.error(err)
-    toast.error(err instanceof Error ? err.message : String(err))
+    toast.error(formatRpcErrorMessage(err))
   }
 })
 

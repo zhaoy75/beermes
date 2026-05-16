@@ -164,6 +164,7 @@ type RLI0010_232_Input = {
     reduction?: {
       included: boolean
       priorFiscalYearStandardTaxAmount: number
+      priorFiscalYearStandardTaxAmountSource?: 'calculated' | 'manual_override'
       currentMonthStandardTaxAmount: number
       currentMonthReducedTaxAmount: number
       returnStandardTaxAmount: number
@@ -193,7 +194,8 @@ type RLI0010_232_Input = {
 - `currentMonthStandardTaxAmount` is the current-month standard tax before return deductions, matching the `LIA110` grand total.
 - `returnStandardTaxAmount` is the current-month return/deduction standard tax, matching the `LIA220` total.
 - `netStandardTaxAmount` is `currentMonthStandardTaxAmount - returnStandardTaxAmount`.
-- `tax_reports.total_tax_amount` stores `netStandardTaxAmount` so later months can use it for `LIA130/EQC00010`.
+- `tax_reports.total_tax_amount` stores `netStandardTaxAmount` so later months can use it as the calculated source for `LIA130/EQC00010`.
+- `LIA130/EQC00010` may be manually overridden on the report row; XML uses the resolved calculated-or-override amount.
 - `totalTaxAmount` is the filing amount written to `LIA010/EFD00020`.
 - When `totals.reduction.included` is true, `totalTaxAmount` equals `totals.reduction.netReducedTaxAmount`.
 - When `totals.reduction.included` is false, `totalTaxAmount` equals `netStandardTaxAmount`.
@@ -318,13 +320,14 @@ export const schemaMap = {
 - Convert summary-side breakdown rows into paged LIA110 payloads
 - Own:
   - row grouping
+  - generated-summary `⑤税率` / `⑥税額` / `⑨算出税額` calculation from taxable standard quantity and tax rate
   - page splitting
   - form page numbering
 
 ### `mappers/toLIA130.ts`
 - Convert reduction totals into one `LIA130` payload when `totals.reduction.included` is true.
 - Own:
-  - `EQC00010`: prior fiscal-year cumulative standard tax amount
+  - `EQC00010`: resolved prior fiscal-year cumulative standard tax amount
   - current-month standard and reduced tax amounts
   - return/deduction standard and reduced tax amounts
   - net standard and reduced tax amounts
@@ -390,6 +393,10 @@ These are implementation assumptions based on the current template-driven flow.
     - `registry_def(kind='alcohol_tax')`
     - `movement_get_rules(...)`
 - Exclude rows where `tax_event = NONE` or `RETURN_TO_FACTORY_NON_TAXABLE`; they are not displayed as `LIA110` detail rows and are not output to `LIA110` XML.
+- Generated `区分小計`, `酒類分類小計`, and `全酒類` rows must output real values in `EHD00090` / `⑤税率`, `EHD00100` / `⑥税額`, and `EHD00140` / `⑨算出税額`.
+- Generated-summary tax values are calculated from taxable standard quantity and tax rate; they must not sum detail rows' display-only `tax_amount` when those detail rows carry zero.
+- Detail rows must leave `EHD00090`, `EHD00100`, and `EHD00140` blank.
+- `⑦軽減後税額` is shown in the LIA110 preview layout, but its value stays blank; reduced-tax calculation and output are handled by `LIA130`.
 - Detail-row `EHD00150` label rule:
   - resolve from `tax_event` first
   - `TAXABLE_REMOVAL` -> `課税移出`
@@ -404,18 +411,29 @@ These are implementation assumptions based on the current template-driven flow.
 - Source:
   - `LIA110` grand-total standard tax amount before returns
   - `LIA220` return/deduction standard tax amount
-  - prior fiscal-year cumulative standard tax amount from saved `tax_reports.total_tax_amount`
+  - prior fiscal-year cumulative standard tax amount resolved from the report's calculated value or manual override
 - Query rule for `EQC00010`:
   - same tenant as the edited report
   - `tax_type = 'monthly'`
   - current Japanese fiscal year only, April through March
   - include months from fiscal-year start through the month before the current report month
-  - sum `total_tax_amount`
+  - include only submitted/approved prior reports
+  - choose the effective report per prior month:
+    - latest submitted/approved amended report if present
+    - otherwise submitted/approved base declaration
+  - calculate in fiscal-month order:
+    - start at `0`
+    - calculated reports add `total_tax_amount`
+    - manual-override reports reset the running base to `prior_cumulative_tax_amount_override`, then add `total_tax_amount`
+    - clamp the running cumulative amount at `0`
+  - exclude the currently edited report id when recalculating
+  - store this result as `tax_reports.prior_cumulative_tax_amount_calculated`
+  - if `tax_reports.prior_cumulative_tax_amount_source = 'manual_override'`, use `tax_reports.prior_cumulative_tax_amount_override` instead
 - Stored total rule:
   - `tax_reports.total_tax_amount` remains the monthly standard/net tax amount before `LIA130` reduction
   - the reduced amount is calculated for XML output and must not overwrite the cumulative source value
 - XML field rules:
-  - `EQC00010` = prior fiscal-year cumulative standard tax amount
+  - `EQC00010` = resolved prior fiscal-year cumulative standard tax amount
   - `EQC00050` and `EQC00070` = current-month standard tax before return deductions
   - `EQC00080` = current-month reduced tax
   - `EQC00100` and `EQC00120` = same current-month standard tax when the cumulative band is `0円～5,000万円以下`

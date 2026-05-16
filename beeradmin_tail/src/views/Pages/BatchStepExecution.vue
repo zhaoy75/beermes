@@ -824,8 +824,10 @@ import AppDateTimePicker from '@/components/common/AppDateTimePicker.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { checkLotChronology, lotChronologyViolationMessage } from '@/lib/lotChronology'
-import { toRpcUserError } from '@/lib/rpcErrors'
+import { formatRpcErrorMessage, toRpcUserError } from '@/lib/rpcErrors'
 import { supabase } from '@/lib/supabase'
+import { toast } from 'vue3-toastify'
+import 'vue3-toastify/dist/index.css'
 
 type BatchHeaderRow = {
   id: string
@@ -1533,7 +1535,10 @@ async function loadPage() {
     console.error(err)
     batch.value = null
     step.value = null
-    pageError.value = extractErrorMessage(err) || t('batch.edit.stepDetailLoadFailed')
+    pageError.value = formatRpcErrorMessage(err, {
+      fallbackKey: 'batch.edit.stepDetailLoadFailed',
+    })
+    toast.error(pageError.value)
   } finally {
     loadingPage.value = false
   }
@@ -1778,6 +1783,7 @@ async function saveStepInputs() {
       : currentStepSaved
       ? t('batch.edit.stepTransitionFailed', { message })
       : `${t('batch.edit.stepSaveFailed')} (${message})`
+    toast.error(stepSaveState.error)
   } finally {
     stepSaveState.saving = false
   }
@@ -2066,6 +2072,7 @@ async function saveEquipmentAssignments() {
   } catch (err) {
     console.error(err)
     equipmentState.error = `${t('batch.edit.stepSectionSaveFailed')} (${extractErrorMessage(err) || t('common.unknown')})`
+    toast.error(equipmentState.error)
   } finally {
     equipmentState.saving = false
   }

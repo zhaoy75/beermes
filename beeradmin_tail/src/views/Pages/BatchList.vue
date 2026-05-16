@@ -1102,6 +1102,9 @@ async function handleCreate(payload: BatchCreatePayload) {
     fetchBatches()
   } catch (err) {
     console.error(err)
+    toast.error(formatRpcErrorMessage(err, {
+      fallbackKey: 'batch.create.createFailed',
+    }))
   } finally {
     loading.value = false
   }

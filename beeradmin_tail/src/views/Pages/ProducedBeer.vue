@@ -194,6 +194,17 @@
                 </th>
                 <th class="px-3 py-2 text-left">
                   <TableColumnHeader
+                    v-model:filter-value="movementColumnFilters.beerCategory"
+                    :active-sort-key="movementSortKey"
+                    :filter-placeholder="t('common.search')"
+                    :label="t('producedBeer.inventory.table.beerCategory')"
+                    sort-key="beerCategory"
+                    :sort-direction="movementSortDirection"
+                    @sort="setMovementColumnSort"
+                  />
+                </th>
+                <th class="px-3 py-2 text-left">
+                  <TableColumnHeader
                     v-model:filter-value="movementColumnFilters.styleName"
                     :active-sort-key="movementSortKey"
                     :filter-placeholder="t('common.search')"
@@ -329,6 +340,7 @@
                   {{ formatDateTime(card.movementAt) }}
                 </td>
                 <td class="px-3 py-2 font-mono text-xs text-gray-600">{{ movementBatchCodeLabel(card) }}</td>
+                <td class="px-3 py-2 text-gray-600">{{ movementBeerCategoryLabel(card) }}</td>
                 <td class="px-3 py-2 text-gray-600">{{ movementStyleLabel(card) }}</td>
                 <td class="px-3 py-2 text-right text-gray-600">
                   {{ movementTargetAbvLabel(card) }}
@@ -388,7 +400,7 @@
                 </td>
               </tr>
               <tr v-if="!movementLoading && visibleMovementCards.length === 0">
-                <td colspan="14" class="px-3 py-8 text-center text-gray-500">
+                <td colspan="15" class="px-3 py-8 text-center text-gray-500">
                   {{ t('common.noData') }}
                 </td>
               </tr>
@@ -418,7 +430,11 @@ import { useRouter } from 'vue-router'
 import AppDateTimePicker from '@/components/common/AppDateTimePicker.vue'
 import ConfirmActionDialog from '@/components/common/ConfirmActionDialog.vue'
 import TableColumnHeader from '@/components/common/TableColumnHeader.vue'
-import { loadAlcoholTypeReferenceData } from '@/lib/alcoholTypeRegistry'
+import {
+  buildAlcoholTypeLabelMap,
+  loadAlcoholTypeReferenceData,
+  resolveAlcoholTypeLabel,
+} from '@/lib/alcoholTypeRegistry'
 import {
   resolveBatchBeerCategoryId,
   resolveBatchDisplayName,
@@ -553,6 +569,7 @@ interface MovementCardView extends MovementCard {
 type MovementTableSortKey =
   | 'movementAt'
   | 'batchCode'
+  | 'beerCategory'
   | 'styleName'
   | 'targetAbv'
   | 'packageType'
@@ -621,6 +638,8 @@ const packageCategoryMap = computed(() => {
   return map
 })
 
+const categoryLabelMap = computed(() => buildAlcoholTypeLabelMap(categories.value))
+
 const uomMap = computed(() => {
   const map = new Map<string, string>()
   uoms.value.forEach((row) => map.set(row.id, row.code ?? ''))
@@ -676,6 +695,7 @@ const {
   [
     { key: 'movementAt', sortValue: (card) => (card.movementAt ? Date.parse(card.movementAt) : null), filterValue: (card) => formatDateTime(card.movementAt), filterType: 'text' },
     { key: 'batchCode', sortValue: (card) => movementBatchCodeLabel(card), filterType: 'text' },
+    { key: 'beerCategory', sortValue: (card) => movementBeerCategoryLabel(card), filterType: 'text' },
     { key: 'styleName', sortValue: (card) => movementStyleLabel(card), filterType: 'text' },
     { key: 'targetAbv', sortValue: (card) => movementTargetAbvSortValue(card), filterValue: (card) => movementTargetAbvLabel(card), filterType: 'text' },
     { key: 'packageType', sortValue: (card) => movementPackageLabel(card), filterType: 'text' },
@@ -825,6 +845,16 @@ function movementBatchCodeLabel(card: MovementCardView) {
   return batchCodes.length ? batchCodes.join(', ') : '—'
 }
 
+function categoryLabel(categoryId: string | null | undefined) {
+  if (!categoryId) return null
+  return resolveAlcoholTypeLabel(categoryLabelMap.value, categoryId) ?? categoryId
+}
+
+function movementBeerCategoryLabel(card: MovementCardView) {
+  const labels = uniqueNonEmpty(card.lines.map((line) => categoryLabel(line.categoryId)))
+  return labels.length ? labels.join(', ') : '—'
+}
+
 function movementTargetAbvLabel(card: MovementCardView) {
   const abvs = uniqueNumbers(card.lines.map((line) => line.targetAbv))
   if (!abvs.length) return '—'
@@ -898,6 +928,7 @@ function buildMovementExportSheet(): WorkbookSheet {
   const header = borderedRow([
     t('producedBeer.movement.card.movementDate'),
     t('producedBeer.movement.card.batchCode'),
+    t('producedBeer.inventory.table.beerCategory'),
     t('producedBeer.inventory.table.styleName'),
     t('producedBeer.inventory.table.targetAbv'),
     t('producedBeer.movement.card.linePackageType'),
@@ -915,6 +946,7 @@ function buildMovementExportSheet(): WorkbookSheet {
     borderedRow([
       formatDateTime(card.movementAt),
       movementBatchCodeLabel(card),
+      movementBeerCategoryLabel(card),
       movementStyleLabel(card),
       movementTargetAbvLabel(card),
       movementPackageLabel(card),
@@ -1134,7 +1166,7 @@ async function fetchMovements() {
   } catch (err) {
     console.error(err)
     movementCards.value = []
-    toast.error(err instanceof Error ? err.message : String(err))
+    toast.error(formatRpcErrorMessage(err))
   } finally {
     movementLoading.value = false
   }
@@ -1357,7 +1389,7 @@ onMounted(async () => {
     await fetchMovements()
   } catch (err) {
     console.error(err)
-    toast.error(err instanceof Error ? err.message : String(err))
+    toast.error(formatRpcErrorMessage(err))
   }
 })
 </script>

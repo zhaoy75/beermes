@@ -96,12 +96,15 @@
       "TRG003": { "message": "申告生成で保存できるステータスは下書きまたは要再生成のみです。" },
       "TRG004": { "message": "提出済みまたは承認済みの申告は再生成できません。" },
       "TRG005": { "message": "選択した期間に申告対象の明細がないため、申告書を作成できません。" },
+      "TRG006": { "message": "修正申告を作成できません。理由、修正対象の申告、申告内容の差異を確認してください。" },
       "TRM001": { "message": "対象の移動が指定されていません。" },
       "TRM002": { "message": "この移動は酒税申告（{report}）に含まれているため、取消できません。" },
       "TRS001": { "message": "対象の酒税申告が指定されていません。" },
       "TRS002": { "message": "指定された申告ステータスは使用できません。" },
       "TRS003": { "message": "対象の酒税申告が見つかりません。" },
-      "TRS006": { "message": "承認できるのは提出済みの申告だけです。" }
+      "TRS006": { "message": "承認できるのは提出済みの申告だけです。" },
+      "TRS007": { "message": "修正申告を提出できません。比較結果と修正差額を確認してください。" },
+      "TRS008": { "message": "前月までの当年度酒税累計額の上書き内容を確認してください。" }
     }
   },
   "equipment": {
@@ -3111,11 +3114,13 @@
       "taxType": "課税種別",
       "taxYear": "年",
       "taxMonth": "月",
+      "declarationType": "申告区分",
       "status": "ステータス"
     },
     "card": {
       "taxType": "課税種別",
       "period": "対象期間",
+      "declarationType": "申告区分",
       "status": "ステータス",
       "totalTax": "酒税額合計",
       "productionVolume": "申告内訳（税務移出種別・ABV別）",
@@ -3131,6 +3136,9 @@
       "taxType": "課税種別",
       "taxYear": "年",
       "taxMonth": "月",
+      "declarationType": "申告区分",
+      "declarationReason": "理由",
+      "originalReport": "元申告",
       "status": "ステータス",
       "totalTax": "酒税額合計",
       "breakdown": "申告内訳",
@@ -3147,6 +3155,7 @@
     "createPrompt": {
       "title": "申告書作成",
       "subtitle": "課税種別と対象期間を選択してください。",
+      "selectOriginal": "提出済みまたは承認済みの申告を選択",
       "confirm": "生成"
     },
     "templateMissing": "XMLテンプレートが見つかりません。",
@@ -3156,6 +3165,11 @@
     "taxTypeMap": {
       "monthly": "月次",
       "yearly": "年次"
+    },
+    "declarationTypeMap": {
+      "on_time": "期限内申告書",
+      "late": "期限後申告書",
+      "amended": "修正申告書"
     },
     "movementTypeMap": {
       "production_receipt": "生産",
@@ -3203,7 +3217,14 @@
       "taxYearRequired": "年は必須です。",
       "taxMonthRequired": "月は必須です。",
       "statusRequired": "ステータスは必須です。",
-      "breakdownRequired": "申告対象データの集計が必要です。"
+      "breakdownRequired": "申告対象データの集計が必要です。",
+      "declarationReasonRequired": "期限後申告または修正申告の理由は必須です。",
+      "originalReportRequired": "修正対象の提出済みまたは承認済み申告を選択してください。",
+      "baseDeclarationLocked": "この期間には提出済みまたは承認済みの通常申告が既にあります。",
+      "noAmendmentDifference": "選択した申告との差異がないため修正申告を作成できません。",
+      "negativeAmendmentDelta": "修正後の税額が減少します。更正の請求ワークフローが必要な可能性があります。",
+      "priorCumulativeOverrideInvalid": "前月までの当年度酒税累計額の上書き金額は0以上の整数で入力してください。",
+      "priorCumulativeOverrideNotesRequired": "計算値と異なる累計額を使用する場合は理由・メモを入力してください。"
     }
   },
   "taxReportEditor": {
@@ -3285,6 +3306,7 @@
         "taxAccountantName": "税理士氏名",
         "taxAccountantTel": "税理士電話番号",
         "refundAccount": "還付金融機関",
+        "declarationReason": "期限後申告等の理由",
         "creatorName": "作成者名"
       }
     },
@@ -3304,6 +3326,21 @@
         "reductionCategory": "軽減割合の区分",
         "finalFactoryTax": "申告対象製造場合計酒税額"
       }
+    },
+    "priorCumulative": {
+      "title": "前月までの当年度酒税累計額",
+      "subtitle": "LIA130 EQC00010 に出力する累計額を確認し、必要に応じて手入力で上書きします。",
+      "calculated": "計算値",
+      "override": "上書き値",
+      "output": "XML出力値",
+      "enableOverride": "手入力で上書きする",
+      "overrideAmount": "上書き金額",
+      "notes": "理由・メモ",
+      "recalculate": "再計算",
+      "reset": "計算値に戻す",
+      "adminOnly": "上書きは管理者のみ変更できます。",
+      "breakdown": "計算内訳",
+      "noPriorReports": "前月までの提出済みまたは承認済み申告はありません。"
     },
     "lia260": {
       "exportDate": "輸出年月日又は販売年月日",
@@ -3328,6 +3365,19 @@
       "kubunSummary": "区分小計",
       "categorySummary": "酒類分類小計",
       "grandTotal": "総合計"
+    },
+    "amendment": {
+      "amendmentNo": "修正回数",
+      "comparisonTitle": "修正比較",
+      "comparisonSubtitle": "選択した提出済み/承認済み申告と最新計算結果を比較します。",
+      "previousVolume": "修正前数量",
+      "currentVolume": "修正後数量",
+      "deltaVolume": "数量差",
+      "previousTax": "修正前税額",
+      "currentTax": "修正後税額",
+      "deltaTax": "税額差",
+      "noComparison": "比較行は生成されていません。",
+      "negativeDeltaWarning": "修正後の税額が修正前の確定額より少ないため、更正の請求ワークフローの対象となる可能性があります。"
     },
     "sections": {
       "movement": {

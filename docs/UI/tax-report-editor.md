@@ -13,6 +13,8 @@
   - `戻入帳_<year>.xlsx`
 - Persist generated XML/XLSX files in Supabase Storage and save file metadata in `tax_reports.report_files`.
 - Persist the source movement references used by the report so submitted/approved reports can block operational rollback of reported movements.
+- Support declaration-type-specific filing output for `期限内申告書`, `期限後申告書`, and `修正申告書` while keeping the existing one-table `tax_reports` model.
+- Allow privileged users to review and manually override the LIA130 `EQC00010` `先月までの納税累計額` value while keeping the calculated value and override reason traceable.
 
 ## Entry Points
 - Route from `酒税申告` list page create prompt
@@ -26,6 +28,8 @@
 - Tenant user: edit an existing saved tax report.
 - Tenant user: generate XML files from the current editor data.
 - Tenant user: save the generated report files and related metadata.
+- Tenant owner/admin: manually override `先月までの納税累計額` on an editable draft/stale report.
+- Tenant viewer: read-only access to calculated and override values when the page is otherwise viewable.
 
 ## Source Movement Tracking
 - Backend RPCs are the authority for source movement selection, tax breakdown calculation, `tax_reports` save/update, and source-reference persistence.
@@ -42,6 +46,75 @@
 - Draft refs do not block movement rollback.
 - Submitted/approved refs block movement rollback for included movements.
 - If a source movement is rolled back or materially changed while a draft report exists, the referenced draft report must be marked `stale` and regenerated before XML export/submission.
+
+## Tax Reports Data Model Option A
+- Keep `tax_reports` as the single persisted report/declaration table in this implementation path.
+- Preserve existing columns:
+  - `id`
+  - `tenant_id`
+  - `tax_type`
+  - `tax_year`
+  - `tax_month`
+  - `status`
+  - `total_tax_amount`
+  - `volume_breakdown`
+  - `report_files`
+  - `attachment_files`
+  - `created_at`
+- Add declaration/amendment columns:
+  - `declaration_type text not null default 'on_time'`
+    - allowed values:
+      - `on_time`: `期限内申告書`
+      - `late`: `期限後申告書`
+      - `amended`: `修正申告書`
+      - `refund_claim`: reserved for a future `還付請求申告書` workflow
+  - `declaration_reason text null`
+    - written to `LIA010/EFH00000` for `late` and `amended`
+  - `original_report_id uuid null`
+    - first submitted/approved declaration being amended
+  - `previous_report_id uuid null`
+    - immediate previous submitted/approved declaration used as the amendment comparison base
+  - `amendment_no int null`
+    - required for `amended`
+    - starts at `1` for the first amended declaration in a period
+  - `previous_confirmed_payable_tax_amount numeric null`
+  - `previous_confirmed_refund_tax_amount numeric null`
+  - `correction_delta_tax_amount numeric null`
+  - `comparison_breakdown jsonb default '[]'::jsonb`
+    - stores row-level comparison output between previous confirmed data and latest calculated data
+  - `prior_cumulative_tax_amount_calculated numeric null`
+    - system-calculated LIA130 `EQC00010` candidate for the report period
+  - `prior_cumulative_tax_amount_override numeric null`
+    - user-entered LIA130 `EQC00010` override for this report row
+  - `prior_cumulative_tax_amount_source text not null default 'calculated'`
+    - allowed values:
+      - `calculated`: XML uses the calculated amount
+      - `manual_override`: XML uses `prior_cumulative_tax_amount_override`
+  - `prior_cumulative_tax_amount_notes text null`
+    - required when `manual_override` differs from the calculated amount
+  - `prior_cumulative_tax_amount_updated_at timestamptz null`
+  - `prior_cumulative_tax_amount_updated_by uuid null`
+  - `updated_at timestamptz null`
+- Replace the current one-row-per-period uniqueness rule with declaration-aware uniqueness:
+  - one base declaration per `tenant_id + tax_type + tax_year + tax_month`
+    - base declaration means `declaration_type in ('on_time', 'late')`
+  - one amended declaration per `tenant_id + tax_type + tax_year + tax_month + amendment_no`
+    - applies only when `declaration_type = 'amended'`
+  - `amendment_no` must be null for base declarations and non-null for amended declarations
+- Existing submitted/approved declarations remain immutable except for strictly append-only file/status metadata allowed by controlled RPCs.
+- The same `tax_report_movement_refs` table continues to reference the specific report/declaration row that used each movement line.
+- Add `tax_report_cumulative_amount_audit` for override changes:
+  - `id uuid primary key`
+  - `tenant_id uuid not null`
+  - `tax_report_id uuid not null`
+  - `old_override_amount numeric null`
+  - `new_override_amount numeric null`
+  - `old_source text null`
+  - `new_source text not null`
+  - `notes text null`
+  - `changed_by uuid null`
+  - `changed_at timestamptz not null default now()`
+  - each save/clear operation for the override writes one audit row
 
 ## PDF / Guide References
 - Use only the PDFs directly under `docs/taxpdf` as the primary local visual samples for this redesign:
@@ -92,6 +165,8 @@
     - read only
   - `月`
     - read only
+  - `申告区分`
+    - read only after creation
   - `ステータス`
 - Do not show LIA010 tax amount fields in the page header/title area; those values belong to the `LIA010` edit panel.
 
@@ -137,8 +212,11 @@
 ### LIA010 Panel (`酒税納税申告書`)
 - Edit mode:
   - shows the filing period, tenant/profile references, declaration type, and calculated tax totals inside the panel body
+  - shows `declaration_reason` when `declaration_type` is `late` or `amended`
+  - shows the selected original/previous declaration summary when `declaration_type` is `amended`
   - profile-derived fields are read-only unless profile editing is explicitly linked from this page
   - tax total fields are read-only and sourced from the current draft calculation
+  - declaration type is read-only after the report is created; changing declaration type requires creating a new report row
   - lists every field currently emitted by the `LIA010` XML builder:
     - `EFA00010` 申告対象年月
     - `EFB00010` 提出年月日
@@ -163,10 +241,27 @@
     - `EFE00010` 税理士氏名
     - `EFE00020` 税理士電話番号
     - `EFG00000` 還付金融機関
+    - `EFH00000` 期限後申告等の理由
     - `EFI00000` 作成者名
 - Preview mode:
   - renders the main tax return form as a paper-like e-Tax preview
   - highlights the final tax amount that will be written to `LIA010/EFD00020`
+- Declaration type mapping:
+  - `on_time` outputs `LIA010/EFC00000/kubun_CD = 1`
+  - `late` outputs `LIA010/EFC00000/kubun_CD = 2`
+  - `amended` outputs `LIA010/EFC00000/kubun_CD = 3`
+  - `refund_claim` is reserved for future use and would output `kubun_CD = 4`
+  - the mapping must be verified against e-Tax XML validation before release
+- Late declaration behavior:
+  - `late` uses the same source calculation as a normal monthly declaration
+  - `declaration_reason` is required and outputs to `EFH00000`
+- Amended declaration behavior:
+  - `amended` uses the latest calculated report content for the target period
+  - the selected original/previous declaration supplies the previous confirmed amounts
+  - `EFD00020` and related current-tax fields contain the corrected report result
+  - `EFD00090` / `EFD00100` contain the previous confirmed refund/payable amounts from the selected original/previous declaration
+  - `EFD00110` contains the resulting difference according to the current XML calculation rules
+  - if the corrected result reduces tax compared with the previous confirmed declaration, the editor should warn that the case may require a separate `更正の請求` workflow rather than normal `修正申告`
 
 ### LIA110 Panel (`税額算出表`)
 - Edit mode:
@@ -179,6 +274,8 @@
 - Preview mode:
   - renders one or more `LIA110` paper-like pages
   - uses the same paging rule as XML generation
+  - fills generated `区分小計`, `酒類分類小計`, and `全酒類` rows with real values in `⑤税率`, `⑥税額`, and `⑨算出税額`
+  - keeps detail-row `⑤税率`, `⑥税額`, and `⑨算出税額` cells blank
   - follows the sample layout:
     - `①総移出数量`
     - `②未納税移出数量`
@@ -189,11 +286,25 @@
     - `⑦軽減後税額`
     - `⑧控除税額`
     - `⑨算出税額`
+  - keeps `⑦軽減後税額` value cells blank; reduced-tax calculation is handled by `LIA130`
 
 ### LIA130 Panel (`軽減税額算出表`)
 - Edit mode:
   - shows the reduced tax calculation inputs and outputs
-  - prior fiscal-year cumulative amount is read from saved `tax_reports.total_tax_amount`
+  - shows a `前月までの当年度酒税累計額` control group above the generated LIA130 field list
+  - displays the system-calculated prior cumulative amount
+  - displays a manual override toggle labeled `手入力で上書きする`
+  - when override is enabled, displays a yen integer input for `上書き金額`
+  - when override differs from calculated amount, requires a `理由・メモ` value before saving
+  - displays the resolved XML output value that will be emitted to `EQC00010`
+  - displays a calculation breakdown:
+    - submitted/approved prior report cumulative amount
+    - effective amended report replacements when applicable
+    - calculated value
+    - manual override value when present
+    - resolved XML output value
+  - provides `再計算`, `保存`, and `計算値に戻す` actions for editable reports
+  - submitted/approved reports show the same values read-only
   - calculated amounts are read-only
   - lists every field currently emitted by the `LIA130` XML builder:
     - `EQA00010` 申告対象年月
@@ -219,7 +330,7 @@
   - renders the official-style reduced tax calculation form
   - uses the same calculation source as generated XML
   - shows:
-    - prior fiscal-year cumulative standard tax through the previous month
+    - resolved prior cumulative standard tax through the previous month
     - current-month standard tax and reduced tax
     - return/deduction standard tax and reduced tax
     - net standard tax and net reduced tax
@@ -286,12 +397,16 @@
    - XML template file when XML output is requested
 4. New flow:
    - use selected route query values as the initial period
-   - call `tax_report_generate` for that period
+   - use selected declaration type from the create prompt
+   - call `tax_report_generate` for that period and declaration type
    - use the returned saved report row as the editor state
    - if the tax type is monthly, prepare the generated supporting workbook package when saving files
+   - for `late`, require a declaration reason before allowing XML export/submission
+   - for `amended`, require a selected submitted/approved original or previous declaration, generate latest period data, and calculate the comparison before allowing XML export/submission
 5. Edit flow:
    - load the saved `tax_reports` row by id
    - populate the editor from the stored breakdown and file metadata
+   - if the row is amended, load its linked original/previous declaration for comparison display
 6. User may edit breakdown values, generate XML files, manage attachment file-name lists, and save.
 7. Save behavior:
    - regenerate the report through `tax_report_generate` so source movement refs match the saved aggregate
@@ -316,6 +431,27 @@
 - `ステータス`
   - editable only for existing rows
   - new rows are saved as `draft`
+- `申告区分`
+  - read-only on the editor page after creation
+  - values:
+    - `期限内申告書`
+    - `期限後申告書`
+    - `修正申告書`
+- `理由`
+  - maps to `tax_reports.declaration_reason`
+  - required for `期限後申告書`
+  - required for `修正申告書`
+  - outputs to `LIA010/EFH00000` when present
+- `元申告`
+  - visible for `修正申告書`
+  - read-only after creation
+  - points to `tax_reports.original_report_id` and/or `tax_reports.previous_report_id`
+- `修正回数`
+  - visible for `修正申告書`
+  - read-only derived from `tax_reports.amendment_no`
+- `修正差額`
+  - visible for `修正申告書`
+  - read-only derived from `tax_reports.correction_delta_tax_amount`
 - `本則税額合計`
   - read-only derived display
   - means the tax amount before `LIA130` reduction
@@ -335,6 +471,34 @@
   - browser file picker
   - current implementation scope still stores file names only unless attachment storage is specified separately
 
+### Amendment Comparison Section
+- Visible only when `declaration_type = amended`.
+- The section compares the selected previous confirmed declaration with the latest calculated declaration data for the same period.
+- Comparison source:
+  - previous side:
+    - `previous_report_id` when present
+    - otherwise `original_report_id`
+  - corrected side:
+    - current generated `volume_breakdown`
+- Comparison key:
+  - tax event
+  - category id/code/name
+  - ABV
+  - tax rate
+  - row role where relevant
+- Columns:
+  - row key / grouping label
+  - previous volume
+  - corrected volume
+  - volume delta
+  - previous tax amount
+  - corrected tax amount
+  - tax delta
+  - reason/notes
+- The comparison is saved in `tax_reports.comparison_breakdown`.
+- If every row has zero volume delta and zero tax delta, the editor blocks amended declaration generation with a no-difference message.
+- If the net correction delta is negative, the editor warns that the case may belong to a separate `更正の請求` workflow and should not silently submit as a normal `修正申告`.
+
 ### Movement Section Table
 - Row groups:
   - `LIA110` detail rows:
@@ -345,6 +509,8 @@
     - generated by the system from detail rows
     - not source movement rows
     - read-only and recalculated whenever detail rows change
+    - calculate `⑤税率`, `⑥税額`, and `⑨算出税額` from taxable standard quantity and tax rate instead of summing detail rows' display-only `tax_amount`
+    - keep detail-row `⑤税率`, `⑥税額`, and `⑨算出税額` blank in preview/XML
   - `LIA220` return rows:
     - rows where `tax_event = RETURN_TO_FACTORY`
     - raw source rows are shown separately from `LIA110` `区分` rows when return editing/review is required
@@ -379,6 +545,7 @@
   - `⑦軽減後税額`
   - `⑧控除税額`
   - `⑨算出税額`
+  - `⑦軽減後税額` is displayed as an official column label but its value cells stay blank in LIA110
   - `税務移出種別`
 - Sort behavior:
   - user may click each column header to sort
@@ -445,6 +612,17 @@
   - all reads and writes are scoped by the current session tenant
 - Saved data source:
   - `tax_reports`
+- Declaration rules:
+  - `declaration_type` is required and defaults to `on_time`
+  - `on_time` and `late` are base declarations
+  - only one submitted/approved base declaration may exist for a tenant/tax type/period
+  - `late` requires `declaration_reason`
+  - `amended` requires `original_report_id` or `previous_report_id`
+  - `amended` requires `amendment_no`
+  - `amended` requires `declaration_reason`
+  - `amended` rows must compare against a submitted/approved declaration for the same tenant/tax type/period
+  - `amended` rows must save `comparison_breakdown` and `correction_delta_tax_amount`
+  - `refund_claim` is reserved and must not be selectable until a separate `更正の請求` / refund-claim workflow is implemented
 - Source movement reference source:
   - `tax_report_movement_refs`
   - generated by `tax_report_generate`
@@ -504,12 +682,26 @@
   - `9` = 総合計
   - this code must not be derived directly from `tax_event`
 - LIA130 cumulative source:
-  - before creating the main report XML, read prior monthly rows from `tax_reports`
-  - source column: `tax_reports.total_tax_amount`
+  - before creating the main report XML, calculate the default prior cumulative amount from prior monthly rows in `tax_reports`
+  - source column for prior reports: `tax_reports.total_tax_amount`
   - scope: same tenant, `tax_type = monthly`, same Japanese fiscal year, months before the current report month
   - fiscal year starts in April and ends in March
   - April reports use `0` when there are no prior fiscal-year months
   - January to March reports sum rows from the previous calendar year's April through the previous month
+  - include only `submitted` or `approved` prior reports
+  - choose one effective report per prior month:
+    - latest submitted/approved amended report if present
+    - otherwise submitted/approved base declaration
+  - calculate the cumulative amount in fiscal-month order:
+    - start at `0`
+    - calculated prior reports add their `tax_reports.total_tax_amount`
+    - prior reports with `manual_override` reset the running base to the override amount, then add their `tax_reports.total_tax_amount`
+    - clamp the running cumulative amount at `0`
+  - exclude the currently edited report id while recalculating
+  - store the calculated amount in `tax_reports.prior_cumulative_tax_amount_calculated`
+  - if `prior_cumulative_tax_amount_source = manual_override`, use `prior_cumulative_tax_amount_override` as the XML value
+  - otherwise use the calculated amount as the XML value
+  - regenerating a draft/stale report refreshes the calculated amount but preserves an existing manual override unless the user clears it
   - `tax_reports.total_tax_amount` remains the monthly standard/net tax amount before LIA130 reduction so future months can use it as cumulative `本則税額`
 - LIA130 reduction rule:
   - current supported reduction category: `Ａ`
@@ -522,7 +714,16 @@
   - tax type required
   - tax year required
   - tax month required for monthly
+  - declaration type required
   - status required
+  - `late` requires declaration reason
+  - `amended` requires a selected submitted/approved previous declaration
+  - `amended` requires a non-empty comparison with at least one changed row
+  - `amended` with a negative correction delta must show a `更正の請求` warning and should not be submitted without an explicit future workflow decision
+  - prior cumulative override amount must be a non-negative yen integer
+  - prior cumulative override notes are required when the override differs from the calculated value
+  - only editable `draft` or `stale` reports can change or clear the override
+  - only privileged users can change or clear the override
   - `LIA110` source/detail section must not be empty
 - Storage overwrite rule:
   - saving the same report updates or replaces files of the same `fileType`
@@ -583,7 +784,10 @@
 ## XML Generation
 ### Summary XML
 - Uses movement-section data only.
-- Before building XML, also loads prior fiscal-year monthly totals from `tax_reports.total_tax_amount` for `LIA130/EQC00010`.
+- Before building XML, resolves the prior cumulative amount for `LIA130/EQC00010` from the stored/manual override state:
+  - `manual_override` source uses `tax_reports.prior_cumulative_tax_amount_override`
+  - `calculated` source uses `tax_reports.prior_cumulative_tax_amount_calculated`
+  - missing stored calculated amount is refreshed from effective submitted/approved prior reports before XML generation
 - Current generated form order in the `CATALOG` and `CONTENTS`:
   - `LIA010`
   - `LIA110`
@@ -591,13 +795,25 @@
   - `LIA220`
   - `LIA260`
 - `LIA010` output:
+  - `EFC00000/kubun_CD` is derived from `tax_reports.declaration_type`
+    - `on_time` -> `1`
+    - `late` -> `2`
+    - `amended` -> `3`
+    - `refund_claim` -> `4` when that future workflow is implemented
+  - `EFH00000` outputs `tax_reports.declaration_reason` when present
   - uses the final LIA130 reduced tax amount when `LIA130` is included
   - otherwise uses the normal calculated total tax amount
+  - for `amended`, the main tax amount fields contain the corrected report result
+  - for `amended`, `EFD00090` / `EFD00100` contain the previous confirmed refund/payable amounts from the selected previous declaration
+  - for `amended`, generated XML must be based on the corrected full declaration contents, not only the difference rows
 - `LIA110` output:
   - uses non-return detail rows plus generated tax-rate-application and category summary rows
   - excludes `tax_event = NONE` rows
   - excludes `tax_event = RETURN_TO_FACTORY_NON_TAXABLE` (`移入`) rows
   - recalculates generated summary rows from detail rows during XML generation
+  - outputs real generated-summary values to `EHD00090` / `⑤税率`, `EHD00100` / `⑥税額`, and `EHD00140` / `⑨算出税額`
+  - omits detail-row `EHD00090`, `EHD00100`, and `EHD00140` values so those official fields remain blank
+  - displays `⑦軽減後税額` in preview but does not populate a LIA110 value for it
   - e-Tax `EHD00010/kubun_CD` is the tax-rate application code, not the `tax_event`
   - `TAXABLE_REMOVAL` contributes to taxable standard quantity and tax
   - `NON_TAXABLE_REMOVAL` contributes to `EHD00060` / 未納税移出数量
@@ -605,7 +821,8 @@
   - `RETURN_TO_FACTORY` is output through `LIA220`
   - unknown tax events are output as `摘要`; `NONE` and `RETURN_TO_FACTORY_NON_TAXABLE` rows are excluded before XML generation
 - `LIA130` output:
-  - `EQC00010` = prior fiscal-year cumulative standard tax amount from saved `tax_reports.total_tax_amount`
+  - `EQC00010` = resolved prior cumulative standard tax amount
+  - the resolved amount is either the calculated amount or the explicit manual override saved on the report row
   - current-month standard tax before returns comes from the `LIA110` grand total
   - return/deduction standard tax comes from the generated `LIA220` `kubun_CD = 7` subtotal rows only
   - net standard tax = current-month standard tax minus return/deduction standard tax
@@ -705,3 +922,6 @@
 - No persistence of generated XML/XLSX binaries in `localStorage`.
 - No base64 file-content persistence inside `tax_reports.report_files`.
 - No delete action on the editor page.
+- No separate tenant-level `先月までの納税累計額` settings page in this pass; editing lives in the dedicated report editor.
+- No split-table declaration/calculation model in this pass; Option A keeps one extended `tax_reports` table.
+- No full `更正の請求` implementation in this pass.

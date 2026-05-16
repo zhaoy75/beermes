@@ -14,10 +14,29 @@ declare
   v_requested_status text;
   v_start_date date;
   v_end_date date;
+  v_fiscal_start_date date;
   v_volume_breakdown jsonb := '[]'::jsonb;
   v_total_tax_amount numeric := 0;
   v_report_files jsonb;
   v_attachment_files jsonb;
+  v_requested_declaration_type text;
+  v_declaration_type text;
+  v_declaration_reason text;
+  v_original_report_id uuid;
+  v_previous_report_id uuid;
+  v_previous_report public.tax_reports%rowtype;
+  v_amendment_no int;
+  v_previous_confirmed_payable_tax_amount numeric;
+  v_previous_confirmed_refund_tax_amount numeric;
+  v_correction_delta_tax_amount numeric;
+  v_comparison_breakdown jsonb := '[]'::jsonb;
+  v_comparison_changed_count int := 0;
+  v_prior_cumulative_tax_amount_calculated numeric := 0;
+  v_prior_cumulative_tax_amount_override numeric;
+  v_prior_cumulative_tax_amount_source text;
+  v_prior_cumulative_tax_amount_notes text;
+  v_prior_cumulative_amount_changed boolean := false;
+  v_prior_report record;
   v_breakdown_count int := 0;
   v_ref_count int := 0;
 begin
@@ -31,6 +50,15 @@ begin
   v_tax_year := nullif(p_doc ->> 'tax_year', '')::int;
   v_tax_month := nullif(p_doc ->> 'tax_month', '')::int;
   v_requested_status := coalesce(nullif(btrim(p_doc ->> 'status'), ''), 'draft');
+  v_requested_declaration_type := nullif(btrim(coalesce(p_doc ->> 'declaration_type', p_doc ->> 'declarationType')), '');
+  v_declaration_type := coalesce(v_requested_declaration_type, 'on_time');
+  v_declaration_reason := nullif(btrim(coalesce(p_doc ->> 'declaration_reason', p_doc ->> 'declarationReason')), '');
+  v_original_report_id := nullif(coalesce(p_doc ->> 'original_report_id', p_doc ->> 'originalReportId'), '')::uuid;
+  v_previous_report_id := nullif(coalesce(p_doc ->> 'previous_report_id', p_doc ->> 'previousReportId'), '')::uuid;
+  v_amendment_no := nullif(coalesce(p_doc ->> 'amendment_no', p_doc ->> 'amendmentNo'), '')::int;
+  v_prior_cumulative_tax_amount_source := nullif(btrim(coalesce(p_doc ->> 'prior_cumulative_tax_amount_source', p_doc ->> 'priorCumulativeTaxAmountSource', '')), '');
+  v_prior_cumulative_tax_amount_override := nullif(coalesce(p_doc ->> 'prior_cumulative_tax_amount_override', p_doc ->> 'priorCumulativeTaxAmountOverride'), '')::numeric;
+  v_prior_cumulative_tax_amount_notes := nullif(btrim(coalesce(p_doc ->> 'prior_cumulative_tax_amount_notes', p_doc ->> 'priorCumulativeTaxAmountNotes', '')), '');
 
   if v_tax_type <> 'monthly' then
     raise exception 'TRG002: only monthly tax reports are supported';
@@ -44,6 +72,10 @@ begin
     raise exception 'TRG003: tax_report_generate can only write draft or stale reports';
   end if;
 
+  if v_declaration_type not in ('on_time', 'late', 'amended') then
+    raise exception 'TRG002: invalid declaration_type';
+  end if;
+
   if v_report_id is not null then
     select *
       into v_existing
@@ -52,23 +84,212 @@ begin
       and r.id = v_report_id
     for update;
   else
-    select *
-      into v_existing
-    from public.tax_reports r
-    where r.tenant_id = v_tenant
-      and r.tax_type = v_tax_type
-      and r.tax_year = v_tax_year
-      and r.tax_month = v_tax_month
-    for update;
+    if v_declaration_type = 'amended' then
+      if v_amendment_no is not null then
+        select *
+          into v_existing
+        from public.tax_reports r
+        where r.tenant_id = v_tenant
+          and r.tax_type = v_tax_type
+          and r.tax_year = v_tax_year
+          and r.tax_month = v_tax_month
+          and r.declaration_type = 'amended'
+          and r.amendment_no = v_amendment_no
+        for update;
+      end if;
+    else
+      select *
+        into v_existing
+      from public.tax_reports r
+      where r.tenant_id = v_tenant
+        and r.tax_type = v_tax_type
+        and r.tax_year = v_tax_year
+        and r.tax_month = v_tax_month
+        and r.declaration_type in ('on_time', 'late')
+      for update;
+    end if;
   end if;
 
   if v_existing.id is not null and v_existing.status in ('submitted', 'approved') then
     raise exception 'TRG004: submitted or approved tax report cannot be regenerated';
   end if;
 
+  v_declaration_type := coalesce(v_requested_declaration_type, v_existing.declaration_type, 'on_time');
+  v_declaration_reason := coalesce(v_declaration_reason, v_existing.declaration_reason);
+  v_original_report_id := coalesce(v_original_report_id, v_existing.original_report_id);
+  v_previous_report_id := coalesce(v_previous_report_id, v_existing.previous_report_id);
+  v_amendment_no := coalesce(v_amendment_no, v_existing.amendment_no);
+
+  if v_declaration_type not in ('on_time', 'late', 'amended') then
+    raise exception 'TRG002: invalid declaration_type';
+  end if;
+
+  if v_declaration_type in ('late', 'amended') and v_declaration_reason is null then
+    raise exception 'TRG006: declaration_reason is required for late or amended reports';
+  end if;
+
+  if v_declaration_type = 'on_time' then
+    v_declaration_reason := null;
+  end if;
+
   v_report_id := coalesce(v_existing.id, v_report_id, gen_random_uuid());
   v_start_date := make_date(v_tax_year, v_tax_month, 1);
   v_end_date := (v_start_date + interval '1 month')::date;
+  v_fiscal_start_date := case
+    when v_tax_month >= 4 then make_date(v_tax_year, 4, 1)
+    else make_date(v_tax_year - 1, 4, 1)
+  end;
+
+  v_prior_cumulative_tax_amount_calculated := 0;
+  for v_prior_report in
+    select distinct on (r.tax_year, r.tax_month)
+      r.tax_year,
+      r.tax_month,
+      r.total_tax_amount,
+      r.prior_cumulative_tax_amount_source,
+      r.prior_cumulative_tax_amount_override
+    from public.tax_reports r
+    where r.tenant_id = v_tenant
+      and r.tax_type = 'monthly'
+      and r.status in ('submitted', 'approved')
+      and r.id <> v_report_id
+      and make_date(r.tax_year, r.tax_month, 1) >= v_fiscal_start_date
+      and make_date(r.tax_year, r.tax_month, 1) < v_start_date
+    order by
+      r.tax_year,
+      r.tax_month,
+      case when r.declaration_type = 'amended' then 1 else 0 end desc,
+      r.amendment_no desc nulls last,
+      r.updated_at desc nulls last,
+      r.created_at desc nulls last
+  loop
+    if v_prior_report.prior_cumulative_tax_amount_source = 'manual_override'
+       and v_prior_report.prior_cumulative_tax_amount_override is not null then
+      v_prior_cumulative_tax_amount_calculated := greatest(
+        v_prior_report.prior_cumulative_tax_amount_override + coalesce(v_prior_report.total_tax_amount, 0),
+        0
+      );
+    else
+      v_prior_cumulative_tax_amount_calculated := greatest(
+        v_prior_cumulative_tax_amount_calculated + coalesce(v_prior_report.total_tax_amount, 0),
+        0
+      );
+    end if;
+  end loop;
+
+  v_prior_cumulative_tax_amount_source := coalesce(
+    v_prior_cumulative_tax_amount_source,
+    v_existing.prior_cumulative_tax_amount_source,
+    'calculated'
+  );
+
+  if v_prior_cumulative_tax_amount_source not in ('calculated', 'manual_override') then
+    raise exception 'TRG002: invalid prior cumulative tax amount source';
+  end if;
+
+  if v_prior_cumulative_tax_amount_source = 'manual_override' then
+    v_prior_cumulative_tax_amount_override := coalesce(
+      v_prior_cumulative_tax_amount_override,
+      v_existing.prior_cumulative_tax_amount_override
+    );
+    if v_prior_cumulative_tax_amount_override is null then
+      raise exception 'TRG002: prior cumulative tax amount override is required';
+    end if;
+    if v_prior_cumulative_tax_amount_override < 0 then
+      raise exception 'TRG002: prior cumulative tax amount override must be non-negative';
+    end if;
+    v_prior_cumulative_tax_amount_notes := coalesce(
+      v_prior_cumulative_tax_amount_notes,
+      v_existing.prior_cumulative_tax_amount_notes
+    );
+  else
+    v_prior_cumulative_tax_amount_override := null;
+    v_prior_cumulative_tax_amount_notes := null;
+  end if;
+
+  v_prior_cumulative_amount_changed :=
+    v_existing.id is not null
+    and (
+      coalesce(v_existing.prior_cumulative_tax_amount_source, 'calculated') is distinct from v_prior_cumulative_tax_amount_source
+      or v_existing.prior_cumulative_tax_amount_override is distinct from v_prior_cumulative_tax_amount_override
+      or coalesce(v_existing.prior_cumulative_tax_amount_notes, '') is distinct from coalesce(v_prior_cumulative_tax_amount_notes, '')
+    );
+
+  if v_declaration_type = 'amended' then
+    if v_original_report_id is null and v_previous_report_id is null then
+      raise exception 'TRG006: amended report requires an original or previous report';
+    end if;
+
+    if v_previous_report_id is not null then
+      select *
+        into v_previous_report
+      from public.tax_reports r
+      where r.tenant_id = v_tenant
+        and r.id = v_previous_report_id;
+    elsif v_original_report_id is not null then
+      select *
+        into v_previous_report
+      from public.tax_reports r
+      where r.tenant_id = v_tenant
+        and r.tax_type = v_tax_type
+        and r.tax_year = v_tax_year
+        and r.tax_month = v_tax_month
+        and r.declaration_type = 'amended'
+        and r.status in ('submitted', 'approved')
+        and r.id <> v_report_id
+      order by r.amendment_no desc nulls last, r.created_at desc
+      limit 1;
+
+      if v_previous_report.id is null then
+        select *
+          into v_previous_report
+        from public.tax_reports r
+        where r.tenant_id = v_tenant
+          and r.id = v_original_report_id;
+      end if;
+    end if;
+
+    if v_previous_report.id is null then
+      raise exception 'TRG006: amended comparison report was not found';
+    end if;
+
+    if v_previous_report.status not in ('submitted', 'approved') then
+      raise exception 'TRG006: amended comparison report must be submitted or approved';
+    end if;
+
+    if v_previous_report.tax_type <> v_tax_type
+       or v_previous_report.tax_year <> v_tax_year
+       or v_previous_report.tax_month <> v_tax_month then
+      raise exception 'TRG006: amended comparison report period does not match';
+    end if;
+
+    if v_previous_report.id = v_report_id then
+      raise exception 'TRG006: amended comparison report cannot be itself';
+    end if;
+
+    v_previous_report_id := v_previous_report.id;
+    v_original_report_id := coalesce(v_original_report_id, v_previous_report.original_report_id, v_previous_report.id);
+
+    if v_amendment_no is null then
+      select coalesce(max(r.amendment_no), 0) + 1
+        into v_amendment_no
+      from public.tax_reports r
+      where r.tenant_id = v_tenant
+        and r.tax_type = v_tax_type
+        and r.tax_year = v_tax_year
+        and r.tax_month = v_tax_month
+        and r.declaration_type = 'amended'
+        and r.id <> v_report_id;
+    end if;
+  else
+    v_original_report_id := null;
+    v_previous_report_id := null;
+    v_amendment_no := null;
+    v_previous_confirmed_payable_tax_amount := null;
+    v_previous_confirmed_refund_tax_amount := null;
+    v_correction_delta_tax_amount := null;
+    v_comparison_breakdown := '[]'::jsonb;
+  end if;
   v_report_files := case
     when jsonb_typeof(p_doc -> 'report_files') = 'array' then p_doc -> 'report_files'
     else coalesce(v_existing.report_files, '[]'::jsonb)
@@ -432,7 +653,7 @@ begin
   from grouped g;
 
   v_breakdown_count := jsonb_array_length(coalesce(v_volume_breakdown, '[]'::jsonb));
-  if v_existing.id is null and v_breakdown_count = 0 then
+  if v_existing.id is null and v_breakdown_count = 0 and v_declaration_type <> 'amended' then
     raise exception 'TRG005: no reportable source records for selected period'
       using detail = jsonb_build_object(
         'tax_type', v_tax_type,
@@ -441,23 +662,184 @@ begin
       )::text;
   end if;
 
-  insert into public.tax_reports (
-    id, tenant_id, tax_type, tax_year, tax_month, status,
-    total_tax_amount, volume_breakdown, report_files, attachment_files
-  ) values (
-    v_report_id, v_tenant, v_tax_type, v_tax_year, v_tax_month, v_requested_status,
-    v_total_tax_amount, v_volume_breakdown, v_report_files, v_attachment_files
-  )
-  on conflict (tenant_id, tax_year, tax_month) do update
-     set tax_type = excluded.tax_type,
-         status = excluded.status,
-         total_tax_amount = excluded.total_tax_amount,
-         volume_breakdown = excluded.volume_breakdown,
-         report_files = excluded.report_files,
-         attachment_files = excluded.attachment_files
-  returning * into v_report;
+  if v_declaration_type = 'amended' then
+    v_previous_confirmed_payable_tax_amount := greatest(coalesce(v_previous_report.total_tax_amount, 0), 0);
+    v_previous_confirmed_refund_tax_amount := greatest(-coalesce(v_previous_report.total_tax_amount, 0), 0);
+    v_correction_delta_tax_amount := coalesce(v_total_tax_amount, 0) - coalesce(v_previous_report.total_tax_amount, 0);
+
+    with previous_items as (
+      select
+        coalesce(item ->> 'key', '') as key,
+        max(item ->> 'move_type') as move_type,
+        max(item ->> 'tax_event') as tax_event,
+        max(coalesce(item ->> 'categoryId', item ->> 'category_id')) as category_id,
+        max(coalesce(item ->> 'categoryCode', item ->> 'category_code')) as category_code,
+        max(coalesce(item ->> 'categoryName', item ->> 'category_name')) as category_name,
+        max(case when item ->> 'abv' ~ '^-?[0-9]+(\.[0-9]+)?$' then (item ->> 'abv')::numeric else null end) as abv,
+        max(case when item ->> 'tax_rate' ~ '^-?[0-9]+(\.[0-9]+)?$' then (item ->> 'tax_rate')::numeric else null end) as tax_rate,
+        sum(case
+          when item ->> 'volume_ml' ~ '^-?[0-9]+(\.[0-9]+)?$' then round((item ->> 'volume_ml')::numeric)
+          when item ->> 'volume_l' ~ '^-?[0-9]+(\.[0-9]+)?$' then round((item ->> 'volume_l')::numeric * 1000)
+          else 0
+        end) as volume_ml,
+        sum(case when item ->> 'tax_amount' ~ '^-?[0-9]+(\.[0-9]+)?$' then (item ->> 'tax_amount')::numeric else 0 end) as tax_amount
+      from jsonb_array_elements(coalesce(v_previous_report.volume_breakdown, '[]'::jsonb)) item
+      where coalesce(item ->> 'row_role', 'detail') = 'detail'
+      group by coalesce(item ->> 'key', '')
+    ),
+    current_items as (
+      select
+        coalesce(item ->> 'key', '') as key,
+        max(item ->> 'move_type') as move_type,
+        max(item ->> 'tax_event') as tax_event,
+        max(coalesce(item ->> 'categoryId', item ->> 'category_id')) as category_id,
+        max(coalesce(item ->> 'categoryCode', item ->> 'category_code')) as category_code,
+        max(coalesce(item ->> 'categoryName', item ->> 'category_name')) as category_name,
+        max(case when item ->> 'abv' ~ '^-?[0-9]+(\.[0-9]+)?$' then (item ->> 'abv')::numeric else null end) as abv,
+        max(case when item ->> 'tax_rate' ~ '^-?[0-9]+(\.[0-9]+)?$' then (item ->> 'tax_rate')::numeric else null end) as tax_rate,
+        sum(case
+          when item ->> 'volume_ml' ~ '^-?[0-9]+(\.[0-9]+)?$' then round((item ->> 'volume_ml')::numeric)
+          when item ->> 'volume_l' ~ '^-?[0-9]+(\.[0-9]+)?$' then round((item ->> 'volume_l')::numeric * 1000)
+          else 0
+        end) as volume_ml,
+        sum(case when item ->> 'tax_amount' ~ '^-?[0-9]+(\.[0-9]+)?$' then (item ->> 'tax_amount')::numeric else 0 end) as tax_amount
+      from jsonb_array_elements(coalesce(v_volume_breakdown, '[]'::jsonb)) item
+      where coalesce(item ->> 'row_role', 'detail') = 'detail'
+      group by coalesce(item ->> 'key', '')
+    ),
+    merged as (
+      select
+        coalesce(c.key, p.key) as key,
+        p.move_type as previous_move_type,
+        c.move_type as current_move_type,
+        p.tax_event as previous_tax_event,
+        c.tax_event as current_tax_event,
+        coalesce(c.category_id, p.category_id) as category_id,
+        coalesce(c.category_code, p.category_code) as category_code,
+        coalesce(c.category_name, p.category_name) as category_name,
+        coalesce(c.abv, p.abv) as abv,
+        coalesce(c.tax_rate, p.tax_rate) as tax_rate,
+        coalesce(p.volume_ml, 0) as previous_volume_ml,
+        coalesce(c.volume_ml, 0) as current_volume_ml,
+        coalesce(p.tax_amount, 0) as previous_tax_amount,
+        coalesce(c.tax_amount, 0) as current_tax_amount
+      from previous_items p
+      full outer join current_items c
+        on c.key = p.key
+    ),
+    comparison as (
+      select
+        *,
+        current_volume_ml - previous_volume_ml as delta_volume_ml,
+        current_tax_amount - previous_tax_amount as delta_tax_amount,
+        (current_volume_ml <> previous_volume_ml or current_tax_amount <> previous_tax_amount) as changed
+      from merged
+    )
+    select
+      coalesce(jsonb_agg(
+        jsonb_build_object(
+          'key', key,
+          'move_type', coalesce(current_move_type, previous_move_type),
+          'tax_event', coalesce(current_tax_event, previous_tax_event),
+          'categoryId', category_id,
+          'categoryCode', category_code,
+          'categoryName', category_name,
+          'abv', abv,
+          'tax_rate', tax_rate,
+          'previous_volume_l', previous_volume_ml / 1000.0,
+          'current_volume_l', current_volume_ml / 1000.0,
+          'delta_volume_l', delta_volume_ml / 1000.0,
+          'previous_volume_ml', previous_volume_ml,
+          'current_volume_ml', current_volume_ml,
+          'delta_volume_ml', delta_volume_ml,
+          'previous_tax_amount', previous_tax_amount,
+          'current_tax_amount', current_tax_amount,
+          'delta_tax_amount', delta_tax_amount,
+          'changed', changed
+        )
+        order by coalesce(current_tax_event, previous_tax_event), category_name, category_code, abv, tax_rate, key
+      ), '[]'::jsonb),
+      count(*) filter (where changed)
+      into v_comparison_breakdown, v_comparison_changed_count
+    from comparison;
+
+    if v_comparison_changed_count = 0 then
+      raise exception 'TRG006: amended report has no differences from the selected comparison report';
+    end if;
+  end if;
+
+  if v_existing.id is null then
+    insert into public.tax_reports (
+      id, tenant_id, tax_type, tax_year, tax_month, status,
+      declaration_type, declaration_reason, original_report_id, previous_report_id, amendment_no,
+      previous_confirmed_payable_tax_amount, previous_confirmed_refund_tax_amount, correction_delta_tax_amount,
+      prior_cumulative_tax_amount_calculated, prior_cumulative_tax_amount_override, prior_cumulative_tax_amount_source,
+      prior_cumulative_tax_amount_notes, prior_cumulative_tax_amount_updated_at, prior_cumulative_tax_amount_updated_by,
+      total_tax_amount, volume_breakdown, comparison_breakdown, report_files, attachment_files, updated_at
+    ) values (
+      v_report_id, v_tenant, v_tax_type, v_tax_year, v_tax_month, v_requested_status,
+      v_declaration_type, v_declaration_reason, v_original_report_id, v_previous_report_id, v_amendment_no,
+      v_previous_confirmed_payable_tax_amount, v_previous_confirmed_refund_tax_amount, v_correction_delta_tax_amount,
+      v_prior_cumulative_tax_amount_calculated, v_prior_cumulative_tax_amount_override, v_prior_cumulative_tax_amount_source,
+      v_prior_cumulative_tax_amount_notes,
+      case when v_prior_cumulative_tax_amount_source = 'manual_override' then now() else null end,
+      case when v_prior_cumulative_tax_amount_source = 'manual_override' then auth.uid() else null end,
+      v_total_tax_amount, v_volume_breakdown, v_comparison_breakdown, v_report_files, v_attachment_files, now()
+    )
+    returning * into v_report;
+  else
+    update public.tax_reports r
+       set tax_type = v_tax_type,
+           status = v_requested_status,
+           declaration_type = v_declaration_type,
+           declaration_reason = v_declaration_reason,
+           original_report_id = v_original_report_id,
+           previous_report_id = v_previous_report_id,
+           amendment_no = v_amendment_no,
+           previous_confirmed_payable_tax_amount = v_previous_confirmed_payable_tax_amount,
+           previous_confirmed_refund_tax_amount = v_previous_confirmed_refund_tax_amount,
+           correction_delta_tax_amount = v_correction_delta_tax_amount,
+           prior_cumulative_tax_amount_calculated = v_prior_cumulative_tax_amount_calculated,
+           prior_cumulative_tax_amount_override = v_prior_cumulative_tax_amount_override,
+           prior_cumulative_tax_amount_source = v_prior_cumulative_tax_amount_source,
+           prior_cumulative_tax_amount_notes = v_prior_cumulative_tax_amount_notes,
+           prior_cumulative_tax_amount_updated_at = case
+             when v_prior_cumulative_amount_changed then now()
+             else r.prior_cumulative_tax_amount_updated_at
+           end,
+           prior_cumulative_tax_amount_updated_by = case
+             when v_prior_cumulative_amount_changed then auth.uid()
+             else r.prior_cumulative_tax_amount_updated_by
+           end,
+           total_tax_amount = v_total_tax_amount,
+           volume_breakdown = v_volume_breakdown,
+           comparison_breakdown = v_comparison_breakdown,
+           report_files = v_report_files,
+           attachment_files = v_attachment_files,
+           updated_at = now()
+     where r.tenant_id = v_tenant
+       and r.id = v_report_id
+    returning * into v_report;
+  end if;
 
   v_report_id := v_report.id;
+
+  if (v_existing.id is null and v_prior_cumulative_tax_amount_source = 'manual_override')
+     or v_prior_cumulative_amount_changed then
+    insert into public.tax_report_cumulative_amount_audit (
+      tenant_id, tax_report_id, old_override_amount, new_override_amount,
+      old_source, new_source, notes, changed_by
+    ) values (
+      v_tenant,
+      v_report_id,
+      v_existing.prior_cumulative_tax_amount_override,
+      v_prior_cumulative_tax_amount_override,
+      coalesce(v_existing.prior_cumulative_tax_amount_source, 'calculated'),
+      v_prior_cumulative_tax_amount_source,
+      v_prior_cumulative_tax_amount_notes,
+      auth.uid()
+    );
+  end if;
 
   delete from public.tax_report_movement_refs r
   where r.tenant_id = v_tenant
@@ -546,4 +928,4 @@ begin
   );
 end;
 $$;
-comment on function public.tax_report_generate(jsonb) is '{"version":2}';
+comment on function public.tax_report_generate(jsonb) is '{"version":5}';

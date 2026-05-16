@@ -10,6 +10,8 @@ import { litersToMilliliters, millilitersToLiters } from '@/lib/volumeFormat'
 export type JsonMap = Record<string, unknown>
 
 export type TaxReportRowRole = 'detail' | 'kubun_summary' | 'category_summary' | 'grand_total'
+export type TaxDeclarationType = 'on_time' | 'late' | 'amended'
+export type PriorCumulativeTaxAmountSource = 'calculated' | 'manual_override'
 
 export type TaxReportFileType =
   | 'tax_report_xml'
@@ -64,6 +66,27 @@ export interface TaxVolumeItem {
   export_reference_notes?: string | null
 }
 
+export interface TaxReportComparisonItem {
+  key: string
+  move_type: string
+  tax_event: string | null
+  categoryId: string
+  categoryCode: string
+  categoryName: string
+  abv: number | null
+  tax_rate: number | null
+  previous_volume_l: number
+  current_volume_l: number
+  delta_volume_l: number
+  previous_volume_ml: number | null
+  current_volume_ml: number | null
+  delta_volume_ml: number | null
+  previous_tax_amount: number
+  current_tax_amount: number
+  delta_tax_amount: number
+  changed: boolean
+}
+
 export interface TaxReportStoredFile {
   fileName: string
   fileType: TaxReportFileType | string
@@ -88,11 +111,44 @@ export interface TaxReportRow {
   tax_year: number
   tax_month: number
   status: string
+  declaration_type: TaxDeclarationType
+  declaration_reason: string | null
+  original_report_id: string | null
+  previous_report_id: string | null
+  amendment_no: number | null
+  previous_confirmed_payable_tax_amount: number | null
+  previous_confirmed_refund_tax_amount: number | null
+  correction_delta_tax_amount: number | null
+  prior_cumulative_tax_amount_calculated: number | null
+  prior_cumulative_tax_amount_override: number | null
+  prior_cumulative_tax_amount_source: PriorCumulativeTaxAmountSource
+  prior_cumulative_tax_amount_notes: string | null
+  prior_cumulative_tax_amount_updated_at: string | null
+  prior_cumulative_tax_amount_updated_by: string | null
   total_tax_amount: number
   volume_breakdown: TaxVolumeItem[]
+  comparison_breakdown: TaxReportComparisonItem[]
   report_files: TaxReportStoredFile[]
   attachment_files: string[]
   created_at: string | null
+  updated_at: string | null
+}
+
+export interface PriorCumulativeReportPeriod {
+  taxYear: number
+  taxMonth: number
+  reportId: string
+  declarationType: TaxDeclarationType
+  amendmentNo: number | null
+  totalTaxAmount: number
+  priorCumulativeSource: PriorCumulativeTaxAmountSource
+  priorCumulativeOverrideAmount: number | null
+  cumulativeTaxAmount: number
+}
+
+export interface PriorCumulativeTaxAmountBreakdown {
+  total: number
+  periods: PriorCumulativeReportPeriod[]
 }
 
 const SUMMARY_DOC_TYPES = ['sale', 'tax_transfer', 'return', 'transfer'] as const
@@ -319,13 +375,13 @@ export function buildLia110ReportRows(items: TaxVolumeItem[]) {
           categoryTaxAmount += summaryRow.tax_amount ?? 0
         })
 
-      rows.push(createCategorySummaryRow(categoryKey, categoryRows[0], categoryTaxableVolume, categoryTaxAmount))
+      rows.push(createCategorySummaryRow(categoryKey, categoryRows[0], categoryTaxableVolume, categoryTaxAmount, categoryRows))
       grandTaxableVolume += categoryTaxableVolume
       grandTaxAmount += categoryTaxAmount
     })
 
   if (detailRows.length > 0) {
-    rows.push(createGrandTotalRow(grandTaxableVolume, grandTaxAmount))
+    rows.push(createGrandTotalRow(grandTaxableVolume, grandTaxAmount, detailRows))
   }
 
   return rows
@@ -390,6 +446,7 @@ export function buildLia220ReturnRows(items: TaxVolumeItem[]) {
 export function buildTaxReductionPreview(options: {
   breakdown: TaxVolumeItem[]
   priorFiscalYearStandardTaxAmount: number
+  priorFiscalYearStandardTaxAmountSource?: PriorCumulativeTaxAmountSource
 }): RLI0010_232_ReductionTotals {
   const sourceBreakdown = options.breakdown.filter((item) => !isGeneratedTaxVolumeItem(item))
   const lia110DetailItems = sourceBreakdown.filter(isLia110DetailItem)
@@ -400,6 +457,7 @@ export function buildTaxReductionPreview(options: {
 
   return buildLia130ReductionTotals({
     priorFiscalYearStandardTaxAmount: options.priorFiscalYearStandardTaxAmount,
+    priorFiscalYearStandardTaxAmountSource: options.priorFiscalYearStandardTaxAmountSource,
     currentMonthStandardTaxAmount,
     returnStandardTaxAmount,
   })
@@ -434,28 +492,87 @@ export async function fetchPriorFiscalYearStandardTaxAmount(options: {
   taxMonth: number
   excludeReportId?: string | null
 }) {
+  return (await fetchPriorFiscalYearStandardTaxBreakdown(options)).total
+}
+
+export async function fetchPriorFiscalYearStandardTaxBreakdown(options: {
+  supabase: SupabaseClient
+  tenantId: string
+  taxYear: number
+  taxMonth: number
+  excludeReportId?: string | null
+}): Promise<PriorCumulativeTaxAmountBreakdown> {
   const { supabase, tenantId, taxYear, taxMonth, excludeReportId } = options
   const periods = priorFiscalYearReportPeriods(taxYear, taxMonth)
-  if (periods.length === 0) return 0
+  if (periods.length === 0) return { total: 0, periods: [] }
 
   const years = Array.from(new Set(periods.map((period) => period.taxYear)))
   const periodKeys = new Set(periods.map((period) => `${period.taxYear}-${period.taxMonth}`))
   const { data, error } = await supabase
     .from('tax_reports')
-    .select('id, tax_year, tax_month, total_tax_amount')
+    .select('id, tax_year, tax_month, status, declaration_type, amendment_no, total_tax_amount, prior_cumulative_tax_amount_source, prior_cumulative_tax_amount_override, created_at, updated_at')
     .eq('tenant_id', tenantId)
     .eq('tax_type', 'monthly')
+    .in('status', ['submitted', 'approved'])
     .in('tax_year', years)
 
   if (error) throw error
 
-  return (data ?? []).reduce((sum, row) => {
-    if (excludeReportId && String(row.id) === excludeReportId) return sum
+  const effectiveByPeriod = new Map<string, JsonMap>()
+  ;(data ?? []).forEach((row) => {
+    if (excludeReportId && String(row.id) === excludeReportId) return
     const key = `${Number(row.tax_year)}-${Number(row.tax_month)}`
-    if (!periodKeys.has(key)) return sum
-    const amount = Number(row.total_tax_amount ?? 0)
-    return Number.isFinite(amount) ? sum + amount : sum
-  }, 0)
+    if (!periodKeys.has(key)) return
+    const current = effectiveByPeriod.get(key)
+    if (!current || compareEffectiveTaxReportRows(row as JsonMap, current) > 0) {
+      effectiveByPeriod.set(key, row as JsonMap)
+    }
+  })
+
+  let cumulativeTaxAmount = 0
+  const selectedPeriods = Array.from(effectiveByPeriod.values())
+    .map((row) => ({
+      taxYear: Number(row.tax_year),
+      taxMonth: Number(row.tax_month),
+      reportId: String(row.id ?? ''),
+      declarationType: normalizeDeclarationType(row.declaration_type),
+      amendmentNo: toNullableNumber(row.amendment_no),
+      totalTaxAmount: toFiniteNumber(row.total_tax_amount),
+      priorCumulativeSource: normalizePriorCumulativeTaxAmountSource(row.prior_cumulative_tax_amount_source),
+      priorCumulativeOverrideAmount: toNullableNumber(row.prior_cumulative_tax_amount_override),
+    }))
+    .sort((left, right) => (left.taxYear * 100 + left.taxMonth) - (right.taxYear * 100 + right.taxMonth))
+    .map((row) => {
+      if (row.priorCumulativeSource === 'manual_override' && row.priorCumulativeOverrideAmount != null) {
+        cumulativeTaxAmount = nonNegativeYen(row.priorCumulativeOverrideAmount + row.totalTaxAmount)
+      } else {
+        cumulativeTaxAmount = nonNegativeYen(cumulativeTaxAmount + row.totalTaxAmount)
+      }
+      return {
+        ...row,
+        cumulativeTaxAmount,
+      }
+    })
+
+  return {
+    total: cumulativeTaxAmount,
+    periods: selectedPeriods,
+  }
+}
+
+function compareEffectiveTaxReportRows(left: JsonMap, right: JsonMap) {
+  const leftAmended = normalizeDeclarationType(left.declaration_type) === 'amended' ? 1 : 0
+  const rightAmended = normalizeDeclarationType(right.declaration_type) === 'amended' ? 1 : 0
+  if (leftAmended !== rightAmended) return leftAmended - rightAmended
+
+  const amendmentResult = toFiniteNumber(left.amendment_no) - toFiniteNumber(right.amendment_no)
+  if (amendmentResult !== 0) return amendmentResult
+
+  const leftUpdatedAt = Date.parse(String(left.updated_at ?? left.created_at ?? ''))
+  const rightUpdatedAt = Date.parse(String(right.updated_at ?? right.created_at ?? ''))
+  const leftTime = Number.isFinite(leftUpdatedAt) ? leftUpdatedAt : 0
+  const rightTime = Number.isFinite(rightUpdatedAt) ? rightUpdatedAt : 0
+  return leftTime - rightTime
 }
 
 export function isSummaryDocType(value: string): value is (typeof SUMMARY_DOC_TYPES)[number] {
@@ -502,6 +619,7 @@ export function normalizeReport(row: JsonMap): TaxReportRow {
   const attachments = Array.isArray(row.attachment_files) ? row.attachment_files : []
   const breakdown = Array.isArray(row.volume_breakdown) ? row.volume_breakdown : []
   const storedTotalTaxAmount = Number(row.total_tax_amount ?? 0)
+  const declarationType = normalizeDeclarationType(row.declaration_type)
 
   const normalizedBreakdown: TaxVolumeItem[] = breakdown
     .map((item: unknown, index: number) => {
@@ -580,14 +698,73 @@ export function normalizeReport(row: JsonMap): TaxReportRow {
     tax_year: Number(row.tax_year),
     tax_month: row.tax_month ? Number(row.tax_month) : 0,
     status: toNullableString(row.status) ?? 'draft',
+    declaration_type: declarationType,
+    declaration_reason: toNullableString(row.declaration_reason),
+    original_report_id: toNullableString(row.original_report_id),
+    previous_report_id: toNullableString(row.previous_report_id),
+    amendment_no: toNullableNumber(row.amendment_no),
+    previous_confirmed_payable_tax_amount: toNullableNumber(row.previous_confirmed_payable_tax_amount),
+    previous_confirmed_refund_tax_amount: toNullableNumber(row.previous_confirmed_refund_tax_amount),
+    correction_delta_tax_amount: toNullableNumber(row.correction_delta_tax_amount),
+    prior_cumulative_tax_amount_calculated: toNullableNumber(row.prior_cumulative_tax_amount_calculated),
+    prior_cumulative_tax_amount_override: toNullableNumber(row.prior_cumulative_tax_amount_override),
+    prior_cumulative_tax_amount_source: normalizePriorCumulativeTaxAmountSource(row.prior_cumulative_tax_amount_source),
+    prior_cumulative_tax_amount_notes: toNullableString(row.prior_cumulative_tax_amount_notes),
+    prior_cumulative_tax_amount_updated_at: toNullableString(row.prior_cumulative_tax_amount_updated_at),
+    prior_cumulative_tax_amount_updated_by: toNullableString(row.prior_cumulative_tax_amount_updated_by),
     total_tax_amount: hasDerivedBreakdown && hasTaxBasis && !hasMissingTaxBasis
       ? calculateTaxTotalAmount(normalizedBreakdown)
       : storedTotalTaxAmount,
     volume_breakdown: normalizedBreakdown,
+    comparison_breakdown: normalizeComparisonBreakdown(row.comparison_breakdown),
     report_files: normalizeStoredFiles(row.report_files),
     attachment_files: attachments.map((file: unknown) => String(file)),
     created_at: toNullableString(row.created_at),
+    updated_at: toNullableString(row.updated_at),
   }
+}
+
+export function normalizeDeclarationType(value: unknown): TaxDeclarationType {
+  return value === 'late' || value === 'amended' ? value : 'on_time'
+}
+
+export function normalizePriorCumulativeTaxAmountSource(value: unknown): PriorCumulativeTaxAmountSource {
+  return value === 'manual_override' ? 'manual_override' : 'calculated'
+}
+
+export function declarationKubunCode(value: unknown) {
+  const declarationType = normalizeDeclarationType(value)
+  if (declarationType === 'late') return 2
+  if (declarationType === 'amended') return 3
+  return 1
+}
+
+export function normalizeComparisonBreakdown(value: unknown): TaxReportComparisonItem[] {
+  if (!Array.isArray(value)) return []
+
+  return value.map((item: unknown, index: number) => {
+    const record = item && typeof item === 'object' ? (item as JsonMap) : {}
+    return {
+      key: String(record.key ?? `comparison-${index}`),
+      move_type: String(record.move_type ?? record.moveType ?? 'unknown'),
+      tax_event: normalizeTaxEventValue(record.tax_event ?? record.taxEvent),
+      categoryId: String(record.categoryId ?? record.category_id ?? ''),
+      categoryCode: String(record.categoryCode ?? record.category_code ?? ''),
+      categoryName: String(record.categoryName ?? record.category_name ?? '—'),
+      abv: toNullableNumber(record.abv),
+      tax_rate: toNullableNumber(record.tax_rate ?? record.taxRate),
+      previous_volume_l: toFiniteNumber(record.previous_volume_l ?? record.previousVolumeL),
+      current_volume_l: toFiniteNumber(record.current_volume_l ?? record.currentVolumeL),
+      delta_volume_l: toFiniteNumber(record.delta_volume_l ?? record.deltaVolumeL),
+      previous_volume_ml: toNullableNumber(record.previous_volume_ml ?? record.previousVolumeMl),
+      current_volume_ml: toNullableNumber(record.current_volume_ml ?? record.currentVolumeMl),
+      delta_volume_ml: toNullableNumber(record.delta_volume_ml ?? record.deltaVolumeMl),
+      previous_tax_amount: toFiniteNumber(record.previous_tax_amount ?? record.previousTaxAmount),
+      current_tax_amount: toFiniteNumber(record.current_tax_amount ?? record.currentTaxAmount),
+      delta_tax_amount: toFiniteNumber(record.delta_tax_amount ?? record.deltaTaxAmount),
+      changed: Boolean(record.changed),
+    }
+  })
 }
 
 export function normalizeStoredFiles(value: unknown): TaxReportStoredFile[] {
@@ -731,7 +908,7 @@ function createKubunSummaryRow(
   const nonTaxableVolume = sumNumbers(rows.map((item) => item.non_taxable_volume_l))
   const exportExemptVolume = sumNumbers(rows.map((item) => item.export_exempt_volume_l))
   const taxableVolume = sumNumbers(rows.map((item) => item.taxable_volume_l))
-  const taxAmount = sumNumbers(rows.map((item) => taxAmountForItem(item)))
+  const taxAmount = lia110SummaryTaxAmountForRows(rows)
   const taxRate = sharedTaxRate(rows)
 
   return {
@@ -754,11 +931,28 @@ function createKubunSummaryRow(
   }
 }
 
+function lia110SummaryTaxAmountForRows(rows: TaxVolumeItem[]) {
+  return rows.reduce((sum, item) => {
+    const taxableVolume = finiteNumber(item.taxable_volume_l)
+    const taxRate = nullableFiniteNumber(item.tax_rate)
+    if (taxableVolume <= 0 || taxRate == null) return sum
+    return sum + taxAmountFromLiters(taxableVolume, taxRate)
+  }, 0)
+}
+
+function lia110SummaryTaxRateForRows(rows: TaxVolumeItem[], taxAmount: number, taxableVolume: number) {
+  const sharedRate = sharedTaxRate(rows)
+  if (sharedRate != null) return sharedRate
+  if (taxableVolume <= 0 || taxAmount <= 0) return null
+  return nonNegativeYen((taxAmount * 1000) / taxableVolume)
+}
+
 function createCategorySummaryRow(
   categoryKey: string,
   first: TaxVolumeItem | undefined,
   taxableVolume: number,
   taxAmount: number,
+  rows: TaxVolumeItem[],
 ): TaxVolumeItem {
   return {
     key: `${categoryKey}-category-summary`,
@@ -769,7 +963,7 @@ function createCategorySummaryRow(
     categoryName: first?.categoryName ?? '—',
     abv: null,
     volume_l: taxableVolume,
-    tax_rate: null,
+    tax_rate: lia110SummaryTaxRateForRows(rows, taxAmount, taxableVolume),
     row_role: 'category_summary',
     kubun_code: 8,
     non_taxable_volume_l: 0,
@@ -780,7 +974,7 @@ function createCategorySummaryRow(
   }
 }
 
-function createGrandTotalRow(taxableVolume: number, taxAmount: number): TaxVolumeItem {
+function createGrandTotalRow(taxableVolume: number, taxAmount: number, rows: TaxVolumeItem[]): TaxVolumeItem {
   return {
     key: 'all-liquor-grand-total',
     move_type: 'summary',
@@ -790,7 +984,7 @@ function createGrandTotalRow(taxableVolume: number, taxAmount: number): TaxVolum
     categoryName: '全酒類',
     abv: null,
     volume_l: taxableVolume,
-    tax_rate: null,
+    tax_rate: lia110SummaryTaxRateForRows(rows, taxAmount, taxableVolume),
     row_role: 'grand_total',
     kubun_code: 9,
     non_taxable_volume_l: 0,
@@ -929,6 +1123,7 @@ function finiteNumber(value: number | null | undefined) {
 
 function buildLia130ReductionTotals(options: {
   priorFiscalYearStandardTaxAmount: number
+  priorFiscalYearStandardTaxAmountSource?: PriorCumulativeTaxAmountSource
   currentMonthStandardTaxAmount: number
   returnStandardTaxAmount: number
   reimportDeductionTaxAmount?: number
@@ -953,6 +1148,7 @@ function buildLia130ReductionTotals(options: {
   return {
     included: true,
     priorFiscalYearStandardTaxAmount,
+    priorFiscalYearStandardTaxAmountSource: options.priorFiscalYearStandardTaxAmountSource,
     currentMonthStandardTaxAmount,
     currentMonthReducedTaxAmount,
     returnStandardTaxAmount,
@@ -981,22 +1177,32 @@ export async function buildXmlPayload(options: {
   taxType: string
   taxYear: number
   taxMonth: number
+  declarationType?: TaxDeclarationType | string
+  declarationReason?: string | null
+  previousConfirmedPayableTaxAmount?: number | null
+  previousConfirmedRefundTaxAmount?: number | null
   breakdown: TaxVolumeItem[]
   profile: TaxReportProfile
   tenantId: string
   tenantName: string
   priorFiscalYearStandardTaxAmount?: number
+  priorFiscalYearStandardTaxAmountSource?: PriorCumulativeTaxAmountSource
   includeLia130?: boolean
 }) {
   const {
     taxType,
     taxYear,
     taxMonth,
+    declarationType = 'on_time',
+    declarationReason = null,
+    previousConfirmedPayableTaxAmount = null,
+    previousConfirmedRefundTaxAmount = null,
     breakdown,
     profile,
     tenantId,
     tenantName,
     priorFiscalYearStandardTaxAmount = 0,
+    priorFiscalYearStandardTaxAmountSource = 'calculated',
     includeLia130 = true,
   } = options
   if (taxType !== 'monthly') {
@@ -1032,6 +1238,7 @@ export async function buildXmlPayload(options: {
   const reduction = !disposeOnly && includeLia130
     ? buildLia130ReductionTotals({
         priorFiscalYearStandardTaxAmount,
+        priorFiscalYearStandardTaxAmountSource,
         currentMonthStandardTaxAmount,
         returnStandardTaxAmount,
         reimportDeductionTaxAmount,
@@ -1044,6 +1251,16 @@ export async function buildXmlPayload(options: {
   const payableTaxAmount = Math.max(0, totalTaxAmount - roundedDownAmount)
   const refundableTaxAmount = Math.max(0, truncateYen(rawTotalTaxAmount < 0 ? Math.abs(rawTotalTaxAmount) : 0))
   const generatedAt = new Date().toISOString()
+  const normalizedDeclarationType = normalizeDeclarationType(declarationType)
+  const amendedPayableTaxAmount = normalizedDeclarationType === 'amended'
+    ? nonNegativeYen(previousConfirmedPayableTaxAmount ?? 0)
+    : undefined
+  const amendedRefundableTaxAmount = normalizedDeclarationType === 'amended'
+    ? nonNegativeYen(previousConfirmedRefundTaxAmount ?? 0)
+    : undefined
+  const netPayableTaxAmount = normalizedDeclarationType === 'amended'
+    ? Math.max(0, payableTaxAmount - (amendedPayableTaxAmount ?? 0) + (amendedRefundableTaxAmount ?? 0))
+    : payableTaxAmount
 
   const result = await generateRLI0010_232({
     input: {
@@ -1051,6 +1268,8 @@ export async function buildXmlPayload(options: {
         taxType: 'monthly',
         taxYear,
         taxMonth,
+        declarationType: normalizedDeclarationType,
+        declarationReason,
         generatedAt,
       },
       tenant: {
@@ -1068,7 +1287,9 @@ export async function buildXmlPayload(options: {
         refundableTaxAmount,
         roundedDownAmount,
         payableTaxAmount,
-        netPayableTaxAmount: payableTaxAmount,
+        amendedRefundableTaxAmount,
+        amendedPayableTaxAmount,
+        netPayableTaxAmount,
         reduction,
       },
       breakdown: {
@@ -1228,6 +1449,10 @@ function toNullableNumber(value: unknown) {
   if (value == null || value === '') return null
   const numeric = Number(value)
   return Number.isFinite(numeric) ? numeric : null
+}
+
+function toFiniteNumber(value: unknown) {
+  return toNullableNumber(value) ?? 0
 }
 
 function taxDirectionForMovement(moveType: string, taxEvent?: string | null) {

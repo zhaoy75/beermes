@@ -546,7 +546,7 @@ import {
   normalizeDateOnly,
 } from '@/lib/dateOnly'
 import { DEVELOPMENT_MODE_ENABLED } from '@/lib/devMode'
-import { toRpcUserError } from '@/lib/rpcErrors'
+import { formatRpcErrorMessage, toRpcUserError } from '@/lib/rpcErrors'
 import { supabase } from '@/lib/supabase'
 import { formatVolume } from '@/lib/volumeFormat'
 
@@ -1134,6 +1134,7 @@ async function fetchBatch() {
     }
   } catch (err) {
     console.error(err)
+    toast.error(formatRpcErrorMessage(err))
   } finally {
     loadingBatch.value = false
   }
@@ -1426,6 +1427,7 @@ async function loadBatchOptions() {
     batchOptions.value = all.filter((row: any) => row.value !== batchId.value)
   } catch (err) {
     console.error(err)
+    toast.error(formatRpcErrorMessage(err))
   } finally {
     batchOptionsLoading.value = false
   }
@@ -1834,7 +1836,10 @@ async function saveBatch() {
     await fetchBatch()
   } catch (err) {
     console.error(err)
-    batchSaveError.value = extractErrorMessage(err) || t('batch.edit.errors.saveFailed')
+    batchSaveError.value = formatRpcErrorMessage(err, {
+      fallbackKey: 'batch.edit.errors.saveFailed',
+    })
+    toast.error(batchSaveError.value)
   } finally {
     savingBatch.value = false
   }
@@ -2091,6 +2096,7 @@ async function saveActualYieldDialog() {
     actualYieldDialog.globalError = detail
       ? `${baseMessage} (${detail})`
       : baseMessage
+    toast.error(actualYieldDialog.globalError)
   } finally {
     actualYieldDialog.loading = false
   }
@@ -2259,6 +2265,9 @@ async function deletePackingEvent(event: PackingEvent) {
   } catch (err) {
     console.error(err)
     showPackingNotice(t('batch.packaging.errors.deleteFailed'))
+    toast.error(formatRpcErrorMessage(err, {
+      fallbackKey: 'batch.packaging.errors.deleteFailed',
+    }))
   }
 }
 
@@ -2763,6 +2772,7 @@ onMounted(async () => {
     await Promise.all([loadBatchOptions(), loadBatchStatusOptions(), loadSites(), loadBeerCategories(), loadVolumeUoms(), loadUoms(), fetchPackageCategories(), loadPackingEvents(), loadBatchRelations()])
   } catch (err) {
     console.error(err)
+    toast.error(formatRpcErrorMessage(err))
   }
 })
 </script>

@@ -823,6 +823,8 @@ import {
 import { formatRpcErrorMessage, toRpcUserError } from '@/lib/rpcErrors'
 import { supabase } from '@/lib/supabase'
 import { VOLUME_DISPLAY_DECIMALS, formatVolume, formatVolumeNumber } from '@/lib/volumeFormat'
+import { toast } from 'vue3-toastify'
+import 'vue3-toastify/dist/index.css'
 
 const route = useRoute()
 const router = useRouter()
@@ -1762,6 +1764,7 @@ async function fetchBatch() {
     }
   } catch (err) {
     console.error(err)
+    toast.error(formatRpcErrorMessage(err))
   } finally {
     loadingBatch.value = false
   }
@@ -2044,6 +2047,7 @@ async function loadBatchOptions() {
     batchOptions.value = all.filter((row: any) => row.value !== batchId.value)
   } catch (err) {
     console.error(err)
+    toast.error(formatRpcErrorMessage(err))
   } finally {
     batchOptionsLoading.value = false
   }
@@ -2422,7 +2426,10 @@ async function saveBatch() {
     await fetchBatch()
   } catch (err) {
     console.error(err)
-    batchSaveError.value = extractErrorMessage(err) || t('batch.edit.errors.saveFailed')
+    batchSaveError.value = formatRpcErrorMessage(err, {
+      fallbackKey: 'batch.edit.errors.saveFailed',
+    })
+    toast.error(batchSaveError.value)
   } finally {
     savingBatch.value = false
   }
@@ -2570,6 +2577,7 @@ async function saveActualYieldDialog() {
     actualYieldDialog.globalError = detail
       ? `${baseMessage} (${detail})`
       : baseMessage
+    toast.error(actualYieldDialog.globalError)
   } finally {
     actualYieldDialog.loading = false
   }
@@ -2993,7 +3001,10 @@ async function calculateTankVolume(target: 'start' | 'left') {
   } catch (err) {
     console.error(err)
     const key = target === 'start' ? 'tank_fill_start_depth' : 'tank_fill_left_depth'
-    packingDialog.errors[key] = t('batch.packaging.errors.tankVolumeCalcFailed')
+    packingDialog.errors[key] = formatRpcErrorMessage(err, {
+      fallbackKey: 'batch.packaging.errors.tankVolumeCalcFailed',
+    })
+    toast.error(packingDialog.errors[key])
   }
 }
 
@@ -3088,6 +3099,7 @@ async function savePackingEvent(addAnother: boolean) {
     packingDialog.globalError = detail
       ? `${t('batch.packaging.errors.saveFailed')} (${detail})`
       : t('batch.packaging.errors.saveFailed')
+    toast.error(packingDialog.globalError)
   } finally {
     packingDialog.loading = false
   }
@@ -3196,6 +3208,9 @@ async function deletePackingEvent(event: PackingEvent) {
   } catch (err) {
     console.error(err)
     packingDialog.globalError = t('batch.packaging.errors.deleteFailed')
+    toast.error(formatRpcErrorMessage(err, {
+      fallbackKey: 'batch.packaging.errors.deleteFailed',
+    }))
   }
 }
 
@@ -4362,6 +4377,7 @@ onMounted(async () => {
     await Promise.all([loadBatchOptions(), loadBatchStatusOptions(), loadSites(), loadBeerCategories(), loadTankOptions(), loadVolumeUoms(), loadUoms(), fetchPackageCategories(), loadPackingEvents(), loadBatchRelations()])
   } catch (err) {
     console.error(err)
+    toast.error(formatRpcErrorMessage(err))
   }
 })
 

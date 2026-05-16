@@ -59,6 +59,32 @@ begin
     if v_breakdown_count > 0 and v_ref_count = 0 then
       raise exception 'TRS005: tax report has no source movement references';
     end if;
+
+    if v_current.prior_cumulative_tax_amount_source = 'manual_override' then
+      if v_current.prior_cumulative_tax_amount_override is null
+         or v_current.prior_cumulative_tax_amount_override < 0 then
+        raise exception 'TRS008: prior cumulative tax amount override is invalid';
+      end if;
+
+      if v_current.prior_cumulative_tax_amount_override is distinct from coalesce(v_current.prior_cumulative_tax_amount_calculated, 0)
+         and nullif(btrim(coalesce(v_current.prior_cumulative_tax_amount_notes, '')), '') is null then
+        raise exception 'TRS008: prior cumulative tax amount override notes are required';
+      end if;
+    end if;
+
+    if v_current.declaration_type = 'amended' then
+      if v_current.previous_report_id is null
+         or v_current.amendment_no is null
+         or nullif(btrim(coalesce(v_current.declaration_reason, '')), '') is null
+         or jsonb_array_length(coalesce(v_current.comparison_breakdown, '[]'::jsonb)) = 0
+         or v_current.correction_delta_tax_amount is null then
+        raise exception 'TRS007: amended tax report is missing comparison metadata';
+      end if;
+
+      if v_current.correction_delta_tax_amount < 0 then
+        raise exception 'TRS007: amended tax report reduces tax and may require a correction claim workflow';
+      end if;
+    end if;
   end if;
 
   if v_target_status = 'approved' and v_current.status <> 'submitted' then
@@ -66,11 +92,12 @@ begin
   end if;
 
   update public.tax_reports r
-     set status = v_target_status
+     set status = v_target_status,
+         updated_at = now()
    where r.tenant_id = v_tenant
      and r.id = p_tax_report_id;
 
   return p_tax_report_id;
 end;
 $$;
-comment on function public.tax_report_set_status(uuid, text, text) is '{"version":1}';
+comment on function public.tax_report_set_status(uuid, text, text) is '{"version":3}';

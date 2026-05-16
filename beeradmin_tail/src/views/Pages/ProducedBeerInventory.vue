@@ -863,6 +863,7 @@ async function openDagDialog(row: InventoryPageRow) {
     dagDialog.error = formatRpcErrorMessage(err, {
       fallbackKey: 'producedBeerInventory.dag.loadFailed',
     })
+    toast.error(dagDialog.error)
   } finally {
     dagDialog.loading = false
   }
@@ -901,7 +902,12 @@ async function completeDomesticRemoval(row: InventoryPageRow) {
 }
 
 onMounted(async () => {
-  await Promise.all([initialize(), loadRuleengineLabels()])
+  try {
+    await Promise.all([initialize(), loadRuleengineLabels()])
+  } catch (err) {
+    console.error(err)
+    toast.error(formatRpcErrorMessage(err))
+  }
 })
 </script>
 

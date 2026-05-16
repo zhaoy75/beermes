@@ -125,6 +125,8 @@ import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { formatRpcErrorMessage } from '@/lib/rpcErrors'
 import { supabase } from '@/lib/supabase'
+import { toast } from 'vue3-toastify'
+import 'vue3-toastify/dist/index.css'
 
 type LotDagNode = {
   id: string
@@ -229,6 +231,9 @@ async function fetchBatchAndDag() {
   } catch (err) {
     console.error(err)
     batch.value = null
+    toast.error(formatRpcErrorMessage(err, {
+      fallbackKey: 'batch.edit.lotDagLoadFailed',
+    }))
   } finally {
     loadingBatch.value = false
   }
@@ -284,6 +289,7 @@ async function loadLotDag() {
     lotDag.globalError = formatRpcErrorMessage(err, {
       fallbackKey: 'batch.edit.lotDagLoadFailed',
     })
+    toast.error(lotDag.globalError)
   } finally {
     lotDag.loading = false
   }

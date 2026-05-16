@@ -24,7 +24,7 @@
         </header>
 
         <section class="space-y-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-          <section class="grid grid-cols-1 gap-4 md:grid-cols-4">
+          <section class="grid grid-cols-1 gap-4 md:grid-cols-5">
             <div>
               <label class="mb-1 block text-sm text-gray-600">
                 {{ t('taxReport.form.taxType') }}<span class="text-red-600">*</span>
@@ -63,12 +63,51 @@
             </div>
             <div>
               <label class="mb-1 block text-sm text-gray-600">
+                {{ t('taxReport.form.declarationType') }}<span class="text-red-600">*</span>
+              </label>
+              <input
+                :value="declarationTypeLabel(form.declaration_type, form.amendment_no)"
+                class="h-[40px] w-full rounded border bg-gray-50 px-3"
+                disabled
+              />
+            </div>
+            <div>
+              <label class="mb-1 block text-sm text-gray-600">
                 {{ t('taxReport.form.status') }}<span class="text-red-600">*</span>
               </label>
               <select v-model="form.status" class="h-[40px] w-full rounded border bg-white px-3" :disabled="!editing">
                 <option v-for="status in statusOptions" :key="status" :value="status">{{ statusLabel(status) }}</option>
               </select>
               <p v-if="errors.status" class="mt-1 text-xs text-red-600">{{ errors.status }}</p>
+            </div>
+          </section>
+          <section v-if="form.declaration_type === 'late' || form.declaration_type === 'amended'" class="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div class="md:col-span-2">
+              <label class="mb-1 block text-sm text-gray-600">
+                {{ t('taxReport.form.declarationReason') }}<span class="text-red-600">*</span>
+              </label>
+              <textarea
+                v-model="form.declaration_reason"
+                rows="3"
+                class="w-full rounded border px-3 py-2 disabled:bg-gray-50"
+                :disabled="savedReportStatus === 'submitted' || savedReportStatus === 'approved'"
+              />
+              <p v-if="errors.declaration_reason" class="mt-1 text-xs text-red-600">{{ errors.declaration_reason }}</p>
+            </div>
+            <div v-if="form.declaration_type === 'amended'" class="space-y-2 text-sm">
+              <div class="rounded border border-gray-200 p-3">
+                <div class="text-xs text-gray-500">{{ t('taxReportEditor.amendment.amendmentNo') }}</div>
+                <div class="font-medium">{{ form.amendment_no || '—' }}</div>
+              </div>
+              <div class="rounded border border-gray-200 p-3">
+                <div class="text-xs text-gray-500">{{ t('taxReportEditor.amendment.deltaTax') }}</div>
+                <div class="font-medium" :class="(form.correction_delta_tax_amount ?? 0) < 0 ? 'text-amber-700' : ''">
+                  {{ formatCurrency(form.correction_delta_tax_amount) }}
+                </div>
+              </div>
+              <p v-if="(form.correction_delta_tax_amount ?? 0) < 0" class="text-xs text-amber-700">
+                {{ t('taxReportEditor.amendment.negativeDeltaWarning') }}
+              </p>
             </div>
           </section>
 
@@ -143,6 +182,43 @@
                   </tr>
                 </tbody>
               </table>
+            </div>
+            <div v-if="form.declaration_type === 'amended'" class="space-y-2">
+              <div>
+                <h3 class="text-sm font-semibold">{{ t('taxReportEditor.amendment.comparisonTitle') }}</h3>
+                <p class="text-xs text-gray-500">{{ t('taxReportEditor.amendment.comparisonSubtitle') }}</p>
+              </div>
+              <div class="overflow-x-auto rounded border bg-gray-50">
+                <table class="min-w-full text-xs">
+                  <thead class="bg-white uppercase text-gray-500">
+                    <tr>
+                      <th class="px-3 py-2 text-left">{{ t('taxReport.breakdown.columns.category') }}</th>
+                      <th class="px-3 py-2 text-left">{{ t('taxReport.breakdown.columns.abv') }}</th>
+                      <th class="px-3 py-2 text-right">{{ t('taxReportEditor.amendment.previousVolume') }}</th>
+                      <th class="px-3 py-2 text-right">{{ t('taxReportEditor.amendment.currentVolume') }}</th>
+                      <th class="px-3 py-2 text-right">{{ t('taxReportEditor.amendment.deltaVolume') }}</th>
+                      <th class="px-3 py-2 text-right">{{ t('taxReportEditor.amendment.previousTax') }}</th>
+                      <th class="px-3 py-2 text-right">{{ t('taxReportEditor.amendment.currentTax') }}</th>
+                      <th class="px-3 py-2 text-right">{{ t('taxReportEditor.amendment.deltaTax') }}</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-100">
+                    <tr v-for="item in comparisonBreakdown" :key="item.key" :class="item.changed ? 'bg-white' : 'text-gray-400'">
+                      <td class="px-3 py-2">{{ item.categoryName }}</td>
+                      <td class="px-3 py-2">{{ formatAbv(item.abv) }}</td>
+                      <td class="px-3 py-2 text-right">{{ formatVolume(item.previous_volume_l) }}</td>
+                      <td class="px-3 py-2 text-right">{{ formatVolume(item.current_volume_l) }}</td>
+                      <td class="px-3 py-2 text-right">{{ formatSignedVolume(item.delta_volume_l) }}</td>
+                      <td class="px-3 py-2 text-right">{{ formatCurrency(item.previous_tax_amount) }}</td>
+                      <td class="px-3 py-2 text-right">{{ formatCurrency(item.current_tax_amount) }}</td>
+                      <td class="px-3 py-2 text-right">{{ formatSignedCurrency(item.delta_tax_amount) }}</td>
+                    </tr>
+                    <tr v-if="comparisonBreakdown.length === 0">
+                      <td colspan="8" class="px-3 py-4 text-center text-xs text-gray-400">{{ t('taxReportEditor.amendment.noComparison') }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </section>
 
@@ -250,6 +326,106 @@
             <p v-if="reductionPreviewError" class="text-xs text-red-600">
               {{ t('taxReportEditor.sections.reduction.loadFailed', { message: reductionPreviewError }) }}
             </p>
+            <div class="rounded border border-gray-200 bg-white p-3 text-sm">
+              <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                  <h3 class="font-semibold text-gray-800">{{ t('taxReportEditor.priorCumulative.title') }}</h3>
+                  <p class="mt-1 text-xs text-gray-500">{{ t('taxReportEditor.priorCumulative.subtitle') }}</p>
+                </div>
+                <div class="grid grid-cols-1 gap-2 text-xs sm:grid-cols-3 lg:min-w-[34rem]">
+                  <div class="rounded border border-gray-100 bg-gray-50 p-2">
+                    <div class="text-gray-500">{{ t('taxReportEditor.priorCumulative.calculated') }}</div>
+                    <div class="mt-1 font-semibold text-gray-900">{{ formatCurrency(priorCumulativeCalculatedAmount) }}</div>
+                  </div>
+                  <div class="rounded border border-gray-100 bg-gray-50 p-2">
+                    <div class="text-gray-500">{{ t('taxReportEditor.priorCumulative.override') }}</div>
+                    <div class="mt-1 font-semibold text-gray-900">
+                      {{ priorCumulativeOverrideAmount == null ? displayValue('') : formatCurrency(priorCumulativeOverrideAmount) }}
+                    </div>
+                  </div>
+                  <div class="rounded border border-blue-100 bg-blue-50 p-2">
+                    <div class="text-blue-700">{{ t('taxReportEditor.priorCumulative.output') }}</div>
+                    <div class="mt-1 font-semibold text-blue-900">{{ formatCurrency(priorCumulativeResolvedAmount) }}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-3">
+                <label class="flex items-center gap-2 text-sm text-gray-700">
+                  <input
+                    :checked="priorCumulativeOverrideEnabled"
+                    type="checkbox"
+                    class="h-4 w-4 rounded border-gray-300"
+                    :disabled="!canEditPriorCumulativeOverride"
+                    @change="togglePriorCumulativeOverride"
+                  />
+                  <span>{{ t('taxReportEditor.priorCumulative.enableOverride') }}</span>
+                </label>
+                <div>
+                  <label class="mb-1 block text-xs text-gray-500">{{ t('taxReportEditor.priorCumulative.overrideAmount') }}</label>
+                  <input
+                    v-model.number="form.prior_cumulative_tax_amount_override"
+                    type="number"
+                    min="0"
+                    step="1"
+                    class="h-[38px] w-full rounded border px-3 disabled:bg-gray-50"
+                    :disabled="!canEditPriorCumulativeOverride || !priorCumulativeOverrideEnabled"
+                  />
+                  <p v-if="errors.prior_cumulative_tax_amount_override" class="mt-1 text-xs text-red-600">
+                    {{ errors.prior_cumulative_tax_amount_override }}
+                  </p>
+                </div>
+                <div>
+                  <label class="mb-1 block text-xs text-gray-500">{{ t('taxReportEditor.priorCumulative.notes') }}</label>
+                  <input
+                    v-model.trim="form.prior_cumulative_tax_amount_notes"
+                    type="text"
+                    class="h-[38px] w-full rounded border px-3 disabled:bg-gray-50"
+                    :disabled="!canEditPriorCumulativeOverride || !priorCumulativeOverrideEnabled"
+                  />
+                  <p v-if="errors.prior_cumulative_tax_amount_notes" class="mt-1 text-xs text-red-600">
+                    {{ errors.prior_cumulative_tax_amount_notes }}
+                  </p>
+                </div>
+              </div>
+
+              <div class="mt-3 flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  class="rounded border px-3 py-1.5 text-xs hover:bg-gray-50 disabled:opacity-50"
+                  :disabled="reductionPreviewLoading"
+                  @click="refreshReductionPreview"
+                >
+                  {{ t('taxReportEditor.priorCumulative.recalculate') }}
+                </button>
+                <button
+                  type="button"
+                  class="rounded border px-3 py-1.5 text-xs hover:bg-gray-50 disabled:opacity-50"
+                  :disabled="!canEditPriorCumulativeOverride || !priorCumulativeOverrideEnabled"
+                  @click="resetPriorCumulativeOverride"
+                >
+                  {{ t('taxReportEditor.priorCumulative.reset') }}
+                </button>
+                <span v-if="!canOverridePriorCumulative" class="text-xs text-gray-500">
+                  {{ t('taxReportEditor.priorCumulative.adminOnly') }}
+                </span>
+              </div>
+
+              <div class="mt-3 rounded bg-gray-50 p-2 text-xs text-gray-600">
+                <div class="font-medium text-gray-700">{{ t('taxReportEditor.priorCumulative.breakdown') }}</div>
+                <div v-if="priorCumulativeReportPeriods.length" class="mt-1 space-y-1">
+                  <div
+                    v-for="period in priorCumulativeReportPeriods"
+                    :key="period.reportId"
+                    class="flex justify-between gap-3"
+                  >
+                    <span>{{ priorCumulativePeriodLabel(period) }}</span>
+                    <span class="font-medium text-gray-900">{{ formatCurrency(period.cumulativeTaxAmount) }}</span>
+                  </div>
+                </div>
+                <div v-else class="mt-1 text-gray-400">{{ t('taxReportEditor.priorCumulative.noPriorReports') }}</div>
+              </div>
+            </div>
             <div class="max-h-[42vh] overflow-auto rounded border bg-gray-50">
               <table class="min-w-full text-xs">
                 <thead class="sticky top-0 z-10 bg-white text-xs uppercase text-gray-500">
@@ -495,7 +671,7 @@
                     </tr>
                     <tr>
                       <td colspan="4" class="border border-black p-[2mm] text-[14px]">
-                        下記のとおり酒税の納税申告書（　期限内申告書　）を提出します。
+                        下記のとおり酒税の納税申告書（　{{ declarationPreviewText }}　）を提出します。
                       </td>
                     </tr>
                   </tbody>
@@ -514,13 +690,13 @@
                     <tr class="h-[9mm]">
                       <td class="border border-black p-[1.5mm] text-center">算　出　税　額　①</td>
                       <td class="border border-black p-[1.5mm] text-right text-[16px] font-semibold">{{ formatInteger(filingTaxAmount) }}　円</td>
-                      <td class="border border-black p-[1.5mm]"></td>
-                      <td rowspan="3" class="border border-black p-[1.5mm] align-bottom text-right text-[16px] font-semibold">{{ formatInteger(finalPayableTaxAmount) }}　円</td>
+                      <td class="border border-black p-[1.5mm] text-right text-[16px]">{{ form.declaration_type === 'amended' ? formatInteger(amendedPreviousPayableTaxAmount) + '　円' : '' }}</td>
+                      <td rowspan="3" class="border border-black p-[1.5mm] align-bottom text-right text-[16px] font-semibold">{{ formatInteger(netPayableTaxAmount) }}　円</td>
                     </tr>
                     <tr class="h-[9mm]">
                       <td class="border border-black p-[1.5mm] text-center">端 数 切 捨 額　②</td>
                       <td class="border border-black p-[1.5mm] text-right text-[16px]">{{ formatInteger(roundedDownTaxAmount) }}　円</td>
-                      <td class="border border-black p-[1.5mm]"></td>
+                      <td class="border border-black p-[1.5mm] text-right text-[16px]">{{ form.declaration_type === 'amended' ? formatInteger(amendedPreviousRefundTaxAmount) + '　円' : '' }}</td>
                     </tr>
                     <tr class="h-[9mm]">
                       <td class="border border-black p-[1.5mm] text-center">納付すべき税額　④</td>
@@ -543,7 +719,7 @@
                         <div>銀行等の預貯金口座に振込みを希望する場合</div>
                         <div class="mt-[4mm]">口座種類　普通　　口座番号</div>
                       </td>
-                      <td class="border border-black p-[1.5mm]"></td>
+                      <td class="border border-black p-[1.5mm]">{{ form.declaration_reason }}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -596,16 +772,16 @@
                         <div class="px-[0.8mm] text-right">{{ formatMilliliters(row.item.export_exempt_volume_l) }}</div>
                       </td>
                       <td class="border border-black p-[0.8mm] text-right">{{ formatMilliliters(row.item.taxable_volume_l) }}</td>
-                      <td class="border border-black p-[0.8mm] text-right">{{ formatInteger(row.item.tax_rate) }}</td>
+                      <td class="border border-black p-[0.8mm] text-right">{{ formatLia110TaxRate(row.item) }}</td>
                       <td class="border border-black p-0">
-                        <div class="h-1/2 border-b border-black px-[0.8mm] text-right">（{{ formatInteger(row.item.tax_amount ?? 0) }}）</div>
-                        <div class="px-[0.8mm] text-right">{{ formatInteger(row.item.tax_amount ?? 0) }}</div>
+                        <div class="h-1/2 border-b border-black px-[0.8mm] text-right"></div>
+                        <div class="px-[0.8mm] text-right">{{ formatLia110TaxAmount(row.item) }}</div>
                       </td>
                       <td class="border border-black p-0">
                         <div class="h-1/2 border-b border-black px-[0.8mm] text-right"></div>
                         <div class="px-[0.8mm] text-right"></div>
                       </td>
-                      <td class="border border-black p-[0.8mm] text-right">{{ formatInteger(previewTaxAmount(row.item)) }}</td>
+                      <td class="border border-black p-[0.8mm] text-right">{{ formatLia110TaxAmount(row.item) }}</td>
                       <td class="border border-black p-[0.8mm]">{{ movementRowLabel(row.item) }}</td>
                     </tr>
                     <tr v-if="movementTableRows.length === 0" class="h-[7.2mm]">
@@ -1113,7 +1289,7 @@ import {
   buildXmlPayload,
   downloadStoredTaxReportFile,
   disposeItemsFromBreakdown,
-  fetchPriorFiscalYearStandardTaxAmount,
+  fetchPriorFiscalYearStandardTaxBreakdown,
   type GeneratedTaxReportFile,
   inferStoredFileType,
   isDisasterDeductionItem,
@@ -1126,6 +1302,10 @@ import {
   lia110KubunCodeForItem,
   sortTaxVolumeItems,
   summaryItemsFromBreakdown,
+  type TaxDeclarationType,
+  type TaxReportComparisonItem,
+  type PriorCumulativeReportPeriod,
+  type PriorCumulativeTaxAmountSource,
   type TaxReportStoredFile,
   uploadGeneratedTaxReportFiles,
   type JsonMap,
@@ -1180,6 +1360,7 @@ interface EditorField {
 }
 
 const TABLE = 'tax_reports'
+const TAX_REPORT_REDIRECT_ERROR_TOAST_KEY = 'beeradmin.taxReport.redirectErrorToast'
 const STATUS_OPTIONS = ['draft', 'stale', 'submitted', 'approved'] as const
 type TaxReportStatus = (typeof STATUS_OPTIONS)[number]
 const TAX_TYPE_OPTIONS = ['monthly'] as const
@@ -1244,6 +1425,18 @@ const form = reactive({
   tax_year: new Date().getFullYear(),
   tax_month: new Date().getMonth() + 1,
   status: 'draft',
+  declaration_type: 'on_time' as TaxDeclarationType,
+  declaration_reason: '',
+  original_report_id: '',
+  previous_report_id: '',
+  amendment_no: null as number | null,
+  previous_confirmed_payable_tax_amount: null as number | null,
+  previous_confirmed_refund_tax_amount: null as number | null,
+  correction_delta_tax_amount: null as number | null,
+  prior_cumulative_tax_amount_calculated: null as number | null,
+  prior_cumulative_tax_amount_override: null as number | null,
+  prior_cumulative_tax_amount_source: 'calculated' as PriorCumulativeTaxAmountSource,
+  prior_cumulative_tax_amount_notes: '',
   attachment_files: '',
 })
 const savedReportStatus = ref<TaxReportStatus>('draft')
@@ -1251,8 +1444,10 @@ const savedReportStatus = ref<TaxReportStatus>('draft')
 const errors = reactive<Record<string, string>>({})
 const reportBreakdown = ref<TaxVolumeItem[]>([])
 const disposeBreakdown = ref<TaxVolumeItem[]>([])
+const comparisonBreakdown = ref<TaxReportComparisonItem[]>([])
 const totalTaxAmount = ref(0)
 const priorFiscalYearStandardTaxAmount = ref(0)
+const priorCumulativeReportPeriods = ref<PriorCumulativeReportPeriod[]>([])
 const reductionPreviewLoading = ref(false)
 const reductionPreviewError = ref('')
 const summaryXmlUrl = ref('')
@@ -1279,6 +1474,7 @@ const movementSort = reactive<{
 })
 const editorMode = ref<EditorMode>('preview')
 const activeFormTab = ref<TaxReportFormTab>('LIA010')
+const canOverridePriorCumulative = ref(false)
 
 const editing = computed(() => typeof route.params.id === 'string' && route.params.id.length > 0)
 const pageTitle = computed(() => (editing.value ? t('taxReportEditor.editTitle') : t('taxReportEditor.newTitle')))
@@ -1422,16 +1618,50 @@ const exportExemptTableRows = computed<MovementTableRow[]>(() =>
       return compareNullableNumbers(a.item.abv, b.item.abv, 'desc')
     }),
 )
+const canEditPriorCumulativeOverride = computed(() =>
+  canOverridePriorCumulative.value &&
+  savedReportStatus.value !== 'submitted' &&
+  savedReportStatus.value !== 'approved',
+)
+const priorCumulativeOverrideEnabled = computed(() =>
+  form.prior_cumulative_tax_amount_source === 'manual_override',
+)
+const priorCumulativeCalculatedAmount = computed(() =>
+  nonNegativeYen(form.prior_cumulative_tax_amount_calculated ?? 0),
+)
+const priorCumulativeOverrideAmount = computed(() =>
+  Number.isFinite(form.prior_cumulative_tax_amount_override)
+    ? nonNegativeYen(Number(form.prior_cumulative_tax_amount_override))
+    : null,
+)
+const priorCumulativeResolvedAmount = computed(() =>
+  priorCumulativeOverrideEnabled.value && priorCumulativeOverrideAmount.value != null
+    ? priorCumulativeOverrideAmount.value
+    : priorCumulativeCalculatedAmount.value,
+)
 const taxReductionPreview = computed(() =>
   buildTaxReductionPreview({
     breakdown: reportBreakdown.value,
-    priorFiscalYearStandardTaxAmount: priorFiscalYearStandardTaxAmount.value,
+    priorFiscalYearStandardTaxAmount: priorCumulativeResolvedAmount.value,
+    priorFiscalYearStandardTaxAmountSource: form.prior_cumulative_tax_amount_source,
   }),
 )
 const filingTaxAmount = computed(() => taxReductionPreview.value.netReducedTaxAmount)
 const roundedDownTaxAmount = computed(() => (filingTaxAmount.value > 0 ? filingTaxAmount.value % 100 : 0))
 const finalPayableTaxAmount = computed(() => Math.max(0, filingTaxAmount.value - roundedDownTaxAmount.value))
 const refundableTaxAmount = computed(() => Math.max(0, -filingTaxAmount.value))
+const amendedPreviousPayableTaxAmount = computed(() =>
+  form.declaration_type === 'amended' ? Math.max(0, form.previous_confirmed_payable_tax_amount ?? 0) : 0,
+)
+const amendedPreviousRefundTaxAmount = computed(() =>
+  form.declaration_type === 'amended' ? Math.max(0, form.previous_confirmed_refund_tax_amount ?? 0) : 0,
+)
+const netPayableTaxAmount = computed(() =>
+  form.declaration_type === 'amended'
+    ? Math.max(0, finalPayableTaxAmount.value - amendedPreviousPayableTaxAmount.value + amendedPreviousRefundTaxAmount.value)
+    : finalPayableTaxAmount.value,
+)
+const declarationPreviewText = computed(() => declarationTypeLabel(form.declaration_type, form.amendment_no))
 const lia010EditorFields = computed<EditorField[]>(() => [
   { code: 'EFA00010', label: t('taxReportEditor.lia010.fields.filingPeriod'), value: reportPeriodText.value },
   { code: 'EFB00010', label: t('taxReportEditor.lia010.fields.submissionDate'), value: t('taxReportEditor.lia010.generatedAtXmlCreation') },
@@ -1445,17 +1675,18 @@ const lia010EditorFields = computed<EditorField[]>(() => [
   { code: 'EFB00090', label: t('taxReportEditor.lia010.fields.taxpayerTel'), value: formatTelParts(tenantProfile.value.NOZEISHA_TEL) },
   { code: 'EFB00100', label: t('taxReportEditor.lia010.fields.taxpayerName'), value: displayValue(tenantProfile.value.NOZEISHA_NM || tenantName.value) },
   { code: 'EFB00110', label: t('taxReportEditor.lia010.fields.representativeName'), value: displayValue(tenantProfile.value.DAIHYO_NM) },
-  { code: 'kubun_CD', label: t('taxReportEditor.lia010.fields.declarationType'), value: t('taxReportEditor.lia010.declarationTypeDefault') },
+  { code: 'kubun_CD', label: t('taxReportEditor.lia010.fields.declarationType'), value: declarationPreviewText.value },
   { code: 'EFD00020', label: t('taxReportEditor.lia010.fields.taxAmount'), value: formatCurrency(filingTaxAmount.value), highlight: true },
   { code: 'EFD00030', label: t('taxReportEditor.lia010.fields.roundedDownAmount'), value: formatCurrency(roundedDownTaxAmount.value) },
   { code: 'EFD00040', label: t('taxReportEditor.lia010.fields.refundableTaxAmount'), value: formatCurrency(refundableTaxAmount.value) },
   { code: 'EFD00050', label: t('taxReportEditor.lia010.fields.payableTaxAmount'), value: formatCurrency(finalPayableTaxAmount.value), highlight: true },
-  { code: 'EFD00090', label: t('taxReportEditor.lia010.fields.amendedRefundableTaxAmount'), value: displayValue('') },
-  { code: 'EFD00100', label: t('taxReportEditor.lia010.fields.amendedPayableTaxAmount'), value: displayValue('') },
-  { code: 'EFD00110', label: t('taxReportEditor.lia010.fields.netPayableTaxAmount'), value: formatCurrency(finalPayableTaxAmount.value), highlight: true },
+  { code: 'EFD00090', label: t('taxReportEditor.lia010.fields.amendedRefundableTaxAmount'), value: form.declaration_type === 'amended' ? formatCurrency(amendedPreviousRefundTaxAmount.value) : displayValue('') },
+  { code: 'EFD00100', label: t('taxReportEditor.lia010.fields.amendedPayableTaxAmount'), value: form.declaration_type === 'amended' ? formatCurrency(amendedPreviousPayableTaxAmount.value) : displayValue('') },
+  { code: 'EFD00110', label: t('taxReportEditor.lia010.fields.netPayableTaxAmount'), value: formatCurrency(netPayableTaxAmount.value), highlight: true },
   { code: 'EFE00010', label: t('taxReportEditor.lia010.fields.taxAccountantName'), value: displayValue(tenantProfile.value.DAIRI_NM) },
   { code: 'EFE00020', label: t('taxReportEditor.lia010.fields.taxAccountantTel'), value: formatTelParts(tenantProfile.value.DAIRI_TEL) },
   { code: 'EFG00000', label: t('taxReportEditor.lia010.fields.refundAccount'), value: formatRefundAccount(tenantProfile.value.KANPU_KINYUKIKAN) },
+  { code: 'EFH00000', label: t('taxReportEditor.lia010.fields.declarationReason'), value: displayValue(form.declaration_reason) },
   { code: 'EFI00000', label: t('taxReportEditor.lia010.fields.creatorName'), value: displayValue(tenantName.value) },
 ])
 const lia130EditorFields = computed<EditorField[]>(() => [
@@ -1551,6 +1782,16 @@ function taxTypeLabel(taxType: string) {
   if (!map || typeof map !== 'object') return taxType
   const label = (map as Record<string, unknown>)[taxType]
   return typeof label === 'string' ? label : taxType
+}
+
+function declarationTypeLabel(type: string, amendmentNo?: number | null) {
+  const map = tm('taxReport.declarationTypeMap')
+  const label = map && typeof map === 'object'
+    ? (map as Record<string, unknown>)[type]
+    : null
+  const text = typeof label === 'string' ? label : type
+  if (type === 'amended' && Number.isFinite(amendmentNo)) return `${text} #${amendmentNo}`
+  return text
 }
 
 function taxEventLabel(value: string | null | undefined) {
@@ -1823,6 +2064,25 @@ function formatCurrency(value: number | null | undefined) {
   return formatYen(value, locale.value)
 }
 
+function formatSignedCurrency(value: number | null | undefined) {
+  if (!Number.isFinite(value)) return formatCurrency(0)
+  const amount = Number(value)
+  const prefix = amount > 0 ? '+' : ''
+  return `${prefix}${formatCurrency(amount)}`
+}
+
+function formatVolume(value: number | null | undefined) {
+  if (!Number.isFinite(value)) return '—'
+  return `${formatNullableNumber(value, 3)} L`
+}
+
+function formatSignedVolume(value: number | null | undefined) {
+  if (!Number.isFinite(value)) return '—'
+  const amount = Number(value)
+  const prefix = amount > 0 ? '+' : ''
+  return `${prefix}${formatVolume(amount)}`
+}
+
 function formatInteger(value: number | null | undefined) {
   if (!Number.isFinite(value)) return ''
   return new Intl.NumberFormat(locale.value, {
@@ -1838,6 +2098,19 @@ function previewTaxAmount(item: TaxVolumeItem) {
   if (Number.isFinite(item.tax_amount)) return nonNegativeYen(Number(item.tax_amount))
   const taxableVolume = item.taxable_volume_l ?? (resolveTaxEvent(item.move_type, item.tax_event) === 'TAXABLE_REMOVAL' ? item.volume_l : 0)
   return taxAmountFromLiters(taxableVolume, item.tax_rate || 0)
+}
+
+function isLia110GeneratedRow(item: TaxVolumeItem) {
+  return (item.row_role ?? 'detail') !== 'detail'
+}
+
+function formatLia110TaxRate(item: TaxVolumeItem) {
+  return formatInteger(isLia110GeneratedRow(item) ? item.tax_rate : null)
+}
+
+function formatLia110TaxAmount(item: TaxVolumeItem) {
+  if (!isLia110GeneratedRow(item)) return ''
+  return formatInteger(previewTaxAmount(item))
 }
 
 function previewReturnTaxAmount(item: TaxVolumeItem) {
@@ -1960,7 +2233,7 @@ async function downloadSavedReportFile(entry: {
       toast.info(t('taxReport.fileUnavailable'))
     } catch (err) {
       console.error(err)
-      toast.error(err instanceof Error ? err.message : String(err))
+      toast.error(formatRpcErrorMessage(err))
     }
     return
   }
@@ -1972,7 +2245,7 @@ async function downloadSavedReportFile(entry: {
     downloadBlob(entry.fileName, blob)
   } catch (err) {
     console.error(err)
-    toast.error(err instanceof Error ? err.message : String(err))
+    toast.error(formatRpcErrorMessage(err))
   }
 }
 
@@ -1983,6 +2256,24 @@ async function ensureTenant() {
   const id = data.user?.app_metadata?.tenant_id as string | undefined
   if (!id) throw new Error('Tenant not resolved in session')
   tenantId.value = id
+  const metadataRole = String(data.user?.app_metadata?.role ?? data.user?.user_metadata?.role ?? '').toLowerCase()
+  const isAdminFlag = Boolean(
+    data.user?.app_metadata?.is_admin ||
+    data.user?.user_metadata?.is_admin ||
+    data.user?.app_metadata?.is_system_admin ||
+    data.user?.app_metadata?.system_role,
+  )
+  canOverridePriorCumulative.value = isAdminFlag || metadataRole === 'owner' || metadataRole === 'admin'
+  if (!canOverridePriorCumulative.value && data.user?.id) {
+    const { data: member } = await supabase
+      .from('tenant_members')
+      .select('role')
+      .eq('tenant_id', id)
+      .eq('user_id', data.user.id)
+      .maybeSingle()
+    const tenantRole = String(member?.role ?? '').toLowerCase()
+    canOverridePriorCumulative.value = tenantRole === 'owner' || tenantRole === 'admin'
+  }
   return id
 }
 
@@ -2000,6 +2291,21 @@ function applySavedReport(row: JsonMap) {
   form.tax_year = normalized.tax_year
   form.tax_month = normalized.tax_month
   form.status = normalized.status
+  form.declaration_type = normalized.declaration_type
+  form.declaration_reason = normalized.declaration_reason ?? ''
+  form.original_report_id = normalized.original_report_id ?? ''
+  form.previous_report_id = normalized.previous_report_id ?? ''
+  form.amendment_no = normalized.amendment_no
+  form.previous_confirmed_payable_tax_amount = normalized.previous_confirmed_payable_tax_amount
+  form.previous_confirmed_refund_tax_amount = normalized.previous_confirmed_refund_tax_amount
+  form.correction_delta_tax_amount = normalized.correction_delta_tax_amount
+  form.prior_cumulative_tax_amount_calculated = normalized.prior_cumulative_tax_amount_calculated
+  form.prior_cumulative_tax_amount_override = normalized.prior_cumulative_tax_amount_override
+  form.prior_cumulative_tax_amount_source = normalized.prior_cumulative_tax_amount_source
+  form.prior_cumulative_tax_amount_notes = normalized.prior_cumulative_tax_amount_notes ?? ''
+  priorFiscalYearStandardTaxAmount.value = form.prior_cumulative_tax_amount_source === 'manual_override'
+    ? (form.prior_cumulative_tax_amount_override ?? form.prior_cumulative_tax_amount_calculated ?? 0)
+    : (form.prior_cumulative_tax_amount_calculated ?? 0)
   savedReportStatus.value = STATUS_OPTIONS.includes(normalized.status as TaxReportStatus)
     ? (normalized.status as TaxReportStatus)
     : 'draft'
@@ -2007,6 +2313,7 @@ function applySavedReport(row: JsonMap) {
   storedReportFiles.value = normalized.report_files
   reportBreakdown.value = sortTaxVolumeItems(summaryItemsFromBreakdown(normalized.volume_breakdown)).map((item) => ({ ...item }))
   disposeBreakdown.value = sortTaxVolumeItems(disposeItemsFromBreakdown(normalized.volume_breakdown)).map((item) => ({ ...item }))
+  comparisonBreakdown.value = normalized.comparison_breakdown
   sortMovementBreakdown(reportBreakdown.value)
   totalTaxAmount.value = normalized.total_tax_amount
   return normalized
@@ -2036,6 +2343,7 @@ async function generateReportForPeriod(
     generating.value = true
     reportBreakdown.value = []
     disposeBreakdown.value = []
+    comparisonBreakdown.value = []
     totalTaxAmount.value = 0
 
     await ensureTenant()
@@ -2046,6 +2354,18 @@ async function generateReportForPeriod(
         tax_year: year,
         tax_month: month,
         status: options.status ?? 'draft',
+        declaration_type: form.declaration_type,
+        declaration_reason: form.declaration_reason.trim() || null,
+        original_report_id: form.original_report_id || null,
+        previous_report_id: form.previous_report_id || null,
+        amendment_no: form.amendment_no,
+        prior_cumulative_tax_amount_source: form.prior_cumulative_tax_amount_source,
+        prior_cumulative_tax_amount_override: form.prior_cumulative_tax_amount_source === 'manual_override'
+          ? form.prior_cumulative_tax_amount_override
+          : null,
+        prior_cumulative_tax_amount_notes: form.prior_cumulative_tax_amount_source === 'manual_override'
+          ? form.prior_cumulative_tax_amount_notes.trim() || null
+          : null,
         report_files: options.reportFiles ?? storedReportFiles.value,
         attachment_files: options.attachmentFiles ?? parseFileList(form.attachment_files),
       },
@@ -2103,12 +2423,39 @@ async function applyRequestedFinalStatus(requestedStatus: string) {
   }
 }
 
-function validateForm() {
+function validateForm(targetStatus = form.status) {
   Object.keys(errors).forEach((key) => delete errors[key])
   if (!form.tax_type) errors.tax_type = t('taxReport.errors.taxTypeRequired')
   if (!form.tax_year) errors.tax_year = t('taxReport.errors.taxYearRequired')
   if (form.tax_type === 'monthly' && !form.tax_month) errors.tax_month = t('taxReport.errors.taxMonthRequired')
   if (!form.status) errors.status = t('taxReport.errors.statusRequired')
+  if ((form.declaration_type === 'late' || form.declaration_type === 'amended') && !form.declaration_reason.trim()) {
+    errors.declaration_reason = t('taxReport.errors.declarationReasonRequired')
+  }
+  if (form.declaration_type === 'amended') {
+    if (!form.previous_report_id && !form.original_report_id) {
+      errors.original_report_id = t('taxReport.errors.originalReportRequired')
+    }
+    if (comparisonBreakdown.value.length === 0 || !comparisonBreakdown.value.some((item) => item.changed)) {
+      errors.comparison = t('taxReport.errors.noAmendmentDifference')
+    }
+    if ((form.correction_delta_tax_amount ?? 0) < 0 && (targetStatus === 'submitted' || targetStatus === 'approved')) {
+      errors.correction_delta = t('taxReport.errors.negativeAmendmentDelta')
+    }
+  }
+  if (form.prior_cumulative_tax_amount_source === 'manual_override') {
+    const overrideAmount = Number(form.prior_cumulative_tax_amount_override)
+    if (!Number.isFinite(overrideAmount) || overrideAmount < 0 || !Number.isInteger(overrideAmount)) {
+      errors.prior_cumulative_tax_amount_override = t('taxReport.errors.priorCumulativeOverrideInvalid')
+    }
+    if (
+      Number.isFinite(overrideAmount) &&
+      overrideAmount !== priorCumulativeCalculatedAmount.value &&
+      !form.prior_cumulative_tax_amount_notes.trim()
+    ) {
+      errors.prior_cumulative_tax_amount_notes = t('taxReport.errors.priorCumulativeOverrideNotesRequired')
+    }
+  }
   if (reportBreakdown.value.length === 0) errors.breakdown = t('taxReport.emptyBreakdown')
   return Object.keys(errors).length === 0
 }
@@ -2123,24 +2470,23 @@ async function buildSummaryXmlFile() {
   const disasterBreakdown = disposeBreakdown.value.filter(isDisasterDeductionItem)
   if (summaryBreakdown.length === 0) return null
   const tenant = await ensureTenant()
-  const priorStandardTaxAmount = await fetchPriorFiscalYearStandardTaxAmount({
-    supabase,
-    tenantId: tenant,
-    taxYear: form.tax_year,
-    taxMonth: form.tax_month,
-    excludeReportId: form.id || null,
-  })
-  priorFiscalYearStandardTaxAmount.value = priorStandardTaxAmount
+  await refreshReductionPreview()
+  const priorStandardTaxAmount = priorCumulativeResolvedAmount.value
   const fileName = buildXmlFilename(form.tax_type, form.tax_year, form.tax_month)
   const content = await buildXmlPayload({
     taxType: form.tax_type,
     taxYear: form.tax_year,
     taxMonth: form.tax_month,
+    declarationType: form.declaration_type,
+    declarationReason: form.declaration_reason,
+    previousConfirmedPayableTaxAmount: form.previous_confirmed_payable_tax_amount,
+    previousConfirmedRefundTaxAmount: form.previous_confirmed_refund_tax_amount,
     breakdown: [...summaryBreakdown, ...disasterBreakdown],
     profile: tenantProfile.value,
     tenantId: tenant,
     tenantName: tenantName.value,
     priorFiscalYearStandardTaxAmount: priorStandardTaxAmount,
+    priorFiscalYearStandardTaxAmountSource: form.prior_cumulative_tax_amount_source,
     includeLia130: true,
   })
   return {
@@ -2159,6 +2505,10 @@ async function buildDisposeXmlFile() {
     taxType: form.tax_type,
     taxYear: form.tax_year,
     taxMonth: form.tax_month,
+    declarationType: form.declaration_type,
+    declarationReason: form.declaration_reason,
+    previousConfirmedPayableTaxAmount: form.previous_confirmed_payable_tax_amount,
+    previousConfirmedRefundTaxAmount: form.previous_confirmed_refund_tax_amount,
     breakdown: disposeBreakdown.value,
     profile: tenantProfile.value,
     tenantId: tenantId.value ?? '',
@@ -2254,7 +2604,7 @@ async function saveReport() {
       silent: true,
     })
 
-    if (!validateForm()) {
+    if (!validateForm(requestedStatus)) {
       showValidationErrorToast()
       return
     }
@@ -2381,11 +2731,33 @@ function removeAttachment(file: string) {
     .join('\n')
 }
 
+function togglePriorCumulativeOverride(event: Event) {
+  const checked = event.target instanceof HTMLInputElement ? event.target.checked : false
+  if (checked) {
+    form.prior_cumulative_tax_amount_source = 'manual_override'
+    form.prior_cumulative_tax_amount_override = priorCumulativeResolvedAmount.value
+    return
+  }
+  resetPriorCumulativeOverride()
+}
+
+function resetPriorCumulativeOverride() {
+  form.prior_cumulative_tax_amount_source = 'calculated'
+  form.prior_cumulative_tax_amount_override = null
+  form.prior_cumulative_tax_amount_notes = ''
+  priorFiscalYearStandardTaxAmount.value = priorCumulativeCalculatedAmount.value
+}
+
+function priorCumulativePeriodLabel(row: PriorCumulativeReportPeriod) {
+  const declaration = declarationTypeLabel(row.declarationType, row.amendmentNo)
+  return `${row.taxYear}/${row.taxMonth} · ${declaration}`
+}
+
 async function loadExistingReport(id: string) {
   const tenant = await ensureTenant()
   const { data, error } = await supabase
     .from(TABLE)
-    .select('id, tax_type, tax_year, tax_month, status, total_tax_amount, volume_breakdown, report_files, attachment_files, created_at')
+    .select('id, tax_type, tax_year, tax_month, status, declaration_type, declaration_reason, original_report_id, previous_report_id, amendment_no, previous_confirmed_payable_tax_amount, previous_confirmed_refund_tax_amount, correction_delta_tax_amount, prior_cumulative_tax_amount_calculated, prior_cumulative_tax_amount_override, prior_cumulative_tax_amount_source, prior_cumulative_tax_amount_notes, prior_cumulative_tax_amount_updated_at, prior_cumulative_tax_amount_updated_by, total_tax_amount, volume_breakdown, comparison_breakdown, report_files, attachment_files, created_at, updated_at')
     .eq('tenant_id', tenant)
     .eq('id', id)
     .maybeSingle()
@@ -2397,7 +2769,9 @@ async function loadExistingReport(id: string) {
 
 async function refreshReductionPreview() {
   if (form.tax_type !== 'monthly' || !form.tax_year || !form.tax_month) {
+    form.prior_cumulative_tax_amount_calculated = 0
     priorFiscalYearStandardTaxAmount.value = 0
+    priorCumulativeReportPeriods.value = []
     reductionPreviewError.value = ''
     return
   }
@@ -2405,13 +2779,16 @@ async function refreshReductionPreview() {
     reductionPreviewLoading.value = true
     reductionPreviewError.value = ''
     const tenant = await ensureTenant()
-    priorFiscalYearStandardTaxAmount.value = await fetchPriorFiscalYearStandardTaxAmount({
+    const breakdown = await fetchPriorFiscalYearStandardTaxBreakdown({
       supabase,
       tenantId: tenant,
       taxYear: form.tax_year,
       taxMonth: form.tax_month,
       excludeReportId: form.id || null,
     })
+    form.prior_cumulative_tax_amount_calculated = breakdown.total
+    priorCumulativeReportPeriods.value = breakdown.periods
+    priorFiscalYearStandardTaxAmount.value = priorCumulativeResolvedAmount.value
   } catch (err) {
     console.error(err)
     reductionPreviewError.value = err instanceof Error ? err.message : String(err)
@@ -2438,11 +2815,35 @@ async function initializeNewReport() {
   form.tax_year = queryNumber(route.query.taxYear, new Date().getFullYear())
   form.tax_month = form.tax_type === 'monthly' ? queryNumber(route.query.taxMonth, new Date().getMonth() + 1) : 12
   form.status = 'draft'
+  const routeDeclarationType = route.query.declarationType
+  form.declaration_type = routeDeclarationType === 'late' || routeDeclarationType === 'amended'
+    ? routeDeclarationType
+    : 'on_time'
+  form.declaration_reason = typeof route.query.declarationReason === 'string' ? route.query.declarationReason : ''
+  form.original_report_id = typeof route.query.originalReportId === 'string' ? route.query.originalReportId : ''
+  form.previous_report_id = ''
+  form.amendment_no = null
+  form.previous_confirmed_payable_tax_amount = null
+  form.previous_confirmed_refund_tax_amount = null
+  form.correction_delta_tax_amount = null
+  form.prior_cumulative_tax_amount_calculated = null
+  form.prior_cumulative_tax_amount_override = null
+  form.prior_cumulative_tax_amount_source = 'calculated'
+  form.prior_cumulative_tax_amount_notes = ''
   await generateReportForPeriod(form.tax_type, form.tax_year, form.tax_month, { silent: true })
 }
 
 async function goBack() {
   await router.push({ name: 'TaxReport' })
+}
+
+function queueTaxReportRedirectErrorToast(message: string) {
+  try {
+    window.sessionStorage.setItem(TAX_REPORT_REDIRECT_ERROR_TOAST_KEY, message)
+  } catch (storageErr) {
+    console.warn('Failed to queue tax report redirect toast', storageErr)
+    toast.error(message)
+  }
 }
 
 onMounted(async () => {
@@ -2462,10 +2863,14 @@ onMounted(async () => {
     await fitPreviewToWidthWhenVisible()
   } catch (err) {
     console.error(err)
-    toast.error(formatRpcErrorMessage(err))
-    if (!editing.value && parseRpcError(err).businessCode === 'TRG005') {
+    const businessCode = parseRpcError(err).businessCode
+    const message = formatRpcErrorMessage(err)
+    if (!editing.value && ['TRG005', 'TRG006'].includes(businessCode ?? '')) {
+      queueTaxReportRedirectErrorToast(message)
       await router.push({ name: 'TaxReport' })
+      return
     }
+    toast.error(message)
   } finally {
     loadingInitial.value = false
   }

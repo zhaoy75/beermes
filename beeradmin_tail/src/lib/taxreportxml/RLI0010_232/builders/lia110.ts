@@ -34,7 +34,7 @@ export function buildLia110Xml(input: RLI0010_232_Input) {
 
 function buildLia110Row(item: TaxVolumeItem) {
   const volume = formatXmlVolume(item)
-  const taxRate = Math.max(0, Math.round(item.tax_rate || 0))
+  const taxRate = Number.isFinite(item.tax_rate) ? Math.max(0, Math.round(Number(item.tax_rate))) : null
   const rowRole = item.row_role ?? 'detail'
   const kubunCode = lia110KubunCodeForItem(item)
   const taxAmount = taxAmountForRow(item)
@@ -48,7 +48,7 @@ function buildLia110Row(item: TaxVolumeItem) {
   const taxableStandardVolume = formatXmlVolume(
     item.taxable_volume_l ?? (taxEvent === 'TAXABLE_REMOVAL' ? item.volume_l : 0),
   )
-  const includeTaxRate = rowRole === 'kubun_summary'
+  const includeGeneratedTaxFields = rowRole !== 'detail'
   const includeSummaryText = rowRole === 'detail'
   return element('EHD00000', joinXml([
     element('EHD00010', optionalElement('kubun_CD', kubunCode)),
@@ -59,9 +59,9 @@ function buildLia110Row(item: TaxVolumeItem) {
     optionalElement('EHD00060', nonTaxableRemovalVolume),
     optionalElement('EHD00070', exportExemptVolume),
     optionalElement('EHD00080', taxableStandardVolume, { AutoCalc: 1 }),
-    optionalElement('EHD00090', includeTaxRate ? taxRate : null, { AutoCalc: 1 }),
-    optionalElement('EHD00100', taxAmount, { AutoCalc: 1 }),
-    optionalElement('EHD00140', taxAmount, { AutoCalc: 1 }),
+    optionalElement('EHD00090', includeGeneratedTaxFields ? taxRate : null, { AutoCalc: 1 }),
+    optionalElement('EHD00100', includeGeneratedTaxFields ? taxAmount : null, { AutoCalc: 1 }),
+    optionalElement('EHD00140', includeGeneratedTaxFields ? taxAmount : null, { AutoCalc: 1 }),
     optionalElement('EHD00150', includeSummaryText ? moveTypeSummary(item.move_type, item.tax_event) : null),
   ]))
 }
@@ -100,8 +100,8 @@ function resolveCategoryCode(item: TaxVolumeItem) {
 }
 
 function taxAmountForRow(item: TaxVolumeItem) {
+  if ((item.row_role ?? 'detail') === 'detail') return null
   if (Number.isFinite(item.tax_amount)) return nonNegativeYen(Number(item.tax_amount))
-  if ((item.row_role ?? 'detail') === 'detail') return 0
   const taxableMilliliters = item.taxable_volume_l != null
     ? formatXmlVolume(item.taxable_volume_l)
     : volumeMillilitersForItem(item)

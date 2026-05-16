@@ -96,12 +96,15 @@
       "TRG003": { "message": "Tax report generation can only save draft or stale reports." },
       "TRG004": { "message": "Submitted or approved tax reports cannot be regenerated." },
       "TRG005": { "message": "No reportable details exist for the selected period, so the tax report was not created." },
+      "TRG006": { "message": "The amended return cannot be created. Check the reason, selected previous report, and whether there are report differences." },
       "TRM001": { "message": "The target movement was not specified." },
       "TRM002": { "message": "This movement is included in tax report ({report}) and cannot be reversed." },
       "TRS001": { "message": "The target tax report was not specified." },
       "TRS002": { "message": "The specified tax report status is not allowed." },
       "TRS003": { "message": "The target tax report was not found." },
-      "TRS006": { "message": "Only submitted tax reports can be approved." }
+      "TRS006": { "message": "Only submitted tax reports can be approved." },
+      "TRS007": { "message": "The amended return cannot be submitted. Check the comparison result and correction amount." },
+      "TRS008": { "message": "Check the prior cumulative tax amount override before submitting." }
     }
   },
   "equipment": {
@@ -3116,11 +3119,13 @@
       "taxType": "Tax type",
       "taxYear": "Tax year",
       "taxMonth": "Month",
+      "declarationType": "Declaration type",
       "status": "Status"
     },
     "card": {
       "taxType": "Tax type",
       "period": "Period",
+      "declarationType": "Declaration type",
       "status": "Status",
       "totalTax": "Total tax amount",
       "productionVolume": "Report breakdown (by tax movement type & ABV)",
@@ -3136,6 +3141,9 @@
       "taxType": "Tax type",
       "taxYear": "Tax year",
       "taxMonth": "Month",
+      "declarationType": "Declaration type",
+      "declarationReason": "Reason",
+      "originalReport": "Original/previous report",
       "status": "Status",
       "totalTax": "Total tax amount",
       "breakdown": "Report breakdown",
@@ -3152,6 +3160,7 @@
     "createPrompt": {
       "title": "Create tax report",
       "subtitle": "Select the tax type and reporting period before generating.",
+      "selectOriginal": "Select a submitted or approved report",
       "confirm": "Generate"
     },
     "templateMissing": "Template file is not available for XML generation.",
@@ -3161,6 +3170,11 @@
     "taxTypeMap": {
       "monthly": "Monthly",
       "yearly": "Yearly"
+    },
+    "declarationTypeMap": {
+      "on_time": "On-time return",
+      "late": "Late return",
+      "amended": "Amended return"
     },
     "movementTypeMap": {
       "production_receipt": "Production",
@@ -3208,7 +3222,14 @@
       "taxYearRequired": "Tax year is required.",
       "taxMonthRequired": "Month is required.",
       "statusRequired": "Status is required.",
-      "breakdownRequired": "Reportable movement data is required."
+      "breakdownRequired": "Reportable movement data is required.",
+      "declarationReasonRequired": "Reason is required for late or amended returns.",
+      "originalReportRequired": "Select the submitted or approved report to amend.",
+      "baseDeclarationLocked": "A submitted or approved base declaration already exists for this period.",
+      "noAmendmentDifference": "The amended return has no differences from the selected report.",
+      "negativeAmendmentDelta": "This amendment reduces tax and may require a correction claim workflow.",
+      "priorCumulativeOverrideInvalid": "The prior cumulative override amount must be a non-negative whole yen amount.",
+      "priorCumulativeOverrideNotesRequired": "Enter notes when using a cumulative amount that differs from the calculated value."
     }
   },
   "taxReportEditor": {
@@ -3290,6 +3311,7 @@
         "taxAccountantName": "Tax accountant name",
         "taxAccountantTel": "Tax accountant phone",
         "refundAccount": "Refund bank account",
+        "declarationReason": "Late/amended reason",
         "creatorName": "Creator name"
       }
     },
@@ -3309,6 +3331,21 @@
         "reductionCategory": "Reduction-rate category",
         "finalFactoryTax": "Reporting-factory total tax amount"
       }
+    },
+    "priorCumulative": {
+      "title": "Cumulative tax through previous month",
+      "subtitle": "Review the amount emitted to LIA130 EQC00010 and override it manually when needed.",
+      "calculated": "Calculated",
+      "override": "Override",
+      "output": "XML output",
+      "enableOverride": "Override manually",
+      "overrideAmount": "Override amount",
+      "notes": "Reason / notes",
+      "recalculate": "Recalculate",
+      "reset": "Use calculated value",
+      "adminOnly": "Only admins can change the override.",
+      "breakdown": "Calculation breakdown",
+      "noPriorReports": "There are no submitted or approved reports before this month."
     },
     "lia260": {
       "exportDate": "Export or sale date",
@@ -3333,6 +3370,19 @@
       "kubunSummary": "Class subtotal",
       "categorySummary": "Category subtotal",
       "grandTotal": "Grand total"
+    },
+    "amendment": {
+      "amendmentNo": "Amendment no.",
+      "comparisonTitle": "Amendment comparison",
+      "comparisonSubtitle": "Compares the selected submitted/approved report with the latest calculated data.",
+      "previousVolume": "Previous volume",
+      "currentVolume": "Current volume",
+      "deltaVolume": "Volume delta",
+      "previousTax": "Previous tax",
+      "currentTax": "Current tax",
+      "deltaTax": "Tax delta",
+      "noComparison": "No comparison rows were generated.",
+      "negativeDeltaWarning": "The corrected amount is lower than the previous confirmed amount; this may belong to a correction claim workflow."
     },
     "sections": {
       "movement": {

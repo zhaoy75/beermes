@@ -5,6 +5,8 @@ import { nonNegativeYen } from '@/lib/moneyFormat'
 
 export function buildLia010Xml(input: RLI0010_232_Input) {
   const { totals, report, profile, tenant } = input
+  const declarationType = normalizeDeclarationType(report.declarationType)
+  const isAmended = declarationType === 'amended'
   const hasRefundAccount = Boolean(
     profile.KANPU_KINYUKIKAN.kinyukikan_NM || profile.KANPU_KINYUKIKAN.shiten_NM || profile.KANPU_KINYUKIKAN.koza,
   )
@@ -28,7 +30,7 @@ export function buildLia010Xml(input: RLI0010_232_Input) {
         profile.DAIHYO_NM ? emptyElement('EFB00110', { IDREF: 'DAIHYO_NM' }) : '',
       ])),
       element('EFC00000', joinXml([
-        optionalElement('kubun_CD', 1),
+        optionalElement('kubun_CD', declarationKubunCode(declarationType)),
       ])),
       element('EFD00000', joinXml([
         element('EFD00010', joinXml([
@@ -37,13 +39,13 @@ export function buildLia010Xml(input: RLI0010_232_Input) {
           optionalElement('EFD00040', nonNegativeYen(totals.refundableTaxAmount || 0), { AutoCalc: 1 }),
           optionalElement('EFD00050', nonNegativeYen(totals.payableTaxAmount || 0), { AutoCalc: 1 }),
         ])),
-        totals.amendedRefundableTaxAmount || totals.amendedPayableTaxAmount
+        isAmended || totals.amendedRefundableTaxAmount || totals.amendedPayableTaxAmount
           ? element('EFD00060', joinXml([
               optionalElement('EFD00090', nonNegativeYen(totals.amendedRefundableTaxAmount || 0), { AutoCalc: 1 }),
               optionalElement('EFD00100', nonNegativeYen(totals.amendedPayableTaxAmount || 0), { AutoCalc: 1 }),
             ]))
           : '',
-        optionalElement('EFD00110', nonNegativeYen(totals.netPayableTaxAmount || totals.payableTaxAmount || 0), { AutoCalc: 1 }),
+        optionalElement('EFD00110', nonNegativeYen(totals.netPayableTaxAmount ?? totals.payableTaxAmount ?? 0), { AutoCalc: 1 }),
       ])),
       hasTaxAccountant
         ? element('EFE00000', joinXml([
@@ -52,6 +54,7 @@ export function buildLia010Xml(input: RLI0010_232_Input) {
           ]))
         : '',
       hasRefundAccount ? emptyElement('EFG00000', { IDREF: 'KANPU_KINYUKIKAN' }) : '',
+      optionalElement('EFH00000', report.declarationReason),
       element('EFI00000', tenant.tenantName),
     ]),
     {
@@ -63,6 +66,17 @@ export function buildLia010Xml(input: RLI0010_232_Input) {
       sakuseiDay: report.generatedAt.slice(0, 10),
     },
   )
+}
+
+function normalizeDeclarationType(value: unknown) {
+  return value === 'late' || value === 'amended' ? value : 'on_time'
+}
+
+function declarationKubunCode(value: unknown) {
+  const declarationType = normalizeDeclarationType(value)
+  if (declarationType === 'late') return 2
+  if (declarationType === 'amended') return 3
+  return 1
 }
 
 function buildYymmBody(year: number, month: number) {

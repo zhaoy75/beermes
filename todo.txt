@@ -1079,3 +1079,24 @@ for tax report function, there are several feature still need to be implement, p
  - add dropdown list to 申告書作成 modal dialog to let user to choose and declaration_type system will check.
  - for 修正申告書, user need to compare the original report and check the difference, if there are different system will generate the 修正申告書 based on the newest data
 - user need to have some place to input 先月までの納税累計額 because if a new user start use the system in the middle of business year, user need to manually set.
+
+
+category , abv should copy to movement line as. 
+
+I want you to design Tax Correction/Override Layer amend for category, abv and other attribute. please give me a grand design and find problem with the design.
+
+-  when a tax report is submited, the related batch basic information can be changed. 
+-  for submited tax report, category, abv and other attribute should not be changable at batch edit page. 
+   system will provide as dedicate ui for user to create a  修正申告 
+-  amendment should based on batch level and movement level
+-  for not submited tax report, user should have a interface to rollback all movement and input movement again
+   please check whether there are some movement can not be rollback or very difficult to operate
+
+提出済み・承認済みの申告書は修正せず、当時の内容として固定します。
+申告済みデータに関係する酒類分類・ABVは、バッチ編集画面では直接変更しません。
+誤りが見つかった場合は、専用の「税務訂正」画面で訂正内容を登録します。
+第1段階では、バッチ単位の酒類分類・ABV訂正のみ対応します。
+登録された訂正内容を使って、システムが修正申告書を再計算します。
+修正申告書では、元の申告内容と訂正後の内容との差額を確認できます。
+未提出の申告書は、訂正ではなく通常の修正・再登録・再生成で対応します。
+

@@ -19,7 +19,7 @@ VALUES
   'system',
   NULL,
   '{
-    "name": "発泡酒(ビールと同様な税率)" ,
+    "name": "発泡酒(1)" ,
     "tax_category_code": 581,
     "description": "ビールと同様の税率が適用される発泡酒",
     "malt_ratio": ">=50%",
@@ -32,7 +32,7 @@ VALUES
   'system',
   NULL,
   '{
-    "name": "発泡酒_麦芽比率25%以上50％未満（アルコール分10度未満）",
+    "name": "発泡酒(2)",
     "tax_category_code": 582,
     "description": "麦芽比率25%以上50%未満、アルコール分10度未満",
     "malt_ratio": "25%-50%",

@@ -23,11 +23,13 @@
 - `specs/current-task.md`
 - `beeradmin_tail/src/lib/taxReport.ts`
 - `DB/function/74_public.tax_report_generate.sql`
+- `DB/function/77_public._tax_batch_correction_preview_payload.sql`
 
 ## Data Model / API Changes
 - No schema changes.
 - No function signature changes.
 - `tax_report_generate(jsonb)` behavior changes; increment the stored function version comment.
+- `_tax_batch_correction_preview_payload(uuid, uuid, uuid, text, numeric, numeric)` behavior changes; increment the stored function version comment.
 
 ## Calculation Design
 - `LIA110` generated grand-total row remains the authoritative current-month standard tax amount for `LIA130`.
@@ -38,6 +40,11 @@
 - `tax_report_generate` should calculate each grouped `tax_amount` as:
   - `floor(group_volume_ml / 1,000,000 * tax_rate) * tax_direction`
 - This prevents package/movement-level truncation from causing a 1 yen difference against the official grouped quantity calculation.
+- Frontend-generated LIA110 and LIA220 subtotal rows must follow the same rule:
+  - sum the group quantity first
+  - multiply the summed quantity by the tax rate
+  - discard fractional yen once per generated subtotal group
+- Tax batch correction preview totals must also compare grouped previous/corrected amounts, not line-level truncated movement amounts.
 
 ## Validation Plan
 - Run `git diff --check` for changed files.
@@ -52,12 +59,17 @@
 - Updated `tax_report_generate` so grouped `tax_amount` is calculated from grouped `volume_ml` and `tax_rate`, then truncated once at the grouped row level.
 - Updated `tax_report_generate` so persisted `total_tax_amount` is calculated as LIA110-style taxable standard tax minus LIA220-style return standard tax.
 - Updated LIA110 detail row volume handling to prefer integer milliliter-backed conversion before deriving liters.
+- Updated frontend LIA110 and LIA220 generated subtotal calculations so they calculate tax from summed group quantity instead of adding detail-row tax calculations.
+- Updated tax batch correction preview totals so previous/corrected tax amounts are calculated from grouped affected quantity and rate.
 - Incremented `tax_report_generate(jsonb)` function version from `6` to `8`.
+- Incremented `_tax_batch_correction_preview_payload(...)` function version from `1` to `2`.
 
 ## Validation Results
 - `git diff --check -- specs/current-task.md beeradmin_tail/src/lib/taxReport.ts beeradmin_tail/src/views/Pages/TaxReportEditor.vue DB/function/74_public.tax_report_generate.sql` passed.
+- `git diff --check -- specs/current-task.md beeradmin_tail/src/lib/taxReport.ts DB/function/77_public._tax_batch_correction_preview_payload.sql` passed.
 - SQL static review confirmed the grouped tax formula and function version comment were updated.
 - `npm run type-check` passed in `beeradmin_tail`.
 - `npx eslint src/lib/taxReport.ts src/views/Pages/TaxReportEditor.vue --no-fix` passed.
+- `npx eslint src/lib/taxReport.ts --no-fix` passed.
 - Full `npx eslint . --no-fix` failed on pre-existing unrelated lint issues outside this change, including missing Vue `lang` attributes, unused variables, component naming, and `any` usage.
 - Unit tests were not run because `beeradmin_tail/package.json` does not define a unit test script.

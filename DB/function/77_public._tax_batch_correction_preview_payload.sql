@@ -346,6 +346,44 @@ begin
       limit 1
     ) new_rate on true
   ),
+  previous_tax_groups as (
+    select
+      tax_direction,
+      coalesce(old_category_id, old_category_code, old_category_name, '') as category_key,
+      case when tax_direction = -1 then old_effective_abv else null end as abv_key,
+      old_tax_rate as tax_rate,
+      sum(volume_ml)::bigint as volume_ml
+    from rated_lines
+    where tax_direction <> 0
+    group by
+      tax_direction,
+      coalesce(old_category_id, old_category_code, old_category_name, ''),
+      case when tax_direction = -1 then old_effective_abv else null end,
+      old_tax_rate
+  ),
+  corrected_tax_groups as (
+    select
+      tax_direction,
+      coalesce(new_category_id, new_category_code, new_category_name, '') as category_key,
+      case when tax_direction = -1 then new_effective_abv else null end as abv_key,
+      new_tax_rate as tax_rate,
+      sum(volume_ml)::bigint as volume_ml
+    from rated_lines
+    where tax_direction <> 0
+    group by
+      tax_direction,
+      coalesce(new_category_id, new_category_code, new_category_name, ''),
+      case when tax_direction = -1 then new_effective_abv else null end,
+      new_tax_rate
+  ),
+  previous_tax_total as (
+    select coalesce(sum(tax_direction * floor((volume_ml::numeric / 1000000) * tax_rate)), 0) as tax_amount
+    from previous_tax_groups
+  ),
+  corrected_tax_total as (
+    select coalesce(sum(tax_direction * floor((volume_ml::numeric / 1000000) * tax_rate)), 0) as tax_amount
+    from corrected_tax_groups
+  ),
   totals as (
     select
       count(*)::int as affected_movement_count,
@@ -361,16 +399,8 @@ begin
       count(distinct old_category_id) filter (where old_category_id is not null) as old_category_count,
       count(distinct actual_abv) filter (where actual_abv is not null) as old_actual_abv_count,
       count(distinct target_abv) filter (where target_abv is not null) as old_target_abv_count,
-      coalesce(sum(
-        case when tax_direction = 0 then 0
-        else tax_direction * floor((volume_ml::numeric / 1000000) * old_tax_rate)
-        end
-      ), 0) as previous_tax_amount,
-      coalesce(sum(
-        case when tax_direction = 0 then 0
-        else tax_direction * floor((volume_ml::numeric / 1000000) * new_tax_rate)
-        end
-      ), 0) as corrected_tax_amount
+      (select tax_amount from previous_tax_total) as previous_tax_amount,
+      (select tax_amount from corrected_tax_total) as corrected_tax_amount
     from rated_lines
   )
   select jsonb_build_object(
@@ -412,4 +442,4 @@ begin
   return v_payload;
 end;
 $$;
-comment on function public._tax_batch_correction_preview_payload(uuid, uuid, uuid, text, numeric, numeric) is '{"version":1}';
+comment on function public._tax_batch_correction_preview_payload(uuid, uuid, uuid, text, numeric, numeric) is '{"version":2}';

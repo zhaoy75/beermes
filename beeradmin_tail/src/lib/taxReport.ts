@@ -415,7 +415,6 @@ export function buildLia220ReturnRows(items: TaxVolumeItem[]) {
     first: TaxVolumeItem
     rows: TaxVolumeItem[]
     volumeMl: number
-    taxAmount: number
   }>()
 
   items
@@ -438,7 +437,6 @@ export function buildLia220ReturnRows(items: TaxVolumeItem[]) {
           first: detailRow,
           rows: [],
           volumeMl: 0,
-          taxAmount: 0,
         })
       }
 
@@ -446,7 +444,6 @@ export function buildLia220ReturnRows(items: TaxVolumeItem[]) {
       if (!group) return
       group.rows.push(detailRow)
       group.volumeMl += volumeMillilitersForItem(detailRow)
-      group.taxAmount += Math.abs(taxAmountForItem(detailRow))
     })
 
   return Array.from(groups.values())
@@ -910,8 +907,10 @@ function createLia220SubtotalRow(group: {
   taxRate: number | null
   first: TaxVolumeItem
   volumeMl: number
-  taxAmount: number
 }): TaxVolumeItem {
+  const taxAmount = group.taxRate == null
+    ? 0
+    : taxAmountFromMilliliters(group.volumeMl, group.taxRate)
   return {
     ...group.first,
     key: `lia220-subtotal-${group.categoryKey}-${numericGroupKey(group.abv)}-${taxRateGroupKey(group.taxRate)}`,
@@ -922,7 +921,7 @@ function createLia220SubtotalRow(group: {
     tax_rate: group.taxRate,
     row_role: 'kubun_summary',
     kubun_code: 7,
-    tax_amount: nonNegativeYen(group.taxAmount),
+    tax_amount: nonNegativeYen(taxAmount),
   }
 }
 
@@ -960,11 +959,23 @@ function createKubunSummaryRow(
 }
 
 function lia110SummaryTaxAmountForRows(rows: TaxVolumeItem[]) {
-  return rows.reduce((sum, item) => {
+  const taxGroups = new Map<string, { taxRate: number; volumeMl: number }>()
+
+  rows.forEach((item) => {
     const taxableVolume = finiteNumber(item.taxable_volume_l)
     const taxRate = nullableFiniteNumber(item.tax_rate)
-    if (taxableVolume <= 0 || taxRate == null) return sum
-    return sum + taxAmountFromMilliliters(litersToMilliliters(taxableVolume), taxRate)
+    if (taxableVolume <= 0 || taxRate == null) return
+    const key = taxRateGroupKey(taxRate)
+    if (!taxGroups.has(key)) {
+      taxGroups.set(key, { taxRate, volumeMl: 0 })
+    }
+    const group = taxGroups.get(key)
+    if (!group) return
+    group.volumeMl += litersToMilliliters(taxableVolume) ?? 0
+  })
+
+  return Array.from(taxGroups.values()).reduce((sum, group) => {
+    return sum + taxAmountFromMilliliters(group.volumeMl, group.taxRate)
   }, 0)
 }
 

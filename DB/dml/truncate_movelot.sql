@@ -1,4 +1,4 @@
-truncate table public.mes_batch cascade;
+truncate table public.mes_batches cascade;
 
 truncate table public.lot_edge cascade;
 

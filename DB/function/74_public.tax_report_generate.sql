@@ -400,6 +400,7 @@ begin
         else round(ml.qty * 1000)
       end as volume_ml,
       coalesce(
+        corr.new_beer_category_id,
         nullif(btrim(ml.meta ->> 'tax_category_code'), ''),
         nullif(btrim(ml.meta ->> 'beer_category'), ''),
         nullif(btrim(m.meta ->> 'tax_category_code'), ''),
@@ -407,19 +408,30 @@ begin
         cat.raw_category_id
       ) as raw_category_id,
       coalesce(
+        corr.new_actual_abv,
         case
-          when nullif(btrim(ml.meta ->> 'abv'), '') ~ '^[0-9]+(\.[0-9]+)?$' then
-            nullif(btrim(ml.meta ->> 'abv'), '')::numeric
           when nullif(btrim(ml.meta ->> 'actual_abv'), '') ~ '^[0-9]+(\.[0-9]+)?$' then
             nullif(btrim(ml.meta ->> 'actual_abv'), '')::numeric
-          when nullif(btrim(ml.meta ->> 'target_abv'), '') ~ '^[0-9]+(\.[0-9]+)?$' then
-            nullif(btrim(ml.meta ->> 'target_abv'), '')::numeric
+          when nullif(btrim(ml.meta ->> 'abv'), '') ~ '^[0-9]+(\.[0-9]+)?$' then
+            nullif(btrim(ml.meta ->> 'abv'), '')::numeric
+          when nullif(btrim(m.meta ->> 'actual_abv'), '') ~ '^[0-9]+(\.[0-9]+)?$' then
+            nullif(btrim(m.meta ->> 'actual_abv'), '')::numeric
           when nullif(btrim(m.meta ->> 'abv'), '') ~ '^[0-9]+(\.[0-9]+)?$' then
             nullif(btrim(m.meta ->> 'abv'), '')::numeric
           else null
         end,
-        abv.abv
-      ) as abv
+        actual_abv.abv,
+        corr.new_target_abv,
+        case
+          when nullif(btrim(ml.meta ->> 'target_abv'), '') ~ '^[0-9]+(\.[0-9]+)?$' then
+            nullif(btrim(ml.meta ->> 'target_abv'), '')::numeric
+          when nullif(btrim(m.meta ->> 'target_abv'), '') ~ '^[0-9]+(\.[0-9]+)?$' then
+            nullif(btrim(m.meta ->> 'target_abv'), '')::numeric
+          else null
+        end,
+        target_abv.abv
+      ) as abv,
+      (corr.new_beer_category_id is not null) as category_corrected
     from public.inv_movements m
     join public.inv_movement_lines ml
       on ml.tenant_id = m.tenant_id
@@ -453,11 +465,31 @@ begin
         and ea.entity_type = 'batch'
         and ea.entity_id = ml.batch_id
         and ad.domain = 'batch'
-        and ad.code in ('actual_abv', 'target_abv')
+        and ad.code = 'actual_abv'
         and ad.is_active = true
-      order by case when ad.code = 'actual_abv' then 0 else 1 end, ea.updated_at desc
+      order by ea.updated_at desc
       limit 1
-    ) abv on true
+    ) actual_abv on true
+    left join lateral (
+      select ea.value_num as abv
+      from public.entity_attr ea
+      join public.attr_def ad
+        on ad.attr_id = ea.attr_id
+      where ea.tenant_id = v_tenant
+        and ea.entity_type = 'batch'
+        and ea.entity_id = ml.batch_id
+        and ad.domain = 'batch'
+        and ad.code = 'target_abv'
+        and ad.is_active = true
+      order by ea.updated_at desc
+      limit 1
+    ) target_abv on true
+    left join public.tax_batch_corrections corr
+      on v_declaration_type = 'amended'
+     and corr.tenant_id = v_tenant
+     and corr.comparison_report_id = v_previous_report_id
+     and corr.batch_id = ml.batch_id
+     and corr.status = 'approved'
     where m.tenant_id = v_tenant
       and m.status <> 'void'
       and m.doc_type::text in ('sale', 'tax_transfer', 'return', 'transfer', 'waste')
@@ -471,7 +503,11 @@ begin
       coalesce(alc.category_id, s.raw_category_id) as category_id,
       coalesce(alc.category_code, '') as category_code,
       coalesce(alc.category_name, s.raw_category_id, '—') as category_name,
-      coalesce(s.saved_tax_rate, rate.tax_rate, 0) as tax_rate,
+      coalesce(
+        case when s.category_corrected then null else s.saved_tax_rate end,
+        rate.tax_rate,
+        0
+      ) as tax_rate,
       case
         when s.move_type in ('sale', 'tax_transfer', 'return', 'transfer')
              and s.tax_event = 'TAXABLE_REMOVAL' then 1
@@ -521,7 +557,7 @@ begin
     left join lateral (
       select nullif(btrim(r.spec ->> 'tax_rate'), '')::numeric as tax_rate
       from public.registry_def r
-      where s.saved_tax_rate is null
+      where (s.saved_tax_rate is null or s.category_corrected)
         and r.kind = 'alcohol_tax'
         and r.is_active = true
         and (
@@ -594,7 +630,10 @@ begin
       l.tax_rate,
       sum(l.volume_ml)::bigint as volume_ml,
       sum(l.volume_l) as volume_l,
-      sum(l.line_tax_amount) as tax_amount,
+      case
+        when max(l.tax_direction) = 0 then 0
+        else max(l.tax_direction) * floor((sum(l.volume_ml)::numeric / 1000000) * l.tax_rate)
+      end as tax_amount,
       max(l.tax_direction) as tax_direction
     from line_amounts l
     group by
@@ -610,6 +649,56 @@ begin
       l.category_name,
       l.abv,
       l.tax_rate
+  ),
+  taxable_standard_groups as (
+    select
+      l.category_id,
+      l.category_code,
+      l.category_name,
+      l.tax_rate,
+      sum(l.volume_ml)::bigint as volume_ml
+    from line_amounts l
+    where l.tax_direction = 1
+    group by
+      l.category_id,
+      l.category_code,
+      l.category_name,
+      l.tax_rate
+  ),
+  return_standard_groups as (
+    select
+      l.category_id,
+      l.category_code,
+      l.category_name,
+      l.abv,
+      l.tax_rate,
+      sum(l.volume_ml)::bigint as volume_ml
+    from line_amounts l
+    where l.tax_direction = -1
+    group by
+      l.category_id,
+      l.category_code,
+      l.category_name,
+      l.abv,
+      l.tax_rate
+  ),
+  standard_tax_total as (
+    select
+      coalesce(
+        (
+          select sum(floor((t.volume_ml::numeric / 1000000) * t.tax_rate))
+          from taxable_standard_groups t
+        ),
+        0
+      )
+      -
+      coalesce(
+        (
+          select sum(floor((r.volume_ml::numeric / 1000000) * r.tax_rate))
+          from return_standard_groups r
+        ),
+        0
+      ) as total_tax_amount
   )
   select
     coalesce(
@@ -648,7 +737,7 @@ begin
       ),
       '[]'::jsonb
     ),
-    coalesce(sum(case when g.move_type in ('sale', 'tax_transfer', 'return', 'transfer') then g.tax_amount else 0 end), 0)
+    coalesce((select total_tax_amount from standard_tax_total), 0)
     into v_volume_breakdown, v_total_tax_amount
   from grouped g;
 
@@ -928,4 +1017,4 @@ begin
   );
 end;
 $$;
-comment on function public.tax_report_generate(jsonb) is '{"version":5}';
+comment on function public.tax_report_generate(jsonb) is '{"version":8}';

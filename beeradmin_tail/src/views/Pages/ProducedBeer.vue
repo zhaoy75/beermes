@@ -58,18 +58,18 @@
         </header>
 
         <section class="border border-gray-200 rounded-lg p-4 bg-white">
-          <form class="grid grid-cols-1 md:grid-cols-6 gap-3" @submit.prevent>
+          <form class="grid grid-cols-1 md:grid-cols-12 gap-3" @submit.prevent>
             <div class="md:col-span-2">
               <label class="block text-sm text-gray-600 mb-1">{{
-                t('producedBeer.movement.filters.beerName')
+                t('producedBeer.movement.filters.batchNo')
               }}</label>
               <input
-                v-model.trim="movementFilters.beerName"
+                v-model.trim="movementFilters.batchNo"
                 type="search"
                 class="w-full h-[40px] border rounded px-3"
               />
             </div>
-            <div>
+            <div class="md:col-span-2">
               <label class="block text-sm text-gray-600 mb-1">{{
                 t('producedBeer.movement.filters.category')
               }}</label>
@@ -89,7 +89,7 @@
                 </option>
               </select>
             </div>
-            <div>
+            <div class="md:col-span-2">
               <label class="block text-sm text-gray-600 mb-1">{{
                 t('producedBeer.movement.filters.packageType')
               }}</label>
@@ -107,17 +107,17 @@
                 </option>
               </select>
             </div>
-            <div>
+            <div class="md:col-span-2">
               <label class="block text-sm text-gray-600 mb-1">{{
-                t('producedBeer.movement.filters.batchNo')
+                t('producedBeer.movement.filters.beerName')
               }}</label>
               <input
-                v-model.trim="movementFilters.batchNo"
+                v-model.trim="movementFilters.beerName"
                 type="search"
                 class="w-full h-[40px] border rounded px-3"
               />
             </div>
-            <div>
+            <div class="md:col-span-2">
               <label class="block text-sm text-gray-600 mb-1">{{
                 t('producedBeer.movement.filters.dateFrom')
               }}</label>
@@ -126,7 +126,7 @@
                 class="w-full h-[40px] border rounded px-3"
               />
             </div>
-            <div>
+            <div class="md:col-span-2">
               <label class="block text-sm text-gray-600 mb-1">{{
                 t('producedBeer.movement.filters.dateTo')
               }}</label>
@@ -135,17 +135,7 @@
                 class="w-full h-[40px] border rounded px-3"
               />
             </div>
-            <div class="md:col-span-2 flex items-end">
-              <label class="flex h-[40px] items-center gap-2 text-sm text-gray-700">
-                <input
-                  v-model="movementFilters.taxMovementOnly"
-                  type="checkbox"
-                  class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                <span>{{ t('producedBeer.movement.filters.taxMovementOnly') }}</span>
-              </label>
-            </div>
-            <div>
+            <div class="md:col-span-2">
               <label class="block text-sm text-gray-600 mb-1">{{
                 t('producedBeer.movement.filters.movementType')
               }}</label>
@@ -162,6 +152,26 @@
                   {{ option.label }}
                 </option>
               </select>
+            </div>
+            <div class="md:col-span-3 flex items-end">
+              <label class="flex min-h-[40px] items-center gap-2 text-sm text-gray-700">
+                <input
+                  v-model="movementFilters.taxMovementOnly"
+                  type="checkbox"
+                  class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span>{{ t('producedBeer.movement.filters.taxMovementOnly') }}</span>
+              </label>
+            </div>
+            <div class="md:col-span-3 flex items-end">
+              <label class="flex min-h-[40px] items-center gap-2 text-sm text-gray-700">
+                <input
+                  v-model="movementFilters.showReversedMovements"
+                  type="checkbox"
+                  class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span>{{ t('producedBeer.movement.filters.showReversedMovements') }}</span>
+              </label>
             </div>
           </form>
         </section>
@@ -339,13 +349,34 @@
                 <td class="px-3 py-2 text-xs text-gray-500">
                   {{ formatDateTime(card.movementAt) }}
                 </td>
-                <td class="px-3 py-2 font-mono text-xs text-gray-600">{{ movementBatchCodeLabel(card) }}</td>
-                <td class="px-3 py-2 text-gray-600">{{ movementBeerCategoryLabel(card) }}</td>
-                <td class="px-3 py-2 text-gray-600">{{ movementStyleLabel(card) }}</td>
+                <CompactTableCell
+                  :value="movementBatchCodeLabel(card)"
+                  text-column="batchCode"
+                  truncate
+                  monospace
+                  focusable
+                />
+                <CompactTableCell
+                  :value="movementBeerCategoryLabel(card)"
+                  text-column="beerCategory"
+                  truncate
+                  focusable
+                />
+                <CompactTableCell
+                  :value="movementStyleLabel(card)"
+                  text-column="styleName"
+                  truncate
+                  focusable
+                />
                 <td class="px-3 py-2 text-right text-gray-600">
                   {{ movementTargetAbvLabel(card) }}
                 </td>
-                <td class="px-3 py-2 text-gray-600">{{ movementPackageLabel(card) }}</td>
+                <CompactTableCell
+                  :value="movementPackageLabel(card)"
+                  text-column="packageType"
+                  truncate
+                  focusable
+                />
                 <td class="px-3 py-2 text-right text-gray-600">
                   {{ movementVolumeLabel(card) }}
                 </td>
@@ -356,14 +387,31 @@
                   {{ formatVolumeNumberValue(card.totalLiters) }}
                 </td>
                 <td class="px-3 py-2 text-right text-gray-600">{{ movementTaxRateLabel(card) }}</td>
-                <td class="px-3 py-2 text-gray-600">{{ siteLabel(card.sourceSiteId) }}</td>
-                <td class="px-3 py-2 text-gray-600">{{ siteLabel(card.destSiteId) }}</td>
-                <td class="px-3 py-2 font-semibold text-gray-900" :title="card.docNo">
-                  {{ movementDocumentNoLabel(card.docNo) }}
-                </td>
-                <td class="px-3 py-2 text-gray-600">
-                  {{ movementTypeLabel(card.taxEvent) }}
-                </td>
+                <CompactTableCell
+                  :value="siteLabel(card.sourceSiteId)"
+                  text-column="source"
+                  truncate
+                  focusable
+                />
+                <CompactTableCell
+                  :value="siteLabel(card.destSiteId)"
+                  text-column="destination"
+                  truncate
+                  focusable
+                />
+                <CompactTableCell
+                  :value="movementDocumentNoLabel(card.docNo)"
+                  :title="card.docNo || ''"
+                  text-column="batchCode"
+                  truncate
+                  focusable
+                />
+                <CompactTableCell
+                  :value="movementTypeLabel(card.taxEvent)"
+                  text-column="removalType"
+                  truncate
+                  focusable
+                />
                 <td class="px-2 py-1.5 text-center">
                   <button
                     class="inline-flex h-8 w-8 items-center justify-center rounded border border-red-200 bg-white text-red-700 hover:bg-red-50 disabled:border-gray-200 disabled:text-gray-400 disabled:opacity-60 disabled:hover:bg-white"
@@ -456,6 +504,7 @@ import {
   quantityToMilliliters,
 } from '@/lib/volumeFormat'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
+import CompactTableCell from '@/components/common/CompactTableCell.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
@@ -607,6 +656,7 @@ const movementFilters = reactive({
   dateFrom: defaultMovementDateFrom,
   dateTo: '',
   taxMovementOnly: true,
+  showReversedMovements: false,
 })
 
 const movementTypeFilter = ref<
@@ -1082,6 +1132,7 @@ async function fetchMovements() {
       headerQuery = headerQuery.gte('movement_at', `${movementFilters.dateFrom}T00:00:00`)
     if (movementFilters.dateTo)
       headerQuery = headerQuery.lte('movement_at', `${movementFilters.dateTo}T23:59:59`)
+    if (!movementFilters.showReversedMovements) headerQuery = headerQuery.neq('status', 'void')
 
     const { data: headers, error: headerError } = await headerQuery
     if (headerError) throw headerError
@@ -1315,6 +1366,7 @@ function resetMovementFilters() {
   movementFilters.dateFrom = defaultMovementDateFrom
   movementFilters.dateTo = ''
   movementFilters.taxMovementOnly = true
+  movementFilters.showReversedMovements = false
   movementTypeFilter.value = 'all'
 }
 
@@ -1369,6 +1421,7 @@ watch(
     dateFrom: movementFilters.dateFrom,
     dateTo: movementFilters.dateTo,
     taxMovementOnly: movementFilters.taxMovementOnly,
+    showReversedMovements: movementFilters.showReversedMovements,
     movementType: movementTypeFilter.value,
   }),
   async () => {

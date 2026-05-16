@@ -4,7 +4,7 @@ import {
   generateRLI0010_232,
   type RLI0010_232_ReductionTotals,
 } from '@/lib/taxreportxml/RLI0010_232'
-import { nonNegativeYen, taxAmountFromLiters, truncateYen } from '@/lib/moneyFormat'
+import { nonNegativeYen, taxAmountFromLiters, taxAmountFromMilliliters, truncateYen } from '@/lib/moneyFormat'
 import { litersToMilliliters, millilitersToLiters } from '@/lib/volumeFormat'
 
 export type JsonMap = Record<string, unknown>
@@ -387,6 +387,20 @@ export function buildLia110ReportRows(items: TaxVolumeItem[]) {
   return rows
 }
 
+function lia110StandardTaxAmount(summaryItems: TaxVolumeItem[]) {
+  const grandTotal = summaryItems.find((item) => (item.row_role ?? 'detail') === 'grand_total')
+  if (grandTotal && Number.isFinite(grandTotal.tax_amount)) {
+    return nonNegativeYen(Number(grandTotal.tax_amount))
+  }
+
+  const categoryTotal = summaryItems
+    .filter((item) => (item.row_role ?? 'detail') === 'category_summary')
+    .reduce((sum, item) => sum + (Number.isFinite(item.tax_amount) ? Number(item.tax_amount) : 0), 0)
+
+  if (categoryTotal > 0) return nonNegativeYen(categoryTotal)
+  return nonNegativeYen(calculateTaxTotalAmount(summaryItems.filter(isLia110DetailItem)))
+}
+
 export function calculateTaxTotalAmount(
   items: Array<Pick<TaxVolumeItem, 'move_type' | 'tax_event' | 'volume_l' | 'tax_rate' | 'tax_amount'>>,
 ) {
@@ -450,9 +464,10 @@ export function buildTaxReductionPreview(options: {
 }): RLI0010_232_ReductionTotals {
   const sourceBreakdown = options.breakdown.filter((item) => !isGeneratedTaxVolumeItem(item))
   const lia110DetailItems = sourceBreakdown.filter(isLia110DetailItem)
+  const lia110SummaryItems = buildLia110ReportRows(lia110DetailItems)
   const returnItems = buildLia220ReturnRows(sourceBreakdown)
   const returnSubtotalItems = returnItems.filter(isLia220SubtotalRow)
-  const currentMonthStandardTaxAmount = roundNonNegativeTax(calculateTaxTotalAmount(lia110DetailItems))
+  const currentMonthStandardTaxAmount = lia110StandardTaxAmount(lia110SummaryItems)
   const returnStandardTaxAmount = roundNonNegativeTax(Math.abs(calculateTaxTotalAmount(returnSubtotalItems)))
 
   return buildLia130ReductionTotals({
@@ -461,6 +476,19 @@ export function buildTaxReductionPreview(options: {
     currentMonthStandardTaxAmount,
     returnStandardTaxAmount,
   })
+}
+
+export function calculateStandardNetTaxAmount(items: TaxVolumeItem[]) {
+  const sourceBreakdown = items.filter((item) => !isGeneratedTaxVolumeItem(item))
+  if (sourceBreakdown.length > 0 && sourceBreakdown.every((item) => isDisposeDocType(item.move_type))) {
+    return calculateTaxTotalAmount(sourceBreakdown)
+  }
+
+  const lia110SummaryItems = buildLia110ReportRows(sourceBreakdown.filter(isLia110DetailItem))
+  const currentMonthStandardTaxAmount = lia110StandardTaxAmount(lia110SummaryItems)
+  const returnSubtotalItems = buildLia220ReturnRows(sourceBreakdown).filter(isLia220SubtotalRow)
+  const returnStandardTaxAmount = roundNonNegativeTax(Math.abs(calculateTaxTotalAmount(returnSubtotalItems)))
+  return currentMonthStandardTaxAmount - returnStandardTaxAmount
 }
 
 export function priorFiscalYearReportPeriods(taxYear: number, taxMonth: number) {
@@ -713,7 +741,7 @@ export function normalizeReport(row: JsonMap): TaxReportRow {
     prior_cumulative_tax_amount_updated_at: toNullableString(row.prior_cumulative_tax_amount_updated_at),
     prior_cumulative_tax_amount_updated_by: toNullableString(row.prior_cumulative_tax_amount_updated_by),
     total_tax_amount: hasDerivedBreakdown && hasTaxBasis && !hasMissingTaxBasis
-      ? calculateTaxTotalAmount(normalizedBreakdown)
+      ? calculateStandardNetTaxAmount(normalizedBreakdown)
       : storedTotalTaxAmount,
     volume_breakdown: normalizedBreakdown,
     comparison_breakdown: normalizeComparisonBreakdown(row.comparison_breakdown),
@@ -834,7 +862,7 @@ export function inferMimeType(fileName: string) {
 
 function createLia110DetailRow(item: TaxVolumeItem): TaxVolumeItem {
   const taxEvent = resolveTaxEvent(item.move_type, item.tax_event)
-  const volume = finiteNumber(item.volume_l)
+  const volume = volumeLitersForItem(item)
   const kubunCode = lia110KubunCodeForItem(item)
   return {
     ...item,
@@ -936,7 +964,7 @@ function lia110SummaryTaxAmountForRows(rows: TaxVolumeItem[]) {
     const taxableVolume = finiteNumber(item.taxable_volume_l)
     const taxRate = nullableFiniteNumber(item.tax_rate)
     if (taxableVolume <= 0 || taxRate == null) return sum
-    return sum + taxAmountFromLiters(taxableVolume, taxRate)
+    return sum + taxAmountFromMilliliters(litersToMilliliters(taxableVolume), taxRate)
   }, 0)
 }
 
@@ -1228,7 +1256,9 @@ export async function buildXmlPayload(options: {
   const exportExemptItems = disposeOnly
     ? []
     : sourceBreakdown.filter((item) => resolveTaxEvent(item.move_type, item.tax_event) === 'EXPORT_EXEMPT')
-  const currentMonthStandardTaxAmount = roundNonNegativeTax(calculateTaxTotalAmount(lia110DetailItems))
+  const currentMonthStandardTaxAmount = disposeOnly
+    ? roundNonNegativeTax(calculateTaxTotalAmount(lia110DetailItems))
+    : lia110StandardTaxAmount(summaryItems)
   const returnStandardTaxAmount = roundNonNegativeTax(Math.abs(calculateTaxTotalAmount(returnSubtotalItems)))
   const reimportDeductionTaxAmount = calculateDeductionTotalAmount(reimportDeductionItems)
   const disasterDeductionTaxAmount = calculateDisasterDeductionTotalAmount(disasterDeductionItems)

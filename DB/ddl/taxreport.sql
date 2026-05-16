@@ -136,6 +136,150 @@ create unique index if not exists tax_reports_amended_declaration_unique
   on public.tax_reports (tenant_id, tax_type, tax_year, tax_month, amendment_no)
   where declaration_type = 'amended';
 
+create table if not exists public.tax_batch_corrections (
+  id uuid primary key default gen_random_uuid(),
+  tenant_id uuid not null,
+  comparison_report_id uuid not null references public.tax_reports(id),
+  batch_id uuid not null references public.mes_batches(id),
+  old_beer_category_id text,
+  new_beer_category_id text,
+  old_actual_abv numeric,
+  new_actual_abv numeric,
+  old_target_abv numeric,
+  new_target_abv numeric,
+  reason text not null,
+  status text not null default 'draft',
+  used_report_id uuid references public.tax_reports(id),
+  created_by uuid,
+  created_at timestamptz not null default now(),
+  updated_by uuid,
+  updated_at timestamptz not null default now(),
+  approved_by uuid,
+  approved_at timestamptz,
+  voided_by uuid,
+  voided_at timestamptz,
+  used_at timestamptz,
+  constraint tax_batch_corrections_status_check
+    check (status in ('draft','approved','used','void')),
+  constraint tax_batch_corrections_reason_check
+    check (btrim(reason) <> ''),
+  constraint tax_batch_corrections_used_shape_check
+    check (
+      (status = 'used' and used_report_id is not null and used_at is not null)
+      or (status <> 'used')
+    ),
+  constraint tax_batch_corrections_void_shape_check
+    check (
+      (status = 'void' and voided_at is not null)
+      or (status <> 'void')
+    )
+);
+
+alter table public.tax_batch_corrections
+  add column if not exists comparison_report_id uuid,
+  add column if not exists batch_id uuid,
+  add column if not exists old_beer_category_id text,
+  add column if not exists new_beer_category_id text,
+  add column if not exists old_actual_abv numeric,
+  add column if not exists new_actual_abv numeric,
+  add column if not exists old_target_abv numeric,
+  add column if not exists new_target_abv numeric,
+  add column if not exists reason text,
+  add column if not exists status text not null default 'draft',
+  add column if not exists used_report_id uuid,
+  add column if not exists created_by uuid,
+  add column if not exists created_at timestamptz not null default now(),
+  add column if not exists updated_by uuid,
+  add column if not exists updated_at timestamptz not null default now(),
+  add column if not exists approved_by uuid,
+  add column if not exists approved_at timestamptz,
+  add column if not exists voided_by uuid,
+  add column if not exists voided_at timestamptz,
+  add column if not exists used_at timestamptz;
+
+alter table public.tax_batch_corrections
+  alter column tenant_id set default (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid;
+
+alter table public.tax_batch_corrections
+  drop constraint if exists tax_batch_corrections_status_check;
+
+alter table public.tax_batch_corrections
+  add constraint tax_batch_corrections_status_check
+  check (status in ('draft','approved','used','void'));
+
+alter table public.tax_batch_corrections
+  drop constraint if exists tax_batch_corrections_reason_check;
+
+alter table public.tax_batch_corrections
+  add constraint tax_batch_corrections_reason_check
+  check (btrim(coalesce(reason, '')) <> '');
+
+alter table public.tax_batch_corrections
+  drop constraint if exists tax_batch_corrections_used_shape_check;
+
+alter table public.tax_batch_corrections
+  add constraint tax_batch_corrections_used_shape_check
+  check (
+    (status = 'used' and used_report_id is not null and used_at is not null)
+    or (status <> 'used')
+  );
+
+alter table public.tax_batch_corrections
+  drop constraint if exists tax_batch_corrections_void_shape_check;
+
+alter table public.tax_batch_corrections
+  add constraint tax_batch_corrections_void_shape_check
+  check (
+    (status = 'void' and voided_at is not null)
+    or (status <> 'void')
+  );
+
+create unique index if not exists tax_batch_corrections_active_unique
+  on public.tax_batch_corrections (tenant_id, comparison_report_id, batch_id)
+  where status in ('draft','approved','used');
+
+create index if not exists idx_tax_batch_corrections_comparison_report
+  on public.tax_batch_corrections (tenant_id, comparison_report_id);
+
+create index if not exists idx_tax_batch_corrections_used_report
+  on public.tax_batch_corrections (tenant_id, used_report_id)
+  where used_report_id is not null;
+
+create index if not exists idx_tax_batch_corrections_batch
+  on public.tax_batch_corrections (tenant_id, batch_id);
+
+alter table public.tax_batch_corrections enable row level security;
+
+drop policy if exists tax_batch_corrections_tenant_all on public.tax_batch_corrections;
+create policy tax_batch_corrections_tenant_all
+  on public.tax_batch_corrections
+  for all
+  using (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid)
+  with check (
+    tenant_id = (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid
+    and exists (
+      select 1
+      from public.tax_reports r
+      where r.tenant_id = tax_batch_corrections.tenant_id
+        and r.id = tax_batch_corrections.comparison_report_id
+    )
+    and exists (
+      select 1
+      from public.mes_batches b
+      where b.tenant_id = tax_batch_corrections.tenant_id
+        and b.id = tax_batch_corrections.batch_id
+    )
+    and (
+      tax_batch_corrections.used_report_id is null
+      or exists (
+        select 1
+        from public.tax_reports used_report
+        where used_report.tenant_id = tax_batch_corrections.tenant_id
+          and used_report.id = tax_batch_corrections.used_report_id
+      )
+    )
+  );
+
 create table if not exists public.tax_report_cumulative_amount_audit (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null,

@@ -116,7 +116,12 @@
                   </td>
                 </tr>
                 <tr v-for="row in summaryRows" v-else :key="row.key" class="hover:bg-gray-50">
-                  <td class="px-3 py-2 text-gray-700">{{ row.liquorCodeLabel || row.liquorCode || '—' }}</td>
+                  <CompactTableCell
+                    :value="row.liquorCodeLabel || row.liquorCode"
+                    text-column="beerCategory"
+                    truncate
+                    focusable
+                  />
                   <td class="px-3 py-2 text-right">{{ formatAbv(row.abv) }}</td>
                   <td class="px-3 py-2 text-right">{{ formatQuantityMl(row.quantityMl) }}</td>
                   <td class="px-3 py-2 text-right">{{ formatNumberValue(row.packageCount) }}</td>
@@ -291,19 +296,19 @@
                   </td>
                 </tr>
                 <tr v-for="row in visibleDetailRows" v-else :key="row.id" class="hover:bg-gray-50">
-                  <CompactTableCell :value="row.itemLabel || row.liquorCode" max-width="8rem" truncate focusable />
-                  <CompactTableCell :value="row.brandName" max-width="10rem" truncate focusable />
+                  <CompactTableCell :value="row.itemLabel || row.liquorCode" text-column="beerCategory" truncate focusable />
+                  <CompactTableCell :value="row.brandName" text-column="brand" truncate focusable />
                   <CompactTableCell :value="formatAbv(row.abv)" align="right" numeric />
                   <CompactTableCell :value="formatDateTime(row.movementAt)" max-width="9rem" />
-                  <CompactTableCell :value="row.containerLabel" max-width="9rem" truncate focusable />
+                  <CompactTableCell :value="row.containerLabel" text-column="container" truncate focusable />
                   <CompactTableCell :value="formatQuantityMl(row.quantityMl)" align="right" numeric />
                   <CompactTableCell value="—" align="right" numeric />
                   <CompactTableCell value="—" align="right" numeric />
-                  <CompactTableCell :value="row.removalTypeLabel" max-width="9rem" truncate focusable />
-                  <CompactTableCell :value="row.destinationAddress" max-width="13rem" truncate focusable />
-                  <CompactTableCell :value="row.destinationName" max-width="11rem" truncate focusable />
-                  <CompactTableCell :value="row.lotNo" max-width="10rem" truncate monospace focusable />
-                  <CompactTableCell :value="row.notes" max-width="12rem" truncate focusable />
+                  <CompactTableCell :value="row.removalTypeLabel" text-column="removalType" truncate focusable />
+                  <CompactTableCell :value="row.destinationAddress" text-column="address" truncate focusable />
+                  <CompactTableCell :value="row.destinationName" text-column="destination" truncate focusable />
+                  <CompactTableCell :value="row.lotNo" text-column="lotNo" truncate monospace focusable />
+                  <CompactTableCell :value="row.notes" text-column="notes" truncate focusable />
                 </tr>
               </tbody>
             </table>

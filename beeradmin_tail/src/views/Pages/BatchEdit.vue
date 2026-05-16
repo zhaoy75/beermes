@@ -109,7 +109,7 @@
                 {{ attrLabel(field) }}<span v-if="field.required" class="text-red-600">*</span>
               </label>
               <template v-if="field.data_type === 'ref'">
-                <select v-model="field.value" class="w-full h-[40px] border rounded px-3 bg-white">
+                <select v-model="field.value" class="w-full h-[40px] border rounded px-3 bg-white disabled:bg-gray-50" :disabled="isTaxLockedBatchAttr(field)">
                   <option value="">{{ t('common.select') }}</option>
                   <option v-for="opt in field.options" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
                 </select>
@@ -124,8 +124,10 @@
                     :max="field.num_max ?? undefined"
                     :class="[
                       'w-full h-[40px] border rounded px-3',
+                      isTaxLockedBatchAttr(field) ? 'bg-gray-50 text-gray-500' : '',
                       field.error ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : '',
                     ]"
+                    :disabled="isTaxLockedBatchAttr(field)"
                     @input="validateBatchAttributeField(field)"
                     @blur="validateBatchAttributeField(field)"
                   />
@@ -134,22 +136,23 @@
               </template>
               <template v-else-if="field.data_type === 'bool'">
                 <label class="inline-flex items-center gap-2 text-sm text-gray-700">
-                  <input v-model="field.value" type="checkbox" class="h-4 w-4" />
+                  <input v-model="field.value" type="checkbox" class="h-4 w-4" :disabled="isTaxLockedBatchAttr(field)" />
                   {{ t('common.yes') }}
                 </label>
               </template>
               <template v-else-if="field.data_type === 'date'">
-                <AppDateTimePicker v-model="field.value" class="w-full h-[40px] border rounded px-3" />
+                <AppDateTimePicker v-model="field.value" class="w-full h-[40px] border rounded px-3 disabled:bg-gray-50" :disabled="isTaxLockedBatchAttr(field)" />
               </template>
               <template v-else-if="field.data_type === 'timestamp'">
-                <AppDateTimePicker v-model="field.value" mode="datetime" class="w-full h-[40px] border rounded px-3" />
+                <AppDateTimePicker v-model="field.value" mode="datetime" class="w-full h-[40px] border rounded px-3 disabled:bg-gray-50" :disabled="isTaxLockedBatchAttr(field)" />
               </template>
               <template v-else-if="field.data_type === 'json'">
-                <textarea v-model.trim="field.value" rows="3" class="w-full border rounded px-3 py-2 font-mono text-xs"></textarea>
+                <textarea v-model.trim="field.value" rows="3" class="w-full border rounded px-3 py-2 font-mono text-xs disabled:bg-gray-50" :disabled="isTaxLockedBatchAttr(field)"></textarea>
               </template>
               <template v-else>
-                <input v-model.trim="field.value" type="text" class="w-full h-[40px] border rounded px-3" />
+                <input v-model.trim="field.value" type="text" class="w-full h-[40px] border rounded px-3 disabled:bg-gray-50" :disabled="isTaxLockedBatchAttr(field)" />
               </template>
+              <p v-if="isTaxLockedBatchAttr(field)" class="mt-1 text-xs text-amber-700">{{ batchTaxLockNotice }}</p>
               <p v-if="field.error" class="mt-1 text-xs text-red-600">{{ field.error }}</p>
             </div>
           </div>
@@ -287,18 +290,38 @@
             <tbody class="divide-y divide-gray-100">
               <tr v-for="event in packingEvents" :key="event.id" class="hover:bg-gray-50">
                 <td class="px-3 py-2 text-gray-600">{{ formatPackingDate(event.event_time) }}</td>
-                <td class="px-3 py-2 text-gray-700">{{ formatPackingBeerCategory() }}</td>
+                <CompactTableCell
+                  :value="formatPackingBeerCategory()"
+                  text-column="beerCategory"
+                  truncate
+                  focusable
+                />
                 <td class="px-3 py-2 font-medium text-gray-800">{{ formatPackingType(event.packing_type) }}</td>
-                <td class="px-3 py-2 text-gray-700">{{ formatPackingTankNo(event) }}</td>
+                <CompactTableCell
+                  :value="formatPackingTankNo(event)"
+                  text-column="tankNo"
+                  truncate
+                  focusable
+                />
                 <td class="px-3 py-2 text-right text-gray-700">{{ formatPackingTankStartVolume(event) }}</td>
                 <td class="px-3 py-2 text-right text-gray-700">{{ formatPackingTankLeftVolume(event) }}</td>
                 <td class="px-3 py-2 text-right text-gray-700">{{ formatPackingFillingPayout(event) }}</td>
-                <td class="px-3 py-2 text-gray-700">{{ formatPackingPackageInfo(event) }}</td>
+                <CompactTableCell
+                  :value="formatPackingPackageInfo(event)"
+                  text-column="packageInfo"
+                  truncate
+                  focusable
+                />
                 <td class="px-3 py-2 text-right text-gray-700">{{ formatPackingNumber(event) }}</td>
                 <td class="px-3 py-2 text-right text-gray-700">{{ formatPackingTotalLineVolume(event) }}</td>
                 <td class="px-3 py-2 text-right text-gray-700">{{ formatPackingFillingRemaining(event) }}</td>
                 <td class="px-3 py-2 text-right text-gray-700">{{ formatPackingLoss(event) }}</td>
-                <td class="px-3 py-2 text-gray-600">{{ event.memo || '—' }}</td>
+                <CompactTableCell
+                  :value="event.memo"
+                  text-column="notes"
+                  truncate
+                  focusable
+                />
                 <td class="px-3 py-2">
                   <button
                     v-if="event.packing_type !== 'unpack'"
@@ -521,6 +544,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { toast } from 'vue3-toastify'
 import ConfirmActionDialog from '@/components/common/ConfirmActionDialog.vue'
 import AppDateTimePicker from '@/components/common/AppDateTimePicker.vue'
+import CompactTableCell from '@/components/common/CompactTableCell.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { useConfirmDialog } from '@/composables/useConfirmDialog'
@@ -561,12 +585,14 @@ const pageTitle = computed(() => t('batch.edit.title'))
 const ZERO_UUID = '00000000-0000-0000-0000-000000000000'
 const MAX_BATCH_ACTUAL_YIELD = 1000000
 const ACTUAL_YIELD_ALLOWED_STATUSES = new Set(['in_progress', 'finished', 'completed'])
+const TAX_LOCKED_BATCH_ATTR_CODES = new Set(['beer_category', 'actual_abv', 'target_abv'])
 const showStepExecutionSection = DEVELOPMENT_MODE_ENABLED
 
 const tenantId = ref<string | null>(null)
 const batch = ref<any>(null)
 const loadingBatch = ref(false)
 const savingBatch = ref(false)
+const taxLockedReportCount = ref(0)
 
 const batchForm = reactive({
   batch_code: '',
@@ -1060,6 +1086,13 @@ async function handleBatchStatusChange(event: Event) {
 const canInputActualYield = computed(() =>
   isActualYieldAllowedStatus(batchForm.status || batch.value?.status),
 )
+const batchTaxLockNotice = computed(() =>
+  t('batch.edit.taxAttributeLocked', { count: taxLockedReportCount.value }),
+)
+
+function isTaxLockedBatchAttr(field: Pick<AttrField, 'code'>) {
+  return taxLockedReportCount.value > 0 && TAX_LOCKED_BATCH_ATTR_CODES.has(field.code)
+}
 
 async function ensureTenant() {
   if (tenantId.value) return tenantId.value
@@ -1119,6 +1152,7 @@ async function fetchBatch() {
       const detailLoaders = [
         loadPackingEvents(),
         loadBatchAttributes(header.id),
+        loadBatchTaxLocks(header.id),
       ]
       if (showStepExecutionSection) {
         detailLoaders.push(loadBatchExecution(header.id))
@@ -1128,6 +1162,7 @@ async function fetchBatch() {
       attrFields.value = []
       recipeCategoryId.value = null
       packingEvents.value = []
+      taxLockedReportCount.value = 0
       batchRelations.value = []
       executionSteps.value = []
       executionDeviations.value = []
@@ -1281,11 +1316,60 @@ async function loadBatchAttributes(batchUuid: string) {
   }
 }
 
+async function loadBatchTaxLocks(batchUuid: string) {
+  try {
+    const tenant = await ensureTenant()
+    const { data: lineRows, error: lineError } = await supabase
+      .from('inv_movement_lines')
+      .select('id')
+      .eq('tenant_id', tenant)
+      .eq('batch_id', batchUuid)
+      .limit(1000)
+    if (lineError) throw lineError
+
+    const lineIds = (lineRows ?? []).map((row: any) => String(row.id)).filter(Boolean)
+    if (lineIds.length === 0) {
+      taxLockedReportCount.value = 0
+      return
+    }
+
+    const { data: refRows, error: refError } = await supabase
+      .from('tax_report_movement_refs')
+      .select('tax_report_id')
+      .eq('tenant_id', tenant)
+      .in('movement_line_id', lineIds)
+      .limit(1000)
+    if (refError) throw refError
+
+    const reportIds = Array.from(new Set((refRows ?? []).map((row: any) => String(row.tax_report_id)).filter(Boolean)))
+    if (reportIds.length === 0) {
+      taxLockedReportCount.value = 0
+      return
+    }
+
+    const { count, error: reportError } = await supabase
+      .from('tax_reports')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenant)
+      .in('id', reportIds)
+      .in('status', ['submitted', 'approved'])
+    if (reportError) throw reportError
+    taxLockedReportCount.value = count ?? 0
+  } catch (err) {
+    console.error(err)
+    taxLockedReportCount.value = 0
+  }
+}
+
 function validateBatchAttributes(options: { enforceRequired?: boolean } = {}) {
   let hasError = false
   batchSaveError.value = ''
 
   for (const field of attrFields.value) {
+    if (isTaxLockedBatchAttr(field)) {
+      field.error = ''
+      continue
+    }
     if (validateBatchAttributeField(field, options)) hasError = true
   }
 
@@ -1356,6 +1440,8 @@ async function saveBatchAttributes(batchUuid: string, options: { enforceRequired
   const toDelete: number[] = []
 
   for (const field of attrFields.value) {
+    if (isTaxLockedBatchAttr(field)) continue
+
     const base = {
       tenant_id: tenant,
       entity_type: 'batch',

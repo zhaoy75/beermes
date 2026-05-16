@@ -244,16 +244,36 @@
                         <td class="px-3 py-2 font-mono text-xs text-gray-600">
                           {{ row.batchCode || '—' }}
                         </td>
-                        <td class="px-3 py-2">{{ categoryLabel(row.beerCategoryId) }}</td>
+                        <CompactTableCell
+                          :value="categoryLabel(row.beerCategoryId)"
+                          text-column="beerCategory"
+                          truncate
+                          focusable
+                        />
                         <td class="px-3 py-2 text-right">{{ formatAbv(row.actualAbv) }}</td>
-                        <td class="px-3 py-2">{{ row.styleName || row.productName || '—' }}</td>
-                        <td class="px-3 py-2">{{ row.packageTypeLabel || '—' }}</td>
+                        <CompactTableCell
+                          :value="row.styleName || row.productName"
+                          text-column="styleName"
+                          truncate
+                          focusable
+                        />
+                        <CompactTableCell
+                          :value="row.packageTypeLabel"
+                          text-column="packageType"
+                          truncate
+                          focusable
+                        />
                         <td class="px-3 py-2 text-xs text-gray-500">
                           {{ formatDate(row.productionDate) }}
                         </td>
                         <td class="px-3 py-2 text-right">{{ formatVolumeNumberValue(row.qtyLiters) }}</td>
                         <td class="px-3 py-2 text-right">{{ formatNumber(row.qtyPackages) }}</td>
-                        <td class="px-3 py-2">{{ siteLabel(row.siteId) }}</td>
+                        <CompactTableCell
+                          :value="siteLabel(row.siteId)"
+                          text-column="site"
+                          truncate
+                          focusable
+                        />
                       </tr>
                       <tr v-if="isExpanded(row.id)" class="bg-gray-50/80">
                         <td colspan="11" class="px-4 py-3">
@@ -306,6 +326,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import CompactTableCell from '@/components/common/CompactTableCell.vue'
 import Modal from '@/components/ui/Modal.vue'
 import { useRuleengineLabels } from '@/composables/useRuleengineLabels'
 import { useProducedBeerInventory } from '@/composables/useProducedBeerInventory'

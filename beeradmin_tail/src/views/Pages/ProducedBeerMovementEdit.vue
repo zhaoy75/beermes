@@ -221,12 +221,33 @@
                         <div>{{ lot.lotCode || lot.label }}</div>
                         <div class="text-[11px] text-gray-400">{{ lotDisambiguationText(lot) }}</div>
                       </td>
-                      <td class="px-3 py-2 text-gray-700">{{ alcoholTypeLabel(lot.beerCategoryId) }}</td>
+                      <CompactTableCell
+                        :value="alcoholTypeLabel(lot.beerCategoryId)"
+                        text-column="beerCategory"
+                        truncate
+                        focusable
+                      />
                       <td class="px-3 py-2 text-right text-gray-700">{{ formatAbv(lot.targetAbv) }}</td>
-                      <td class="px-3 py-2 text-gray-700">{{ lot.styleName || '—' }}</td>
-                      <td class="px-3 py-2 text-gray-700">{{ lot.batchCode || '—' }}</td>
+                      <CompactTableCell
+                        :value="lot.styleName"
+                        text-column="styleName"
+                        truncate
+                        focusable
+                      />
+                      <CompactTableCell
+                        :value="lot.batchCode"
+                        text-column="batchCode"
+                        truncate
+                        monospace
+                        focusable
+                      />
                       <td class="px-3 py-2 text-right text-gray-700">{{ formatNumber(lot.packageVolume) }}</td>
-                      <td class="px-3 py-2 text-gray-700">{{ lot.packageUom || '—' }}</td>
+                      <CompactTableCell
+                        :value="lot.packageUom"
+                        text-column="packageType"
+                        truncate
+                        focusable
+                      />
                       <td class="px-3 py-2 text-right text-gray-700">{{ formatNumber(lot.quantity) }}</td>
                       <td class="px-3 py-2 text-right text-gray-700">{{ formatNumber(displayLotQuantity(lot)) }}</td>
                       <td class="px-3 py-2">
@@ -334,6 +355,7 @@ import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import AppDateTimePicker from '@/components/common/AppDateTimePicker.vue'
+import CompactTableCell from '@/components/common/CompactTableCell.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import {

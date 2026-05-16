@@ -263,18 +263,38 @@
                 ]"
               >
                 <td class="px-3 py-2 text-gray-600">{{ formatPackingDate(event.event_time) }}</td>
-                <td class="px-3 py-2 text-gray-700">{{ formatPackingBeerCategory() }}</td>
+                <CompactTableCell
+                  :value="formatPackingBeerCategory()"
+                  text-column="beerCategory"
+                  truncate
+                  focusable
+                />
                 <td class="px-3 py-2 font-medium text-gray-800">{{ formatPackingType(event.packing_type) }}</td>
-                <td class="px-3 py-2 text-gray-700">{{ formatPackingTankNo(event) }}</td>
+                <CompactTableCell
+                  :value="formatPackingTankNo(event)"
+                  text-column="tankNo"
+                  truncate
+                  focusable
+                />
                 <td class="px-3 py-2 text-right text-gray-700">{{ formatPackingTankStartVolume(event) }}</td>
                 <td class="px-3 py-2 text-right text-gray-700">{{ formatPackingTankLeftVolume(event) }}</td>
                 <td class="px-3 py-2 text-right text-gray-700">{{ formatPackingFillingPayout(event) }}</td>
-                <td class="px-3 py-2 text-gray-700">{{ formatPackingPackageInfo(event) }}</td>
+                <CompactTableCell
+                  :value="formatPackingPackageInfo(event)"
+                  text-column="packageInfo"
+                  truncate
+                  focusable
+                />
                 <td class="px-3 py-2 text-right text-gray-700">{{ formatPackingNumber(event) }}</td>
                 <td class="px-3 py-2 text-right text-gray-700">{{ formatPackingTotalLineVolume(event) }}</td>
                 <td class="px-3 py-2 text-right text-gray-700">{{ formatPackingFillingRemaining(event) }}</td>
                 <td class="px-3 py-2 text-right text-gray-700">{{ formatPackingLoss(event) }}</td>
-                <td class="px-3 py-2 text-gray-600">{{ event.memo || '—' }}</td>
+                <CompactTableCell
+                  :value="event.memo"
+                  text-column="notes"
+                  truncate
+                  focusable
+                />
                 <td class="px-3 py-2 space-x-2">
                   <button
                     class="px-2 py-1 text-xs rounded border hover:bg-gray-100"
@@ -788,8 +808,9 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch, type ComponentPublicInstance } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
-import ConfirmActionDialog from '@/components/common/ConfirmActionDialog.vue'
 import AppDateTimePicker from '@/components/common/AppDateTimePicker.vue'
+import CompactTableCell from '@/components/common/CompactTableCell.vue'
+import ConfirmActionDialog from '@/components/common/ConfirmActionDialog.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { StaredIcon } from '@/icons'

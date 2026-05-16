@@ -114,7 +114,12 @@
                   </td>
                 </tr>
                 <tr v-for="row in summaryRows" v-else :key="row.key" class="hover:bg-gray-50">
-                  <td class="px-3 py-2 text-gray-700">{{ row.liquorCodeLabel || row.liquorCode || '—' }}</td>
+                  <CompactTableCell
+                    :value="row.liquorCodeLabel || row.liquorCode"
+                    text-column="beerCategory"
+                    truncate
+                    focusable
+                  />
                   <td class="px-3 py-2 text-right">{{ formatAbv(row.abv) }}</td>
                   <td class="px-3 py-2 text-right">{{ formatQuantityMl(row.quantityMl) }}</td>
                   <td class="px-3 py-2 text-right">{{ formatNumberValue(row.packageCount) }}</td>
@@ -212,6 +217,7 @@ import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import TableColumnHeader from '@/components/common/TableColumnHeader.vue'
 import { useColumnTableControls, type ColumnSortDirection } from '@/composables/useColumnTableControls'
+import { tableTextColumnMaxWidth, type TableTextColumnKey } from '@/config/tableTextColumnLimits'
 import { supabase } from '@/lib/supabase'
 import { formatAbvPercent } from '@/lib/abvFormat'
 import { formatTotalVolumeFromMilliliters } from '@/lib/volumeFormat'
@@ -440,24 +446,29 @@ function isTruncatedColumn(column: TaxLedgerColumnKey) {
 }
 
 function columnMaxWidth(column: TaxLedgerColumnKey) {
+  const textColumns: Partial<Record<TaxLedgerColumnKey, TableTextColumnKey>> = {
+    item: 'beerCategory',
+    brand: 'brand',
+    container: 'container',
+    sourceAddress: 'address',
+    sourceName: 'source',
+    destinationAddress: 'address',
+    destinationName: 'destination',
+    recipientAddress: 'address',
+    location: 'site',
+    exporterAddress: 'address',
+    exportDestinationAddress: 'address',
+    exportDestinationName: 'destination',
+    transferorAddress: 'address',
+    deliveryAddress: 'address',
+    lotNo: 'lotNo',
+    notes: 'notes',
+  }
+  const textColumn = textColumns[column]
+  if (textColumn) return tableTextColumnMaxWidth(textColumn)
+
   const widths: Partial<Record<TaxLedgerColumnKey, string>> = {
     movementAt: '9rem',
-    item: '8rem',
-    brand: '10rem',
-    container: '9rem',
-    sourceAddress: '13rem',
-    sourceName: '11rem',
-    destinationAddress: '13rem',
-    destinationName: '11rem',
-    recipientAddress: '13rem',
-    location: '10rem',
-    exporterAddress: '13rem',
-    exportDestinationAddress: '13rem',
-    exportDestinationName: '11rem',
-    transferorAddress: '13rem',
-    deliveryAddress: '13rem',
-    lotNo: '10rem',
-    notes: '12rem',
   }
   return widths[column] ?? ''
 }

@@ -174,10 +174,20 @@
                     {{ row.batchCode || '—' }}
                   </button>
                 </td>
-                <td class="px-3 py-2">{{ row.displayName || '—' }}</td>
+                <CompactTableCell
+                  :value="row.displayName"
+                  text-column="beerName"
+                  truncate
+                  focusable
+                />
                 <td class="px-3 py-2 text-xs text-gray-500">{{ formatDateOnlyFromTimestamp(row.latestFillingAt) }}</td>
                 <td class="px-3 py-2 text-right">{{ formatVolumeValue(row.totalVolume) }}</td>
-                <td class="px-3 py-2 text-gray-700">{{ row.liquorCodeLabel || row.liquorCode || '—' }}</td>
+                <CompactTableCell
+                  :value="row.liquorCodeLabel || row.liquorCode"
+                  text-column="beerCategory"
+                  truncate
+                  focusable
+                />
                 <td class="px-3 py-2 text-right">{{ formatAbv(row.abv) }}</td>
                 <td
                   v-for="packageCode in packageColumns"
@@ -331,6 +341,7 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue3-toastify'
+import CompactTableCell from '@/components/common/CompactTableCell.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import {

@@ -111,6 +111,171 @@
             </div>
           </section>
 
+          <section v-if="showCorrectionPanel" class="space-y-3 rounded-lg border border-amber-200 bg-amber-50/40 p-3">
+            <header class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+              <div>
+                <h2 class="text-sm font-semibold text-gray-900">{{ t('taxReportEditor.corrections.title') }}</h2>
+                <p class="text-xs text-gray-600">{{ t('taxReportEditor.corrections.subtitle') }}</p>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  class="rounded border border-gray-300 bg-white px-3 py-1.5 text-xs hover:bg-gray-50 disabled:opacity-50"
+                  :disabled="correctionLoading"
+                  @click="loadTaxCorrections"
+                >
+                  {{ t('taxReportEditor.corrections.refresh') }}
+                </button>
+                <button
+                  v-if="canCreateBatchCorrection"
+                  type="button"
+                  class="rounded bg-amber-600 px-3 py-1.5 text-xs text-white hover:bg-amber-700 disabled:opacity-50"
+                  :disabled="correctionLoading || correctionBatchOptions.length === 0"
+                  @click="openCorrectionForm"
+                >
+                  {{ t('taxReportEditor.corrections.create') }}
+                </button>
+                <button
+                  v-if="canCreateBatchCorrection"
+                  type="button"
+                  class="rounded bg-blue-600 px-3 py-1.5 text-xs text-white hover:bg-blue-700 disabled:opacity-50"
+                  :disabled="!canCreateAmendedReportFromCorrections || correctionSaving || generating"
+                  :title="canCreateAmendedReportFromCorrections ? '' : t('taxReportEditor.corrections.approveBeforeAmendment')"
+                  @click="createAmendedReportFromCorrections"
+                >
+                  {{ t('taxReportEditor.corrections.createAmendedReport') }}
+                </button>
+              </div>
+            </header>
+
+            <div v-if="correctionForm.open" class="space-y-3 rounded border border-amber-200 bg-white p-3">
+              <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
+                <div>
+                  <label class="mb-1 block text-xs text-gray-600">{{ t('taxReportEditor.corrections.batch') }}</label>
+                  <select v-model="correctionForm.batch_id" class="h-[38px] w-full rounded border bg-white px-3 text-sm" @change="resetCorrectionPreview">
+                    <option value="">{{ t('common.select') }}</option>
+                    <option v-for="batch in correctionBatchOptions" :key="batch.batch_id" :value="batch.batch_id">
+                      {{ correctionBatchLabel(batch) }}
+                    </option>
+                  </select>
+                </div>
+                <div>
+                  <label class="mb-1 block text-xs text-gray-600">{{ t('taxReportEditor.corrections.newCategory') }}</label>
+                  <select v-model="correctionForm.new_beer_category_id" class="h-[38px] w-full rounded border bg-white px-3 text-sm" @change="resetCorrectionPreview">
+                    <option value="">{{ t('taxReportEditor.corrections.noChange') }}</option>
+                    <option v-for="category in beerCategoryOptions" :key="category.value" :value="category.value">
+                      {{ category.label }}
+                    </option>
+                  </select>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <div>
+                    <label class="mb-1 block text-xs text-gray-600">{{ t('taxReportEditor.corrections.newActualAbv') }}</label>
+                    <input v-model="correctionForm.new_actual_abv" type="number" step="0.1" min="0" class="h-[38px] w-full rounded border px-3 text-sm" @input="resetCorrectionPreview" />
+                  </div>
+                  <div>
+                    <label class="mb-1 block text-xs text-gray-600">{{ t('taxReportEditor.corrections.newTargetAbv') }}</label>
+                    <input v-model="correctionForm.new_target_abv" type="number" step="0.1" min="0" class="h-[38px] w-full rounded border px-3 text-sm" @input="resetCorrectionPreview" />
+                  </div>
+                </div>
+              </div>
+              <div v-if="selectedCorrectionBatch" class="grid grid-cols-1 gap-2 text-xs text-gray-600 md:grid-cols-3">
+                <div>{{ t('taxReportEditor.corrections.currentCategory') }}: {{ selectedCorrectionBatch.beer_category_name || '—' }}</div>
+                <div>{{ t('taxReportEditor.corrections.currentActualAbv') }}: {{ formatAbv(selectedCorrectionBatch.actual_abv) }}</div>
+                <div>{{ t('taxReportEditor.corrections.currentTargetAbv') }}: {{ formatAbv(selectedCorrectionBatch.target_abv) }}</div>
+              </div>
+              <div>
+                <label class="mb-1 block text-xs text-gray-600">{{ t('taxReportEditor.corrections.reason') }}</label>
+                <textarea v-model.trim="correctionForm.reason" rows="2" class="w-full rounded border px-3 py-2 text-sm" />
+              </div>
+              <div v-if="correctionPreview" class="grid grid-cols-1 gap-2 rounded bg-gray-50 p-3 text-xs md:grid-cols-4">
+                <div>
+                  <div class="text-gray-500">{{ t('taxReportEditor.corrections.affectedMovements') }}</div>
+                  <div class="font-medium">{{ correctionPreview.affected_movement_count }}</div>
+                </div>
+                <div>
+                  <div class="text-gray-500">{{ t('taxReportEditor.corrections.affectedVolume') }}</div>
+                  <div class="font-medium">{{ formatVolume(correctionPreview.affected_volume_l) }}</div>
+                </div>
+                <div>
+                  <div class="text-gray-500">{{ t('taxReportEditor.corrections.deltaTax') }}</div>
+                  <div class="font-medium">{{ formatSignedCurrency(correctionPreview.delta_tax_amount) }}</div>
+                </div>
+                <div>
+                  <div class="text-gray-500">{{ t('taxReportEditor.corrections.correctedTax') }}</div>
+                  <div class="font-medium">{{ formatCurrency(correctionPreview.corrected_tax_amount) }}</div>
+                </div>
+              </div>
+              <footer class="flex flex-wrap justify-end gap-2">
+                <button type="button" class="rounded border px-3 py-1.5 text-xs hover:bg-gray-50" @click="closeCorrectionForm">
+                  {{ t('common.cancel') }}
+                </button>
+                <button type="button" class="rounded border px-3 py-1.5 text-xs hover:bg-gray-50 disabled:opacity-50" :disabled="correctionSaving" @click="previewBatchCorrection">
+                  {{ t('taxReportEditor.corrections.preview') }}
+                </button>
+                <button type="button" class="rounded bg-blue-600 px-3 py-1.5 text-xs text-white hover:bg-blue-700 disabled:opacity-50" :disabled="correctionSaving" @click="saveBatchCorrection">
+                  {{ t('taxReportEditor.corrections.saveDraft') }}
+                </button>
+              </footer>
+            </div>
+
+            <div class="overflow-x-auto rounded border bg-white">
+              <table class="min-w-full text-xs">
+                <thead class="bg-gray-50 text-gray-500">
+                  <tr>
+                    <th class="px-3 py-2 text-left">{{ t('taxReportEditor.corrections.batch') }}</th>
+                    <th class="px-3 py-2 text-left">{{ t('taxReportEditor.corrections.status') }}</th>
+                    <th class="px-3 py-2 text-left">{{ t('taxReportEditor.corrections.categoryChange') }}</th>
+                    <th class="px-3 py-2 text-left">{{ t('taxReportEditor.corrections.abvChange') }}</th>
+                    <th class="px-3 py-2 text-left">{{ t('taxReportEditor.corrections.reason') }}</th>
+                    <th class="px-3 py-2 text-right">{{ t('common.actions') }}</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                  <tr v-for="correction in taxCorrections" :key="correction.id">
+                    <td class="px-3 py-2">{{ correction.batch_code || correction.batch_id }}</td>
+                    <td class="px-3 py-2">{{ correctionStatusLabel(correction.status) }}</td>
+                    <td class="px-3 py-2">
+                      {{ correction.old_beer_category_name || correction.old_beer_category_id || '—' }}
+                      <span class="text-gray-400">→</span>
+                      {{ correction.new_beer_category_name || correction.new_beer_category_id || t('taxReportEditor.corrections.noChange') }}
+                    </td>
+                    <td class="px-3 py-2">
+                      {{ formatCorrectionAbvChange(correction) }}
+                    </td>
+                    <td class="max-w-xs px-3 py-2 text-gray-600">{{ correction.reason }}</td>
+                    <td class="px-3 py-2 text-right">
+                      <button
+                        v-if="correction.status === 'draft'"
+                        type="button"
+                        class="mr-2 rounded border px-2 py-1 hover:bg-gray-50 disabled:opacity-50"
+                        :disabled="correctionSaving"
+                        @click="approveBatchCorrection(correction.id)"
+                      >
+                        {{ t('taxReportEditor.corrections.approve') }}
+                      </button>
+                      <button
+                        v-if="correction.status === 'draft' || correction.status === 'approved'"
+                        type="button"
+                        class="rounded border px-2 py-1 hover:bg-gray-50 disabled:opacity-50"
+                        :disabled="correctionSaving"
+                        @click="voidBatchCorrection(correction.id)"
+                      >
+                        {{ t('taxReportEditor.corrections.void') }}
+                      </button>
+                    </td>
+                  </tr>
+                  <tr v-if="!correctionLoading && taxCorrections.length === 0">
+                    <td colspan="6" class="px-3 py-4 text-center text-gray-400">{{ t('taxReportEditor.corrections.empty') }}</td>
+                  </tr>
+                  <tr v-if="correctionLoading">
+                    <td colspan="6" class="px-3 py-4 text-center text-gray-400">{{ t('common.loading') }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
           <section class="space-y-0">
           <section class="flex flex-col gap-3 border-y border-gray-100 py-2 xl:flex-row xl:items-center xl:justify-between">
             <div class="overflow-x-auto">
@@ -1280,7 +1445,7 @@ import {
   type TaxReportProfile,
 } from '@/lib/taxReportProfile'
 import {
-  calculateTaxTotalAmount,
+  calculateStandardNetTaxAmount,
   buildLia220ReturnRows,
   buildLia110ReportRows,
   buildTaxReductionPreview,
@@ -1359,7 +1524,53 @@ interface EditorField {
   highlight?: boolean
 }
 
+type TaxBatchCorrectionStatus = 'draft' | 'approved' | 'used' | 'void'
+
+interface CorrectionBatchOption {
+  batch_id: string
+  batch_code: string | null
+  batch_label: string | null
+  affected_movement_count: number
+  beer_category_id: string | null
+  beer_category_name: string | null
+  actual_abv: number | null
+  target_abv: number | null
+}
+
+interface TaxBatchCorrectionRow {
+  id: string
+  comparison_report_id: string
+  used_report_id: string | null
+  batch_id: string
+  batch_code: string | null
+  batch_label: string | null
+  old_beer_category_id: string | null
+  old_beer_category_name: string | null
+  new_beer_category_id: string | null
+  new_beer_category_name: string | null
+  old_actual_abv: number | null
+  new_actual_abv: number | null
+  old_target_abv: number | null
+  new_target_abv: number | null
+  reason: string
+  status: TaxBatchCorrectionStatus
+}
+
+interface TaxBatchCorrectionPreview {
+  affected_movement_count: number
+  affected_volume_l: number
+  previous_tax_amount: number
+  corrected_tax_amount: number
+  delta_tax_amount: number
+}
+
+interface BeerCategoryOption {
+  value: string
+  label: string
+}
+
 const TABLE = 'tax_reports'
+const REPORT_SELECT = 'id, tax_type, tax_year, tax_month, status, declaration_type, declaration_reason, original_report_id, previous_report_id, amendment_no, previous_confirmed_payable_tax_amount, previous_confirmed_refund_tax_amount, correction_delta_tax_amount, prior_cumulative_tax_amount_calculated, prior_cumulative_tax_amount_override, prior_cumulative_tax_amount_source, prior_cumulative_tax_amount_notes, prior_cumulative_tax_amount_updated_at, prior_cumulative_tax_amount_updated_by, total_tax_amount, volume_breakdown, comparison_breakdown, report_files, attachment_files, created_at, updated_at'
 const TAX_REPORT_REDIRECT_ERROR_TOAST_KEY = 'beeradmin.taxReport.redirectErrorToast'
 const STATUS_OPTIONS = ['draft', 'stale', 'submitted', 'approved'] as const
 type TaxReportStatus = (typeof STATUS_OPTIONS)[number]
@@ -1475,6 +1686,20 @@ const movementSort = reactive<{
 const editorMode = ref<EditorMode>('preview')
 const activeFormTab = ref<TaxReportFormTab>('LIA010')
 const canOverridePriorCumulative = ref(false)
+const correctionLoading = ref(false)
+const correctionSaving = ref(false)
+const taxCorrections = ref<TaxBatchCorrectionRow[]>([])
+const correctionBatchOptions = ref<CorrectionBatchOption[]>([])
+const correctionPreview = ref<TaxBatchCorrectionPreview | null>(null)
+const beerCategoryOptions = ref<BeerCategoryOption[]>([])
+const correctionForm = reactive({
+  open: false,
+  batch_id: '',
+  new_beer_category_id: '',
+  new_actual_abv: '',
+  new_target_abv: '',
+  reason: '',
+})
 
 const editing = computed(() => typeof route.params.id === 'string' && route.params.id.length > 0)
 const pageTitle = computed(() => (editing.value ? t('taxReportEditor.editTitle') : t('taxReportEditor.newTitle')))
@@ -1622,6 +1847,34 @@ const canEditPriorCumulativeOverride = computed(() =>
   canOverridePriorCumulative.value &&
   savedReportStatus.value !== 'submitted' &&
   savedReportStatus.value !== 'approved',
+)
+const canCreateBatchCorrection = computed(() =>
+  Boolean(form.id) && (savedReportStatus.value === 'submitted' || savedReportStatus.value === 'approved'),
+)
+const approvedTaxCorrections = computed(() =>
+  taxCorrections.value.filter((correction) =>
+    correction.status === 'approved' &&
+    correction.comparison_report_id === correctionReportId.value,
+  ),
+)
+const canCreateAmendedReportFromCorrections = computed(() =>
+  canCreateBatchCorrection.value && approvedTaxCorrections.value.length > 0,
+)
+const correctionReportId = computed(() => {
+  if (canCreateBatchCorrection.value) return form.id
+  if (form.declaration_type === 'amended') return form.previous_report_id || form.original_report_id
+  return form.id
+})
+const showCorrectionPanel = computed(() =>
+  Boolean(correctionReportId.value) &&
+  (
+    canCreateBatchCorrection.value ||
+    form.declaration_type === 'amended' ||
+    taxCorrections.value.length > 0
+  ),
+)
+const selectedCorrectionBatch = computed(() =>
+  correctionBatchOptions.value.find((batch) => batch.batch_id === correctionForm.batch_id) ?? null,
 )
 const priorCumulativeOverrideEnabled = computed(() =>
   form.prior_cumulative_tax_amount_source === 'manual_override',
@@ -2083,6 +2336,43 @@ function formatSignedVolume(value: number | null | undefined) {
   return `${prefix}${formatVolume(amount)}`
 }
 
+function correctionStatusLabel(status: string) {
+  const map = tm('taxReportEditor.corrections.statusMap')
+  if (!map || typeof map !== 'object') return status
+  const label = (map as Record<string, unknown>)[status]
+  return typeof label === 'string' ? label : status
+}
+
+function correctionBatchLabel(batch: CorrectionBatchOption) {
+  const code = batch.batch_code || batch.batch_id
+  const label = batch.batch_label ? ` / ${batch.batch_label}` : ''
+  return `${code}${label}`
+}
+
+function formatCorrectionAbvChange(correction: TaxBatchCorrectionRow) {
+  const actualChanged = correction.new_actual_abv != null
+  const targetChanged = correction.new_target_abv != null
+  const actual = `${t('taxReportEditor.corrections.actualAbvShort')}: ${formatAbv(correction.old_actual_abv)} → ${
+    actualChanged ? formatAbv(correction.new_actual_abv) : t('taxReportEditor.corrections.noChange')
+  }`
+  const target = `${t('taxReportEditor.corrections.targetAbvShort')}: ${formatAbv(correction.old_target_abv)} → ${
+    targetChanged ? formatAbv(correction.new_target_abv) : t('taxReportEditor.corrections.noChange')
+  }`
+  return `${actual} / ${target}`
+}
+
+function nullableNumberInput(value: unknown) {
+  if (value == null) return null
+  const trimmed = String(value).trim()
+  if (!trimmed) return null
+  const parsed = Number(trimmed)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+function resetCorrectionPreview() {
+  correctionPreview.value = null
+}
+
 function formatInteger(value: number | null | undefined) {
   if (!Number.isFinite(value)) return ''
   return new Intl.NumberFormat(locale.value, {
@@ -2139,7 +2429,7 @@ function toWarekiYearParts(year: number) {
 }
 
 function recalcTotalTax() {
-  totalTaxAmount.value = calculateTaxTotalAmount(reportBreakdown.value)
+  totalTaxAmount.value = calculateStandardNetTaxAmount(reportBreakdown.value)
 }
 
 function handleBreakdownChange(index: number) {
@@ -2316,6 +2606,7 @@ function applySavedReport(row: JsonMap) {
   comparisonBreakdown.value = normalized.comparison_breakdown
   sortMovementBreakdown(reportBreakdown.value)
   totalTaxAmount.value = normalized.total_tax_amount
+  void loadTaxCorrections()
   return normalized
 }
 
@@ -2326,6 +2617,283 @@ function reportRowFromGenerateResponse(data: unknown) {
     throw new Error('tax_report_generate did not return a report row')
   }
   return report as JsonMap
+}
+
+function normalizeCorrectionBatchOption(row: JsonMap): CorrectionBatchOption {
+  return {
+    batch_id: String(row.batch_id ?? ''),
+    batch_code: row.batch_code != null ? String(row.batch_code) : null,
+    batch_label: row.batch_label != null ? String(row.batch_label) : null,
+    affected_movement_count: Number(row.affected_movement_count ?? 0),
+    beer_category_id: row.beer_category_id != null ? String(row.beer_category_id) : null,
+    beer_category_name: row.beer_category_name != null ? String(row.beer_category_name) : null,
+    actual_abv: Number.isFinite(Number(row.actual_abv)) ? Number(row.actual_abv) : null,
+    target_abv: Number.isFinite(Number(row.target_abv)) ? Number(row.target_abv) : null,
+  }
+}
+
+function normalizeTaxBatchCorrection(row: JsonMap): TaxBatchCorrectionRow {
+  return {
+    id: String(row.id ?? ''),
+    comparison_report_id: String(row.comparison_report_id ?? ''),
+    used_report_id: row.used_report_id != null ? String(row.used_report_id) : null,
+    batch_id: String(row.batch_id ?? ''),
+    batch_code: row.batch_code != null ? String(row.batch_code) : null,
+    batch_label: row.batch_label != null ? String(row.batch_label) : null,
+    old_beer_category_id: row.old_beer_category_id != null ? String(row.old_beer_category_id) : null,
+    old_beer_category_name: row.old_beer_category_name != null ? String(row.old_beer_category_name) : null,
+    new_beer_category_id: row.new_beer_category_id != null ? String(row.new_beer_category_id) : null,
+    new_beer_category_name: row.new_beer_category_name != null ? String(row.new_beer_category_name) : null,
+    old_actual_abv: Number.isFinite(Number(row.old_actual_abv)) ? Number(row.old_actual_abv) : null,
+    new_actual_abv: Number.isFinite(Number(row.new_actual_abv)) ? Number(row.new_actual_abv) : null,
+    old_target_abv: Number.isFinite(Number(row.old_target_abv)) ? Number(row.old_target_abv) : null,
+    new_target_abv: Number.isFinite(Number(row.new_target_abv)) ? Number(row.new_target_abv) : null,
+    reason: String(row.reason ?? ''),
+    status: ['draft', 'approved', 'used', 'void'].includes(String(row.status))
+      ? (String(row.status) as TaxBatchCorrectionStatus)
+      : 'draft',
+  }
+}
+
+function normalizeCorrectionPreview(row: JsonMap): TaxBatchCorrectionPreview {
+  return {
+    affected_movement_count: Number(row.affected_movement_count ?? 0),
+    affected_volume_l: Number(row.affected_volume_l ?? 0),
+    previous_tax_amount: Number(row.previous_tax_amount ?? 0),
+    corrected_tax_amount: Number(row.corrected_tax_amount ?? 0),
+    delta_tax_amount: Number(row.delta_tax_amount ?? 0),
+  }
+}
+
+async function loadBeerCategoryOptions() {
+  try {
+    const { data, error } = await supabase
+      .from('v_alcohol_type_options')
+      .select('def_id, def_key, key, label, spec')
+      .order('value', { ascending: true })
+    if (error) throw error
+    beerCategoryOptions.value = (data ?? []).map((row: JsonMap) => ({
+      value: String(row.def_id ?? ''),
+      label: String(row.label ?? (row.spec as JsonMap | null)?.name ?? row.def_key ?? row.key ?? row.def_id ?? ''),
+    })).filter((row: BeerCategoryOption) => row.value)
+  } catch (err) {
+    console.error(err)
+    beerCategoryOptions.value = []
+  }
+}
+
+async function loadTaxCorrections() {
+  const reportId = correctionReportId.value
+  if (!reportId) {
+    taxCorrections.value = []
+    correctionBatchOptions.value = []
+    return
+  }
+
+  try {
+    correctionLoading.value = true
+    const { data, error } = await supabase.rpc('tax_batch_correction_list_for_report', {
+      p_tax_report_id: reportId,
+    })
+    if (error) throw error
+    const payload = data && typeof data === 'object' ? data as JsonMap : {}
+    correctionBatchOptions.value = Array.isArray(payload.batch_options)
+      ? payload.batch_options.map((row) => normalizeCorrectionBatchOption(row as JsonMap)).filter((row) => row.batch_id)
+      : []
+    taxCorrections.value = Array.isArray(payload.corrections)
+      ? payload.corrections.map((row) => normalizeTaxBatchCorrection(row as JsonMap)).filter((row) => row.id)
+      : []
+  } catch (err) {
+    console.error(err)
+    toast.error(formatRpcErrorMessage(err))
+  } finally {
+    correctionLoading.value = false
+  }
+}
+
+function openCorrectionForm() {
+  correctionForm.open = true
+  correctionForm.batch_id = ''
+  correctionForm.new_beer_category_id = ''
+  correctionForm.new_actual_abv = ''
+  correctionForm.new_target_abv = ''
+  correctionForm.reason = ''
+  correctionPreview.value = null
+}
+
+function closeCorrectionForm() {
+  correctionForm.open = false
+  correctionPreview.value = null
+}
+
+function correctionPayload() {
+  return {
+    comparison_report_id: correctionReportId.value,
+    batch_id: correctionForm.batch_id,
+    new_beer_category_id: correctionForm.new_beer_category_id || null,
+    new_actual_abv: nullableNumberInput(correctionForm.new_actual_abv),
+    new_target_abv: nullableNumberInput(correctionForm.new_target_abv),
+    reason: correctionForm.reason.trim(),
+  }
+}
+
+async function previewBatchCorrection() {
+  if (!correctionForm.batch_id) {
+    toast.info(t('taxReportEditor.corrections.batchRequired'))
+    return
+  }
+  try {
+    correctionSaving.value = true
+    const { data, error } = await supabase.rpc('tax_batch_correction_preview', {
+      p_doc: correctionPayload(),
+    })
+    if (error) throw error
+    correctionPreview.value = normalizeCorrectionPreview((data ?? {}) as JsonMap)
+  } catch (err) {
+    console.error(err)
+    toast.error(formatRpcErrorMessage(err))
+  } finally {
+    correctionSaving.value = false
+  }
+}
+
+async function saveBatchCorrection() {
+  if (!correctionForm.batch_id) {
+    toast.info(t('taxReportEditor.corrections.batchRequired'))
+    return
+  }
+  if (!correctionForm.reason.trim()) {
+    toast.info(t('taxReportEditor.corrections.reasonRequired'))
+    return
+  }
+
+  try {
+    correctionSaving.value = true
+    const { data, error } = await supabase.rpc('tax_batch_correction_save', {
+      p_doc: correctionPayload(),
+    })
+    if (error) throw error
+    const payload = data && typeof data === 'object' ? data as JsonMap : {}
+    if (payload.preview && typeof payload.preview === 'object') {
+      correctionPreview.value = normalizeCorrectionPreview(payload.preview as JsonMap)
+    }
+    toast.success(t('taxReportEditor.corrections.saved'))
+    closeCorrectionForm()
+    await loadTaxCorrections()
+  } catch (err) {
+    console.error(err)
+    toast.error(formatRpcErrorMessage(err))
+  } finally {
+    correctionSaving.value = false
+  }
+}
+
+async function approveBatchCorrection(correctionId: string) {
+  try {
+    correctionSaving.value = true
+    const { error } = await supabase.rpc('tax_batch_correction_approve', {
+      p_correction_id: correctionId,
+    })
+    if (error) throw error
+    toast.success(t('taxReportEditor.corrections.approved'))
+    await loadTaxCorrections()
+  } catch (err) {
+    console.error(err)
+    toast.error(formatRpcErrorMessage(err))
+  } finally {
+    correctionSaving.value = false
+  }
+}
+
+async function voidBatchCorrection(correctionId: string) {
+  try {
+    correctionSaving.value = true
+    const { error } = await supabase.rpc('tax_batch_correction_void', {
+      p_correction_id: correctionId,
+    })
+    if (error) throw error
+    toast.success(t('taxReportEditor.corrections.voided'))
+    await loadTaxCorrections()
+  } catch (err) {
+    console.error(err)
+    toast.error(formatRpcErrorMessage(err))
+  } finally {
+    correctionSaving.value = false
+  }
+}
+
+function correctionAmendmentReason() {
+  const uniqueReasons = Array.from(new Set(
+    approvedTaxCorrections.value
+      .map((correction) => correction.reason.trim())
+      .filter(Boolean),
+  ))
+  return uniqueReasons.join('\n') || t('taxReportEditor.corrections.defaultAmendmentReason')
+}
+
+async function findExistingDraftAmendedReportForCurrentComparison() {
+  if (!form.id) return null
+  const tenant = await ensureTenant()
+  const { data, error } = await supabase
+    .from(TABLE)
+    .select(REPORT_SELECT)
+    .eq('tenant_id', tenant)
+    .eq('tax_type', form.tax_type)
+    .eq('tax_year', form.tax_year)
+    .eq('tax_month', form.tax_month)
+    .eq('declaration_type', 'amended')
+    .eq('previous_report_id', form.id)
+    .in('status', ['draft', 'stale'])
+    .order('amendment_no', { ascending: false })
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (error) throw error
+  return data ? data as JsonMap : null
+}
+
+async function createAmendedReportFromCorrections() {
+  if (!form.id || !canCreateBatchCorrection.value) return
+  if (approvedTaxCorrections.value.length === 0) {
+    toast.info(t('taxReportEditor.corrections.approveBeforeAmendment'))
+    return
+  }
+
+  try {
+    correctionSaving.value = true
+    generating.value = true
+    const existingDraft = await findExistingDraftAmendedReportForCurrentComparison()
+    const existingNormalized = existingDraft ? normalizeReport(existingDraft) : null
+    const { data, error } = await supabase.rpc('tax_report_generate', {
+      p_doc: {
+        report_id: existingNormalized?.id ?? null,
+        tax_type: form.tax_type,
+        tax_year: form.tax_year,
+        tax_month: form.tax_month,
+        status: 'draft',
+        declaration_type: 'amended',
+        declaration_reason: correctionAmendmentReason(),
+        original_report_id: form.original_report_id || null,
+        previous_report_id: form.id,
+        amendment_no: existingNormalized?.amendment_no ?? null,
+      },
+    })
+    if (error) throw error
+
+    const saved = applySavedReport(reportRowFromGenerateResponse(data))
+    toast.success(
+      existingNormalized
+        ? t('taxReportEditor.corrections.amendedReportUpdated')
+        : t('taxReportEditor.corrections.amendedReportCreated'),
+    )
+    await router.replace({ name: 'TaxReportEdit', params: { id: saved.id } })
+  } catch (err) {
+    console.error(err)
+    toast.error(formatRpcErrorMessage(err))
+  } finally {
+    generating.value = false
+    correctionSaving.value = false
+  }
 }
 
 async function generateReportForPeriod(
@@ -2757,7 +3325,7 @@ async function loadExistingReport(id: string) {
   const tenant = await ensureTenant()
   const { data, error } = await supabase
     .from(TABLE)
-    .select('id, tax_type, tax_year, tax_month, status, declaration_type, declaration_reason, original_report_id, previous_report_id, amendment_no, previous_confirmed_payable_tax_amount, previous_confirmed_refund_tax_amount, correction_delta_tax_amount, prior_cumulative_tax_amount_calculated, prior_cumulative_tax_amount_override, prior_cumulative_tax_amount_source, prior_cumulative_tax_amount_notes, prior_cumulative_tax_amount_updated_at, prior_cumulative_tax_amount_updated_by, total_tax_amount, volume_breakdown, comparison_breakdown, report_files, attachment_files, created_at, updated_at')
+    .select(REPORT_SELECT)
     .eq('tenant_id', tenant)
     .eq('id', id)
     .maybeSingle()
@@ -2853,6 +3421,7 @@ onMounted(async () => {
     await Promise.all([
       loadRuleengineLabels({ tenantId: tenantId.value }),
       loadTenantTaxReportProfile(),
+      loadBeerCategoryOptions(),
     ])
     if (editing.value && typeof route.params.id === 'string') {
       await loadExistingReport(route.params.id)

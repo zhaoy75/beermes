@@ -97,7 +97,21 @@ begin
    where r.tenant_id = v_tenant
      and r.id = p_tax_report_id;
 
+  if v_target_status in ('submitted', 'approved')
+     and v_current.declaration_type = 'amended'
+     and v_current.previous_report_id is not null then
+    update public.tax_batch_corrections c
+       set status = 'used',
+           used_report_id = p_tax_report_id,
+           used_at = coalesce(c.used_at, now()),
+           updated_by = auth.uid(),
+           updated_at = now()
+     where c.tenant_id = v_tenant
+       and c.comparison_report_id = v_current.previous_report_id
+       and c.status = 'approved';
+  end if;
+
   return p_tax_report_id;
 end;
 $$;
-comment on function public.tax_report_set_status(uuid, text, text) is '{"version":3}';
+comment on function public.tax_report_set_status(uuid, text, text) is '{"version":4}';

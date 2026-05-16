@@ -207,16 +207,36 @@
                   <td class="px-3 py-2 font-mono text-xs text-gray-600">
                     {{ row.batchCode || '—' }}
                   </td>
-                  <td class="px-3 py-2">{{ categoryLabel(row.beerCategoryId) }}</td>
+                  <CompactTableCell
+                    :value="categoryLabel(row.beerCategoryId)"
+                    text-column="beerCategory"
+                    truncate
+                    focusable
+                  />
                   <td class="px-3 py-2 text-right">{{ formatAbv(row.actualAbv) }}</td>
-                  <td class="px-3 py-2">{{ row.styleName || row.productName || '—' }}</td>
-                  <td class="px-3 py-2">{{ row.packageTypeLabel || '—' }}</td>
+                  <CompactTableCell
+                    :value="row.styleName || row.productName"
+                    text-column="styleName"
+                    truncate
+                    focusable
+                  />
+                  <CompactTableCell
+                    :value="row.packageTypeLabel"
+                    text-column="packageType"
+                    truncate
+                    focusable
+                  />
                   <td class="px-3 py-2 text-xs text-gray-500">
                     {{ formatDate(row.productionDate) }}
                   </td>
                   <td class="px-3 py-2 text-right">{{ formatVolumeNumberValue(row.qtyLiters) }}</td>
                   <td class="px-3 py-2 text-right">{{ formatNumber(row.qtyPackages) }}</td>
-                  <td class="px-3 py-2">{{ row.siteLabelText }}</td>
+                  <CompactTableCell
+                    :value="row.siteLabelText"
+                    text-column="site"
+                    truncate
+                    focusable
+                  />
                   <td class="px-2 py-1.5 text-center">
                     <RowActionMenu
                       :actions="inventoryRowActions(row)"
@@ -416,6 +436,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
+import CompactTableCell from '@/components/common/CompactTableCell.vue'
 import ConfirmActionDialog from '@/components/common/ConfirmActionDialog.vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'

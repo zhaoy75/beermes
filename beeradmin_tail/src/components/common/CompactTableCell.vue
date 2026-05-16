@@ -14,12 +14,14 @@
 
 <script setup lang="ts">
 import { computed, type CSSProperties } from 'vue'
+import { tableTextColumnMaxWidth, type TableTextColumnKey } from '@/config/tableTextColumnLimits'
 
 const props = withDefaults(
   defineProps<{
     value?: string | number | null
     align?: 'left' | 'right' | 'center'
     maxWidth?: string
+    textColumn?: TableTextColumnKey | string
     truncate?: boolean
     monospace?: boolean
     numeric?: boolean
@@ -30,6 +32,7 @@ const props = withDefaults(
     value: '',
     align: 'left',
     maxWidth: '',
+    textColumn: '',
     truncate: false,
     monospace: false,
     numeric: false,
@@ -68,7 +71,8 @@ const contentClasses = computed(() => [
 ])
 
 const contentStyle = computed<CSSProperties | undefined>(() => {
-  if (!props.maxWidth) return undefined
-  return { maxWidth: props.maxWidth }
+  const maxWidth = props.maxWidth || tableTextColumnMaxWidth(props.textColumn)
+  if (!maxWidth) return undefined
+  return { maxWidth }
 })
 </script>

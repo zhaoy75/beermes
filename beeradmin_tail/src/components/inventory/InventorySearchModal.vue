@@ -122,20 +122,55 @@
                 <p class="text-sm text-gray-500">
                   {{ t('inventorySearchModal.results.count', { count: sortedRows.length }) }}
                 </p>
-                <button
-                  class="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-                  type="button"
-                  :disabled="inventoryLoading"
-                  @click="loadInventory"
-                >
-                  {{ t('common.refresh') }}
-                </button>
+                <div class="flex flex-wrap items-center justify-end gap-2">
+                  <div
+                    v-if="selectedResultRows.length > 0"
+                    class="flex flex-wrap items-center justify-end gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-900"
+                  >
+                    <span class="font-medium">
+                      {{ t('inventorySearchModal.bulk.selected', { count: selectedResultRows.length }) }}
+                    </span>
+                    <button
+                      class="text-blue-700 underline-offset-2 hover:underline"
+                      type="button"
+                      @click="clearSelectedResultRows"
+                    >
+                      {{ t('inventorySearchModal.bulk.clearSelection') }}
+                    </button>
+                    <button
+                      v-if="canApplySelection"
+                      class="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+                      type="button"
+                      @click="applySelectedResultRows"
+                    >
+                      {{ t('inventorySearchModal.bulk.applySelected') }}
+                    </button>
+                  </div>
+                  <button
+                    class="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                    type="button"
+                    :disabled="inventoryLoading"
+                    @click="loadInventory"
+                  >
+                    {{ t('common.refresh') }}
+                  </button>
+                </div>
               </div>
 
               <div class="max-h-[48vh] overflow-auto rounded-xl border border-gray-200">
                 <table class="compact-table min-w-full divide-y divide-gray-200 text-sm">
                   <thead class="bg-gray-50 text-xs uppercase text-gray-600">
                     <tr>
+                      <th class="w-10 px-3 py-2 text-center">
+                        <input
+                          type="checkbox"
+                          class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          :checked="allVisibleResultRowsSelected"
+                          :disabled="sortedRows.length === 0"
+                          :aria-label="t('inventorySearchModal.bulk.selectVisible')"
+                          @change="toggleVisibleResultRows"
+                        />
+                      </th>
                       <th class="px-3 py-2 text-left">
                         <button class="font-medium" type="button" @click="toggleSort('lotNo')">
                           {{ t('producedBeer.inventory.table.lotNo') }} {{ sortIndicator('lotNo') }}
@@ -196,12 +231,12 @@
                   </thead>
                   <tbody class="divide-y divide-gray-100 bg-white">
                     <tr v-if="inventoryLoading">
-                      <td colspan="11" class="px-3 py-8 text-center text-gray-500">
+                      <td :colspan="resultColumnCount" class="px-3 py-8 text-center text-gray-500">
                         {{ t('common.loading') }}
                       </td>
                     </tr>
                     <tr v-else-if="sortedRows.length === 0">
-                      <td colspan="11" class="px-3 py-8 text-center text-gray-500">
+                      <td :colspan="resultColumnCount" class="px-3 py-8 text-center text-gray-500">
                         {{ t('common.noData') }}
                       </td>
                     </tr>
@@ -212,6 +247,7 @@
                         :class="{
                           'cursor-pointer': selectable,
                           'bg-blue-50 ring-1 ring-inset ring-blue-200': activeRowId === row.id,
+                          'bg-blue-50/70': selectedResultRowIdSet.has(row.id),
                         }"
                         :tabindex="selectable ? 0 : -1"
                         :role="selectable ? 'button' : undefined"
@@ -219,6 +255,17 @@
                         @dblclick.stop.prevent="handleRowDoubleClick(row)"
                         @keydown.enter.prevent="handleRowDoubleClick(row)"
                       >
+                        <td class="px-3 py-2 text-center">
+                          <input
+                            type="checkbox"
+                            class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            :checked="selectedResultRowIdSet.has(row.id)"
+                            :aria-label="t('inventorySearchModal.bulk.selectRow')"
+                            @click.stop
+                            @keydown.stop
+                            @change.stop="toggleResultRowSelection(row)"
+                          />
+                        </td>
                         <td class="px-3 py-2 text-gray-600">
                           <div class="flex items-center justify-between gap-2">
                             <div class="font-mono text-xs">{{ row.lotNo || '—' }}</div>
@@ -276,7 +323,7 @@
                         />
                       </tr>
                       <tr v-if="isExpanded(row.id)" class="bg-gray-50/80">
-                        <td colspan="11" class="px-4 py-3">
+                        <td :colspan="resultColumnCount" class="px-4 py-3">
                           <div class="rounded-lg border border-gray-200 bg-white">
                             <div class="border-b border-gray-200 px-3 py-2 text-xs font-medium text-gray-600">
                               {{ t('producedBeerInventory.merge.detailsTitle') }}
@@ -338,17 +385,20 @@ const props = withDefaults(
     siteId?: string
     siteLocked?: boolean
     selectable?: boolean
+    canApplySelection?: boolean
   }>(),
   {
     siteId: '',
     siteLocked: false,
     selectable: false,
+    canApplySelection: false,
   },
 )
 
 const emit = defineEmits<{
   close: []
   select: [row: InventorySearchSelection]
+  selectMany: [rows: InventorySearchSelection[]]
 }>()
 
 const { t } = useI18n()
@@ -358,6 +408,7 @@ const dialogRef = ref<HTMLElement | null>(null)
 const activeRowId = ref('')
 const resultRowRefs = new Map<string, HTMLTableRowElement>()
 const expandedRowIds = ref<string[]>([])
+const selectedResultRowIds = ref<string[]>([])
 
 const filters = reactive({
   keyword: '',
@@ -369,6 +420,8 @@ const filters = reactive({
 
 const siteLocked = computed(() => props.siteLocked && !!props.siteId)
 const selectable = computed(() => props.selectable)
+const canApplySelection = computed(() => props.canApplySelection)
+const resultColumnCount = 12
 
 const sortState = reactive<{
   key:
@@ -506,6 +559,15 @@ const sortedRows = computed(() =>
   }),
 )
 
+const selectedResultRowIdSet = computed(() => new Set(selectedResultRowIds.value))
+const selectedResultRows = computed(() =>
+  sortedRows.value.filter((row) => selectedResultRowIdSet.value.has(row.id)),
+)
+const allVisibleResultRowsSelected = computed(() => {
+  if (!sortedRows.value.length) return false
+  return sortedRows.value.every((row) => selectedResultRowIdSet.value.has(row.id))
+})
+
 function setResultRowRef(id: string, el: unknown) {
   if (el instanceof HTMLTableRowElement) {
     resultRowRefs.set(id, el)
@@ -585,6 +647,27 @@ function lotTaxTypeLabel(code: string | null | undefined) {
   return ruleLabel('lot_tax_type', code)
 }
 
+function clearSelectedResultRows() {
+  selectedResultRowIds.value = []
+}
+
+function toggleResultRowSelection(row: (typeof inventoryRows.value)[number]) {
+  const selected = new Set(selectedResultRowIds.value)
+  if (selected.has(row.id)) selected.delete(row.id)
+  else selected.add(row.id)
+  selectedResultRowIds.value = Array.from(selected)
+}
+
+function toggleVisibleResultRows() {
+  const selected = new Set(selectedResultRowIds.value)
+  if (allVisibleResultRowsSelected.value) {
+    sortedRows.value.forEach((row) => selected.delete(row.id))
+  } else {
+    sortedRows.value.forEach((row) => selected.add(row.id))
+  }
+  selectedResultRowIds.value = Array.from(selected)
+}
+
 function handleModalKeydown(event: KeyboardEvent) {
   if (event.defaultPrevented) return
   if (event.altKey || event.ctrlKey || event.metaKey) return
@@ -642,7 +725,17 @@ function emitSelection(
   >,
 ) {
   if (!selectable.value) return
-  emit('select', {
+  emit('select', toInventorySearchSelection(row, detail))
+}
+
+function toInventorySearchSelection(
+  row: (typeof inventoryRows.value)[number],
+  detail: Pick<
+    (typeof inventoryRows.value)[number]['mergedDetails'][number],
+    'lotId' | 'lotNo' | 'siteId' | 'qtyLiters' | 'qtyPackages'
+  >,
+): InventorySearchSelection {
+  return {
     id: detail.lotId,
     lotId: detail.lotId,
     lotNo: detail.lotNo,
@@ -654,7 +747,25 @@ function emitSelection(
     siteId: detail.siteId,
     qtyLiters: detail.qtyLiters,
     qtyPackages: detail.qtyPackages,
-  })
+  }
+}
+
+function selectionsForResultRow(row: (typeof inventoryRows.value)[number]) {
+  const details = row.mergedDetails.length > 0 ? row.mergedDetails : [row]
+  return details.map((detail) => toInventorySearchSelection(row, detail))
+}
+
+function applySelectedResultRows() {
+  if (!canApplySelection.value || selectedResultRows.value.length === 0) return
+  const uniqueRows = new Map<string, InventorySearchSelection>()
+  selectedResultRows.value
+    .flatMap((row) => selectionsForResultRow(row))
+    .forEach((row) => {
+      uniqueRows.set(row.lotId, row)
+    })
+  const rows = Array.from(uniqueRows.values())
+  if (!rows.length) return
+  emit('selectMany', rows)
 }
 
 async function focusFirstField() {
@@ -681,6 +792,8 @@ watch(
   sortedRows,
   () => {
     ensureActiveRow()
+    const visibleIds = new Set(sortedRows.value.map((row) => row.id))
+    selectedResultRowIds.value = selectedResultRowIds.value.filter((id) => visibleIds.has(id))
     nextTick(() => scrollActiveRowIntoView())
   },
   { immediate: true },

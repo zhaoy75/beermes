@@ -1638,6 +1638,16 @@
         "reverseSuccess": "移出を取り消しました。",
         "exportExcel": "EXCEL出力"
       },
+      "bulk": {
+        "selected": "{count}件選択中",
+        "selectVisible": "表示中の移入出を選択",
+        "selectRow": "移入出を選択",
+        "clearSelection": "選択解除",
+        "reverse": "選択を取消",
+        "reverseConfirm": "選択した{selected}行のうち、取消可能な{count}件を取り消します。よろしいですか？",
+        "reverseSuccess": "{count}件の移入出を取り消しました。",
+        "reverseFailed": "選択した移入出の取消に失敗しました。"
+      },
       "errors": {
         "reverseFailed": "移出の取消に失敗しました。",
         "lockedByTaxReport": "この移動は酒税申告（{report}）に含まれているため、取消できません。"
@@ -2628,6 +2638,13 @@
     },
     "results": {
       "count": "{count}件"
+    },
+    "bulk": {
+      "selected": "{count}件選択中",
+      "selectVisible": "表示中の在庫を選択",
+      "selectRow": "在庫行を選択",
+      "clearSelection": "選択を解除",
+      "applySelected": "選択を適用"
     },
     "shortcuts": {
       "closeHint": "Esc で閉じる"

@@ -176,10 +176,49 @@
           </form>
         </section>
 
+        <div
+          v-if="selectedMovementCards.length > 0"
+          class="ml-auto flex w-fit flex-wrap items-center justify-end gap-2 rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-sm"
+        >
+          <span class="text-red-900">
+            {{ t('producedBeer.movement.bulk.selected', { count: selectedMovementCards.length }) }}
+          </span>
+          <button
+            class="rounded border border-red-200 bg-white px-3 py-1.5 text-red-700 hover:bg-red-50 disabled:opacity-50"
+            type="button"
+            :disabled="movementBulkProcessing"
+            @click="clearMovementSelection"
+          >
+            {{ t('producedBeer.movement.bulk.clearSelection') }}
+          </button>
+          <button
+            class="rounded bg-red-600 px-3 py-1.5 text-white hover:bg-red-700 disabled:opacity-50"
+            type="button"
+            :disabled="movementBulkProcessing || reversibleSelectedMovementCards.length === 0"
+            @click="reverseSelectedMovements"
+          >
+            {{
+              movementBulkProcessing
+                ? t('common.saving')
+                : t('producedBeer.movement.bulk.reverse')
+            }}
+          </button>
+        </div>
+
         <section class="overflow-x-auto border border-gray-200 rounded-lg">
           <table class="compact-table min-w-full divide-y divide-gray-200 text-sm">
             <thead class="bg-gray-50 text-xs uppercase text-gray-600">
               <tr>
+                <th class="w-10 px-2 py-1.5 text-center">
+                  <input
+                    class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-40"
+                    type="checkbox"
+                    :checked="allVisibleMovementCardsSelected"
+                    :disabled="visibleMovementCards.length === 0 || movementLoading || movementBulkProcessing"
+                    :aria-label="t('producedBeer.movement.bulk.selectVisible')"
+                    @change="toggleVisibleMovementSelection"
+                  />
+                </th>
                 <th class="px-3 py-2 text-left">
                   <TableColumnHeader
                     v-model:filter-value="movementColumnFilters.movementAt"
@@ -346,6 +385,16 @@
             </thead>
             <tbody class="divide-y divide-gray-100">
               <tr v-for="card in visibleMovementCards" :key="card.id" class="hover:bg-gray-50">
+                <td class="px-2 py-1.5 text-center">
+                  <input
+                    class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-40"
+                    type="checkbox"
+                    :checked="selectedMovementCardIdSet.has(card.id)"
+                    :disabled="movementLoading || movementBulkProcessing"
+                    :aria-label="t('producedBeer.movement.bulk.selectRow')"
+                    @change="toggleMovementSelection(card)"
+                  />
+                </td>
                 <td class="px-3 py-2 text-xs text-gray-500">
                   {{ formatDateTime(card.movementAt) }}
                 </td>
@@ -415,7 +464,7 @@
                 <td class="px-2 py-1.5 text-center">
                   <button
                     class="inline-flex h-8 w-8 items-center justify-center rounded border border-red-200 bg-white text-red-700 hover:bg-red-50 disabled:border-gray-200 disabled:text-gray-400 disabled:opacity-60 disabled:hover:bg-white"
-                    :disabled="movementLoading || card.status === 'void'"
+                    :disabled="movementLoading || movementBulkProcessing || card.status === 'void'"
                     :aria-label="
                       card.status === 'void'
                         ? t('producedBeer.movement.actions.reversed')
@@ -448,7 +497,7 @@
                 </td>
               </tr>
               <tr v-if="!movementLoading && visibleMovementCards.length === 0">
-                <td colspan="15" class="px-3 py-8 text-center text-gray-500">
+                <td colspan="16" class="px-3 py-8 text-center text-gray-500">
                   {{ t('common.noData') }}
                 </td>
               </tr>
@@ -672,6 +721,7 @@ const pageTitle = computed(() => t('producedBeer.title'))
 const tenantId = ref<string | null>(null)
 const movementLoading = ref(false)
 const exportLoading = ref(false)
+const movementBulkProcessing = ref(false)
 
 const categories = ref<CategoryRow[]>([])
 const packageCategories = ref<PackageCategoryRow[]>([])
@@ -679,6 +729,7 @@ const uoms = ref<Array<{ id: string; code: string | null }>>([])
 const siteOptions = ref<SiteOption[]>([])
 
 const movementCards = ref<MovementCard[]>([])
+const selectedMovementCardIds = ref<string[]>([])
 const defaultMovementDateFrom = oneMonthAgoDateInput()
 const rememberedMovementSearchState = readStoredMovementSearchState()
 const movementFilters = reactive<MovementFiltersState>({
@@ -799,6 +850,18 @@ const movementTaxEventColumnFilterOptions = computed(() => {
     options.push({ value: 'NONE', label: '—' })
   }
   return options
+})
+
+const selectedMovementCardIdSet = computed(() => new Set(selectedMovementCardIds.value))
+const selectedMovementCards = computed(() =>
+  visibleMovementCards.value.filter((card) => selectedMovementCardIdSet.value.has(card.id)),
+)
+const reversibleSelectedMovementCards = computed(() =>
+  selectedMovementCards.value.filter((card) => card.status !== 'void'),
+)
+const allVisibleMovementCardsSelected = computed(() => {
+  if (visibleMovementCards.value.length === 0) return false
+  return visibleMovementCards.value.every((card) => selectedMovementCardIdSet.value.has(card.id))
 })
 
 function setMovementColumnSort(key: string, direction?: ColumnSortDirection) {
@@ -1010,6 +1073,29 @@ function taxEventLabel(taxEvent: string | null | undefined) {
   const normalized = (taxEvent ?? '').trim()
   if (!normalized.length) return '—'
   return ruleLabel('tax_event', normalized)
+}
+
+function clearMovementSelection() {
+  selectedMovementCardIds.value = []
+}
+
+function toggleMovementSelection(card: MovementCardView) {
+  if (movementLoading.value || movementBulkProcessing.value) return
+  const selected = new Set(selectedMovementCardIds.value)
+  if (selected.has(card.id)) selected.delete(card.id)
+  else selected.add(card.id)
+  selectedMovementCardIds.value = Array.from(selected)
+}
+
+function toggleVisibleMovementSelection() {
+  if (movementLoading.value || movementBulkProcessing.value) return
+  const selected = new Set(selectedMovementCardIds.value)
+  if (allVisibleMovementCardsSelected.value) {
+    visibleMovementCards.value.forEach((card) => selected.delete(card.id))
+  } else {
+    visibleMovementCards.value.forEach((card) => selected.add(card.id))
+  }
+  selectedMovementCardIds.value = Array.from(selected)
 }
 
 function uniqueNonEmpty(values: Array<string | null | undefined>) {
@@ -1515,8 +1601,23 @@ function openMovementCreateFast() {
   router.push({ path: '/producedBeerMovementFast' })
 }
 
+async function rollbackMovement(card: MovementCard) {
+  const { error } = await supabase.rpc('product_move_rollback', {
+    p_doc: {
+      product_movement_id: card.id,
+      doc_no: `PMR-${card.docNo || card.id}`,
+      movement_at: new Date().toISOString(),
+      reason: 'cancelled_from_movement_register',
+      meta: {
+        idempotency_key: `product_move_rollback:${card.id}`,
+      },
+    },
+  })
+  if (error) throw error
+}
+
 async function reverseMovement(card: MovementCard) {
-  if (movementLoading.value || card.status === 'void') return
+  if (movementLoading.value || movementBulkProcessing.value || card.status === 'void') return
 
   const confirmed = await requestConfirmation({
     title: t('producedBeer.movement.actions.reverse'),
@@ -1528,20 +1629,10 @@ async function reverseMovement(card: MovementCard) {
 
   try {
     movementLoading.value = true
-    const { error } = await supabase.rpc('product_move_rollback', {
-      p_doc: {
-        product_movement_id: card.id,
-        doc_no: `PMR-${card.docNo || card.id}`,
-        movement_at: new Date().toISOString(),
-        reason: 'cancelled_from_movement_register',
-        meta: {
-          idempotency_key: `product_move_rollback:${card.id}`,
-        },
-      },
-    })
-    if (error) throw error
+    await rollbackMovement(card)
 
     toast.success(t('producedBeer.movement.actions.reverseSuccess'))
+    selectedMovementCardIds.value = selectedMovementCardIds.value.filter((id) => id !== card.id)
     await fetchMovements()
   } catch (err) {
     console.error(err)
@@ -1552,6 +1643,45 @@ async function reverseMovement(card: MovementCard) {
     movementLoading.value = false
   }
 }
+
+async function reverseSelectedMovements() {
+  const selectedCount = selectedMovementCards.value.length
+  const cards = reversibleSelectedMovementCards.value
+  if (!selectedCount || !cards.length) return
+
+  const confirmed = await requestConfirmation({
+    title: t('producedBeer.movement.bulk.reverse'),
+    message: t('producedBeer.movement.bulk.reverseConfirm', {
+      selected: selectedCount,
+      count: cards.length,
+    }),
+    confirmLabel: t('producedBeer.movement.bulk.reverse'),
+    tone: 'danger',
+  })
+  if (!confirmed) return
+
+  try {
+    movementBulkProcessing.value = true
+    for (const card of cards) {
+      await rollbackMovement(card)
+    }
+    clearMovementSelection()
+    await fetchMovements()
+    toast.success(t('producedBeer.movement.bulk.reverseSuccess', { count: cards.length }))
+  } catch (err) {
+    console.error(err)
+    toast.error(formatRpcErrorMessage(err, {
+      fallbackKey: 'producedBeer.movement.bulk.reverseFailed',
+    }))
+  } finally {
+    movementBulkProcessing.value = false
+  }
+}
+
+watch(visibleMovementCards, (cards) => {
+  const visibleIds = new Set(cards.map((card) => card.id))
+  selectedMovementCardIds.value = selectedMovementCardIds.value.filter((id) => visibleIds.has(id))
+})
 
 watch(
   () => ({

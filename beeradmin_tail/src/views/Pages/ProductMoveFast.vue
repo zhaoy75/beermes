@@ -1315,6 +1315,20 @@ function focusQuickVolumeInput() {
   target.select()
 }
 
+function resolveInventorySearchAllocation(row: InventorySearchSelection) {
+  const matchedOption = beerOptions.value.find((option) =>
+    option.candidateLots.some((lot) => lot.lotId === row.lotId),
+  )
+  const matchedLot = matchedOption?.candidateLots.find((lot) => lot.lotId === row.lotId)
+  if (!matchedOption || !matchedLot) return null
+  const qtyLiters = toNumber(row.qtyLiters)
+  return {
+    option: matchedOption,
+    lot: matchedLot,
+    qtyLiters: qtyLiters != null && qtyLiters > 0 ? qtyLiters : matchedLot.qtyLiters,
+  }
+}
+
 function handleInventorySearchSelection(row: InventorySearchSelection) {
   const matchedOption = beerOptions.value.find((option) =>
     option.candidateLots.some((lot) => lot.lotId === row.lotId),
@@ -1344,6 +1358,28 @@ function handleInventorySearchSelection(row: InventorySearchSelection) {
   quickSuggestionOpen.value = false
 }
 
+function handleInventorySearchManySelection(rows: InventorySearchSelection[]) {
+  const allocations = rows.map((row) => resolveInventorySearchAllocation(row))
+  if (allocations.some((allocation) => !allocation)) {
+    toast.error(t('producedBeer.movementFast.errors.beerUnresolved'))
+    return
+  }
+  const resolvedAllocations = allocations.filter((allocation) => allocation !== null)
+  appendAllocatedRows(
+    resolvedAllocations.map((allocation) => ({
+      option: allocation.option,
+      lot: allocation.lot,
+      qtyLiters: allocation.qtyLiters,
+    })),
+  )
+  quickEntry.keyword = ''
+  quickEntry.beerKey = ''
+  quickEntry.packageId = ''
+  quickEntry.unitText = ''
+  quickEntry.volumeText = ''
+  quickSuggestionOpen.value = false
+}
+
 function focusAfterInventorySearchSelection(row: InventorySearchSelection) {
   const matchedOption = beerOptions.value.find((option) =>
     option.candidateLots.some((lot) => lot.lotId === row.lotId),
@@ -1354,6 +1390,10 @@ function focusAfterInventorySearchSelection(row: InventorySearchSelection) {
     return
   }
   focusQuickVolumeInput()
+}
+
+function focusAfterInventorySearchManySelection() {
+  focusQuickKeywordInput()
 }
 
 const quickKeywordSuggestions = computed(() => {
@@ -2754,7 +2794,9 @@ onMounted(async () => {
         siteId: routeForm.fromSiteId,
         siteLocked: true,
         onSelect: handleInventorySearchSelection,
+        onSelectMany: handleInventorySearchManySelection,
         afterSelectFocus: focusAfterInventorySearchSelection,
+        afterSelectManyFocus: focusAfterInventorySearchManySelection,
       }
     })
     window.addEventListener('keydown', handleGlobalKeydown)

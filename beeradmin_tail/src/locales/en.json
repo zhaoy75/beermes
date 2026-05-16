@@ -1635,6 +1635,16 @@
         "reverseSuccess": "Movement reversed.",
         "exportExcel": "Export Excel"
       },
+      "bulk": {
+        "selected": "{count} selected",
+        "selectVisible": "Select visible movements",
+        "selectRow": "Select movement",
+        "clearSelection": "Clear selection",
+        "reverse": "Reverse Selected",
+        "reverseConfirm": "Reverse {count} eligible movements from {selected} selected rows?",
+        "reverseSuccess": "Reversed {count} movements.",
+        "reverseFailed": "Failed to reverse the selected movements."
+      },
       "errors": {
         "reverseFailed": "Failed to reverse the movement.",
         "lockedByTaxReport": "This movement is included in tax report ({report}) and cannot be reversed."
@@ -2633,6 +2643,13 @@
     },
     "results": {
       "count": "{count} results"
+    },
+    "bulk": {
+      "selected": "{count} selected",
+      "selectVisible": "Select visible inventory",
+      "selectRow": "Select inventory row",
+      "clearSelection": "Clear selection",
+      "applySelected": "Apply selected"
     },
     "shortcuts": {
       "closeHint": "Press Esc to close"

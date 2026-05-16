@@ -19,11 +19,6 @@
       </header>
 
       <section class="border border-gray-200 rounded-xl shadow-sm p-4 bg-white space-y-4">
-        <header>
-          <h2 class="text-lg font-semibold">{{ t('producedBeer.sections.inventory') }}</h2>
-          <p class="text-sm text-gray-500">{{ t('producedBeer.inventory.subtitle') }}</p>
-        </header>
-
         <section class="rounded-xl border border-gray-200 bg-gray-50/70 p-4">
           <form class="grid grid-cols-1 gap-4 md:grid-cols-5" @submit.prevent>
             <div>

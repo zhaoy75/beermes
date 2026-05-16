@@ -4,12 +4,14 @@
 - Provide a global keyboard shortcut to open an inventory search modal from authenticated app screens.
 - Let users search produced beer inventory without leaving the current page.
 - Reuse the same inventory result shape already shown on the `ProducedBeerInventory` page.
+- Support multi-check selection in the inventory search result grid.
 
 ## Scope
 - Frontend only.
 - Applies to the authenticated admin application shell.
 - Initial shortcut is `Ctrl + I`. for mac will be `command + I`
 - Supports caller-provided page context for default filters and row selection callback.
+- Supports optional caller-provided multi-selection callback for applying selected rows.
 
 ## Trigger and Availability
 - Register the shortcut globally while the user is inside the authenticated app layout.
@@ -89,6 +91,10 @@
 - The grid should update from the active filter state.
 - The grid can be sort by each column
 - The grid should support keyboard row navigation.
+- The grid includes a checkbox column.
+- The header checkbox selects or clears all currently visible result rows.
+- Row checkboxes remain enabled even when only one result row is visible.
+- Selected row state should be pruned when filters, sorting, or reloads remove rows from the visible result.
 - ABV column displays actual ABV, not target ABV:
   - prefer batch `actual_abv`
   - fallback only to actual-like snapshot/meta `actual_abv` or generic `abv`
@@ -110,6 +116,22 @@
   - must close the modal after selection
 - The active row should remain visible by scrolling into view when needed.
 - Mouse and keyboard selection must use the same result payload.
+
+### Result Grid Multi-Check Behavior
+- Multi-check is always enabled in the result grid.
+- A selected-count summary appears when at least one visible result row is selected.
+- The summary includes:
+  - selected row count
+  - clear selection action
+  - apply selected action, only when the caller provides a multi-selection callback
+- Applying selected rows:
+  - returns selected inventory rows to the caller
+  - closes the modal after the caller callback runs
+  - uses the same payload shape as single-row selection
+- If a selected visible row represents a merged row with multiple underlying lots:
+  - applying selected rows returns each underlying lot detail as an individual selection payload
+  - row-level single selection still requires expanding and double-clicking a detail row, or selecting an unmerged row
+- Double-click and `Enter` remain single-row selection behaviors and must not toggle checkboxes.
 
 ## Data Contract
 - Base the result set on the same produced beer inventory source used by `ProducedBeerInventory`.
@@ -140,15 +162,19 @@
   - `site_id`: preselected site filter
   - `site_locked`: locks the site filter to the provided value
   - `onSelect`: callback payload returned when a result row is selected
+  - `onSelectMany`: callback payload returned when checked result rows are applied
 - ProductMoveFast integration:
   - when ProductMoveFast has selected `From Site`, modal opens with `site_id = From Site`
   - `site_locked = true`
   - result grid must show only lots in that source site
   - double-clicking a result row must call `onSelect(row)` and close the modal
+  - checking multiple rows and applying selection must call `onSelectMany(rows)` and close the modal
   - selection payload should include quantity values needed by the caller page
+  - multi-selection payload should append one movement input line per selected underlying lot
   - ProductMoveFast may route focus after close based on selected row:
     - package lot -> `unit`
     - non-package lot -> `volume`
+  - after multi-selection closes, ProductMoveFast should return focus to the quick keyword input
   
 ## Implementation Direction
 - Preferred placement:
@@ -182,3 +208,7 @@
 12. Pressing `ArrowDown` / `ArrowUp` in the modal moves the active result row selection.
 13. Pressing `Enter` while a result row is active behaves the same as double-clicking that row.
 14. Non-package inventory rows are hidden by default and only shown when `Show Non-Package` is enabled.
+15. The modal shows row checkboxes and a visible-row select-all checkbox.
+16. Selected rows can be applied even when only one row is selected.
+17. Applying selected rows returns selected underlying inventory lots to the caller and closes the modal.
+18. ProductMoveFast appends one movement line per selected inventory lot when multi-selection is applied.

@@ -41,6 +41,16 @@
   - active sort/filter state is indicated on the icon and inside the popup menu.
   - column filters apply after page-level filters.
   - Clear filters clears table column filters only.
+- Row selection:
+  - the movement table may include a checkbox column.
+  - the header checkbox selects or clears all currently visible movement rows.
+  - row checkboxes are general movement-row selection and should remain enabled even when only one movement row is visible.
+  - selected row state should be pruned when filters, column filters, sorting, or reloads remove rows from the visible result.
+- Bulk action bar:
+  - appears when at least one visible movement row is selected.
+  - shows selected row count.
+  - includes a clear-selection command.
+  - exposes only movement actions that are explicitly safe for bulk execution.
 - Actions:
   - Export Excel
   - Fast movement
@@ -77,6 +87,37 @@
 - Tax removal type (`税務移出種別`)
 - Actions (reverse)
 
+### Row Selection and Bulk Actions
+- Selection behavior:
+  - checkboxes select movement rows from the currently visible filtered/sorted table.
+  - selecting rows does not imply all selected rows are eligible for every bulk action.
+  - select-all operates on visible rows only.
+  - selection should be cleared or pruned after successful bulk execution and list reload.
+- Initial bulk action:
+  - `Reverse movement` / `取消`
+  - This is the only bulk action in scope for the first implementation because it matches the existing row-level action.
+- Bulk reverse eligibility:
+  - exclude movements whose `status` is already `void`.
+  - backend may still reject a movement because of downstream usage or tax-report lock rules.
+  - selected ineligible rows must not be sent to the rollback RPC.
+  - if no selected rows are eligible, the bulk reverse command must be disabled or blocked before RPC execution.
+- Bulk reverse confirmation:
+  - show one confirmation dialog before execution.
+  - confirmation should communicate selected row count and actual eligible target count.
+  - wording should clearly say the action cancels/reverses selected movements.
+- Bulk reverse execution:
+  - call the same rollback path as the row-level reverse action: `public.product_move_rollback`.
+  - execute against eligible selected movements only.
+  - sequential execution is acceptable for the first implementation.
+  - row actions and bulk controls should be disabled while bulk processing is running.
+  - on success, reload the movement list.
+  - if any rollback fails, show the backend error and avoid implying that every selected movement succeeded.
+- Out of scope for bulk:
+  - no bulk edit.
+  - no bulk create.
+  - no bulk export action beyond the existing table export.
+  - no bulk fast movement or new movement action.
+
 ## Actions
 - Reset filters:
   - clear beer/category/package/batch/date filters.
@@ -100,6 +141,11 @@
   - call `public.product_move_rollback`.
   - do not call `movement_save(status='void')` because that only changes the movement header and does not reverse `inv_inventory` or lot balances.
   - on success, reload the movement list.
+- Bulk reverse movement:
+  - uses the same cancellation rules as `Reverse movement`.
+  - applies only to selected eligible movement rows.
+  - selected rows already in `void` status are skipped before RPC execution.
+  - reloads the movement list after completion.
 
 ## Business Rules
 - Tenant isolation:
@@ -124,6 +170,7 @@
   - blocks cancellation if the destination lot has downstream non-void movement usage.
   - blocks cancellation when the movement is locked by a submitted or approved tax report.
   - marks draft tax reports that referenced the movement as stale.
+  - bulk cancellation must preserve the same per-movement backend validations and must not bypass downstream usage or tax-report lock checks.
 - Tax rate label:
   - prefer `inv_movements.meta.tax_rate`.
   - if tax type is `notax`, show `0/kl`.
@@ -196,6 +243,7 @@
 ## Non-Scope
 - No inventory table on this page.
 - No inline modal editing on this page.
+- No bulk actions except movement reversal in the first bulk-action implementation.
 
 ## Other
 - This page is multilingual (Japanese/English) via i18n keys under `producedBeer`.

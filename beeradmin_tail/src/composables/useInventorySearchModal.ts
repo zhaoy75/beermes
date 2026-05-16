@@ -18,7 +18,9 @@ export type InventorySearchOpenOptions = {
   siteId?: string | null
   siteLocked?: boolean
   onSelect?: ((row: InventorySearchSelection) => void) | null
+  onSelectMany?: ((rows: InventorySearchSelection[]) => void) | null
   afterSelectFocus?: ((row: InventorySearchSelection) => void) | null
+  afterSelectManyFocus?: ((rows: InventorySearchSelection[]) => void) | null
 }
 
 const isInventorySearchOpen = ref(false)
@@ -33,7 +35,9 @@ function normalizedOptions(options?: InventorySearchOpenOptions): InventorySearc
     siteId: options.siteId ?? '',
     siteLocked: options.siteLocked ?? false,
     onSelect: options.onSelect ?? null,
+    onSelectMany: options.onSelectMany ?? null,
     afterSelectFocus: options.afterSelectFocus ?? null,
+    afterSelectManyFocus: options.afterSelectManyFocus ?? null,
   }
 }
 

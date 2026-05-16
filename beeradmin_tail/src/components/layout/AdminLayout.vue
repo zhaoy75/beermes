@@ -18,8 +18,10 @@
       :site-id="inventorySearchOptions.siteId ?? ''"
       :site-locked="Boolean(inventorySearchOptions.siteLocked)"
       :selectable="Boolean(inventorySearchOptions.onSelect)"
+      :can-apply-selection="Boolean(inventorySearchOptions.onSelectMany)"
       @close="closeInventorySearch"
       @select="handleInventorySearchSelect"
+      @select-many="handleInventorySearchSelectMany"
     />
 
     <TypeDefGraphModal
@@ -130,6 +132,13 @@ async function handleInventorySearchSelect(row: InventorySearchSelection) {
   const afterSelectFocus = inventorySearchOptions.value.afterSelectFocus
   onSelect?.(row)
   await closeInventorySearch(afterSelectFocus ? () => afterSelectFocus(row) : null)
+}
+
+async function handleInventorySearchSelectMany(rows: InventorySearchSelection[]) {
+  const onSelectMany = inventorySearchOptions.value.onSelectMany
+  const afterSelectManyFocus = inventorySearchOptions.value.afterSelectManyFocus
+  onSelectMany?.(rows)
+  await closeInventorySearch(afterSelectManyFocus ? () => afterSelectManyFocus(rows) : null)
 }
 
 async function handleTypeDefGraphSelect(row: TypeDefGraphSelection) {

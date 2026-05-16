@@ -23,10 +23,30 @@
 ### New Page
 - Route path: `/producedBeerInventory`
 - Route name: `ProducedBeerInventory`
-- View component: new page component under `src/views/Pages/`
+- View component: `beeradmin_tail/src/views/Pages/ProducedBeerInventory.vue`
+- Shared inventory loader: `beeradmin_tail/src/composables/useProducedBeerInventory.ts`
 - Page title:
-  - Japanese: `在庫管理`
-  - English: `Inventory Management`
+  - Japanese: `ビール在庫管理`
+  - English: `Beer Inventory Management`
+
+### Source Files
+- Route registration:
+  - `beeradmin_tail/src/router/tenant-routes.ts`
+- Sidebar navigation:
+  - `beeradmin_tail/src/components/layout/AppSidebar.vue`
+- Page component:
+  - `beeradmin_tail/src/views/Pages/ProducedBeerInventory.vue`
+- Shared inventory source/composable:
+  - `beeradmin_tail/src/composables/useProducedBeerInventory.ts`
+- Inventory shortcut modal using the same source shape:
+  - `beeradmin_tail/src/components/inventory/InventorySearchModal.vue`
+- Locale keys:
+  - `beeradmin_tail/src/locales/ja.json`
+  - `beeradmin_tail/src/locales/en.json`
+- Related behavior specs:
+  - `specs/domestic-removal-complete-redesign.md`
+  - `specs/produced-beer-unpacking-page.md`
+  - `docs/UI/inventory-search-shortcut-modal-spec.md`
 
 ### Data Source
 - Continue reading packaged beer stock from `inv_inventory`.
@@ -40,9 +60,12 @@
   - top-level refresh action
 - Add a search/filter section above the inventory grid.
 - Add sortable column headers in the inventory grid.
+- Add a row-selection checkbox column in the inventory grid.
 - Add row-level action buttons in the inventory grid.
 - Keep the current inventory table columns:
+  - Selection checkbox
   - Lot Code
+  - Lot Tax Type
   - Batch No
   - Beer Category
   - ABV
@@ -102,6 +125,25 @@
   - `国内移出完了` / `Complete Domestic Removal`
   - `解体` / `Unpack`
 
+### Row Selection and Bulk Action Bar
+- The inventory grid includes a checkbox column.
+- The header checkbox selects or clears all currently visible rows.
+- Row checkboxes are general row selection:
+  - they remain enabled when only one row is visible
+  - they may be enabled even when the row is not eligible for `国内移出完了`
+- A bulk action bar appears when at least one visible row is selected.
+- The bulk action bar shows:
+  - selected row count
+  - clear selection command
+  - `国内移出完了` command
+- Bulk processing is available only for `国内移出完了`.
+- The bulk `国内移出完了` command must be disabled when none of the selected rows are eligible.
+- When bulk `国内移出完了` runs, it processes only selected rows that are eligible for `国内移出完了`.
+- Selected ineligible rows must not be sent to the backend RPC.
+- The implementation should deduplicate underlying lot/site targets before calling the backend.
+- Row actions should be disabled while bulk processing is running to avoid concurrent operations.
+- Selection should be cleared or pruned after successful processing and inventory refresh.
+
 #### `関連履歴` / `Show DAG`
 - Purpose:
   - show all related movement / lot genealogy for the selected inventory lot
@@ -122,6 +164,8 @@
   - the action always moves the full current quantity of each underlying lot
   - after success, refresh inventory grid and remove or update the affected `TAX_STORAGE` row from the visible positive inventory result
   - if the action is rejected by backend business rules, show an explicit error message
+  - for bulk execution, show one confirmation that includes selected row count and actual eligible target count
+  - for bulk execution, call the backend only for eligible selected lot/site targets
 - Backend direction:
   - UI must not update `inv_inventory` or `lot` directly
   - implement or call a backend endpoint / RPC that performs the shipment through business logic
@@ -181,6 +225,7 @@
 - Add new locale keys only for:
   - the new page title/subtitle
   - the new sidebar label if a distinct label is needed
+  - row selection and bulk `国内移出完了` labels/messages
 - Reuse search/filter behavior from `inventory-search-shortcut-modal-spec.md` where practical.
 - Reuse lot genealogy backend from `public.lot_trace_full` for `関連履歴`.
 - Add new locale keys for row actions and confirmation/error messages related to `国内移出完了` if they do not already exist.
@@ -197,4 +242,7 @@
 9. `関連履歴` shows all related movement / lot genealogy for the selected row.
 10. `国内移出完了` executes through backend business logic, only for `TAX_STORAGE` rows, and removes or updates the visible merged row after refresh.
 11. `解体` navigates to a dedicated unpacking page using the selected inventory row as source context.
-12. The new page and existing movement page both load successfully without TypeScript or build regressions.
+12. Row checkboxes can select visible rows even when only one row is visible.
+13. Bulk processing is available only for `国内移出完了`; no bulk `解体`, `関連履歴`, or other action is exposed.
+14. Bulk `国内移出完了` executes only eligible selected targets and does not send selected ineligible rows to the backend.
+15. The new page and existing movement page both load successfully without TypeScript or build regressions.

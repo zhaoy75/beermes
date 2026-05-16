@@ -40,21 +40,36 @@
 - The action remains unavailable for non-`TAX_STORAGE` rows.
 - The action remains unavailable when the visible row has no positive quantity.
 
+### Row Selection and Bulk Processing
+- The inventory table may provide checkboxes for row selection.
+- Row selection itself is not limited to `国内移出完了` eligibility:
+  - a checkbox may be enabled even when only one row is visible
+  - a checkbox may be enabled for rows that are not eligible for `国内移出完了`
+- Bulk execution is limited to `国内移出完了` only.
+- The bulk `国内移出完了` command must execute only against selected rows that are eligible for the action.
+- If selected rows contain no eligible `国内移出完了` targets, the bulk command must be disabled or otherwise blocked before RPC execution.
+- Select-all behavior should operate on the currently visible rows, then the bulk command should internally filter to eligible rows before execution.
+- Bulk execution should deduplicate underlying lot/site targets before calling the backend wrapper.
+- Other row actions, including `解体` and `関連履歴`, remain single-row actions.
+
 ### Full-Quantity Rule
 - The action always moves the full current quantity of each target lot in the visible row.
 - The inventory page must not prompt the user for partial quantity.
 - For merged visible rows, the page may continue iterating underlying lot targets one by one.
+- For bulk execution, each eligible selected row follows the same full-quantity rule for each underlying target lot.
 
 ### Confirmation
 - Keep a confirmation dialog.
 - Suggested confirmation meaning:
   - “complete domestic removal for the selected lot(s)”
 - The wording must no longer imply “cancel removal” or “set inventory to zero”.
+- For bulk execution, the confirmation should communicate the selected row count and the actual eligible target count.
 
 ### Success Result on Inventory Page
 - After success, the selected `TAX_STORAGE` inventory row disappears from the tax-storage view because its source quantity becomes zero.
 - The destination customer-side lot must not appear in normal `ビール在庫管理` grid results.
 - The page refresh behavior remains the same after successful completion.
+- After successful bulk execution, selected rows should be cleared or pruned during the inventory refresh.
 
 ## Backend Flow
 
@@ -255,3 +270,6 @@
 7. The created movement stores standard movement metadata including `movement_intent`, `tax_decision_code`, and derived `tax_event`.
 8. Future `RETURN_FROM_CUSTOMER` flow can search the resulting customer-side lot as a sold-lot candidate.
 9. The inventory page no longer depends on `inventory_lot_void(...)` for `国内移出完了`.
+10. Inventory row checkboxes can be used for selection even when only one row is visible.
+11. Bulk processing is available only for `国内移出完了`; selecting rows must not create bulk `解体`, `関連履歴`, or other bulk actions.
+12. Bulk `国内移出完了` executes only selected eligible targets and must not call the backend for selected ineligible rows.

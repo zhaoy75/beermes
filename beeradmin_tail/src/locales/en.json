@@ -2458,6 +2458,16 @@
       "showDag": "Show DAG",
       "cancelRemoval": "Complete Domestic Removal"
     },
+    "bulk": {
+      "selected": "{count} selected",
+      "selectVisible": "Select visible rows",
+      "selectRow": "Select row",
+      "clearSelection": "Clear selection",
+      "completeDomesticRemoval": "Complete Domestic Removal",
+      "confirmCompleteDomesticRemoval": "Complete domestic removal for {rows} selected rows ({targets} targets)?",
+      "completeDomesticRemovalSuccess": "Completed domestic removal for {count} targets.",
+      "completeDomesticRemovalFailed": "Failed to complete domestic removal in bulk."
+    },
     "merge": {
       "expand": "Show merged details",
       "collapse": "Hide merged details",

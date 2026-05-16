@@ -2453,6 +2453,16 @@
       "showDag": "関連履歴",
       "cancelRemoval": "国内移出完了"
     },
+    "bulk": {
+      "selected": "{count}件選択中",
+      "selectVisible": "表示中の行を選択",
+      "selectRow": "行を選択",
+      "clearSelection": "選択解除",
+      "completeDomesticRemoval": "国内移出完了",
+      "confirmCompleteDomesticRemoval": "選択した{rows}行（対象{targets}件）の国内移出を完了します。よろしいですか？",
+      "completeDomesticRemovalSuccess": "{count}件の国内移出を完了しました。",
+      "completeDomesticRemovalFailed": "一括国内移出完了に失敗しました。"
+    },
     "merge": {
       "expand": "内訳を表示",
       "collapse": "内訳を閉じる",

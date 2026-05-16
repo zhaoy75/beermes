@@ -377,6 +377,7 @@ type JsonRecord = Record<string, unknown>
 
 type PackageLookup = {
   packageCode: string
+  displayName: string
   volumeFix: boolean
   unitVolumeLiters: number | null
   volumeUomCode: string | null
@@ -385,6 +386,7 @@ type PackageLookup = {
 type PackageRow = {
   id: string
   package_code: string | null
+  name_i18n: Record<string, string> | null
   package_type_id: string | null
   unit_volume: number | string | null
   volume_uom: string | null
@@ -499,6 +501,7 @@ type AggregatePackageGroup = {
 
 type DetailPackageGroup = {
   label: string
+  containerKind: string
   quantity: number | null
   volume: number | null
 }
@@ -999,6 +1002,22 @@ function resolveContainerKind(packageCode: string | null | undefined) {
   return 'other'
 }
 
+function resolveLang() {
+  return String(locale.value ?? '')
+    .toLowerCase()
+    .startsWith('ja')
+    ? 'ja'
+    : 'en'
+}
+
+function resolvePackageName(row: PackageRow) {
+  const lang = resolveLang()
+  const localizedName = row.name_i18n?.[lang]?.trim()
+  if (localizedName) return localizedName
+  const fallbackName = Object.values(row.name_i18n ?? {}).find((value) => value.trim().length > 0)
+  return fallbackName?.trim() ?? null
+}
+
 function isUuidLike(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
     value.trim(),
@@ -1018,7 +1037,7 @@ function resolvePackageDisplayLabel(
 ) {
   const normalized = packageTypeId.trim()
   const packageDef = lookup.get(normalized)
-  if (packageDef?.packageCode) return packageDef.packageCode
+  if (packageDef?.displayName) return packageDef.displayName
   if (!isUuidLike(normalized)) return normalized
 
   const existing = unresolvedPackageLabels.get(normalized)
@@ -1053,7 +1072,7 @@ async function ensureTenant() {
 async function loadPackageLookup(tenant: string) {
   const { data, error } = await supabase
     .from('mst_package')
-    .select('id, package_code, package_type_id, unit_volume, volume_uom, volume_fix_flg, is_active')
+    .select('id, package_code, name_i18n, package_type_id, unit_volume, volume_uom, volume_fix_flg, is_active')
     .eq('tenant_id', tenant)
     .order('package_code', { ascending: true })
   if (error) throw error
@@ -1064,6 +1083,7 @@ async function loadPackageLookup(tenant: string) {
     if (!id) return []
 
     const packageCode = String(row.package_code ?? '').trim() || id
+    const displayName = resolvePackageName(row) || packageCode
     const packageTypeId = String(row.package_type_id ?? '').trim() || null
     const unitVolume = toNumber(row.unit_volume)
     const volumeUomCode = resolveVolumeUomCode(row.volume_uom ?? null, volumeUomCodeById.value)
@@ -1075,6 +1095,7 @@ async function loadPackageLookup(tenant: string) {
       packageTypeId,
       lookup: {
         packageCode,
+        displayName,
         volumeFix: row.volume_fix_flg !== false,
         unitVolumeLiters,
         volumeUomCode,
@@ -1524,6 +1545,7 @@ function buildReportRows(
       if (!packageTypeId) return
 
       const label = resolvePackageDisplayLabel(packageTypeId, lookup, unresolvedPackageLabels)
+      const containerKind = resolveContainerKind(lookup.get(packageTypeId)?.packageCode ?? packageTypeId)
       const quantity = packageNumberFromLine(line, lookup)
       const volume = resolveFillingLineVolumeFromEvent(line, fillingOptions)
       const group = row.packageGroups.get(packageTypeId)
@@ -1542,6 +1564,7 @@ function buildReportRows(
       if (!detailGroup) {
         detailPackageGroups.set(packageTypeId, {
           label,
+          containerKind,
           quantity,
           volume,
         })
@@ -1575,7 +1598,7 @@ function buildReportRows(
     let canBottleUnits: number | null = null
     orderedDetailGroups.forEach((group) => {
       if (group.quantity == null || !Number.isFinite(group.quantity)) return
-      if (resolveContainerKind(group.label) === 'keg') {
+      if (group.containerKind === 'keg') {
         kegUnits = (kegUnits ?? 0) + group.quantity
         return
       }

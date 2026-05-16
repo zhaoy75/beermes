@@ -98,16 +98,54 @@
           </form>
         </section>
 
-        <div class="flex items-center justify-between gap-3">
+        <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <p class="text-sm text-gray-500">
             {{ t('producedBeerInventory.results.count', { count: sortedRows.length }) }}
           </p>
+          <div
+            v-if="selectedInventoryRows.length > 0"
+            class="flex flex-wrap items-center gap-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-sm"
+          >
+            <span class="text-blue-900">
+              {{ t('producedBeerInventory.bulk.selected', { count: selectedInventoryRows.length }) }}
+            </span>
+            <button
+              class="rounded border border-blue-200 bg-white px-3 py-1.5 text-blue-700 hover:bg-blue-50 disabled:opacity-50"
+              type="button"
+              :disabled="bulkProcessing"
+              @click="clearInventorySelection"
+            >
+              {{ t('producedBeerInventory.bulk.clearSelection') }}
+            </button>
+            <button
+              class="rounded bg-blue-600 px-3 py-1.5 text-white hover:bg-blue-700 disabled:opacity-50"
+              type="button"
+              :disabled="bulkProcessing || selectedDomesticRemovalRows.length === 0"
+              @click="completeSelectedDomesticRemoval"
+            >
+              {{
+                bulkProcessing
+                  ? t('common.saving')
+                  : t('producedBeerInventory.bulk.completeDomesticRemoval')
+              }}
+            </button>
+          </div>
         </div>
 
         <section class="overflow-x-auto border border-gray-200 rounded-lg">
           <table class="compact-table min-w-full divide-y divide-gray-200 text-sm">
             <thead class="bg-gray-50 text-xs uppercase text-gray-600">
               <tr>
+                <th class="w-10 px-2 py-1.5 text-center">
+                  <input
+                    class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-40"
+                    type="checkbox"
+                    :checked="allVisibleRowsSelected"
+                    :disabled="sortedRows.length === 0 || bulkProcessing"
+                    :aria-label="t('producedBeerInventory.bulk.selectVisible')"
+                    @change="toggleVisibleRowsSelection"
+                  />
+                </th>
                 <th class="px-3 py-2 text-left">
                   <button class="font-medium" type="button" @click="toggleSort('lotNo')">
                     {{ t('producedBeer.inventory.table.lotNo') }} {{ sortIndicator('lotNo') }}
@@ -169,17 +207,27 @@
             </thead>
             <tbody class="divide-y divide-gray-100 bg-white">
               <tr v-if="inventoryLoading">
-                <td colspan="12" class="px-3 py-8 text-center text-gray-500">
+                <td colspan="13" class="px-3 py-8 text-center text-gray-500">
                   {{ t('common.loading') }}
                 </td>
               </tr>
               <tr v-else-if="sortedRows.length === 0">
-                <td colspan="12" class="px-3 py-8 text-center text-gray-500">
+                <td colspan="13" class="px-3 py-8 text-center text-gray-500">
                   {{ t('common.noData') }}
                 </td>
               </tr>
               <template v-for="row in sortedRows" :key="row.id">
                 <tr class="hover:bg-gray-50">
+                  <td class="px-2 py-1.5 text-center">
+                    <input
+                      class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-40"
+                      type="checkbox"
+                      :checked="selectedInventoryRowIdSet.has(row.id)"
+                      :disabled="bulkProcessing"
+                      :aria-label="t('producedBeerInventory.bulk.selectRow')"
+                      @change="toggleInventoryRowSelection(row)"
+                    />
+                  </td>
                   <td class="px-3 py-2 font-mono text-xs text-gray-600">
                     <div class="flex items-center justify-between gap-2">
                       <span>{{ row.lotNo || '—' }}</span>
@@ -246,7 +294,7 @@
                   </td>
                 </tr>
                 <tr v-if="isExpanded(row.id)" class="bg-gray-50/80">
-                  <td colspan="12" class="px-4 py-3">
+                  <td colspan="13" class="px-4 py-3">
                     <div class="rounded-lg border border-gray-200 bg-white">
                       <div class="border-b border-gray-200 px-3 py-2 text-xs font-medium text-gray-600">
                         {{ t('producedBeerInventory.merge.detailsTitle') }}
@@ -433,7 +481,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import CompactTableCell from '@/components/common/CompactTableCell.vue'
@@ -562,6 +610,8 @@ const sortState = reactive<{
 })
 
 const processingRowId = ref('')
+const bulkProcessing = ref(false)
+const selectedInventoryRowIds = ref<string[]>([])
 const expandedRowIds = ref<string[]>([])
 
 const dagDialog = reactive({
@@ -661,10 +711,27 @@ const sortedRows = computed(() =>
   }),
 )
 
+const selectedInventoryRowIdSet = computed(() => new Set(selectedInventoryRowIds.value))
+const selectedInventoryRows = computed(() =>
+  sortedRows.value.filter((row) => selectedInventoryRowIdSet.value.has(row.id)),
+)
+const selectedDomesticRemovalRows = computed(() =>
+  selectedInventoryRows.value.filter((row) => row.canVoid),
+)
+const allVisibleRowsSelected = computed(() => {
+  if (sortedRows.value.length === 0) return false
+  return sortedRows.value.every((row) => selectedInventoryRowIdSet.value.has(row.id))
+})
+
 const dagDialogSummary = computed(() => {
   const root = dagDialog.rootRow
   if (!root) return ''
   return `${root.lotNo || '—'} / ${root.batchCode || '—'}`
+})
+
+watch(sortedRows, (rows) => {
+  const visibleIds = new Set(rows.map((row) => row.id))
+  selectedInventoryRowIds.value = selectedInventoryRowIds.value.filter((id) => visibleIds.has(id))
 })
 
 function toggleSort(key: SortKey) {
@@ -683,6 +750,39 @@ function sortIndicator(key: SortKey) {
 
 function lotTaxTypeLabel(code: string | null | undefined) {
   return ruleLabel('lot_tax_type', code)
+}
+
+function clearInventorySelection() {
+  selectedInventoryRowIds.value = []
+}
+
+function toggleInventoryRowSelection(row: InventoryPageRow) {
+  if (bulkProcessing.value) return
+  const selected = new Set(selectedInventoryRowIds.value)
+  if (selected.has(row.id)) selected.delete(row.id)
+  else selected.add(row.id)
+  selectedInventoryRowIds.value = Array.from(selected)
+}
+
+function toggleVisibleRowsSelection() {
+  if (bulkProcessing.value) return
+  const selected = new Set(selectedInventoryRowIds.value)
+  if (allVisibleRowsSelected.value) {
+    sortedRows.value.forEach((row) => selected.delete(row.id))
+  } else {
+    sortedRows.value.forEach((row) => selected.add(row.id))
+  }
+  selectedInventoryRowIds.value = Array.from(selected)
+}
+
+function domesticRemovalTargetsForRows(rows: InventoryPageRow[]) {
+  const targets = new Map<string, { lotId: string; siteId: string }>()
+  rows.forEach((row) => {
+    row.voidTargets.forEach((target) => {
+      targets.set(`${target.lotId}__${target.siteId}`, target)
+    })
+  })
+  return Array.from(targets.values())
 }
 
 function toNumber(value: unknown): number | null {
@@ -717,19 +817,19 @@ function inventoryRowActions(row: InventoryPageRow) {
     {
       key: 'unpack',
       label: t('producedBeerInventory.actions.unpack'),
-      disabled: !canUnpack(row),
+      disabled: bulkProcessing.value || !canUnpack(row),
     },
     {
       key: 'dag',
       label: t('producedBeerInventory.actions.showDag'),
-      disabled: !row.canShowDag,
+      disabled: bulkProcessing.value || !row.canShowDag,
     },
     {
       key: 'cancelRemoval',
-      label: processingRowId.value === row.id
+      label: processingRowId.value === row.id || bulkProcessing.value
         ? t('common.saving')
         : t('producedBeerInventory.actions.cancelRemoval'),
-      disabled: processingRowId.value === row.id || !row.canVoid,
+      disabled: processingRowId.value === row.id || bulkProcessing.value || !row.canVoid,
       tone: 'danger' as const,
     },
   ]
@@ -891,6 +991,7 @@ async function openDagDialog(row: InventoryPageRow) {
 }
 
 async function completeDomesticRemoval(row: InventoryPageRow) {
+  if (bulkProcessing.value) return
   if (!row.canVoid) return
   const target = row.lotNo || row.batchCode || row.id
   const confirmed = await requestConfirmation({
@@ -919,6 +1020,48 @@ async function completeDomesticRemoval(row: InventoryPageRow) {
     }))
   } finally {
     processingRowId.value = ''
+  }
+}
+
+async function completeSelectedDomesticRemoval() {
+  const rows = selectedDomesticRemovalRows.value
+  if (!rows.length) return
+  const targets = domesticRemovalTargetsForRows(rows)
+  if (!targets.length) return
+
+  const confirmed = await requestConfirmation({
+    title: t('producedBeerInventory.bulk.completeDomesticRemoval'),
+    message: t('producedBeerInventory.bulk.confirmCompleteDomesticRemoval', {
+      rows: rows.length,
+      targets: targets.length,
+    }),
+    confirmLabel: t('producedBeerInventory.bulk.completeDomesticRemoval'),
+    tone: 'warning',
+  })
+  if (!confirmed) return
+
+  try {
+    bulkProcessing.value = true
+    for (const targetRow of targets) {
+      const { error } = await supabase.rpc('domestic_removal_complete', {
+        p_lot_id: targetRow.lotId,
+        p_site_id: targetRow.siteId,
+        p_reason: 'domestic_removal_complete_from_inventory_page_bulk',
+      })
+      if (error) throw error
+    }
+    if (dagDialog.rootRow && rows.some((row) => row.lotIds.includes(dagDialog.rootRow?.lotId ?? ''))) {
+      closeDagDialog()
+    }
+    clearInventorySelection()
+    await loadInventory()
+    toast.success(t('producedBeerInventory.bulk.completeDomesticRemovalSuccess', { count: targets.length }))
+  } catch (err) {
+    toast.error(formatRpcErrorMessage(err, {
+      fallbackKey: 'producedBeerInventory.bulk.completeDomesticRemovalFailed',
+    }))
+  } finally {
+    bulkProcessing.value = false
   }
 }
 

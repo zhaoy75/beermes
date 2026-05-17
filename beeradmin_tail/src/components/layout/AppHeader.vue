@@ -85,7 +85,6 @@
             <option value="en">EN</option>
             <option value="ja">日本語</option>
           </select>
-          <NotificationMenu />
         </div>
         <UserMenu />
       </div>
@@ -99,7 +98,6 @@ import { useI18n } from 'vue-i18n'
 import { useSidebar } from '@/composables/useSidebar'
 import SearchBar from './header/SearchBar.vue'
 import HeaderLogo from './header/HeaderLogo.vue'
-import NotificationMenu from './header/NotificationMenu.vue'
 import UserMenu from './header/UserMenu.vue'
 
 const { toggleSidebar, toggleMobileSidebar, isMobileOpen } = useSidebar()

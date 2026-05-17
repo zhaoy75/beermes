@@ -12,6 +12,7 @@
 - Initial shortcut is `Ctrl + I`. for mac will be `command + I`
 - Supports caller-provided page context for default filters and row selection callback.
 - Supports optional caller-provided multi-selection callback for applying selected rows.
+- Supports optional caller-provided multi-selection action label.
 
 ## Trigger and Availability
 - Register the shortcut globally while the user is inside the authenticated app layout.
@@ -124,6 +125,7 @@
   - selected row count
   - clear selection action
   - apply selected action, only when the caller provides a multi-selection callback
+- The apply selected action label may be overridden by the caller page.
 - Applying selected rows:
   - returns selected inventory rows to the caller
   - closes the modal after the caller callback runs
@@ -163,14 +165,17 @@
   - `site_locked`: locks the site filter to the provided value
   - `onSelect`: callback payload returned when a result row is selected
   - `onSelectMany`: callback payload returned when checked result rows are applied
+  - `selectManyLabel`: label shown on the checked-row apply action
 - ProductMoveFast integration:
   - when ProductMoveFast has selected `From Site`, modal opens with `site_id = From Site`
   - `site_locked = true`
   - result grid must show only lots in that source site
   - double-clicking a result row must call `onSelect(row)` and close the modal
-  - checking multiple rows and applying selection must call `onSelectMany(rows)` and close the modal
+  - checking multiple rows shows a `移出登録` action
+  - clicking `移出登録` must call `onSelectMany(rows)` and close the modal
   - selection payload should include quantity values needed by the caller page
-  - multi-selection payload should append one movement input line per selected underlying lot
+  - multi-selection payload should append one movement input line per selected underlying lot into `明細入力`
+  - appended lines should use each selected lot's full available quantity so package lots show the maximum unit
   - ProductMoveFast may route focus after close based on selected row:
     - package lot -> `unit`
     - non-package lot -> `volume`
@@ -211,4 +216,6 @@
 15. The modal shows row checkboxes and a visible-row select-all checkbox.
 16. Selected rows can be applied even when only one row is selected.
 17. Applying selected rows returns selected underlying inventory lots to the caller and closes the modal.
-18. ProductMoveFast appends one movement line per selected inventory lot when multi-selection is applied.
+18. ProductMoveFast shows `移出登録` for checked inventory in the modal.
+19. ProductMoveFast appends one movement line per selected inventory lot when `移出登録` is clicked.
+20. ProductMoveFast appended lines use each selected lot's full available quantity and show the maximum unit for package lots.

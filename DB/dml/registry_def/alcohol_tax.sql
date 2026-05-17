@@ -1,3 +1,5 @@
+DELETE FROM registry_def WHERE kind = 'alcohol_tax' and scope = 'system' and owner_id IS NULL;
+
 INSERT INTO registry_def (kind, def_key, scope, owner_id, spec)
 VALUES
 

@@ -4,10 +4,10 @@
     <Backdrop />
     <div
       class="flex-1 transition-all duration-300 ease-in-out"
-      :class="[isExpanded || isHovered ? 'lg:ml-[240px]' : 'lg:ml-[90px]']"
+      :class="[isExpanded || isHovered ? 'lg:ml-[220px]' : 'lg:ml-[80px]']"
     >
       <app-header />
-      <div class="w-full p-4 md:p-6">
+      <div class="w-full p-2 md:p-3">
         <slot></slot>
       </div>
     </div>
@@ -19,6 +19,7 @@
       :site-locked="Boolean(inventorySearchOptions.siteLocked)"
       :selectable="Boolean(inventorySearchOptions.onSelect)"
       :can-apply-selection="Boolean(inventorySearchOptions.onSelectMany)"
+      :apply-selection-label="inventorySearchOptions.selectManyLabel ?? ''"
       @close="closeInventorySearch"
       @select="handleInventorySearchSelect"
       @select-many="handleInventorySearchSelectMany"

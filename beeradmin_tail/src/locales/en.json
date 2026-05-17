@@ -1751,6 +1751,7 @@
         "postNext": "Post & Next (Ctrl+Enter)",
         "swap": "Swap",
         "addLine": "Add",
+        "registerRemoval": "Register removal",
         "clearLines": "Clear lines",
         "favorite": "Add favorite",
         "unfavorite": "Remove favorite"

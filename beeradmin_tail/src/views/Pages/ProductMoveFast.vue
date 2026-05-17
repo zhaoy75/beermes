@@ -1321,11 +1321,10 @@ function resolveInventorySearchAllocation(row: InventorySearchSelection) {
   )
   const matchedLot = matchedOption?.candidateLots.find((lot) => lot.lotId === row.lotId)
   if (!matchedOption || !matchedLot) return null
-  const qtyLiters = toNumber(row.qtyLiters)
   return {
     option: matchedOption,
     lot: matchedLot,
-    qtyLiters: qtyLiters != null && qtyLiters > 0 ? qtyLiters : matchedLot.qtyLiters,
+    qtyLiters: matchedLot.qtyLiters,
   }
 }
 
@@ -2795,6 +2794,7 @@ onMounted(async () => {
         siteLocked: true,
         onSelect: handleInventorySearchSelection,
         onSelectMany: handleInventorySearchManySelection,
+        selectManyLabel: t('producedBeer.movementFast.actions.registerRemoval'),
         afterSelectFocus: focusAfterInventorySearchSelection,
         afterSelectManyFocus: focusAfterInventorySearchManySelection,
       }

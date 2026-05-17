@@ -1754,6 +1754,7 @@
         "postNext": "確定して次へ(Ctrl+Enter)",
         "swap": "入替",
         "addLine": "追加",
+        "registerRemoval": "移出登録",
         "clearLines": "明細クリア",
         "favorite": "お気に入り登録",
         "unfavorite": "お気に入り解除"

@@ -143,7 +143,7 @@
                       type="button"
                       @click="applySelectedResultRows"
                     >
-                      {{ t('inventorySearchModal.bulk.applySelected') }}
+                      {{ applySelectionLabel || t('inventorySearchModal.bulk.applySelected') }}
                     </button>
                   </div>
                   <button
@@ -386,12 +386,14 @@ const props = withDefaults(
     siteLocked?: boolean
     selectable?: boolean
     canApplySelection?: boolean
+    applySelectionLabel?: string
   }>(),
   {
     siteId: '',
     siteLocked: false,
     selectable: false,
     canApplySelection: false,
+    applySelectionLabel: '',
   },
 )
 

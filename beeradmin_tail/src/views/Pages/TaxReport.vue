@@ -329,6 +329,7 @@ import TableColumnHeader from '@/components/common/TableColumnHeader.vue'
 import { useConfirmDialog } from '@/composables/useConfirmDialog'
 import { useColumnTableControls, type ColumnSortDirection } from '@/composables/useColumnTableControls'
 import { formatAbvPercent } from '@/lib/abvFormat'
+import { japaneseTaxYearMonthOptions } from '@/lib/fiscalMonths'
 import { formatYen } from '@/lib/moneyFormat'
 import { formatTotalVolumeFromLiters } from '@/lib/volumeFormat'
 import { supabase } from '@/lib/supabase'
@@ -455,7 +456,7 @@ const yearOptions = computed(() => {
   return Array.from(years).sort((a, b) => b - a)
 })
 
-const monthOptions = computed(() => [4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3])
+const monthOptions = computed(() => japaneseTaxYearMonthOptions())
 function statusLabel(status: string) {
   const map = tm('taxReport.statusMap')
   if (!map || typeof map !== 'object') return status

@@ -370,6 +370,7 @@ import {
   type WorkbookCellValue,
   type WorkbookSheet,
 } from '@/lib/fillingReportExport'
+import { japaneseTaxYearMonthOptions } from '@/lib/fiscalMonths'
 import { supabase } from '@/lib/supabase'
 import { formatVolumeNumber } from '@/lib/volumeFormat'
 
@@ -614,7 +615,7 @@ const liquorCodeOptions = computed<LiquorCodeOption[]>(() =>
     ([value, label]) => ({ value, label }),
   ).sort((a, b) => a.label.localeCompare(b.label)),
 )
-const monthOptions = Array.from({ length: 12 }, (_, index) => index + 1)
+const monthOptions = japaneseTaxYearMonthOptions()
 const selectedDetailRows = computed(() =>
   selectedReportRow.value ? orderedDetailRowsFor(selectedReportRow.value) : [],
 )

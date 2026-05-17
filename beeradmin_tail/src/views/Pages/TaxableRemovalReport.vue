@@ -330,6 +330,7 @@ import TableColumnHeader from '@/components/common/TableColumnHeader.vue'
 import { useColumnTableControls, type ColumnSortDirection } from '@/composables/useColumnTableControls'
 import { supabase } from '@/lib/supabase'
 import { formatAbvPercent } from '@/lib/abvFormat'
+import { japaneseTaxYearMonthOptions } from '@/lib/fiscalMonths'
 import { formatYen } from '@/lib/moneyFormat'
 import { formatTotalVolumeFromMilliliters } from '@/lib/volumeFormat'
 import {
@@ -380,7 +381,7 @@ const filters = reactive({
   liquorCode: '',
 })
 
-const monthOptions = Array.from({ length: 12 }, (_, index) => index + 1)
+const monthOptions = japaneseTaxYearMonthOptions()
 
 const exportLabels = computed<TaxableRemovalExportLabels>(() => ({
   summaryTitle: t('taxableRemovalReport.summary.title'),

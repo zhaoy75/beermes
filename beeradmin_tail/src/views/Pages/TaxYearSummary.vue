@@ -130,6 +130,7 @@ import {
 } from '@/lib/alcoholTypeRegistry'
 import { supabase } from '@/lib/supabase'
 import { normalizeDateOnly } from '@/lib/dateOnly'
+import { japaneseTaxYearMonthOptions } from '@/lib/fiscalMonths'
 import { calculateTaxAmount, normalizeTaxEventValue, resolveTaxEvent } from '@/lib/taxReport'
 import { formatYen, truncateYen } from '@/lib/moneyFormat'
 import { formatTotalVolumeFromLiters, millilitersToLiters, quantityToMilliliters } from '@/lib/volumeFormat'
@@ -139,7 +140,8 @@ Chart.register(...registerables)
 const { t, locale } = useI18n()
 const pageTitle = computed(() => t('taxYearSummary.title'))
 
-const currentYear = new Date().getFullYear()
+const fiscalMonthIndexes = japaneseTaxYearMonthOptions().map((month) => month - 1)
+const currentYear = currentJapaneseTaxYear()
 const yearOptions = computed(() => {
   const years: number[] = []
   for (let offset = 0; offset < 6; offset += 1) {
@@ -272,8 +274,17 @@ const uomLookup = computed(() => {
 
 const monthFormatter = computed(() => new Intl.DateTimeFormat(locale.value, { month: 'short' }))
 
+function currentJapaneseTaxYear(date = new Date()) {
+  return date.getMonth() + 1 >= 4 ? date.getFullYear() : date.getFullYear() - 1
+}
+
 function monthLabel(monthIndex: number) {
-  return monthFormatter.value.format(new Date(selectedYear.value, monthIndex, 1))
+  const year = monthIndex >= 3 ? selectedYear.value : selectedYear.value + 1
+  return monthFormatter.value.format(new Date(year, monthIndex, 1))
+}
+
+function emptyMonthlySeries() {
+  return fiscalMonthIndexes.map((month) => ({ month, volume: 0, tax: 0 }))
 }
 
 function formatVolume(value: number) {
@@ -591,8 +602,8 @@ async function loadSummary() {
     loading.value = true
     errorMessage.value = ''
     const tenant = await ensureTenant()
-    const startDate = `${selectedYear.value}-01-01`
-    const endDate = `${selectedYear.value + 1}-01-01`
+    const startDate = `${selectedYear.value}-04-01`
+    const endDate = `${selectedYear.value + 1}-04-01`
 
     const { data, error } = await supabase
       .from('inv_movements')
@@ -639,7 +650,7 @@ async function loadSummary() {
 
 function resetSummary() {
   categorySummaries.value = []
-  monthlySeries.value = Array.from({ length: 12 }, (_, month) => ({ month, volume: 0, tax: 0 }))
+  monthlySeries.value = emptyMonthlySeries()
   batchBreakdown.value = []
   updateChart()
 }
@@ -652,7 +663,7 @@ function processMovementLines(
   batchCategoryMap: Map<string, string>
 ) {
   const categoryTotals = new Map<string, { volume: number; tax: number }>()
-  const monthlyTotals = Array.from({ length: 12 }, (_, month) => ({ month, volume: 0, tax: 0 }))
+  const monthlyTotals = new Map(fiscalMonthIndexes.map((month) => [month, { month, volume: 0, tax: 0 }]))
   const monthBatchMap = new Map<string, MonthBatchRow>()
 
   rows.forEach((row) => {
@@ -688,8 +699,10 @@ function processMovementLines(
     categoryEntry.tax += taxAmount
     categoryTotals.set(categoryId, categoryEntry)
 
-    monthlyTotals[monthIndex].volume += volume
-    monthlyTotals[monthIndex].tax += taxAmount
+    const monthlyTotal = monthlyTotals.get(monthIndex)
+    if (!monthlyTotal) return
+    monthlyTotal.volume += volume
+    monthlyTotal.tax += taxAmount
 
     const key = `${monthIndex}-${batchId}`
     let batchEntry = monthBatchMap.get(key)
@@ -724,10 +737,10 @@ function processMovementLines(
     }
   }).sort((a, b) => a.categoryName.localeCompare(b.categoryName))
 
-  monthlySeries.value = monthlyTotals
+  monthlySeries.value = fiscalMonthIndexes.map((month) => monthlyTotals.get(month) ?? { month, volume: 0, tax: 0 })
 
   const groups: MonthGroup[] = []
-  for (let month = 0; month < 12; month += 1) {
+  for (const month of fiscalMonthIndexes) {
     const batches = Array.from(monthBatchMap.values()).filter((row) => row.month === month)
     if (batches.length === 0) continue
     batches.sort((a, b) => new Date(a.movementDate).getTime() - new Date(b.movementDate).getTime() || a.batchCode.localeCompare(b.batchCode))

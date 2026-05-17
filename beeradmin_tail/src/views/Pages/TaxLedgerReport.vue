@@ -220,6 +220,7 @@ import { useColumnTableControls, type ColumnSortDirection } from '@/composables/
 import { tableTextColumnMaxWidth, type TableTextColumnKey } from '@/config/tableTextColumnLimits'
 import { supabase } from '@/lib/supabase'
 import { formatAbvPercent } from '@/lib/abvFormat'
+import { japaneseTaxYearMonthOptions } from '@/lib/fiscalMonths'
 import { formatTotalVolumeFromMilliliters } from '@/lib/volumeFormat'
 import {
   buildTaxLedgerBusinessYearFileName,
@@ -292,7 +293,7 @@ const filters = reactive({
   liquorCode: '',
 })
 
-const monthOptions = Array.from({ length: 12 }, (_, index) => index + 1)
+const monthOptions = japaneseTaxYearMonthOptions()
 
 const ledgerKey = computed(() => String(route.meta.ledgerKey ?? 'nonTaxableRemoval'))
 const reportConfig = computed(() => getTaxLedgerConfig(ledgerKey.value))

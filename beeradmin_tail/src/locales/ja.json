@@ -3515,7 +3515,7 @@
     "subtitle": "課税移出の記録を年度サマリーと明細で確認します。",
     "filters": {
       "businessYear": "年度",
-      "month": "month",
+      "month": "月",
       "liquorCode": "酒類分類"
     },
     "defaults": {
@@ -3573,7 +3573,7 @@
   "taxLedgerReport": {
     "filters": {
       "businessYear": "年度",
-      "month": "month",
+      "month": "月",
       "liquorCode": "酒類分類"
     },
     "defaults": {

@@ -51,6 +51,7 @@
 
 ### Purpose
 - Show each batch as a combined planning + execution card in table form.
+- Use the same compact table density as the `移入出登録` movement table.
 
 ### Required Columns
 - `batch_code`
@@ -118,6 +119,18 @@
 
 ### Row Click
 - clicking the batch name or edit opens batch edit page
+
+### Current UI Adjustment
+- The first visible column title should be `バッチコード`, not `名称`.
+- The first visible column value should display `batch_code`.
+- Apply compact table styling consistent with `移入出登録`:
+  - `compact-table`
+  - `text-xs`
+  - reduced header/body padding
+- Keep existing sorting, search, row actions, and data loading behavior.
+- Use clickable column headers with sort/filter popovers consistent with `移入出登録`.
+- Add row checkboxes and a visible-row select-all checkbox.
+- Do not add a bulk delete action in this change.
 
 ## Batch Create Dialog
 

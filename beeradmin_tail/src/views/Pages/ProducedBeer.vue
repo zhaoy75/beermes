@@ -166,6 +166,16 @@
                 <span>{{ t('producedBeer.movement.filters.showReversedMovements') }}</span>
               </label>
             </div>
+            <div class="md:col-span-2 flex items-end">
+              <button
+                class="h-[40px] rounded border border-gray-300 px-3 text-sm hover:bg-gray-50 disabled:opacity-50"
+                type="button"
+                :disabled="movementLoading"
+                @click="fetchMovements"
+              >
+                {{ t('common.search') }}
+              </button>
+            </div>
           </form>
         </section>
 
@@ -1602,6 +1612,7 @@ function resetMovementFilters() {
   Object.assign(movementFilters, defaultMovementFilters())
   movementTypeFilter.value = DEFAULT_MOVEMENT_TYPE_FILTER
   rememberMovementSearchState()
+  void fetchMovements()
 }
 
 function openMovementCreate() {
@@ -1696,8 +1707,6 @@ watch(visibleMovementCards, (cards) => {
 
 watch(
   () => ({
-    dateFrom: movementFilters.dateFrom,
-    dateTo: movementFilters.dateTo,
     taxMovementOnly: movementFilters.taxMovementOnly,
     showReversedMovements: movementFilters.showReversedMovements,
     movementType: movementTypeFilter.value,

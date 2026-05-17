@@ -332,6 +332,12 @@
       "summary": "サマリー",
       "loadFailed": "バッチ一覧の取得に失敗しました。",
       "deleteBlocked": "このステータスのバッチは削除できません。",
+      "bulk": {
+        "selected": "{count}件選択中",
+        "clearSelection": "選択解除",
+        "selectVisible": "表示中のバッチを選択",
+        "selectRow": "バッチを選択"
+      },
       "errors": {
         "attrMin": "{field} は {min} 以上で入力してください。",
         "attrMax": "{field} は {max} 以下で入力してください。"

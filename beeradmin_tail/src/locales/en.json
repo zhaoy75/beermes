@@ -332,6 +332,12 @@
       "summary": "Summary",
       "loadFailed": "Failed to load batches.",
       "deleteBlocked": "This batch cannot be deleted in its current status.",
+      "bulk": {
+        "selected": "{count} selected",
+        "clearSelection": "Clear selection",
+        "selectVisible": "Select visible batches",
+        "selectRow": "Select batch"
+      },
       "errors": {
         "attrMin": "{field} must be greater than or equal to {min}.",
         "attrMax": "{field} must be less than or equal to {max}."

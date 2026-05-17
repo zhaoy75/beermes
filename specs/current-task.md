@@ -1,19 +1,17 @@
 # Current Task
 
 ## Goal
-- Move the `税務移出種別` column to the left of `バッチコード` on the `移入出登録` movement result table.
+- Prevent `移入出登録` from calling the server while `開始日` / `終了日` are being edited.
 
 ## Scope
-- Reorder the movement result table so `税務移出種別` appears immediately before `バッチコード`.
-- Keep the existing sort and filter behavior for both columns.
-- Keep movement row selection, actions, and underlying data unchanged.
-- Keep exported movement columns in the same order as the on-screen table.
+- Stop automatic movement reloads on `開始日` and `終了日` model changes.
+- Add an explicit search action for applying date range changes.
+- Keep other existing filter behavior and movement table behavior unchanged.
 
 ## Non-Goals
-- Do not change movement query, create, reverse, or selection behavior.
-- Do not add, remove, or rename result columns.
-- Do not change `ProductMoveFast.vue`.
 - Do not change database schema or APIs.
+- Do not change movement query semantics.
+- Do not refactor unrelated `ProducedBeer.vue` sections.
 
 ## Affected Files
 - `specs/current-task.md`
@@ -22,23 +20,18 @@
 ## Data Model / API Changes
 - No database schema changes.
 - No application API changes.
-- Frontend table/export column-order changes only for `移入出登録`.
+- Frontend filter interaction change only.
 
 ## Validation Plan
 - Run `git diff --check -- specs/current-task.md beeradmin_tail/src/views/Pages/ProducedBeer.vue`.
 - Run `npm run type-check` in `beeradmin_tail`.
 - Run focused ESLint for `ProducedBeer.vue`.
 
-## Planned File Changes
-- `ProducedBeer.vue`: move the `taxEvent` header/body cell before `batchCode`, and reorder the movement sort-key/control/export definitions to match.
-- `specs/current-task.md`: document scope, validation, and final decisions.
-
 ## Final Decisions
-- Moved the `税務移出種別` table header to immediately after `移出日` and before `バッチコード`.
-- Moved the `税務移出種別` table body cell to the same position.
-- Reordered the movement table sort keys and column filter controls so saved/filterable column behavior matches the visible table order.
-- Reordered the movement Excel export columns to match the on-screen movement table order.
-- Kept movement query, row actions, selection, and source data unchanged.
+- Removed `開始日` and `終了日` from the auto-fetch watcher.
+- Added an explicit `検索` button to apply date range changes by calling `fetchMovements()`.
+- Kept `税務移出のみ`, `取消済みを表示`, and movement type changes on the existing auto-refresh behavior.
+- Made Reset explicitly reload movements after restoring default filters.
 
 ## Validation Results
 - `git diff --check -- specs/current-task.md beeradmin_tail/src/views/Pages/ProducedBeer.vue` passed.

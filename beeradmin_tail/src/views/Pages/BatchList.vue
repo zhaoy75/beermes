@@ -104,38 +104,71 @@
           </div>
         </div>
       </form>
-      <p class="mt-1 text-xs text-gray-500">{{ t('batch.list.showing', { count: filteredBatches.length, total: batches.length }) }}</p>
+      <p class="mt-1 text-xs text-gray-500">{{ t('batch.list.showing', { count: sortedBatches.length, total: batches.length }) }}</p>
     </section>
 
     <section aria-labelledby="batchTableHeading">
       <h2 id="batchTableHeading" class="sr-only">{{ t('batch.list.tableTitle') }}</h2>
+      <div v-if="selectedBatchIds.length" class="mb-2 flex items-center gap-2 text-xs text-gray-600">
+        <span>{{ t('batch.list.bulk.selected', { count: selectedBatchIds.length }) }}</span>
+        <button class="rounded border border-gray-300 px-2 py-1 hover:bg-gray-50" type="button" @click="clearSelectedBatches">
+          {{ t('batch.list.bulk.clearSelection') }}
+        </button>
+      </div>
 
-      <div class="overflow-x-auto border border-gray-200 rounded-lg shadow-sm">
-        <table class="min-w-full divide-y divide-gray-200">
-          <thead class="bg-gray-50">
+      <div class="overflow-x-auto border border-gray-200 rounded-lg">
+        <table class="compact-table min-w-full divide-y divide-gray-200 text-xs">
+          <thead class="bg-gray-50 text-xs uppercase text-gray-600">
             <tr>
-              <th v-for="col in columns" :key="col.key" class="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                <button v-if="col.sortable" class="inline-flex items-center gap-1" @click="setSort(col.key as SortKey)" type="button">
-                  <span>{{ col.i18n ? t(col.label) : col.label }}</span>
-                  <span class="text-[10px] text-gray-400">{{ sortGlyph(col.key as SortKey) }}</span>
-                </button>
-                <span v-else>{{ col.i18n ? t(col.label) : col.label }}</span>
+              <th class="w-10 px-2 py-1.5 text-center">
+                <input
+                  class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-40"
+                  type="checkbox"
+                  :checked="allVisibleBatchesSelected"
+                  :disabled="sortedBatches.length === 0 || loading"
+                  :aria-label="t('batch.list.bulk.selectVisible')"
+                  @change="toggleVisibleBatchSelection"
+                />
               </th>
-              <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">{{ t('common.actions') }}</th>
+              <th v-for="col in columns" :key="col.key" class="px-2 py-1.5 text-left">
+                <TableColumnHeader
+                  v-model:filter-value="columnFilters[col.key]"
+                  :active-sort-key="sortKey"
+                  :all-label="t('common.all')"
+                  :filter-options="columnFilterOptions(col)"
+                  :filter-placeholder="t('common.search')"
+                  :filter-type="columnFilterType(col)"
+                  :label="columnLabel(col)"
+                  :sort-key="col.key"
+                  :sort-direction="sortDirection"
+                  @sort="setSort"
+                />
+              </th>
+              <th class="px-2 py-1.5 text-left">{{ t('common.actions') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100">
             <tr v-for="batch in sortedBatches" :key="batch.id" class="hover:bg-gray-50">
-              <td class="px-3 py-2 text-sm text-blue-600 hover:underline cursor-pointer" @click="goEdit(batch)">{{ batch.label || batch.batch_code }}</td>
-              <td class="px-3 py-2 text-sm">
+              <td class="px-2 py-1.5 text-center">
+                <input
+                  class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-40"
+                  type="checkbox"
+                  :checked="selectedBatchIdSet.has(batch.id)"
+                  :disabled="loading"
+                  :aria-label="t('batch.list.bulk.selectRow')"
+                  @change="toggleBatchSelection(batch, $event)"
+                />
+              </td>
+              <td class="px-2 py-1.5 font-mono text-xs text-blue-600 hover:underline cursor-pointer" @click="goEdit(batch)">{{ batch.batch_code }}</td>
+              <td class="px-2 py-1.5 text-xs">
                 <span :class="statusClass(batch.status)">{{ statusLabel(batch.status) }}</span>
               </td>
-              <td class="px-3 py-2 text-sm text-gray-600">{{ formatDateOnly(batch.planned_start, locale) }}</td>
-              <td class="px-3 py-2 text-sm text-gray-600">{{ formatDateOnly(batch.planned_end, locale) }}</td>
-              <td v-for="field in attrSearchFields" :key="`${batch.id}-${field.attr_id}`" class="px-3 py-2 text-sm text-gray-600">
+              <td class="px-2 py-1.5 text-xs text-gray-600">{{ formatDateOnly(batch.planned_start, locale) }}</td>
+              <td class="px-2 py-1.5 text-xs text-gray-600">{{ formatDateOnly(batch.planned_end, locale) }}</td>
+              <td v-for="field in attrSearchFields" :key="`${batch.id}-${field.attr_id}`" class="px-2 py-1.5 text-xs text-gray-600">
                 {{ formatAttrValueForField(attrValueFor(batch.id, field.attr_id), field) }}
               </td>
-              <td class="px-3 py-2 text-sm">
+              <td class="px-2 py-1.5 text-xs">
                 <div class="flex flex-wrap gap-2">
                   <button class="px-2 py-1 text-xs rounded border hover:bg-gray-100" @click="goEdit(batch)" type="button">{{ t('common.edit') }}</button>
                   <button class="px-2 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-50" :disabled="loading" @click="confirmDelete(batch)" type="button">{{ t('common.delete') }}</button>
@@ -143,10 +176,10 @@
               </td>
             </tr>
             <tr v-if="!loading && sortedBatches.length === 0">
-              <td class="px-3 py-5 text-center text-gray-500" colspan="6">{{ t('common.noData') }}</td>
+              <td class="px-2 py-4 text-center text-xs text-gray-500" :colspan="columns.length + 2">{{ t('common.noData') }}</td>
             </tr>
             <tr v-if="loading">
-              <td class="px-3 py-5 text-center text-gray-500" colspan="6">{{ t('common.loading') }}</td>
+              <td class="px-2 py-4 text-center text-xs text-gray-500" :colspan="columns.length + 2">{{ t('common.loading') }}</td>
             </tr>
           </tbody>
         </table>
@@ -180,6 +213,8 @@ import 'vue3-toastify/dist/index.css'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import AppDateTimePicker from '@/components/common/AppDateTimePicker.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import TableColumnHeader from '@/components/common/TableColumnHeader.vue'
+import type { ColumnFilterType, ColumnSortDirection } from '@/composables/useColumnTableControls'
 import {
   buildAlcoholTypeLabelMap,
   loadAlcoholTypeReferenceData,
@@ -191,7 +226,6 @@ import {
 } from '@/lib/batchAttrValidation'
 import { formatAbvPercent } from '@/lib/abvFormat'
 import {
-  compareDateOnly,
   formatDateOnly,
   nextDateOnly,
   normalizeDateOnly,
@@ -238,7 +272,7 @@ type RecipeOption = {
   versionStatus: string | null
 }
 
-type SortKey = 'label' | 'status' | 'planned_start' | 'planned_end'
+type SortKey = 'batch_code' | 'status' | 'planned_start' | 'planned_end' | `attr-${number}`
 
 type SearchState = {
   name: string
@@ -266,7 +300,14 @@ type AttrField = {
   ref_domain?: string | null
 }
 
-type ColumnDef = { key: SortKey | string, label: string, sortable: boolean, i18n: boolean }
+type ColumnDef = {
+  key: SortKey
+  label: string
+  sortable: boolean
+  i18n: boolean
+  filterType: ColumnFilterType
+  field?: AttrField
+}
 type BatchCreatePayload = {
   recipeId: string
   batchCode: string | null
@@ -283,10 +324,10 @@ type StoredBatchListDateFilters = {
 }
 
 const baseColumns: ColumnDef[] = [
-  { key: 'label', label: 'batch.list.colName', sortable: true, i18n: true },
-  { key: 'status', label: 'batch.list.colStatus', sortable: true, i18n: true },
-  { key: 'planned_start', label: 'batch.list.startDate', sortable: true, i18n: true },
-  { key: 'planned_end', label: 'batch.list.endDate', sortable: true, i18n: true },
+  { key: 'batch_code', label: 'batch.list.colBatchCode', sortable: true, i18n: true, filterType: 'text' },
+  { key: 'status', label: 'batch.list.colStatus', sortable: true, i18n: true, filterType: 'select' },
+  { key: 'planned_start', label: 'batch.list.startDate', sortable: true, i18n: true, filterType: 'text' },
+  { key: 'planned_end', label: 'batch.list.endDate', sortable: true, i18n: true, filterType: 'text' },
 ]
 
 const batches = ref<BatchRow[]>([])
@@ -304,12 +345,14 @@ const search = reactive<SearchState>({
   attr: {},
 })
 const sortKey = ref<SortKey>('planned_start')
-const sortDirection = ref<'asc' | 'desc'>('desc')
+const sortDirection = ref<ColumnSortDirection>('desc')
+const columnFilters = reactive<Record<string, string>>({})
 
 const showSummary = ref(false)
 const summaryState = ref<BatchRow | null>(null)
 const showCreate = ref(false)
 const toDelete = ref<BatchRow | null>(null)
+const selectedBatchIds = ref<string[]>([])
 
 const batchStatusRows = ref<Array<{ status_code: string, label_ja: string | null, label_en: string | null, sort_order: number | null }>>([])
 const batchStatusLoading = ref(false)
@@ -371,10 +414,12 @@ const mesClient = () => supabase.schema('mes')
 
 const columns = computed<ColumnDef[]>(() => {
   const dynamic = attrSearchFields.value.map((field) => ({
-    key: `attr-${field.attr_id}`,
+    key: `attr-${field.attr_id}` as SortKey,
     label: attrLabel(field),
-    sortable: false,
+    sortable: true,
     i18n: false,
+    filterType: attrColumnFilterType(field),
+    field,
   }))
   return [...baseColumns, ...dynamic]
 })
@@ -777,39 +822,169 @@ const filteredBatches = computed(() => {
   })
 })
 
+const tableFilteredBatches = computed(() => {
+  return filteredBatches.value.filter((batch) =>
+    columns.value.every((column) => batchMatchesColumnFilter(batch, column)),
+  )
+})
+
 const sortedBatches = computed(() => {
-  const rows = [...filteredBatches.value]
+  const rows = [...tableFilteredBatches.value]
   rows.sort((a, b) => {
     const key = sortKey.value
-    const dir = sortDirection.value === 'asc' ? 1 : -1
-    const av = (a as any)[key]
-    const bv = (b as any)[key]
+    const direction = sortDirection.value
+    const av = batchColumnSortValue(a, key)
+    const bv = batchColumnSortValue(b, key)
     if (av == null && bv == null) return 0
-    if (av == null) return 1
-    if (bv == null) return -1
-    if (key === 'planned_start' || key === 'planned_end') {
-      return dir * compareDateOnly(av, bv)
-    }
+    if (av == null) return direction === 'asc' ? 1 : -1
+    if (bv == null) return direction === 'asc' ? -1 : 1
     if (typeof av === 'number' && typeof bv === 'number') {
-      return dir * (av - bv)
+      return (direction === 'asc' ? 1 : -1) * (av - bv)
     }
-    return dir * String(av).localeCompare(String(bv))
+    return (direction === 'asc' ? 1 : -1) * String(av).localeCompare(String(bv))
   })
   return rows
 })
 
-function setSort(key: SortKey) {
-  if (sortKey.value === key) {
+const selectedBatchIdSet = computed(() => new Set(selectedBatchIds.value))
+const allVisibleBatchesSelected = computed(() =>
+  sortedBatches.value.length > 0 && sortedBatches.value.every((batch) => selectedBatchIdSet.value.has(batch.id)),
+)
+
+watch(
+  columns,
+  (value) => {
+    value.forEach((column) => {
+      if (!(column.key in columnFilters)) columnFilters[column.key] = ''
+    })
+  },
+  { immediate: true },
+)
+
+watch(
+  batches,
+  (value) => {
+    const existingIds = new Set(value.map((batch) => batch.id))
+    selectedBatchIds.value = selectedBatchIds.value.filter((id) => existingIds.has(id))
+  },
+)
+
+function setSort(key: string, direction?: ColumnSortDirection) {
+  const nextKey = key as SortKey
+  if (direction) {
+    sortKey.value = nextKey
+    sortDirection.value = direction
+    return
+  }
+  if (sortKey.value === nextKey) {
     sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc'
   } else {
-    sortKey.value = key
+    sortKey.value = nextKey
     sortDirection.value = 'asc'
   }
 }
 
-function sortGlyph(key: SortKey) {
-  if (sortKey.value !== key) return ''
-  return sortDirection.value === 'asc' ? '▲' : '▼'
+function columnLabel(column: ColumnDef) {
+  return column.i18n ? t(column.label) : column.label
+}
+
+function columnFilterType(column: ColumnDef) {
+  return column.filterType
+}
+
+function columnFilterOptions(column: ColumnDef) {
+  if (column.key === 'status') return batchStatusOptions.value
+  if (!column.field) return []
+  if (column.field.data_type === 'bool') {
+    return [
+      { value: 'true', label: t('common.yes') },
+      { value: 'false', label: t('common.no') },
+    ]
+  }
+  if (column.field.data_type === 'ref') return attrOptions(column.field).map((option) => ({
+    value: String(option.value),
+    label: option.label,
+  }))
+  return []
+}
+
+function attrColumnFilterType(field: AttrField): ColumnFilterType {
+  if (field.data_type === 'ref' || field.data_type === 'bool') return 'select'
+  return 'text'
+}
+
+function batchMatchesColumnFilter(batch: BatchRow, column: ColumnDef) {
+  const filter = (columnFilters[column.key] ?? '').trim()
+  if (!filter || column.filterType === 'none') return true
+  const raw = batchColumnFilterValue(batch, column)
+  const normalizedRaw = normalizeColumnFilterValue(raw)
+  const normalizedFilter = filter.toLowerCase()
+  if (column.filterType === 'select') return normalizedRaw === normalizedFilter
+  return normalizedRaw.includes(normalizedFilter)
+}
+
+function batchColumnFilterValue(batch: BatchRow, column: ColumnDef) {
+  if (column.key === 'batch_code') return batch.batch_code
+  if (column.key === 'status') return batch.status ?? ''
+  if (column.key === 'planned_start') return formatDateOnly(batch.planned_start, locale.value)
+  if (column.key === 'planned_end') return formatDateOnly(batch.planned_end, locale.value)
+  if (column.field) {
+    const value = attrValueFor(batch.id, column.field.attr_id)
+    if (column.field.data_type === 'ref') return normalizeAttrValue(value)
+    if (column.field.data_type === 'bool') return value == null ? '' : String(Boolean(value))
+    return formatAttrValueForField(value, column.field)
+  }
+  return ''
+}
+
+function batchColumnSortValue(batch: BatchRow, key: SortKey) {
+  if (key === 'batch_code') return batch.batch_code
+  if (key === 'status') return statusLabel(batch.status)
+  if (key === 'planned_start') return normalizeDateOnly(batch.planned_start)
+  if (key === 'planned_end') return normalizeDateOnly(batch.planned_end)
+  if (key.startsWith('attr-')) {
+    const attrId = Number(key.slice(5))
+    const field = attrSearchFields.value.find((item) => item.attr_id === attrId)
+    const value = attrValueFor(batch.id, attrId)
+    if (field?.data_type === 'number') {
+      const numeric = Number(value)
+      return Number.isFinite(numeric) ? numeric : null
+    }
+    if (field) return formatAttrValueForField(value, field)
+    return normalizeColumnFilterValue(value)
+  }
+  return ''
+}
+
+function normalizeColumnFilterValue(value: unknown) {
+  if (value == null) return ''
+  if (typeof value === 'string') return value.trim().toLowerCase()
+  if (typeof value === 'boolean') return value ? 'true' : 'false'
+  return String(value).trim().toLowerCase()
+}
+
+function toggleVisibleBatchSelection(event: Event) {
+  const checked = (event.target as HTMLInputElement | null)?.checked ?? false
+  const visibleIds = sortedBatches.value.map((batch) => batch.id)
+  if (checked) {
+    selectedBatchIds.value = Array.from(new Set([...selectedBatchIds.value, ...visibleIds]))
+    return
+  }
+  const visibleSet = new Set(visibleIds)
+  selectedBatchIds.value = selectedBatchIds.value.filter((id) => !visibleSet.has(id))
+}
+
+function toggleBatchSelection(batch: BatchRow, event: Event) {
+  const checked = (event.target as HTMLInputElement | null)?.checked ?? false
+  if (checked) {
+    selectedBatchIds.value = Array.from(new Set([...selectedBatchIds.value, batch.id]))
+    return
+  }
+  selectedBatchIds.value = selectedBatchIds.value.filter((id) => id !== batch.id)
+}
+
+function clearSelectedBatches() {
+  selectedBatchIds.value = []
 }
 
 function fmtDateTime(value: string | null | undefined) {

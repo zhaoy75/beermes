@@ -1,5 +1,9 @@
 <template>
-  <div v-if="open" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+  <div
+    v-if="open"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+    @keydown.enter.capture="handleEnterShortcut"
+  >
     <div class="w-full max-w-sm rounded-xl border border-gray-200 bg-white shadow-lg">
       <header v-if="title" class="border-b px-4 py-3">
         <h3 class="text-lg font-semibold text-gray-800">{{ title }}</h3>
@@ -20,8 +24,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { runDialogEnterAction, shouldRunDialogEnterAction } from '@/lib/dialogKeyboard'
 
 type ConfirmDialogTone = 'danger' | 'warning' | 'primary'
 
@@ -50,5 +55,35 @@ const confirmButtonClass = computed(() => {
     return 'rounded bg-amber-500 px-3 py-2 text-white hover:bg-amber-600'
   }
   return 'rounded bg-blue-600 px-3 py-2 text-white hover:bg-blue-700'
+})
+
+function confirmFromEnter() {
+  emit('confirm')
+}
+
+function handleEnterShortcut(event: KeyboardEvent) {
+  runDialogEnterAction(event, confirmFromEnter)
+}
+
+function handleWindowKeydown(event: KeyboardEvent) {
+  if (!props.open || !shouldRunDialogEnterAction(event)) return
+  event.preventDefault()
+  confirmFromEnter()
+}
+
+watch(
+  () => props.open,
+  (open) => {
+    if (open) {
+      window.addEventListener('keydown', handleWindowKeydown)
+    } else {
+      window.removeEventListener('keydown', handleWindowKeydown)
+    }
+  },
+  { immediate: true },
+)
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleWindowKeydown)
 })
 </script>

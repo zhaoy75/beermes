@@ -39,7 +39,7 @@
           {{ batchSaveError }}
         </div>
 
-        <form class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" @submit.prevent>
+        <form class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4" @submit.prevent>
           <div>
             <label class="block text-sm text-gray-600 mb-1" for="batchCode">{{ t('batch.edit.batchCode') }}</label>
             <input id="batchCode" v-model.trim="batchForm.batch_code" type="text" class="w-full h-[40px] border rounded px-3" />
@@ -103,7 +103,7 @@
         <div class="space-y-3">
           <div v-if="attrLoading" class="text-sm text-gray-500">{{ t('common.loading') }}</div>
           <div v-else-if="attrFields.length === 0" class="text-sm text-gray-500">{{ t('batch.edit.attrEmpty') }}</div>
-          <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
             <div v-for="field in attrFields" :key="field.attr_id">
               <label class="block text-sm text-gray-600 mb-1">
                 {{ attrLabel(field) }}<span v-if="field.required" class="text-red-600">*</span>

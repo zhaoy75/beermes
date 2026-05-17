@@ -1,5 +1,9 @@
 <template>
-  <div v-if="open" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+  <div
+    v-if="open"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+    @keydown.enter.capture="handleEnterShortcut"
+  >
     <div class="w-full max-w-2xl bg-white rounded-xl shadow-lg border border-gray-200">
       <header class="px-4 py-3 border-b flex items-center justify-between">
         <div>
@@ -170,6 +174,7 @@
 import { reactive, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import AppDateTimePicker from '@/components/common/AppDateTimePicker.vue'
+import { runDialogEnterAction } from '@/lib/dialogKeyboard'
 import {
   normalizeBatchAttrDataType,
   validateBatchAttrField,
@@ -244,6 +249,7 @@ watch(() => props.showRecipeSelection, (show) => {
 })
 
 function submitForm() {
+  if (props.loading) return
   if (!validateAttributes()) return
 
   emit('submit', {
@@ -255,6 +261,10 @@ function submitForm() {
     notes: form.notes ? form.notes.trim() : null,
     attrValues: { ...attrValues },
   })
+}
+
+function handleEnterShortcut(event: KeyboardEvent) {
+  runDialogEnterAction(event, submitForm)
 }
 
 function recipeLabel(recipe: RecipeOption) {

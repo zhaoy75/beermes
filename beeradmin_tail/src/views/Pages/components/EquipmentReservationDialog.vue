@@ -1,7 +1,10 @@
 <template>
   <Modal v-if="open" @close="emit('close')">
     <template #body>
-      <div class="relative mx-4 w-full max-w-3xl overflow-y-auto rounded-3xl bg-white p-6 shadow-xl dark:bg-gray-900 lg:p-8">
+      <div
+        class="relative mx-4 w-full max-w-3xl overflow-y-auto rounded-3xl bg-white p-6 shadow-xl dark:bg-gray-900 lg:p-8"
+        @keydown.enter.capture="handleEnterShortcut"
+      >
         <div class="mb-6">
           <h2 class="text-xl font-semibold text-gray-800 dark:text-white/90">
             {{ mode === 'edit' ? t('equipmentSchedule.modal.editTitle') : t('equipmentSchedule.modal.createTitle') }}
@@ -172,6 +175,7 @@ import { useI18n } from 'vue-i18n'
 
 import AppDateTimePicker from '@/components/common/AppDateTimePicker.vue'
 import Modal from '@/components/profile/Modal.vue'
+import { runDialogEnterAction } from '@/lib/dialogKeyboard'
 
 import type { ReservationFormState, SelectOption } from '../equipment-schedule/types'
 
@@ -220,4 +224,13 @@ watch(
   },
   { deep: true },
 )
+
+function saveFromEnter() {
+  if (props.saving || props.deleting) return
+  emit('save')
+}
+
+function handleEnterShortcut(event: KeyboardEvent) {
+  runDialogEnterAction(event, saveFromEnter)
+}
 </script>

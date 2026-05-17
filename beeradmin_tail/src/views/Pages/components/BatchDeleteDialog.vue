@@ -1,5 +1,9 @@
 <template>
-  <div v-if="open && batch" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+  <div
+    v-if="open && batch"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+    @keydown.enter.capture="handleEnterShortcut"
+  >
     <div class="w-full max-w-sm bg-white rounded-xl shadow-lg border border-gray-200">
       <header class="px-4 py-3 border-b">
         <h3 class="text-lg font-semibold text-gray-800">{{ t('batch.delete.title') }}</h3>
@@ -17,7 +21,9 @@
 </template>
 
 <script setup lang="ts">
+import { onBeforeUnmount, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { runDialogEnterAction, shouldRunDialogEnterAction } from '@/lib/dialogKeyboard'
 
 interface BatchRef {
   batch_code: string
@@ -27,4 +33,35 @@ const props = defineProps<{ open: boolean, batch: BatchRef | null, loading: bool
 const emit = defineEmits(['cancel', 'confirm'])
 
 const { t } = useI18n()
+
+function confirmFromEnter() {
+  if (props.loading) return
+  emit('confirm')
+}
+
+function handleEnterShortcut(event: KeyboardEvent) {
+  runDialogEnterAction(event, confirmFromEnter)
+}
+
+function handleWindowKeydown(event: KeyboardEvent) {
+  if (!props.open || !props.batch || !shouldRunDialogEnterAction(event)) return
+  event.preventDefault()
+  confirmFromEnter()
+}
+
+watch(
+  () => props.open && Boolean(props.batch),
+  (open) => {
+    if (open) {
+      window.addEventListener('keydown', handleWindowKeydown)
+    } else {
+      window.removeEventListener('keydown', handleWindowKeydown)
+    }
+  },
+  { immediate: true },
+)
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleWindowKeydown)
+})
 </script>

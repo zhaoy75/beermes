@@ -1,5 +1,9 @@
 <template>
-  <div v-if="open" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+  <div
+    v-if="open"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+    @keydown.enter.capture="handleEnterShortcut"
+  >
     <div class="w-full max-w-lg bg-white rounded-xl shadow-lg border border-gray-200">
       <header class="px-4 py-3 border-b flex items-center justify-between">
         <h3 class="text-lg font-semibold text-gray-800">{{ editing ? t('batch.ingredients.editTitle') : t('batch.ingredients.addTitle') }}</h3>
@@ -50,6 +54,7 @@
 <script setup lang="ts">
 import { reactive, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { runDialogEnterAction } from '@/lib/dialogKeyboard'
 
 interface MaterialOption {
   id: string
@@ -102,7 +107,12 @@ watch(() => props.initial, (val) => {
 }, { deep: true })
 
 function submitForm() {
+  if (props.loading) return
   if (!form.material_id || !form.uom_id) return
   emit('submit', { ...form })
+}
+
+function handleEnterShortcut(event: KeyboardEvent) {
+  runDialogEnterAction(event, submitForm)
 }
 </script>

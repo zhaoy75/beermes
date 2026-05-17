@@ -2,111 +2,109 @@
   <AdminLayout>
     <PageBreadcrumb :pageTitle="pageTitle" />
 
-    <section class="mb-6 bg-white shadow rounded-lg p-4 border border-gray-200" aria-labelledby="batchSearchHeading">
-      <div class="flex items-center justify-between mb-4">
-        <h2 id="batchSearchHeading" class="text-lg font-semibold text-gray-800">{{ t('batch.list.searchTitle') }}</h2>
+    <section class="mb-4 rounded-lg border border-gray-200 bg-white p-3 shadow" aria-labelledby="batchSearchHeading">
+      <div class="mb-2 flex items-center justify-between">
+        <h2 id="batchSearchHeading" class="text-base font-semibold text-gray-800">{{ t('batch.list.searchTitle') }}</h2>
         <div class="flex gap-2">
-          <button class="text-sm px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50" :disabled="loading" @click="openCreate">
+          <button class="h-8 rounded bg-blue-600 px-2.5 text-sm text-white hover:bg-blue-700 disabled:opacity-50" :disabled="loading" @click="openCreate">
             {{ t('batch.list.newBatch') }}
           </button>
-          <button class="text-sm px-3 py-1 rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-50" :disabled="loading" @click="fetchBatches">
+          <button class="h-8 rounded border border-gray-300 px-2.5 text-sm hover:bg-gray-100 disabled:opacity-50" :disabled="loading" @click="fetchBatches">
             {{ t('common.search') }}
           </button>
         </div>
       </div>
-      <form class="grid grid-cols-1 md:grid-cols-4 gap-4" @submit.prevent>
-        <div>
-          <label class="block text-sm text-gray-600 mb-1" for="batchNameFilter">{{ t('batch.list.nameLabel') }}</label>
-          <input id="batchNameFilter" v-model.trim="search.name" type="search" class="w-full h-[36px] border rounded px-3" :placeholder="t('batch.list.namePlaceholder')" />
+      <form class="space-y-2" @submit.prevent>
+        <div class="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-6 lg:items-end">
+          <div class="lg:col-span-2">
+            <label class="mb-0.5 block text-xs text-gray-600" for="batchNameFilter">{{ t('batch.list.nameLabel') }}</label>
+            <input id="batchNameFilter" v-model.trim="search.name" type="search" class="h-8 w-full rounded border px-2 text-sm" :placeholder="t('batch.list.namePlaceholder')" />
+          </div>
+          <div>
+            <label class="mb-0.5 block text-xs text-gray-600" for="batchStatusFilter">{{ t('batch.list.colStatus') }}</label>
+            <select id="batchStatusFilter" v-model="search.status" class="h-8 w-full rounded border bg-white px-2 text-sm" :disabled="batchStatusLoading">
+              <option value="">{{ t('common.select') }}</option>
+              <option v-for="option in batchStatusOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="mb-0.5 block text-xs text-gray-600" for="startFilter">{{ t('batch.list.startDate') }}</label>
+            <AppDateTimePicker id="startFilter" v-model="search.start" class="h-8 w-full rounded border px-2 text-sm" @change="rememberDateFilters" />
+          </div>
+          <div>
+            <label class="mb-0.5 block text-xs text-gray-600" for="endFilter">{{ t('batch.list.endDate') }}</label>
+            <AppDateTimePicker id="endFilter" v-model="search.end" class="h-8 w-full rounded border px-2 text-sm" @change="rememberDateFilters" />
+          </div>
+          <div class="flex items-end">
+            <button class="h-8 rounded border border-gray-300 px-2.5 text-sm hover:bg-gray-100" type="button" @click="resetFilters">{{ t('common.reset') }}</button>
+          </div>
         </div>
-        <div>
-          <label class="block text-sm text-gray-600 mb-1" for="batchStatusFilter">{{ t('batch.list.colStatus') }}</label>
-          <select id="batchStatusFilter" v-model="search.status" class="w-full h-[36px] border rounded px-3 bg-white" :disabled="batchStatusLoading">
-            <option value="">{{ t('common.select') }}</option>
-            <option v-for="option in batchStatusOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-sm text-gray-600 mb-1" for="startFilter">{{ t('batch.list.startDate') }}</label>
-          <AppDateTimePicker id="startFilter" v-model="search.start" class="w-full h-[36px] border rounded px-3" @change="rememberDateFilters" />
-        </div>
-        <div>
-          <label class="block text-sm text-gray-600 mb-1" for="endFilter">{{ t('batch.list.endDate') }}</label>
-          <AppDateTimePicker id="endFilter" v-model="search.end" class="w-full h-[36px] border rounded px-3" @change="rememberDateFilters" />
-        </div>
-        <div class="flex items-end">
-          <button class="text-sm px-3 py-2 rounded border border-gray-300 hover:bg-gray-100" type="button" @click="resetFilters">{{ t('common.reset') }}</button>
-        </div>
-        <div class="md:col-span-4">
-          <hr class="border-gray-200" />
-        </div>
-        <div v-for="field in attrSearchFields" :key="field.attr_id">
-          <label class="block text-sm text-gray-600 mb-1" :for="`attr-search-${field.attr_id}`">{{ attrLabel(field) }}</label>
-          <select
-            v-if="field.data_type === 'ref'"
-            :id="`attr-search-${field.attr_id}`"
-            v-model="search.attr[String(field.attr_id)]"
-            class="w-full h-[36px] border rounded px-3 bg-white"
-          >
-            <option value="">{{ t('common.select') }}</option>
-            <option v-for="option in attrOptions(field)" :key="`${option.value}`" :value="String(option.value)">
-              {{ option.label }}
-            </option>
-          </select>
-          <select
-            v-else-if="field.data_type === 'boolean'"
-            :id="`attr-search-${field.attr_id}`"
-            v-model="search.attr[String(field.attr_id)]"
-            class="w-full h-[36px] border rounded px-3 bg-white"
-          >
-            <option value="">{{ t('common.select') }}</option>
-            <option value="true">{{ t('common.yes') }}</option>
-            <option value="false">{{ t('common.no') }}</option>
-          </select>
-          <AppDateTimePicker
-            v-else-if="field.data_type === 'date'"
-            :id="`attr-search-${field.attr_id}`"
-            v-model="search.attr[String(field.attr_id)]"
-            class="w-full h-[36px] border rounded px-3"
-          />
-          <AppDateTimePicker
-            v-else-if="field.data_type === 'timestamp'"
-            :id="`attr-search-${field.attr_id}`"
-            v-model="search.attr[String(field.attr_id)]"
-            mode="datetime"
-            class="w-full h-[36px] border rounded px-3"
-          />
-          <template v-else-if="field.data_type === 'number'">
-            <input
-              :id="`attr-search-${field.attr_id}`"
-              v-model.trim="search.attr[String(field.attr_id)]"
-              type="number"
-              :min="field.num_min ?? undefined"
-              :max="field.num_max ?? undefined"
-              :class="[
-                'w-full h-[36px] border rounded px-3',
-                attrSearchError(field) ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : '',
-              ]"
-            />
-            <p v-if="attrSearchError(field)" class="mt-1 text-xs text-red-600">
-              {{ attrSearchError(field) }}
-            </p>
-          </template>
-          <input
-            v-else
-            :id="`attr-search-${field.attr_id}`"
-            v-model.trim="search.attr[String(field.attr_id)]"
-            type="search"
-            class="w-full h-[36px] border rounded px-3"
-          />
+        <div v-if="attrSearchFields.length" class="border-t border-gray-200 pt-2">
+          <div class="flex gap-2 overflow-x-auto pb-1">
+            <div v-for="field in attrSearchFields" :key="field.attr_id" class="min-w-[160px] max-w-[220px] flex-none">
+              <label class="mb-0.5 block text-xs text-gray-600" :for="`attr-search-${field.attr_id}`">{{ attrLabel(field) }}</label>
+              <select
+                v-if="field.data_type === 'ref'"
+                :id="`attr-search-${field.attr_id}`"
+                v-model="search.attr[String(field.attr_id)]"
+                class="h-8 w-full rounded border bg-white px-2 text-sm"
+              >
+                <option value="">{{ t('common.select') }}</option>
+                <option v-for="option in attrOptions(field)" :key="`${option.value}`" :value="String(option.value)">
+                  {{ option.label }}
+                </option>
+              </select>
+              <select
+                v-else-if="field.data_type === 'boolean'"
+                :id="`attr-search-${field.attr_id}`"
+                v-model="search.attr[String(field.attr_id)]"
+                class="h-8 w-full rounded border bg-white px-2 text-sm"
+              >
+                <option value="">{{ t('common.select') }}</option>
+                <option value="true">{{ t('common.yes') }}</option>
+                <option value="false">{{ t('common.no') }}</option>
+              </select>
+              <AppDateTimePicker
+                v-else-if="field.data_type === 'date'"
+                :id="`attr-search-${field.attr_id}`"
+                v-model="search.attr[String(field.attr_id)]"
+                class="h-8 w-full rounded border px-2 text-sm"
+              />
+              <AppDateTimePicker
+                v-else-if="field.data_type === 'timestamp'"
+                :id="`attr-search-${field.attr_id}`"
+                v-model="search.attr[String(field.attr_id)]"
+                mode="datetime"
+                class="h-8 w-full rounded border px-2 text-sm"
+              />
+              <template v-else-if="field.data_type === 'number'">
+                <input
+                  :id="`attr-search-${field.attr_id}`"
+                  v-model.trim="search.attr[String(field.attr_id)]"
+                  type="number"
+                  :min="field.num_min ?? undefined"
+                  :max="field.num_max ?? undefined"
+                  :class="[
+                    'h-8 w-full rounded border px-2 text-sm',
+                    attrSearchError(field) ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : '',
+                  ]"
+                />
+                <p v-if="attrSearchError(field)" class="mt-1 text-xs text-red-600">
+                  {{ attrSearchError(field) }}
+                </p>
+              </template>
+              <input
+                v-else
+                :id="`attr-search-${field.attr_id}`"
+                v-model.trim="search.attr[String(field.attr_id)]"
+                type="search"
+                class="h-8 w-full rounded border px-2 text-sm"
+              />
+            </div>
+          </div>
         </div>
       </form>
-      <p class="mt-2 text-sm text-gray-500">{{ t('batch.list.showing', { count: filteredBatches.length, total: batches.length }) }}</p>
-      <div v-if="searchConditions.length" class="mt-2 flex flex-wrap gap-2 text-xs text-gray-600">
-        <span v-for="cond in searchConditions" :key="cond.key" class="px-2 py-1 rounded-full bg-gray-100">
-          {{ cond.label }}: {{ cond.value }}
-        </span>
-      </div>
+      <p class="mt-1 text-xs text-gray-500">{{ t('batch.list.showing', { count: filteredBatches.length, total: batches.length }) }}</p>
     </section>
 
     <section aria-labelledby="batchTableHeading">
@@ -422,25 +420,6 @@ const attrSearchErrors = computed<Record<string, string>>(() => {
     )
   })
   return errors
-})
-
-const searchConditions = computed(() => {
-  const conditions: Array<{ key: string; label: string; value: string }> = []
-  if (search.name) conditions.push({ key: 'name', label: t('batch.list.nameLabel'), value: search.name })
-  if (search.status) {
-    const match = batchStatusOptions.value.find((option) => option.value === search.status)
-    conditions.push({ key: 'status', label: t('batch.list.colStatus'), value: match?.label ?? search.status })
-  }
-  if (search.start) conditions.push({ key: 'start', label: t('batch.list.startDate'), value: search.start })
-  if (search.end) conditions.push({ key: 'end', label: t('batch.list.endDate'), value: search.end })
-  attrSearchFields.value.forEach((field) => {
-    if (attrSearchError(field)) return
-    const value = normalizeSearchText(search.attr[String(field.attr_id)])
-    if (value) {
-      conditions.push({ key: `attr-${field.attr_id}`, label: attrLabel(field), value })
-    }
-  })
-  return conditions
 })
 
 async function ensureTenant() {

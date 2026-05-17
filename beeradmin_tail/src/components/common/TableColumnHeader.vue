@@ -4,10 +4,29 @@
       class="flex w-full items-center gap-1"
       :class="align === 'right' ? 'justify-end text-right' : 'justify-start text-left'"
     >
-      <span class="min-w-0 truncate text-xs font-medium uppercase tracking-wide text-gray-600">
+      <button
+        v-if="triggerMode === 'label'"
+        class="inline-flex min-w-0 max-w-full items-center gap-1 rounded px-1 py-0.5 text-xs font-medium uppercase tracking-wide text-gray-600 hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+        :class="[
+          align === 'right' ? 'justify-end text-right' : 'justify-start text-left',
+          hasActiveControl ? 'bg-blue-50 text-blue-700' : '',
+        ]"
+        type="button"
+        :title="menuButtonTitle"
+        :aria-label="menuButtonTitle"
+        @click.stop="toggleMenu"
+      >
+        <span class="min-w-0 truncate">{{ label }}</span>
+        <span v-if="isSortActive" class="shrink-0 text-[10px]" aria-hidden="true">
+          {{ sortDirection === 'asc' ? '▲' : '▼' }}
+        </span>
+        <span v-if="hasFilter" class="h-1.5 w-1.5 shrink-0 rounded-full bg-blue-500" aria-hidden="true"></span>
+      </button>
+      <span v-else class="min-w-0 truncate text-xs font-medium uppercase tracking-wide text-gray-600">
         {{ label }}
       </span>
       <button
+        v-if="triggerMode === 'button'"
         class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded border hover:bg-gray-100"
         :class="hasActiveControl ? 'border-blue-300 bg-blue-50 text-blue-700' : 'border-gray-200 bg-white text-gray-500 hover:text-gray-800'"
         type="button"
@@ -113,6 +132,7 @@ const props = withDefaults(
     filterPlaceholder?: string
     allLabel?: string
     align?: 'left' | 'right'
+    triggerMode?: 'button' | 'label'
   }>(),
   {
     filterType: 'text',
@@ -120,6 +140,7 @@ const props = withDefaults(
     filterPlaceholder: '',
     allLabel: 'All',
     align: 'left',
+    triggerMode: 'label',
   },
 )
 

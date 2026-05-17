@@ -2,13 +2,6 @@
   <AdminLayout>
     <PageBreadcrumb :pageTitle="pageTitle" />
     <div class="min-h-screen bg-white text-gray-900 p-4 w-full space-y-6">
-      <header class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 class="text-xl font-semibold">{{ t('producedBeer.title') }}</h1>
-          <p class="text-sm text-gray-500">{{ t('producedBeer.subtitle') }}</p>
-        </div>
-      </header>
-
       <section class="border border-gray-200 rounded-xl shadow-sm p-4 bg-white space-y-4">
         <header class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div>
@@ -58,7 +51,7 @@
         </header>
 
         <section class="border border-gray-200 rounded-lg p-4 bg-white">
-          <form class="grid grid-cols-1 md:grid-cols-12 gap-3" @submit.prevent>
+          <form class="grid grid-cols-1 gap-2 md:grid-cols-[repeat(16,minmax(0,1fr))]" @submit.prevent>
             <div class="md:col-span-2">
               <label class="block text-sm text-gray-600 mb-1">{{
                 t('producedBeer.movement.filters.batchNo')
@@ -206,7 +199,7 @@
         </div>
 
         <section class="overflow-x-auto border border-gray-200 rounded-lg">
-          <table class="compact-table min-w-full divide-y divide-gray-200 text-sm">
+          <table class="compact-table min-w-full divide-y divide-gray-200 text-xs">
             <thead class="bg-gray-50 text-xs uppercase text-gray-600">
               <tr>
                 <th class="w-10 px-2 py-1.5 text-center">
@@ -219,7 +212,7 @@
                     @change="toggleVisibleMovementSelection"
                   />
                 </th>
-                <th class="px-3 py-2 text-left">
+                <th class="px-2 py-1.5 text-left">
                   <TableColumnHeader
                     v-model:filter-value="movementColumnFilters.movementAt"
                     :active-sort-key="movementSortKey"
@@ -230,7 +223,20 @@
                     @sort="setMovementColumnSort"
                   />
                 </th>
-                <th class="px-3 py-2 text-left">
+                <th class="px-2 py-1.5 text-left">
+                  <TableColumnHeader
+                    v-model:filter-value="movementColumnFilters.taxEvent"
+                    :active-sort-key="movementSortKey"
+                    :all-label="t('common.all')"
+                    :filter-options="movementTaxEventColumnFilterOptions"
+                    filter-type="select"
+                    :label="t('producedBeer.movement.filters.movementType')"
+                    sort-key="taxEvent"
+                    :sort-direction="movementSortDirection"
+                    @sort="setMovementColumnSort"
+                  />
+                </th>
+                <th class="px-2 py-1.5 text-left">
                   <TableColumnHeader
                     v-model:filter-value="movementColumnFilters.batchCode"
                     :active-sort-key="movementSortKey"
@@ -241,7 +247,7 @@
                     @sort="setMovementColumnSort"
                   />
                 </th>
-                <th class="px-3 py-2 text-left">
+                <th class="px-2 py-1.5 text-left">
                   <TableColumnHeader
                     v-model:filter-value="movementColumnFilters.beerCategory"
                     :active-sort-key="movementSortKey"
@@ -252,7 +258,7 @@
                     @sort="setMovementColumnSort"
                   />
                 </th>
-                <th class="px-3 py-2 text-left">
+                <th class="px-2 py-1.5 text-left">
                   <TableColumnHeader
                     v-model:filter-value="movementColumnFilters.styleName"
                     :active-sort-key="movementSortKey"
@@ -263,7 +269,7 @@
                     @sort="setMovementColumnSort"
                   />
                 </th>
-                <th class="px-3 py-2 text-right">
+                <th class="px-2 py-1.5 text-right">
                   <TableColumnHeader
                     v-model:filter-value="movementColumnFilters.targetAbv"
                     align="right"
@@ -275,7 +281,7 @@
                     @sort="setMovementColumnSort"
                   />
                 </th>
-                <th class="px-3 py-2 text-left">
+                <th class="w-28 max-w-[7rem] px-2 py-1.5 text-left">
                   <TableColumnHeader
                     v-model:filter-value="movementColumnFilters.packageType"
                     :active-sort-key="movementSortKey"
@@ -286,7 +292,7 @@
                     @sort="setMovementColumnSort"
                   />
                 </th>
-                <th class="px-3 py-2 text-right">
+                <th class="w-24 max-w-[6rem] px-2 py-1.5 text-right">
                   <TableColumnHeader
                     v-model:filter-value="movementColumnFilters.volumePerPackage"
                     align="right"
@@ -298,7 +304,7 @@
                     @sort="setMovementColumnSort"
                   />
                 </th>
-                <th class="px-3 py-2 text-right">
+                <th class="px-2 py-1.5 text-right">
                   <TableColumnHeader
                     v-model:filter-value="movementColumnFilters.unitOfPackage"
                     align="right"
@@ -310,7 +316,7 @@
                     @sort="setMovementColumnSort"
                   />
                 </th>
-                <th class="px-3 py-2 text-right">
+                <th class="px-2 py-1.5 text-right">
                   <TableColumnHeader
                     v-model:filter-value="movementColumnFilters.totalVolume"
                     align="right"
@@ -322,7 +328,7 @@
                     @sort="setMovementColumnSort"
                   />
                 </th>
-                <th class="px-3 py-2 text-right">
+                <th class="px-2 py-1.5 text-right">
                   <TableColumnHeader
                     v-model:filter-value="movementColumnFilters.taxRate"
                     align="right"
@@ -334,7 +340,7 @@
                     @sort="setMovementColumnSort"
                   />
                 </th>
-                <th class="px-3 py-2 text-left">
+                <th class="px-2 py-1.5 text-left">
                   <TableColumnHeader
                     v-model:filter-value="movementColumnFilters.source"
                     :active-sort-key="movementSortKey"
@@ -345,7 +351,7 @@
                     @sort="setMovementColumnSort"
                   />
                 </th>
-                <th class="px-3 py-2 text-left">
+                <th class="px-2 py-1.5 text-left">
                   <TableColumnHeader
                     v-model:filter-value="movementColumnFilters.destination"
                     :active-sort-key="movementSortKey"
@@ -356,26 +362,13 @@
                     @sort="setMovementColumnSort"
                   />
                 </th>
-                <th class="px-3 py-2 text-left">
+                <th class="px-2 py-1.5 text-left">
                   <TableColumnHeader
                     v-model:filter-value="movementColumnFilters.docNo"
                     :active-sort-key="movementSortKey"
                     :filter-placeholder="t('common.search')"
                     :label="t('producedBeer.movement.card.docNo')"
                     sort-key="docNo"
-                    :sort-direction="movementSortDirection"
-                    @sort="setMovementColumnSort"
-                  />
-                </th>
-                <th class="px-3 py-2 text-left">
-                  <TableColumnHeader
-                    v-model:filter-value="movementColumnFilters.taxEvent"
-                    :active-sort-key="movementSortKey"
-                    :all-label="t('common.all')"
-                    :filter-options="movementTaxEventColumnFilterOptions"
-                    filter-type="select"
-                    :label="t('producedBeer.movement.filters.movementType')"
-                    sort-key="taxEvent"
                     :sort-direction="movementSortDirection"
                     @sort="setMovementColumnSort"
                   />
@@ -395,9 +388,15 @@
                     @change="toggleMovementSelection(card)"
                   />
                 </td>
-                <td class="px-3 py-2 text-xs text-gray-500">
-                  {{ formatDateTime(card.movementAt) }}
+                <td class="px-2 py-1.5 text-xs text-gray-500">
+                  {{ formatMovementDate(card.movementAt) }}
                 </td>
+                <CompactTableCell
+                  :value="movementTypeLabel(card.taxEvent)"
+                  text-column="removalType"
+                  truncate
+                  focusable
+                />
                 <CompactTableCell
                   :value="movementBatchCodeLabel(card)"
                   text-column="batchCode"
@@ -417,25 +416,32 @@
                   truncate
                   focusable
                 />
-                <td class="px-3 py-2 text-right text-gray-600">
+                <td class="px-2 py-1.5 text-right text-gray-600">
                   {{ movementTargetAbvLabel(card) }}
                 </td>
-                <CompactTableCell
-                  :value="movementPackageLabel(card)"
-                  text-column="packageType"
-                  truncate
-                  focusable
-                />
-                <td class="px-3 py-2 text-right text-gray-600">
-                  {{ movementVolumeLabel(card) }}
+                <td class="max-w-[7rem] px-2 py-1.5 text-gray-600">
+                  <div
+                    class="whitespace-normal break-words leading-tight"
+                    :title="movementPackageLabel(card)"
+                  >
+                    {{ movementPackageLabel(card) }}
+                  </div>
                 </td>
-                <td class="px-3 py-2 text-right text-gray-600">
+                <td class="max-w-[6rem] px-2 py-1.5 text-right text-gray-600">
+                  <div
+                    class="ml-auto whitespace-normal break-words leading-tight"
+                    :title="movementVolumeLabel(card)"
+                  >
+                    {{ movementVolumeLabel(card) }}
+                  </div>
+                </td>
+                <td class="px-2 py-1.5 text-right text-gray-600">
                   {{ movementUnitOfPackageLabel(card) }}
                 </td>
-                <td class="px-3 py-2 text-right font-semibold text-gray-900">
+                <td class="px-2 py-1.5 text-right font-semibold text-gray-900">
                   {{ formatVolumeNumberValue(card.totalLiters) }}
                 </td>
-                <td class="px-3 py-2 text-right text-gray-600">{{ movementTaxRateLabel(card) }}</td>
+                <td class="px-2 py-1.5 text-right text-gray-600">{{ movementTaxRateLabel(card) }}</td>
                 <CompactTableCell
                   :value="siteLabel(card.sourceSiteId)"
                   text-column="source"
@@ -452,12 +458,6 @@
                   :value="movementDocumentNoLabel(card.docNo)"
                   :title="card.docNo || ''"
                   text-column="batchCode"
-                  truncate
-                  focusable
-                />
-                <CompactTableCell
-                  :value="movementTypeLabel(card.taxEvent)"
-                  text-column="removalType"
                   truncate
                   focusable
                 />
@@ -674,6 +674,7 @@ const MOVEMENT_TYPE_FILTER_VALUES = [
 ] as const
 const MOVEMENT_TABLE_SORT_KEYS = [
   'movementAt',
+  'taxEvent',
   'batchCode',
   'beerCategory',
   'styleName',
@@ -686,7 +687,6 @@ const MOVEMENT_TABLE_SORT_KEYS = [
   'source',
   'destination',
   'docNo',
-  'taxEvent',
 ] as const
 const DEFAULT_MOVEMENT_TYPE_FILTER = 'all'
 
@@ -821,7 +821,8 @@ const {
 } = useColumnTableControls<MovementCardView, MovementTableSortKey>(
   filteredMovementCards,
   [
-    { key: 'movementAt', sortValue: (card) => (card.movementAt ? Date.parse(card.movementAt) : null), filterValue: (card) => formatDateTime(card.movementAt), filterType: 'text' },
+    { key: 'movementAt', sortValue: (card) => (card.movementAt ? Date.parse(card.movementAt) : null), filterValue: (card) => formatMovementDate(card.movementAt), filterType: 'text' },
+    { key: 'taxEvent', sortValue: (card) => movementTypeLabel(card.taxEvent), filterValue: (card) => card.taxEvent, filterType: 'select' },
     { key: 'batchCode', sortValue: (card) => movementBatchCodeLabel(card), filterType: 'text' },
     { key: 'beerCategory', sortValue: (card) => movementBeerCategoryLabel(card), filterType: 'text' },
     { key: 'styleName', sortValue: (card) => movementStyleLabel(card), filterType: 'text' },
@@ -834,7 +835,6 @@ const {
     { key: 'source', sortValue: (card) => siteLabel(card.sourceSiteId), filterType: 'text' },
     { key: 'destination', sortValue: (card) => siteLabel(card.destSiteId), filterType: 'text' },
     { key: 'docNo', sortValue: (card) => card.docNo, filterType: 'text' },
-    { key: 'taxEvent', sortValue: (card) => movementTypeLabel(card.taxEvent), filterValue: (card) => card.taxEvent, filterType: 'select' },
   ],
   'movementAt',
   'desc',
@@ -1017,6 +1017,17 @@ function formatDateTime(value: string | null | undefined) {
   if (!value) return '—'
   try {
     return new Date(value).toLocaleString()
+  } catch {
+    return value
+  }
+}
+
+function formatMovementDate(value: string | null | undefined) {
+  if (!value) return '—'
+  const datePart = value.match(/^\d{4}-\d{2}-\d{2}/)?.[0]
+  if (datePart) return datePart
+  try {
+    return new Date(value).toLocaleDateString(locale.value)
   } catch {
     return value
   }
@@ -1206,6 +1217,7 @@ function borderedRow(values: Array<string | number | null | undefined>, style: '
 function buildMovementExportSheet(): WorkbookSheet {
   const header = borderedRow([
     t('producedBeer.movement.card.movementDate'),
+    t('producedBeer.movement.filters.movementType'),
     t('producedBeer.movement.card.batchCode'),
     t('producedBeer.inventory.table.beerCategory'),
     t('producedBeer.inventory.table.styleName'),
@@ -1218,12 +1230,12 @@ function buildMovementExportSheet(): WorkbookSheet {
     t('producedBeer.movement.card.source'),
     t('producedBeer.movement.card.destination'),
     t('producedBeer.movement.card.docNo'),
-    t('producedBeer.movement.filters.movementType'),
   ], 'header')
 
   const rows = visibleMovementCards.value.map((card) =>
     borderedRow([
       formatDateTime(card.movementAt),
+      movementTypeLabel(card.taxEvent),
       movementBatchCodeLabel(card),
       movementBeerCategoryLabel(card),
       movementStyleLabel(card),
@@ -1236,7 +1248,6 @@ function buildMovementExportSheet(): WorkbookSheet {
       siteLabel(card.sourceSiteId),
       siteLabel(card.destSiteId),
       card.docNo,
-      movementTypeLabel(card.taxEvent),
     ]),
   )
 
